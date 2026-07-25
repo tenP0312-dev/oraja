@@ -1,6 +1,7 @@
 package bms.player.beatoraja.decide;
 
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 import bms.player.beatoraja.skin.*;
@@ -56,7 +57,9 @@ public class MusicDecide extends MainState {
 			if (input.getKeyState(0) || input.getKeyState(2) || input.getKeyState(4) || input.getKeyState(6) || input.isControlKeyPressed(ControlKeys.ENTER)) {
 				timer.setTimerOn(TIMER_FADEOUT);
 			}
-			if (input.isControlKeyPressed(ControlKeys.ESCAPE) || (input.startPressed() && input.isSelectPressed())) {
+			if (!BMSIRArenaClient.isAbortInputBlocked()
+					&& (input.isControlKeyPressed(ControlKeys.ESCAPE)
+					|| (input.startPressed() && input.isSelectPressed()))) {
 				cancel = true;
 				main.getAudioProcessor().setGlobalPitch(1f);
 				timer.setTimerOn(TIMER_FADEOUT);

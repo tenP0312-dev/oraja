@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import bms.player.beatoraja.PlayConfig;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
@@ -203,8 +204,9 @@ public final class ControlInputProcessor {
 			}
 		}
 		long now = System.currentTimeMillis();
-		if((input.startPressed() && input.isSelectPressed() && now - exitpressedtime > exitPressDuration )||
-				(player.isNoteEnd() && (input.startPressed() || input.isSelectPressed()))){
+		boolean abortBlocked = BMSIRArenaClient.isAbortInputBlocked();
+		if(!abortBlocked && ((input.startPressed() && input.isSelectPressed() && now - exitpressedtime > exitPressDuration )||
+				(player.isNoteEnd() && (input.startPressed() || input.isSelectPressed())))){
 			input.startChanged(false);
 			input.setSelectPressed(false);
 			player.stopPlay();
@@ -212,7 +214,7 @@ public final class ControlInputProcessor {
 			exitpressedtime = now;
 		}
 		// stop playing
-		if (input.isControlKeyPressed(ControlKeys.ESCAPE)) {
+		if (!abortBlocked && input.isControlKeyPressed(ControlKeys.ESCAPE)) {
 			player.stopPlay();
 		}
 		// play speed change (autoplay or replay only)

@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
-Status: development implementation for BMS-IR Arena v1. The public Arena
-service, download, and Web navigation are not live yet.
+Status: controlled BMS-IR Arena v1 canary. The direct service and OS-specific
+downloads are live, but global Web navigation and announcement are not.
 
 ## Enabling
 
@@ -46,6 +46,9 @@ whether the player is actually queued.
 - When BMS-IR Arena is enabled, the game does not auto-catch the OS mouse
   cursor during play. The canary client must not prevent desktop mouse
   movement while waiting, playing, or returning from an Arena match.
+- Start+Select and Escape cannot abort a server-selected Arena chart. This
+  applies only while the Arena play is active; Arena OFF and ordinary play keep
+  their normal input behavior.
 - The client sends current EX and processed-note count at most once per second,
   followed by one immediate final packet. The processed-note count uses the
   larger of the play counter and judged-note total so skins or rules that keep
@@ -53,8 +56,9 @@ whether the player is actually queued.
 - After Arena play, the result screen remains until the ordinary IR submission
   finishes. Fixed Arena options are restored only after that submission has
   captured the Arena score.
-- A completed match stops queueing. Re-enter from the Web page for another
-  match.
+- A normal result or hard fail automatically returns the account to the Arena
+  queue. Client shutdown or an unexpected Arena play exit requests a
+  zero-score forfeit and stops automatic entry.
 
 ## Build
 

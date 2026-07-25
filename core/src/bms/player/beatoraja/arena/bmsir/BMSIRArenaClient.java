@@ -55,7 +55,9 @@ public final class BMSIRArenaClient {
     private static volatile boolean reserved;
     private static volatile boolean arenaPlayPending;
     private static volatile boolean arenaPlayActive;
+    private static volatile boolean forfeitRequested;
     private static volatile boolean normalResultReady = true;
+    private static volatile int currentPlayerId;
     private static volatile String currentMatchId = "";
     private static volatile long serverStartMillis;
     private static volatile long serverClockOffsetMillis;
@@ -87,6 +89,7 @@ public final class BMSIRArenaClient {
             ImGuiNotify.error("BMS-IR Arena: User IDが不正です");
             return;
         }
+        currentPlayerId = playerId;
         String passmd5 = md5(config.getPassword());
         try {
             URI uri = new URI(controller.getPlayerConfig().getBmsirArenaServer());
@@ -101,11 +104,14 @@ public final class BMSIRArenaClient {
     }
 
     public static synchronized void shutdown() {
+        sendForfeit("client_shutdown");
         initialized = false;
         connected = false;
         reserved = false;
         arenaPlayPending = false;
         arenaPlayActive = false;
+        forfeitRequested = false;
+        currentPlayerId = 0;
         currentMatchId = "";
         pendingFinal = null;
         serverClockOffsetMillis = 0L;
@@ -160,6 +166,12 @@ public final class BMSIRArenaClient {
         return arenaPlayActive;
     }
 
+    public static boolean isAbortInputBlocked() {
+        return arenaPlayActive
+                && main != null
+                && main.getPlayerConfig().isBmsirArenaEnabled();
+    }
+
     public static void enforceArenaOptions() {
         if (arenaPlayActive && main != null) {
             applyFixedOptions(main.getPlayerConfig());
@@ -177,6 +189,13 @@ public final class BMSIRArenaClient {
             return;
         }
         String value = normalizeState(state);
+        if (
+                arenaPlayActive
+                        && pendingFinal == null
+                        && ("select".equals(value) || "result".equals(value))
+        ) {
+            sendForfeit("play_aborted");
+        }
         if ("play".equals(value) && !arenaPlayActive) {
             normalResultReady = false;
         }
@@ -283,6 +302,21 @@ public final class BMSIRArenaClient {
         return message;
     }
 
+    private static void sendForfeit(String reason) {
+        if (
+                forfeitRequested
+                        || !reserved
+                        || currentMatchId.isBlank()
+                        || pendingFinal != null
+        ) {
+            return;
+        }
+        ObjectNode message = baseMatchMessage("forfeit");
+        message.put("reason", reason);
+        forfeitRequested = true;
+        send(message);
+    }
+
     private static void sendState(String state, boolean ready) {
         ObjectNode message = JSON.createObjectNode();
         message.put("type", "state");
@@ -319,8 +353,9 @@ public final class BMSIRArenaClient {
                         arenaPlayActive = false;
                         currentMatchId = "";
                         pendingFinal = null;
+                        forfeitRequested = false;
                         restoreOptionsWhenSafe();
-                        ImGuiNotify.info("Arena終了。再戦する場合はWebから再エントリーしてください", 8000);
+                        ImGuiNotify.info("Arenaの試合状態を同期しました", 8000);
                     }
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                     if (pendingFinal != null && !activeMatchId.isBlank()) {
@@ -341,6 +376,7 @@ public final class BMSIRArenaClient {
                             normalResultReady = false;
                         }
                         sequence.set(0);
+                        forfeitRequested = false;
                         ImGuiNotify.info("マッチングしました！ 現在のプレイ終了後にArenaへ移動します", 8000);
                     }
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
@@ -358,19 +394,45 @@ public final class BMSIRArenaClient {
                     }
                 }
                 case "result" -> {
+                    boolean autoReentered = false;
+                    for (JsonNode playerId : message.path("auto_reentry_player_ids")) {
+                        if (playerId.asInt() == currentPlayerId) {
+                            autoReentered = true;
+                            break;
+                        }
+                    }
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
+                    forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
                     restoreOptionsWhenSafe();
-                    ImGuiNotify.info("Arena終了。再戦する場合はWebから再エントリーしてください", 8000);
+                    ImGuiNotify.info(
+                            autoReentered
+                                    ? "Arena終了。次の対戦を待機しています"
+                                    : "Arena終了。自動エントリーを終了しました",
+                            8000
+                    );
                     sendState("result", false);
+                }
+                case "forfeit_accepted" -> {
+                    reserved = false;
+                    arenaPlayPending = false;
+                    arenaPlayActive = false;
+                    forfeitRequested = false;
+                    currentMatchId = "";
+                    pendingFinal = null;
+                    normalResultReady = true;
+                    restoreOptionsWhenSafe();
+                    ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
+                    sendState(normalizeCurrentState(), false);
                 }
                 case "match_cancelled" -> {
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
+                    forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
                     restoreOptionsWhenSafe();
@@ -380,6 +442,7 @@ public final class BMSIRArenaClient {
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
+                    forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
                     restoreOptionsWhenSafe();
