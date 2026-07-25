@@ -63,6 +63,19 @@ The server release gate checks both Arena protocol release and build identity.
 That gate controls supported distribution; server-side score/state validation
 remains necessary because an open-source client identity can be imitated.
 
+Build the distributable fat jar with an explicit target platform and
+architecture. For example, the macOS Apple Silicon canary is built with:
+
+```bash
+./gradlew clean shadowJar --no-daemon -Dplatform=macos -Darch=aarch64
+```
+
+The artifact name identifies this as the dedicated BMS-IR Arena ED client:
+
+```text
+BMS-IR-Arena-ED-0.1.0-dev-macos-aarch64.jar
+```
+
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
 commit, record the artifact hashes privately for rollout, and configure the
 server allowlists before distribution.

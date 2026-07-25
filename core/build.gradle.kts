@@ -52,15 +52,14 @@ tasks {
     shadowJar {
         dependsOn("generateBuildMetaInfo", "test")
 
-        val archProp = System.getProperty("arch")
-        val archVariant = archProp?.let { "$it-" } ?: ""
-        val platformProp = System.getProperty("platform")
-        val endlessDreamVersion = libs.versions.endlessdream.get()
-        val classifierPlatform = platformProp?.let { "$it-$archVariant$endlessDreamVersion"} ?: endlessDreamVersion
+        val platformProp = System.getProperty("platform")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val archProp = System.getProperty("arch")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val platformClassifier = listOfNotNull(platformProp, archProp).joinToString("-")
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))
-        archiveBaseName.set("lr2oraja")
-        archiveClassifier.set(classifierPlatform)
+        archiveBaseName.set("BMS-IR-Arena-ED")
+        archiveVersion.set("0.1.0-dev")
+        archiveClassifier.set(platformClassifier)
         mergeServiceFiles()
     }
 
