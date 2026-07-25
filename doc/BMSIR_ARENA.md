@@ -43,6 +43,9 @@ whether the player is actually queued.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
   CONSTANT, battle, and mode conversion are disabled for that Arena play and
   restored afterward.
+- When BMS-IR Arena is enabled, the game does not auto-catch the OS mouse
+  cursor during play. The canary client must not prevent desktop mouse
+  movement while waiting, playing, or returning from an Arena match.
 - The client sends current EX and processed-note count at most once per second,
   followed by one immediate final packet.
 - After Arena play, the result screen remains until the ordinary IR submission
