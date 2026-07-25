@@ -7,6 +7,7 @@ import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.MainState.MainStateType;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.modmenu.ArenaMenu;
@@ -15,7 +16,9 @@ import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.JudgeTrainer;
 import bms.player.beatoraja.modmenu.RandomTrainer;
 import bms.player.beatoraja.select.MusicSelector;
+import bms.player.beatoraja.select.bar.HashBar;
 import bms.player.beatoraja.select.bar.SongBar;
+import bms.player.beatoraja.select.bar.TableBar;
 import bms.player.beatoraja.song.SongData;
 
 import com.badlogic.gdx.Gdx;
@@ -30,7 +33,11 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -46,8 +53,12 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.5-dev";
+    private static final String CLIENT_VERSION = "0.1.6-dev";
     private static final int PROTOCOL_VERSION = 1;
+    private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
+    private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
+    private static final String OFFICIAL_ARENA_TABLE_URL =
+            "https://darksabun.club/table/archive/insane1/";
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
 
@@ -81,6 +92,7 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode nominationView = JSON.createObjectNode();
     private static volatile boolean nominationOpen;
     private static volatile long nominationDeadlineMillis;
+    private static volatile int nominationTargetBand;
 
     private BMSIRArenaClient() {
     }
@@ -284,6 +296,146 @@ public final class BMSIRArenaClient {
         }
         SongData song = songBar.getSongData();
         return song != null && !song.getMd5().isBlank() ? song : null;
+    }
+
+    static boolean isOfficialArenaTable(String name, String url) {
+        String normalizedName = name == null ? "" : name.trim();
+        String normalizedUrl = url == null
+                ? ""
+                : url.trim().toLowerCase(Locale.ROOT);
+        return OFFICIAL_ARENA_TABLE_NAME.equals(normalizedName)
+                || OFFICIAL_ARENA_TABLE_URL.equals(normalizedUrl);
+    }
+
+    static int officialArenaLevel(String label) {
+        if (label == null || !label.startsWith("★")) {
+            return -1;
+        }
+        try {
+            int level = Integer.parseInt(label.substring(1));
+            return level >= 1 && level <= MAX_OFFICIAL_ARENA_LEVEL
+                    ? level
+                    : -1;
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    static SongData[] nominationCandidateElements(
+            TableBar[] tables,
+            int targetBand
+    ) {
+        if (tables == null) {
+            return SongData.EMPTY;
+        }
+        return nominationCandidateElements(
+                Arrays.stream(tables)
+                        .filter(Objects::nonNull)
+                        .map(TableBar::getTableData)
+                        .toArray(TableData[]::new),
+                targetBand
+        );
+    }
+
+    static SongData[] nominationCandidateElements(
+            TableData[] tables,
+            int targetBand
+    ) {
+        int ceiling = Math.max(
+                1,
+                Math.min(MAX_OFFICIAL_ARENA_LEVEL, targetBand)
+        );
+        Map<String, SongData> candidates = new LinkedHashMap<>();
+        if (tables == null) {
+            return SongData.EMPTY;
+        }
+        for (TableData table : tables) {
+            if (
+                    table == null
+                            || !isOfficialArenaTable(
+                                    table.getName(),
+                                    table.getUrl()
+                            )
+            ) {
+                continue;
+            }
+            for (TableData.TableFolder folder : table.getFolder()) {
+                int level = officialArenaLevel(folder.getName());
+                if (level < 1 || level > ceiling) {
+                    continue;
+                }
+                for (SongData song : folder.getSong()) {
+                    String md5 = song == null ? "" : song.getMd5();
+                    if (md5 != null && !md5.isBlank()) {
+                        candidates.putIfAbsent(
+                                md5.toLowerCase(Locale.ROOT),
+                                song
+                        );
+                    }
+                }
+            }
+            break;
+        }
+        return candidates.values().toArray(SongData[]::new);
+    }
+
+    private static void openNominationCandidateFolder(int targetBand) {
+        MainController controller = main;
+        String matchId = currentMatchId;
+        if (controller == null || Gdx.app == null) {
+            return;
+        }
+        Gdx.app.postRunnable(() -> {
+            if (
+                    controller != main
+                            || !isNominationOpen()
+                            || !matchId.equals(currentMatchId)
+                            || !(controller.getCurrentState()
+                                    instanceof MusicSelector selector)
+            ) {
+                return;
+            }
+            SongData[] candidates = nominationCandidateElements(
+                    selector.getBarManager().getTables(),
+                    targetBand
+            );
+            if (candidates.length == 0) {
+                arenaUiMessage =
+                        "発狂BMS難易度表が見つかりません。現在の一覧から選曲してください";
+                ImGuiNotify.warning(
+                        "Arena選曲: 発狂BMS難易度表の候補を読み込めませんでした"
+                );
+                return;
+            }
+            SongData[] owned = selector.getSongDatabase().getSongDatas(
+                    Arrays.stream(candidates)
+                            .map(SongData::getMd5)
+                            .toArray(String[]::new)
+            );
+            if (owned.length == 0) {
+                arenaUiMessage =
+                        "選曲可能な所持譜面がありません。ランダム選曲を利用できます";
+                ImGuiNotify.warning(
+                        "Arena選曲: ★1～★"
+                                + targetBand
+                                + "の所持譜面がありません"
+                );
+                return;
+            }
+            HashBar arenaFolder = new HashBar(
+                    selector,
+                    "BMS-IR Arena ★1～★" + targetBand,
+                    owned
+            );
+            if (selector.getBarManager().updateBar(arenaFolder)) {
+                ImGuiNotify.info(
+                        "Arena選曲候補を表示しました（所持"
+                                + owned.length
+                                + "譜面）",
+                        5000
+                );
+            }
+        });
     }
 
     public static void requestCurrentChartNomination() {
@@ -747,13 +899,20 @@ public final class BMSIRArenaClient {
         if (!currentMatchId.equals(message.path("match_id").asText())) {
             return;
         }
+        int targetBand = message.path("target_band").asInt(1);
+        boolean shouldOpenCandidates =
+                !nominationOpen || nominationTargetBand != targetBand;
         nominationView = message;
         nominationOpen = true;
+        nominationTargetBand = targetBand;
         nominationDeadlineMillis = Math.round(
                 message.path("deadline").asDouble() * 1000.0
         );
         queueStatus = "matched";
         arenaUiMessage = "次のArena課題曲を選んでください";
+        if (shouldOpenCandidates) {
+            openNominationCandidateFolder(targetBand);
+        }
     }
 
     static void receiveNominationsRevealed(JsonNode message) {
@@ -774,6 +933,7 @@ public final class BMSIRArenaClient {
         nominationView = JSON.createObjectNode();
         nominationOpen = false;
         nominationDeadlineMillis = 0L;
+        nominationTargetBand = 0;
     }
 
     private static void receiveLiveView(JsonNode message) {

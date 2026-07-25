@@ -538,11 +538,12 @@ public final class BMSIRArenaOverlay {
 
         long seconds = BMSIRArenaClient.nominationSecondsRemaining();
         int targetBand = nomination.path("target_band").asInt(1);
-        ImGui.text(FontAwesomeIcons.Clock + " 選曲受付");
-        ImGui.sameLine();
-        ImGui.textDisabled(seconds + "秒");
-        ImGui.sameLine();
-        ImGui.text("★1～★" + targetBand);
+        ImGui.setWindowFontScale(1.45f);
+        ImGui.textWrapped(FontAwesomeIcons.Music + " 選曲してください");
+        ImGui.textWrapped(FontAwesomeIcons.Clock + " 残り " + seconds + "秒");
+        ImGui.setWindowFontScale(1.0f);
+        ImGui.spacing();
+        ImGui.text("選曲可能: ★1～★" + targetBand);
         ImGui.separator();
 
         SongData current = BMSIRArenaClient.currentNominationSong();

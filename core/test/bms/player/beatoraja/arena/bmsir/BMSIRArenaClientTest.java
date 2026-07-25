@@ -3,11 +3,14 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRArenaClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -80,16 +83,90 @@ class BMSIRArenaClientTest {
     @Test
     void nominationCountdownRoundsUpAndStopsAtZero() {
         assertEquals(
-                20,
-                BMSIRArenaClient.nominationCountdownSeconds(21_000, 1_000)
+                60,
+                BMSIRArenaClient.nominationCountdownSeconds(61_000, 1_000)
         );
         assertEquals(
                 1,
-                BMSIRArenaClient.nominationCountdownSeconds(21_000, 20_999)
+                BMSIRArenaClient.nominationCountdownSeconds(61_000, 60_999)
         );
         assertEquals(
                 0,
-                BMSIRArenaClient.nominationCountdownSeconds(21_000, 21_000)
+                BMSIRArenaClient.nominationCountdownSeconds(61_000, 61_000)
         );
+    }
+
+    @Test
+    void officialArenaLevelsExcludeZeroUnknownAndOutOfRangeFolders() {
+        assertEquals(1, BMSIRArenaClient.officialArenaLevel("★1"));
+        assertEquals(25, BMSIRArenaClient.officialArenaLevel("★25"));
+        assertEquals(-1, BMSIRArenaClient.officialArenaLevel("★0"));
+        assertEquals(-1, BMSIRArenaClient.officialArenaLevel("★26"));
+        assertEquals(-1, BMSIRArenaClient.officialArenaLevel("★???"));
+        assertEquals(-1, BMSIRArenaClient.officialArenaLevel("▼1"));
+    }
+
+    @Test
+    void officialArenaTableMatchesTheKnownNameOrUrl() {
+        assertTrue(
+                BMSIRArenaClient.isOfficialArenaTable(
+                        "発狂BMS難易度表",
+                        ""
+                )
+        );
+        assertTrue(
+                BMSIRArenaClient.isOfficialArenaTable(
+                        "",
+                        "https://darksabun.club/table/archive/insane1/"
+                )
+        );
+        assertFalse(
+                BMSIRArenaClient.isOfficialArenaTable(
+                        "NEW GENERATION 発狂難易度表",
+                        "http://rattoto10.jounin.jp/table_insane.html"
+                )
+        );
+    }
+
+    @Test
+    void nominationCandidatesUseOwnedOfficialLevelsThroughTheCeiling() {
+        SongData levelOne = song("a");
+        SongData levelTwo = song("b");
+        SongData levelThree = song("c");
+        TableData table = new TableData();
+        table.setName("発狂BMS難易度表");
+        table.setFolder(new TableData.TableFolder[]{
+                folder("★0", song("z")),
+                folder("★1", levelOne),
+                folder("★2", levelOne, levelTwo),
+                folder("★3", levelThree),
+                folder("★???", song("x"))
+        });
+
+        SongData[] candidates =
+                BMSIRArenaClient.nominationCandidateElements(
+                        new TableData[]{table},
+                        2
+                );
+
+        assertEquals(2, candidates.length);
+        assertEquals("a", candidates[0].getMd5());
+        assertEquals("b", candidates[1].getMd5());
+    }
+
+    private static TableData.TableFolder folder(
+            String name,
+            SongData... songs
+    ) {
+        TableData.TableFolder folder = new TableData.TableFolder();
+        folder.setName(name);
+        folder.setSong(songs);
+        return folder;
+    }
+
+    private static SongData song(String md5) {
+        SongData song = new SongData();
+        song.setMd5(md5);
+        return song;
     }
 }

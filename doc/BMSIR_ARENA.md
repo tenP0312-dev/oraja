@@ -103,7 +103,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.5-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.6-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
