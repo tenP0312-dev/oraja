@@ -47,7 +47,9 @@ whether the player is actually queued.
   cursor during play. The canary client must not prevent desktop mouse
   movement while waiting, playing, or returning from an Arena match.
 - The client sends current EX and processed-note count at most once per second,
-  followed by one immediate final packet.
+  followed by one immediate final packet. The processed-note count uses the
+  larger of the play counter and judged-note total so skins or rules that keep
+  the in-play pass counter stale still update spectators.
 - After Arena play, the result screen remains until the ordinary IR submission
   finishes. Fixed Arena options are restored only after that submission has
   captured the Arena score.

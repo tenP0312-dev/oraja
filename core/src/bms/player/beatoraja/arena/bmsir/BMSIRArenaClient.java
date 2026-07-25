@@ -245,7 +245,7 @@ public final class BMSIRArenaClient {
         ObjectNode message = baseMatchMessage("live");
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
-        message.put("processed_notes", Math.max(0, score.getPassnotes()));
+        message.put("processed_notes", processedNotes(score));
         send(message);
     }
 
@@ -256,11 +256,24 @@ public final class BMSIRArenaClient {
         ObjectNode message = baseMatchMessage("final");
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
-        message.put("processed_notes", Math.max(0, score.getPassnotes()));
+        message.put("processed_notes", processedNotes(score));
         message.put("state", hardFail ? "hard_fail" : "complete");
         pendingFinal = message;
         send(message);
         arenaPlayActive = false;
+    }
+
+    private static int processedNotes(ScoreData score) {
+        if (score == null) {
+            return 0;
+        }
+        int judged = 0;
+        for (int judge = 0; judge <= 5; judge++) {
+            judged += Math.max(0, score.getJudgeCount(judge));
+        }
+        int processed = Math.max(Math.max(0, score.getPassnotes()), judged);
+        int total = score.getNotes();
+        return total > 0 ? Math.min(processed, total) : processed;
     }
 
     private static ObjectNode baseMatchMessage(String type) {
