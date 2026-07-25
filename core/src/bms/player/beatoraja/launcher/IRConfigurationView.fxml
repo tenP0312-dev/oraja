@@ -69,4 +69,17 @@
 		</VBox.margin>
 		<CheckBox fx:id="importscore" prefHeight="24.0" prefWidth="200.0" text="%IR_IMPORT_SCORE"/>
 	</HBox>
+	<HBox prefHeight="15.0" prefWidth="740.0">
+		<VBox.margin>
+			<Insets top="30.0" />
+		</VBox.margin>
+		<CheckBox fx:id="bmsirArenaEnabled" prefHeight="24.0" prefWidth="360.0" text="BMS-IR Arenaを有効にする"/>
+	</HBox>
+	<HBox prefHeight="15.0" prefWidth="740.0">
+		<VBox.margin>
+			<Insets top="20.0" />
+		</VBox.margin>
+		<Label prefHeight="24.0" prefWidth="100.0" text="Arena Server"/>
+		<TextField fx:id="bmsirArenaServer" prefHeight="24.0" prefWidth="430.0"/>
+	</HBox>
 </VBox>

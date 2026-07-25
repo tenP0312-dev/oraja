@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.arena.client.Client;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
@@ -110,6 +111,7 @@ public class BMSPlayer extends MainState {
 
 	public BMSPlayer(MainController main, PlayerResource resource) {
 		super(main);
+		BMSIRArenaClient.enforceArenaOptions();
 		this.model = resource.getBMSModel();
 		BMSPlayerMode autoplay = resource.getPlayMode();
 		PlayerConfig config = resource.getPlayerConfig();

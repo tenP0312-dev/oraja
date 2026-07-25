@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.exceptions.PlayerConfigException;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.modmenu.*;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
 import bms.tool.mdprocessor.HttpDownloadSource;
@@ -381,6 +382,7 @@ public class MainController {
 		} else {
 			Gdx.input.setInputProcessor(input.getKeyBoardInputProcesseor());
 		}
+		BMSIRArenaClient.onStateChange(state);
 	}
 
 	private void changeState(MainState newState) {
@@ -615,6 +617,7 @@ public class MainController {
 		SkinMenu.init(this, player);
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
+		BMSIRArenaClient.initialize(this);
 	}
 
 	private void triggerLnWarning() {
@@ -872,6 +875,7 @@ public class MainController {
 	}
 
 	public void dispose() {
+		BMSIRArenaClient.shutdown();
 		saveConfig();
 
 		if (selector != null) {

@@ -115,6 +115,22 @@ public class ArenaMenu {
         }
     }
 
+    /**
+     * Start the BMS-IR selected Arena chart as an ordinary single-song play.
+     * This must run on the libGDX main thread.
+     */
+    public static void startCurrentLobbySong() {
+        SongData songData = Client.state.getCurrentSongData();
+        if (songData == null || selector == null) {
+            ImGuiNotify.error("BMS-IR Arena: 課題譜面を開始できません");
+            return;
+        }
+        ArenaBar bar = new ArenaBar(selector, songData);
+        selector.setSelectedReplay(-1);
+        selector.select(bar);
+        selector.readChart(songData, bar);
+    }
+
     public static void refreshMissingChartState() {
         MainController.pushOneShotAfterRenderTask(main -> {
             String md5 = Client.state.getSelectedSongRemote().getMd5();

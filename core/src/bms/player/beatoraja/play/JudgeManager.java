@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import bms.player.beatoraja.arena.client.Client;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.Score;
 import com.badlogic.gdx.utils.FloatArray;
@@ -771,6 +772,7 @@ public class JudgeManager {
         }
         // NOTE: Hook for Arena
         Client.send(ClientToServer.CTS_PLAYER_SCORE, createArenaScore(score).pack());
+        BMSIRArenaClient.onJudge(score);
     }
 
     public long[] getRecentJudges() {

@@ -39,6 +39,10 @@ public class IRConfigurationView implements Initializable {
 	private CheckBox importrival;
 	@FXML
 	private CheckBox importscore;
+	@FXML
+	private CheckBox bmsirArenaEnabled;
+	@FXML
+	private TextField bmsirArenaServer;
 	
 	private Map<String, IRConfig> irmap = new HashMap<String, IRConfig>();
 	
@@ -77,6 +81,8 @@ public class IRConfigurationView implements Initializable {
 		}
 		irname.setValue(primary);
 		updateIRConnection();
+		bmsirArenaEnabled.setSelected(player.isBmsirArenaEnabled());
+		bmsirArenaServer.setText(player.getBmsirArenaServer());
 
     }
 
@@ -97,6 +103,8 @@ public class IRConfigurationView implements Initializable {
 		}
 		
 		player.setIrconfig(irlist.toArray(new IRConfig[irlist.size()]));
+		player.setBmsirArenaEnabled(bmsirArenaEnabled.isSelected());
+		player.setBmsirArenaServer(bmsirArenaServer.getText());
     }
     
 	@FXML

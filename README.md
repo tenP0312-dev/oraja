@@ -21,6 +21,10 @@ Based on [LR2oraja](https://github.com/wcko87/lr2oraja), which is itself a fork 
 * Compatible with beatoraja 0.8.8 installs
 * Built in Mod Menu, accessible using **`F5` or `Insert`**
 
+The BMS-IR development branch also contains the opt-in dedicated
+[BMS-IR Arena client](doc/BMSIR_ARENA.md). Its server and public download are
+not live yet.
+
 ## Downloads
 > [!NOTE]
 > As of 0.3.0 the Java version has changed from 8 to 17, please check the releases page to update your installations java version

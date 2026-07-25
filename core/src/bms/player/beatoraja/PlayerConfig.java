@@ -238,6 +238,14 @@ public final class PlayerConfig {
 	private int musicselectinput = 0;
 
 	private IRConfig[] irconfig;
+
+	/**
+	 * BMS-IR Arena connects only when this startup option is enabled.
+	 * Match entry itself is controlled from the authenticated BMS-IR Web page.
+	 */
+	private boolean bmsirArenaEnabled = false;
+
+	private String bmsirArenaServer = "wss://www.bms-ir.org/new/arena/ws/client";
 	
 	private String twitterConsumerKey;
 
@@ -553,6 +561,27 @@ public final class PlayerConfig {
 
 	public void setIrconfig(IRConfig[] irconfig) {
 		this.irconfig = irconfig;
+	}
+
+	public boolean isBmsirArenaEnabled() {
+		return bmsirArenaEnabled;
+	}
+
+	public void setBmsirArenaEnabled(boolean bmsirArenaEnabled) {
+		this.bmsirArenaEnabled = bmsirArenaEnabled;
+	}
+
+	public String getBmsirArenaServer() {
+		if (bmsirArenaServer == null || bmsirArenaServer.isBlank()) {
+			bmsirArenaServer = "wss://www.bms-ir.org/new/arena/ws/client";
+		}
+		return bmsirArenaServer;
+	}
+
+	public void setBmsirArenaServer(String bmsirArenaServer) {
+		this.bmsirArenaServer = bmsirArenaServer == null || bmsirArenaServer.isBlank()
+				? "wss://www.bms-ir.org/new/arena/ws/client"
+				: bmsirArenaServer.trim();
 	}
 
 	public String getTargetid() {

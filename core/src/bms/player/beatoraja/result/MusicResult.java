@@ -20,6 +20,7 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.MainController.IRStatus;
 import bms.player.beatoraja.MainController.IRSendStatus;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.skin.SkinType;
@@ -74,6 +75,10 @@ public class MusicResult extends AbstractResult {
 	public void prepare() {
 		state = STATE_OFFLINE;
 		final ScoreData newscore = getNewScore();
+		BMSIRArenaClient.onMusicResultPrepared(
+				newscore,
+				newscore != null && newscore.getClear() == Failed.id
+		);
 
 		ranking = resource.getRankingData() != null && resource.getCourseBMSModels() == null ? resource.getRankingData() : new RankingData();
 		rankingOffset = 0;
@@ -147,8 +152,12 @@ public class MusicResult extends AbstractResult {
 					}
 				}
 				state = STATE_IR_FINISHED;
+				BMSIRArenaClient.onNormalResultReady();
             });
 			irprocess.start();
+		}
+		if (state == STATE_OFFLINE) {
+			BMSIRArenaClient.onNormalResultReady();
 		}
 
 		final ScoreData cscore = resource.getCourseScoreData();
@@ -252,7 +261,7 @@ public class MusicResult extends AbstractResult {
 				}
 			}
 		} else {
-			if (time > getSkin().getScene()) {
+			if (time > getSkin().getScene() && !BMSIRArenaClient.isAwaitingNormalResult()) {
 				timer.switchTimer(TIMER_FADEOUT, true);
 				if (getSound(RESULT_CLOSE) != null) {
 					stop(RESULT_CLEAR);
@@ -292,7 +301,9 @@ public class MusicResult extends AbstractResult {
 					if (((MusicResultSkin) getSkin()).getRankTime() != 0
 							&& !timer.isTimerOn(TIMER_RESULT_UPDATESCORE)) {
 						timer.switchTimer(TIMER_RESULT_UPDATESCORE, true);
-					} else if (state == STATE_OFFLINE || state == STATE_IR_FINISHED ||  time - timer.getTimer(TIMER_IR_CONNECT_BEGIN) >=  1000) {
+					} else if (!BMSIRArenaClient.isAwaitingNormalResult()
+							&& (state == STATE_OFFLINE || state == STATE_IR_FINISHED
+							|| time - timer.getTimer(TIMER_IR_CONNECT_BEGIN) >= 1000)) {
 						timer.switchTimer(TIMER_FADEOUT, true);
 						if (getSound(RESULT_CLOSE) != null) {
 							stop(RESULT_CLEAR);
