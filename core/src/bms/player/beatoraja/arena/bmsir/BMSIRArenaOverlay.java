@@ -38,7 +38,12 @@ public final class BMSIRArenaOverlay {
     private static final int GRAPH_TEXT = ImColor.rgb(238, 242, 246);
     private static final int GRAPH_TEXT_MUTED = ImColor.rgb(174, 184, 194);
     private static final int GRAPH_SELECTED = ImColor.rgb(255, 255, 255);
-    private static final float GAMEPLAY_GRAPH_HEIGHT = 400.0f;
+    private static final float VIEWPORT_MARGIN = 18.0f;
+    private static final float GAMEPLAY_WINDOW_MIN_WIDTH = 420.0f;
+    private static final float GAMEPLAY_WINDOW_MAX_WIDTH = 760.0f;
+    private static final float GAMEPLAY_WINDOW_MIN_HEIGHT = 300.0f;
+    private static final float GAMEPLAY_WINDOW_MAX_HEIGHT = 520.0f;
+    private static final float GAMEPLAY_GRAPH_MIN_HEIGHT = 210.0f;
     private static final float MATCH_GRAPH_HEIGHT = 350.0f;
 
     private static boolean confirmWithdrawal;
@@ -86,32 +91,32 @@ public final class BMSIRArenaOverlay {
     private static void renderGameplayOverlay() {
         JsonNode match = BMSIRArenaClient.currentMatchView();
         boolean hasMatch = match.isObject() && match.size() > 0;
-        float windowWidth = hasMatch
-                ? Math.min(760.0f, Math.max(700.0f, ImGuiRenderer.windowWidth * 0.44f))
-                : 360.0f;
-        windowWidth = Math.min(windowWidth, Math.max(360.0f, ImGuiRenderer.windowWidth - 36.0f));
-        float windowHeight = hasMatch ? GAMEPLAY_GRAPH_HEIGHT + 86.0f : 48.0f;
+        if (!hasMatch) {
+            renderGameplayStatusOverlay();
+            return;
+        }
+
+        float windowWidth = defaultGameplayWindowWidth(ImGuiRenderer.windowWidth);
+        float windowHeight = defaultGameplayWindowHeight(ImGuiRenderer.windowHeight);
         ImGui.setNextWindowPos(
-                Math.max(18, ImGuiRenderer.windowWidth - windowWidth - 18),
-                18,
-                ImGuiCond.Always
+                ImGuiRenderer.windowWidth / 2.0f,
+                Math.max(VIEWPORT_MARGIN, ImGuiRenderer.windowHeight - VIEWPORT_MARGIN),
+                ImGuiCond.FirstUseEver,
+                0.5f,
+                1.0f
         );
-        ImGui.setNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always);
+        ImGui.setNextWindowSize(windowWidth, windowHeight, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSizeConstraints(
+                Math.min(GAMEPLAY_WINDOW_MIN_WIDTH, maximumGameplayWindowWidth(ImGuiRenderer.windowWidth)),
+                Math.min(GAMEPLAY_WINDOW_MIN_HEIGHT, maximumGameplayWindowHeight(ImGuiRenderer.windowHeight)),
+                maximumGameplayWindowWidth(ImGuiRenderer.windowWidth),
+                maximumGameplayWindowHeight(ImGuiRenderer.windowHeight)
+        );
         ImGui.setNextWindowBgAlpha(0.88f);
-        int flags = ImGuiWindowFlags.NoDecoration
-                | ImGuiWindowFlags.NoInputs
-                | ImGuiWindowFlags.NoNav
-                | ImGuiWindowFlags.NoSavedSettings
+        int flags = ImGuiWindowFlags.NoNav
                 | ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus;
         if (!ImGui.begin("BMS-IR Arena##gameplay", flags)) {
-            ImGui.end();
-            return;
-        }
-        ImGui.text("BMS-IR Arena");
-        if (!hasMatch) {
-            ImGui.sameLine();
-            ImGui.textDisabled(BMSIRArenaClient.arenaUiMessage());
             ImGui.end();
             return;
         }
@@ -119,8 +124,63 @@ public final class BMSIRArenaOverlay {
         if (!title.isBlank()) {
             ImGui.textWrapped(title);
         }
-        renderScoreGraph(match, GAMEPLAY_GRAPH_HEIGHT);
+        renderScoreGraph(match, Math.max(GAMEPLAY_GRAPH_MIN_HEIGHT, ImGui.getContentRegionAvailY()));
         ImGui.end();
+    }
+
+    private static void renderGameplayStatusOverlay() {
+        float width = Math.min(360.0f, maximumGameplayWindowWidth(ImGuiRenderer.windowWidth));
+        ImGui.setNextWindowPos(
+                ImGuiRenderer.windowWidth / 2.0f,
+                Math.max(VIEWPORT_MARGIN, ImGuiRenderer.windowHeight - VIEWPORT_MARGIN),
+                ImGuiCond.Always,
+                0.5f,
+                1.0f
+        );
+        ImGui.setNextWindowSize(width, 48.0f, ImGuiCond.Always);
+        ImGui.setNextWindowBgAlpha(0.88f);
+        int flags = ImGuiWindowFlags.NoDecoration
+                | ImGuiWindowFlags.NoInputs
+                | ImGuiWindowFlags.NoNav
+                | ImGuiWindowFlags.NoSavedSettings
+                | ImGuiWindowFlags.NoFocusOnAppearing
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+        if (!ImGui.begin("BMS-IR Arena##gameplay-status", flags)) {
+            ImGui.end();
+            return;
+        }
+        ImGui.text("BMS-IR Arena");
+        ImGui.sameLine();
+        ImGui.textDisabled(BMSIRArenaClient.arenaUiMessage());
+        ImGui.end();
+    }
+
+    static float defaultGameplayWindowWidth(int viewportWidth) {
+        return Math.min(
+                maximumGameplayWindowWidth(viewportWidth),
+                Math.min(
+                        GAMEPLAY_WINDOW_MAX_WIDTH,
+                        Math.max(GAMEPLAY_WINDOW_MIN_WIDTH, viewportWidth * 0.5f)
+                )
+        );
+    }
+
+    static float defaultGameplayWindowHeight(int viewportHeight) {
+        return Math.min(
+                maximumGameplayWindowHeight(viewportHeight),
+                Math.min(
+                        GAMEPLAY_WINDOW_MAX_HEIGHT,
+                        Math.max(GAMEPLAY_WINDOW_MIN_HEIGHT, viewportHeight * 0.55f)
+                )
+        );
+    }
+
+    private static float maximumGameplayWindowWidth(int viewportWidth) {
+        return Math.max(1.0f, viewportWidth - VIEWPORT_MARGIN * 2.0f);
+    }
+
+    private static float maximumGameplayWindowHeight(int viewportHeight) {
+        return Math.max(1.0f, viewportHeight - VIEWPORT_MARGIN * 2.0f);
     }
 
     private static void renderScoreGraph(JsonNode match, float height) {

@@ -14,4 +14,14 @@ class BMSIRArenaOverlayTest {
         assertEquals(0.0, BMSIRArenaOverlay.scoreRate(-1, 100));
         assertEquals(0.0, BMSIRArenaOverlay.scoreRate(100, 0));
     }
+
+    @Test
+    void gameplayWindowDefaultsScaleWithinTheViewport() {
+        assertEquals(640.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1280));
+        assertEquals(760.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1920));
+        assertEquals(420.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(640));
+        assertEquals(396.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(720));
+        assertEquals(520.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(1080));
+        assertEquals(300.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(360));
+    }
 }

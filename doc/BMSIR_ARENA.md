@@ -16,8 +16,10 @@ The startup switch controls the real-time connection. The authenticated
 in-game overlay controls entry, waiting cancellation, and match withdrawal.
 It also shows the current rating, an up-to-eight-player real-time vertical EX
 graph with MAX/AAA/AA/A guides and per-player OP, live/final result details
-with clear lamps, and the Arena rating leaders. The Web Arena page remains
-available for the same queue controls, spectating, and durable match history.
+with clear lamps, and the Arena rating leaders. During play, the graph opens
+at the bottom center and can be moved and resized; ImGui stores the adjusted
+position and size in `layout.ini`. The Web Arena page remains available for the
+same queue controls, spectating, and durable match history.
 
 ## Dedicated-client long-note policy
 
@@ -92,7 +94,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.3-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.4-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
