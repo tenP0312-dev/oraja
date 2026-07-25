@@ -14,9 +14,10 @@ downloads are live, but global Web navigation and announcement are not.
 
 The startup switch controls the real-time connection. The authenticated
 in-game overlay controls entry, waiting cancellation, and match withdrawal.
-It also shows the current rating, live/final results with OP and clear lamp,
-and the Arena rating leaders. The Web Arena page remains available for the
-same queue controls, spectating, and durable match history.
+It also shows the current rating, an up-to-eight-player real-time vertical EX
+graph with MAX/AAA/AA/A guides and per-player OP, live/final result details
+with clear lamps, and the Arena rating leaders. The Web Arena page remains
+available for the same queue controls, spectating, and durable match history.
 
 ## Dedicated-client long-note policy
 
@@ -91,7 +92,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.2-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.3-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
