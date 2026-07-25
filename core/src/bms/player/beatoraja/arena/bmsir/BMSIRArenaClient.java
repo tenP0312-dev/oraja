@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.1-dev";
+    private static final String CLIENT_VERSION = "0.1.2-dev";
     private static final int PROTOCOL_VERSION = 1;
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
@@ -69,6 +69,13 @@ public final class BMSIRArenaClient {
     private static final AtomicLong sequence = new AtomicLong();
     private static volatile long lastLiveNanos;
     private static volatile OptionSnapshot savedOptions;
+    private static volatile double arenaRating = 1000.0;
+    private static volatile int arenaMatchesPlayed;
+    private static volatile String queueStatus = "idle";
+    private static volatile String arenaUiMessage = "";
+    private static volatile JsonNode rankingView = JSON.createObjectNode();
+    private static volatile JsonNode liveView = JSON.createObjectNode();
+    private static volatile JsonNode resultView = JSON.createObjectNode();
 
     private BMSIRArenaClient() {
     }
@@ -122,6 +129,13 @@ public final class BMSIRArenaClient {
         currentPlayMode = 0;
         currentChartTotalNotes = 0;
         serverClockOffsetMillis = 0L;
+        arenaRating = 1000.0;
+        arenaMatchesPlayed = 0;
+        queueStatus = "idle";
+        arenaUiMessage = "";
+        rankingView = JSON.createObjectNode();
+        liveView = JSON.createObjectNode();
+        resultView = JSON.createObjectNode();
         restoreOptions();
         ArenaSocket old = socket;
         socket = null;
@@ -171,6 +185,78 @@ public final class BMSIRArenaClient {
 
     public static boolean isArenaPlayActive() {
         return arenaPlayActive;
+    }
+
+    static boolean shouldShowOverlay() {
+        return initialized
+                && main != null
+                && main.getPlayerConfig().isBmsirArenaEnabled();
+    }
+
+    static boolean isConnected() {
+        return connected;
+    }
+
+    static boolean isReserved() {
+        return reserved;
+    }
+
+    static int currentPlayerId() {
+        return currentPlayerId;
+    }
+
+    static double arenaRating() {
+        return arenaRating;
+    }
+
+    static int arenaMatchesPlayed() {
+        return arenaMatchesPlayed;
+    }
+
+    static String queueStatus() {
+        return queueStatus;
+    }
+
+    static String arenaUiMessage() {
+        return arenaUiMessage;
+    }
+
+    static JsonNode rankingView() {
+        return rankingView;
+    }
+
+    static JsonNode currentMatchView() {
+        return resultView.isObject() && resultView.size() > 0
+                ? resultView
+                : liveView;
+    }
+
+    static boolean isShowingCompletedResult() {
+        return resultView.isObject() && resultView.size() > 0;
+    }
+
+    static boolean isGameplayState() {
+        return "play".equals(normalizeCurrentState());
+    }
+
+    static void requestQueueEntry() {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "queue_entry");
+        arenaUiMessage = "エントリーを送信しています";
+        send(message);
+    }
+
+    static void requestQueueCancel() {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "queue_cancel");
+        arenaUiMessage = reserved ? "棄権を送信しています" : "待機解除を送信しています";
+        send(message);
+    }
+
+    static void requestArenaStatus() {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "arena_status");
+        send(message);
     }
 
     public static boolean isAbortInputBlocked() {
@@ -374,6 +460,7 @@ public final class BMSIRArenaClient {
             switch (message.path("type").asText()) {
                 case "hello_ok" -> {
                     connected = true;
+                    arenaUiMessage = "Arenaサーバーへ接続しました";
                     updateServerClock(message);
                     ImGuiNotify.info("BMS-IR Arenaへ接続しました");
                     String activeMatchId = message.path("active_match_id").asText();
@@ -395,12 +482,15 @@ public final class BMSIRArenaClient {
                     }
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                 }
+                case "arena_status" -> receiveArenaStatus(message);
                 case "pong" -> updateServerClock(message);
                 case "match_reserved" -> {
                     String incomingMatchId = message.path("match_id").asText();
                     boolean sameMatch = reserved && currentMatchId.equals(incomingMatchId);
                     currentMatchId = incomingMatchId;
                     reserved = true;
+                    queueStatus = "reserved";
+                    arenaUiMessage = "マッチングしました";
                     if (!sameMatch) {
                         String currentState = normalizeCurrentState();
                         if ("select".equals(currentState)) {
@@ -419,6 +509,7 @@ public final class BMSIRArenaClient {
                 }
                 case "chart" -> receiveChart(message);
                 case "start" -> scheduleArenaStart(message);
+                case "live" -> receiveLiveView(message);
                 case "match_resume" -> {
                     String incomingMatchId = message.path("match_id").asText();
                     currentMatchId = incomingMatchId;
@@ -430,6 +521,8 @@ public final class BMSIRArenaClient {
                     }
                 }
                 case "result" -> {
+                    resultView = message;
+                    liveView = message;
                     boolean autoReentered = false;
                     for (JsonNode playerId : message.path("auto_reentry_player_ids")) {
                         if (playerId.asInt() == currentPlayerId) {
@@ -437,6 +530,17 @@ public final class BMSIRArenaClient {
                             break;
                         }
                     }
+                    for (JsonNode player : message.path("players")) {
+                        if (player.path("player_id").asInt() == currentPlayerId) {
+                            arenaRating = player.path("after").asDouble(arenaRating);
+                            arenaMatchesPlayed++;
+                            break;
+                        }
+                    }
+                    queueStatus = autoReentered ? "queued" : "cancelled";
+                    arenaUiMessage = autoReentered
+                            ? "対戦終了。次の対戦を待機しています"
+                            : "対戦終了。自動エントリーを終了しました";
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
@@ -454,8 +558,11 @@ public final class BMSIRArenaClient {
                             8000
                     );
                     sendState("result", false);
+                    requestArenaStatus();
                 }
                 case "forfeit_accepted" -> {
+                    queueStatus = "cancelled";
+                    arenaUiMessage = "対戦を棄権しました";
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
@@ -469,8 +576,10 @@ public final class BMSIRArenaClient {
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
                     sendState(normalizeCurrentState(), false);
+                    requestArenaStatus();
                 }
                 case "match_cancelled" -> {
+                    arenaUiMessage = "試合がキャンセルされました";
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
@@ -482,8 +591,14 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
+                    requestArenaStatus();
                 }
                 case "match_released" -> {
+                    boolean queueRetained = message.path("queue_retained").asBoolean();
+                    queueStatus = queueRetained ? "queued" : "cancelled";
+                    arenaUiMessage = queueRetained
+                            ? "今回の組み合わせから外れました。待機は継続しています"
+                            : "今回の組み合わせから外れました";
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
@@ -495,19 +610,48 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning(
-                            message.path("queue_retained").asBoolean()
+                            queueRetained
                                     ? "Arenaの今回の組み合わせから外れました。待機は継続しています"
                                     : "Arenaの今回の組み合わせから外れました"
                     );
                 }
                 case "replaced" -> ImGuiNotify.warning("BMS-IR Arena: 同じアカウントの別本体へ接続を移しました");
-                case "error" -> ImGuiNotify.error(
-                        "BMS-IR Arena: " + message.path("message").asText(message.path("code").asText()));
+                case "error" -> {
+                    arenaUiMessage = message.path("message").asText(message.path("code").asText());
+                    ImGuiNotify.error("BMS-IR Arena: " + arenaUiMessage);
+                }
                 default -> {
                 }
             }
         } catch (Exception e) {
             logger.warn("BMS-IR Arena message parse failed", e);
+        }
+    }
+
+    static void receiveArenaStatus(JsonNode message) {
+        JsonNode player = message.path("player");
+        arenaRating = player.path("rating_exact").asDouble(
+                player.path("rating").asDouble(1000.0)
+        );
+        arenaMatchesPlayed = player.path("matches_played").asInt(0);
+        queueStatus = player.path("queue").path("status").asText("idle");
+        rankingView = message.path("ranking");
+        arenaUiMessage = switch (queueStatus) {
+            case "queued" -> "対戦相手を待っています";
+            case "reserved", "matched" -> "対戦準備中です";
+            case "withdraw_requested" -> "棄権処理中です";
+            default -> "エントリーできます";
+        };
+    }
+
+    private static void receiveLiveView(JsonNode message) {
+        if (!currentMatchId.equals(message.path("match_id").asText())) {
+            return;
+        }
+        liveView = message;
+        String state = message.path("state").asText();
+        if ("countdown".equals(state) || "playing".equals(state)) {
+            resultView = JSON.createObjectNode();
         }
     }
 
@@ -581,6 +725,7 @@ public final class BMSIRArenaClient {
             return;
         }
         serverStartMillis = Math.round(message.path("start_at").asDouble() * 1000.0);
+        resultView = JSON.createObjectNode();
         long serverNowMillis = System.currentTimeMillis() + serverClockOffsetMillis;
         long delay = Math.max(0L, serverStartMillis - serverNowMillis);
         SCHEDULER.schedule(() -> Gdx.app.postRunnable(() -> {
@@ -775,6 +920,7 @@ public final class BMSIRArenaClient {
         @Override
         public void onClose(int code, String reason, boolean remote) {
             connected = false;
+            arenaUiMessage = "Arenaサーバーから切断されました。再接続します";
             if (initialized && main != null && main.getPlayerConfig().isBmsirArenaEnabled()) {
                 SCHEDULER.schedule(() -> {
                     synchronized (BMSIRArenaClient.class) {
@@ -793,6 +939,7 @@ public final class BMSIRArenaClient {
         @Override
         public void onError(Exception e) {
             connected = false;
+            arenaUiMessage = "Arenaサーバーへ接続できません";
             logger.warn("BMS-IR Arena socket error: {}", e.getMessage());
         }
     }

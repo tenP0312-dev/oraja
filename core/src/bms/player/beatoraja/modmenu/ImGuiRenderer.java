@@ -1,6 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.arena.lobby.GraphMenu;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.controller.Lwjgl3ControllerManager;
 
@@ -187,6 +188,7 @@ public class ImGuiRenderer {
             ImGui.end();
         }
 
+        BMSIRArenaOverlay.render();
         ImGuiNotify.renderNotifications();
     }
 

@@ -10,11 +10,13 @@ downloads are live, but global Web navigation and announcement are not.
 2. In the IR configuration screen, enable `BMS-IR Arena`.
 3. Keep the default WSS server unless a developer is running a controlled
    local service.
-4. Start the client, then enter matchmaking from the authenticated BMS-IR Web
-   Arena page.
+4. Start the client, then use the `BMS-IR Arena` overlay to enter matchmaking.
 
-The startup switch controls the real-time connection. Web entry controls
-whether the player is actually queued.
+The startup switch controls the real-time connection. The authenticated
+in-game overlay controls entry, waiting cancellation, and match withdrawal.
+It also shows the current rating, live/final results with OP and clear lamp,
+and the Arena rating leaders. The Web Arena page remains available for the
+same queue controls, spectating, and durable match history.
 
 ## Dedicated-client long-note policy
 
@@ -89,7 +91,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.1-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.2-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
