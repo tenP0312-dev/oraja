@@ -1,5 +1,6 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.model.Mode;
 import bms.player.beatoraja.BMSPlayerMode;
 import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.MainController;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.0-dev";
+    private static final String CLIENT_VERSION = "0.1.1-dev";
     private static final int PROTOCOL_VERSION = 1;
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
@@ -63,6 +64,8 @@ public final class BMSIRArenaClient {
     private static volatile long serverClockOffsetMillis;
     private static volatile ObjectNode pendingFinal;
     private static volatile int currentPlayOption;
+    private static volatile int currentPlayMode;
+    private static volatile int currentChartTotalNotes;
     private static final AtomicLong sequence = new AtomicLong();
     private static volatile long lastLiveNanos;
     private static volatile OptionSnapshot savedOptions;
@@ -116,6 +119,8 @@ public final class BMSIRArenaClient {
         currentMatchId = "";
         pendingFinal = null;
         currentPlayOption = 0;
+        currentPlayMode = 0;
+        currentChartTotalNotes = 0;
         serverClockOffsetMillis = 0L;
         restoreOptions();
         ArenaSocket old = socket;
@@ -194,7 +199,7 @@ public final class BMSIRArenaClient {
         if (
                 arenaPlayActive
                         && pendingFinal == null
-                        && ("select".equals(value) || "result".equals(value))
+                        && "select".equals(value)
         ) {
             sendForfeit("play_aborted");
         }
@@ -268,6 +273,9 @@ public final class BMSIRArenaClient {
         message.put("exscore", score.getExscore());
         message.put("processed_notes", processedNotes(score));
         message.put("play_option", currentPlayOption);
+        if (currentPlayMode > 0) {
+            message.put("play_mode", currentPlayMode);
+        }
         send(message);
     }
 
@@ -278,10 +286,16 @@ public final class BMSIRArenaClient {
         ObjectNode message = baseMatchMessage("final");
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
-        message.put("processed_notes", processedNotes(score));
+        message.put(
+                "processed_notes",
+                finalProcessedNotes(score, hardFail, currentChartTotalNotes)
+        );
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
         message.put("play_option", currentPlayOption);
+        if (currentPlayMode > 0) {
+            message.put("play_mode", currentPlayMode);
+        }
         pendingFinal = message;
         send(message);
         arenaPlayActive = false;
@@ -298,6 +312,17 @@ public final class BMSIRArenaClient {
         int processed = Math.max(Math.max(0, score.getPassnotes()), judged);
         int total = score.getNotes();
         return total > 0 ? Math.min(processed, total) : processed;
+    }
+
+    static int finalProcessedNotes(
+            ScoreData score,
+            boolean hardFail,
+            int expectedChartNotes
+    ) {
+        if (!hardFail && expectedChartNotes > 0) {
+            return expectedChartNotes;
+        }
+        return processedNotes(score);
     }
 
     private static ObjectNode baseMatchMessage(String type) {
@@ -359,14 +384,16 @@ public final class BMSIRArenaClient {
                         currentMatchId = "";
                         pendingFinal = null;
                         currentPlayOption = 0;
+                        currentPlayMode = 0;
+                        currentChartTotalNotes = 0;
                         forfeitRequested = false;
                         restoreOptionsWhenSafe();
                         ImGuiNotify.info("Arenaの試合状態を同期しました", 8000);
                     }
-                    sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                     if (pendingFinal != null && !activeMatchId.isBlank()) {
                         send(pendingFinal);
                     }
+                    sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                 }
                 case "pong" -> updateServerClock(message);
                 case "match_reserved" -> {
@@ -383,6 +410,8 @@ public final class BMSIRArenaClient {
                         }
                         sequence.set(0);
                         currentPlayOption = 0;
+                        currentPlayMode = 0;
+                        currentChartTotalNotes = 0;
                         forfeitRequested = false;
                         ImGuiNotify.info("マッチングしました！ 現在のプレイ終了後にArenaへ移動します", 8000);
                     }
@@ -415,6 +444,8 @@ public final class BMSIRArenaClient {
                     currentMatchId = "";
                     pendingFinal = null;
                     currentPlayOption = 0;
+                    currentPlayMode = 0;
+                    currentChartTotalNotes = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.info(
                             autoReentered
@@ -432,6 +463,8 @@ public final class BMSIRArenaClient {
                     currentMatchId = "";
                     pendingFinal = null;
                     currentPlayOption = 0;
+                    currentPlayMode = 0;
+                    currentChartTotalNotes = 0;
                     normalResultReady = true;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
@@ -445,6 +478,8 @@ public final class BMSIRArenaClient {
                     currentMatchId = "";
                     pendingFinal = null;
                     currentPlayOption = 0;
+                    currentPlayMode = 0;
+                    currentChartTotalNotes = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
                 }
@@ -456,6 +491,8 @@ public final class BMSIRArenaClient {
                     currentMatchId = "";
                     pendingFinal = null;
                     currentPlayOption = 0;
+                    currentPlayMode = 0;
+                    currentChartTotalNotes = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning(
                             message.path("queue_retained").asBoolean()
@@ -502,7 +539,9 @@ public final class BMSIRArenaClient {
         if (!currentMatchId.equals(message.path("match_id").asText()) || main == null) {
             return;
         }
-        String md5 = message.path("chart").path("md5").asText();
+        JsonNode chart = message.path("chart");
+        String md5 = chart.path("md5").asText();
+        int expectedTotalNotes = Math.max(0, chart.path("totalnotes").asInt());
         Gdx.app.postRunnable(() -> {
             SongData[] songs = main.getSongDatabase().getSongDatas(new String[]{md5});
             SongData song = songs != null && songs.length > 0 ? songs[0] : null;
@@ -520,11 +559,16 @@ public final class BMSIRArenaClient {
                 Client.state.getSelectedSongRemote().setArtist(message.path("chart").path("artist").asText());
                 Client.state.setLobbySongData(song);
                 arenaPlayPending = true;
+                currentPlayMode = supportedPlayMode(song.getMode()) ? song.getMode() : 0;
+                currentChartTotalNotes = expectedTotalNotes;
             }
             ObjectNode reply = baseMatchMessage("chart_check");
             reply.put("chart_hash", md5);
             reply.put("available", available);
-            reply.put("totalnotes", 0);
+            reply.put("totalnotes", chartCheckTotalNotes(song, expectedTotalNotes));
+            if (available && supportedPlayMode(song.getMode())) {
+                reply.put("play_mode", song.getMode());
+            }
             send(reply);
             if (!available) {
                 ImGuiNotify.warning("Arena課題譜面を所持していません: " + md5);
@@ -544,7 +588,10 @@ public final class BMSIRArenaClient {
                 return;
             }
             applyFixedOptions(main.getPlayerConfig());
-            currentPlayOption = encodePlayOption(main.getPlayerConfig());
+            currentPlayOption = encodePlayOption(
+                    main.getPlayerConfig(),
+                    currentPlayMode
+            );
             arenaPlayActive = true;
             arenaPlayPending = false;
             normalResultReady = false;
@@ -580,10 +627,36 @@ public final class BMSIRArenaClient {
         RandomTrainer.setActive(false);
     }
 
-    private static int encodePlayOption(PlayerConfig config) {
-        return config.getRandom()
-                + config.getRandom2() * 10
-                + config.getDoubleoption() * 100;
+    static int chartCheckTotalNotes(SongData song, int expectedTotalNotes) {
+        if (
+                song == null
+                        || expectedTotalNotes <= 0
+                        || song.getNotes() != expectedTotalNotes
+        ) {
+            return 0;
+        }
+        return expectedTotalNotes;
+    }
+
+    static int encodePlayOption(PlayerConfig config, int playMode) {
+        int option = config.getRandom();
+        for (Mode mode : Mode.values()) {
+            if (mode.id == playMode && mode.player == 2) {
+                return option
+                        + config.getRandom2() * 10
+                        + config.getDoubleoption() * 100;
+            }
+        }
+        return option;
+    }
+
+    private static boolean supportedPlayMode(int playMode) {
+        for (Mode mode : Mode.values()) {
+            if (mode.id == playMode) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void restoreOptions() {

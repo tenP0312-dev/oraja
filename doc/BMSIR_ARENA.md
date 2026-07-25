@@ -55,13 +55,17 @@ whether the player is actually queued.
   together with the selected OP, followed by one immediate final packet with
   the result ClearType. The processed-note count uses the larger of the play
   counter and judged-note total so skins or rules that keep the in-play pass
-  counter stale still update spectators.
+  counter stale still update spectators. A normal completion uses the
+  server-selected chart total; hard fail keeps the actual processed count.
+- SP sends only the active 1P lane option even if stale 2P/FLIP settings exist.
+  DP sends both sides and FLIP together with the chart play mode.
 - After Arena play, the result screen remains until the ordinary IR submission
   finishes. Fixed Arena options are restored only after that submission has
   captured the Arena score.
 - A normal result or hard fail automatically returns the account to the Arena
   queue. Client shutdown or an unexpected Arena play exit requests a
-  zero-score forfeit and stops automatic entry.
+  zero-score forfeit and stops automatic entry. Entering the normal result
+  screen is not an exit and leaves time for the final packet to be accepted.
 
 ## Build
 
@@ -85,7 +89,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.0-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.1-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
