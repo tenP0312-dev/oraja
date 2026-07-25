@@ -350,6 +350,16 @@ public final class MusicSelector extends MainState {
 		}
 	}
 
+	public void readArenaChart(SongData song, ArenaBar current) {
+		selectedreplay = -1;
+		play = BMSPlayerMode.PLAY;
+		try {
+			readChart(song, current);
+		} finally {
+			play = null;
+		}
+	}
+
 	public int getSelectedReplay() {
 		return  selectedreplay;
 	}

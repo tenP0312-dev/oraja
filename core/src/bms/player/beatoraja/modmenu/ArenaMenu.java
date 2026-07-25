@@ -126,9 +126,7 @@ public class ArenaMenu {
             return;
         }
         ArenaBar bar = new ArenaBar(selector, songData);
-        selector.setSelectedReplay(-1);
-        selector.select(bar);
-        selector.readChart(songData, bar);
+        selector.readArenaChart(songData, bar);
     }
 
     public static void refreshMissingChartState() {
