@@ -5,6 +5,7 @@ import bms.player.beatoraja.CourseData.CourseDataConstraint;
 import bms.player.beatoraja.TableData.TableFolder;
 import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
+import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.play.GrooveGauge;
@@ -198,18 +199,19 @@ public final class PlayerResource {
 	}
 
 	public BMSModel loadBMSModel(Path f, int lnmode) {
-		return loadBMSModel(new ChartInformation(f, lnmode, null));
+		return loadBMSModel(new ChartInformation(f, BMSIRLongNotePolicy.IR_LN_TYPE, null));
 	}
 
 	public BMSModel loadBMSModel(int[] selectedRandom) {
 		if(model != null) {
 			ChartInformation info = model.getChartInformation();
-			return loadBMSModel(new ChartInformation(info.path, info.lntype, selectedRandom));			
+			return loadBMSModel(new ChartInformation(info.path, BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom));
 		}
 		return null;
 	}
 
 	public BMSModel loadBMSModel(ChartInformation info) {
+		info = BMSIRLongNotePolicy.forceLongNote(info);
 		ChartDecoder decoder = ChartDecoder.getDecoder(info.path);
 		if(decoder == null) {
 			return null;
@@ -218,6 +220,7 @@ public final class PlayerResource {
 		if (model == null) {
 			return null;
 		}
+		BMSIRLongNotePolicy.normalizeModel(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);
 		}

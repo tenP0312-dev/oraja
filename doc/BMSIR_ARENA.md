@@ -16,6 +16,18 @@ service, download, and Web navigation are not live yet.
 The startup switch controls the real-time connection. Web entry controls
 whether the player is actually queued.
 
+## Dedicated-client long-note policy
+
+- Every long note is interpreted as legacy LN throughout this BMS-IR build,
+  including ordinary play outside Arena.
+- The decoder input, explicit chart `#LNMODE`, explicit CN/HCN note types,
+  replay/pattern output, local catalog metadata, score storage keys, ranking
+  requests, and IR score payloads are normalized to LN.
+- The launcher LN-type control is fixed to `LONG NOTE`.
+- Existing `songdata.db` files do not need to be rebuilt for Arena chart
+  ownership checks. The exact source chart is identified by MD5 and the model
+  is normalized when loaded for play.
+
 ## Match behavior
 
 - Ordinary single-song play remains available while queued.
@@ -23,8 +35,9 @@ whether the player is actually queued.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
 - After reservation, the next manual selection is blocked.
-- The server selects an official 発狂BMS table chart. The client checks MD5
-  and note count before accepting it.
+- The server selects an official 発狂BMS table chart. The client checks the
+  exact MD5 before accepting it; the server validates the LN-scale processed
+  note count during play.
 - Arena play uses NORMAL and LN. Gauge and ordinary visual/timing preferences
   remain available.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,

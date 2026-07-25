@@ -5,6 +5,7 @@ import java.util.Map;
 
 import bms.model.BMSModel;
 import bms.model.Mode;
+import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import bms.player.beatoraja.song.SongData;
 
 /**
@@ -136,14 +137,14 @@ public class IRChartData {
 		this.minbpm = song.getMinbpm();
 		this.maxbpm = song.getMaxbpm();
 		this.notes = song.getNotes();
-		this.hasUndefinedLN = song.hasUndefinedLongNote();
-		this.hasLN = song.hasLongNote();
-		this.hasCN = song.hasChargeNote();
-		this.hasHCN = song.hasHellChargeNote();
+		this.hasUndefinedLN = false;
+		this.hasLN = song.hasAnyLongNote();
+		this.hasCN = false;
+		this.hasHCN = false;
 		this.hasMine = song.hasMineNote();
 		this.hasRandom = song.hasRandomSequence();
 		this.hasStop = song.isBpmstop();
-		this.lntype = lntype;
+		this.lntype = BMSIRLongNotePolicy.IR_LN_TYPE;
 
 		if(model != null) {
 			values.putAll(model.getValues());			

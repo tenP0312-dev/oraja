@@ -335,6 +335,8 @@ public class PlayConfigurationView implements Initializable {
 		initComboBox(fixhispeed, new String[] { "OFF", "START BPM", "MAX BPM", "MAIN BPM", "MIN BPM" });
 		playconfig.getItems().setAll(PlayMode.values());
 		initComboBox(lntype, new String[] { "LONG NOTE", "CHARGE NOTE", "HELL CHARGE NOTE" });
+		lntype.getSelectionModel().select(0);
+		lntype.setDisable(true);
 		initComboBox(gaugeautoshift, new String[] { "NONE", "CONTINUE", "SURVIVAL TO GROOVE","BEST CLEAR","SELECT TO UNDER" });
 		initComboBox(bottomshiftablegauge, new String[] { "ASSIST EASY", "EASY", "NORMAL" });
 		initComboBox(minemode, new String[] { "OFF", "REMOVE", "ADD RANDOM", "ADD NEAR", "ADD ALL" });
@@ -548,7 +550,7 @@ public class PlayConfigurationView implements Initializable {
 		guidese.setSelected(player.isGuideSE());
 		windowhold.setSelected(player.isWindowHold());
 		gaugeop.getSelectionModel().select(player.getGauge());
-		lntype.getSelectionModel().select(player.getLnmode());
+		lntype.getSelectionModel().select(0);
 
 		notesdisplaytiming.getValueFactory().setValue(player.getJudgetiming());
 		notesdisplaytimingautoadjust.setSelected(player.isNotesDisplayTimingAutoAdjust());
@@ -663,7 +665,7 @@ public class PlayConfigurationView implements Initializable {
 		player.setGuideSE(guidese.isSelected());
 		player.setWindowHold(windowhold.isSelected());
 		player.setGauge(gaugeop.getValue());
-		player.setLnmode(lntype.getValue());
+		player.setLnmode(0);
 		player.setJudgetiming(getValue(notesdisplaytiming));
 		player.setNotesDisplayTimingAutoAdjust(notesdisplaytimingautoadjust.isSelected());
 
@@ -1047,4 +1049,3 @@ public class PlayConfigurationView implements Initializable {
 		}
 	}
 }
-

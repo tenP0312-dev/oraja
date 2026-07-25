@@ -416,11 +416,17 @@ public final class BMSIRArenaClient {
             return;
         }
         String md5 = message.path("chart").path("md5").asText();
-        int expectedNotes = message.path("chart").path("totalnotes").asInt();
         Gdx.app.postRunnable(() -> {
             SongData[] songs = main.getSongDatabase().getSongDatas(new String[]{md5});
             SongData song = songs != null && songs.length > 0 ? songs[0] : null;
-            boolean available = song != null && (expectedNotes <= 0 || song.getNotes() == expectedNotes);
+            /*
+             * Existing songdata.db files may contain a CN/HCN-scale note
+             * count from before this dedicated client normalized its catalog.
+             * The MD5 identifies the exact source chart; its model is
+             * normalized again when gameplay loads it, so a stale cached count
+             * must not incorrectly report that the chart is missing.
+             */
+            boolean available = song != null;
             if (available) {
                 Client.state.getSelectedSongRemote().setMd5(md5);
                 Client.state.getSelectedSongRemote().setTitle(message.path("chart").path("title").asText());
@@ -431,7 +437,7 @@ public final class BMSIRArenaClient {
             ObjectNode reply = baseMatchMessage("chart_check");
             reply.put("chart_hash", md5);
             reply.put("available", available);
-            reply.put("totalnotes", song == null ? 0 : song.getNotes());
+            reply.put("totalnotes", 0);
             send(reply);
             if (!available) {
                 ImGuiNotify.warning("Arena課題譜面を所持していません: " + md5);

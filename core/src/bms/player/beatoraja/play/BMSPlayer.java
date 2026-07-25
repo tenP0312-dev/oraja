@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
@@ -474,6 +475,10 @@ public class BMSPlayer extends MainState {
 			playinfo.laneShufflePattern = patternArray;
 
 		}
+
+		// Pattern/replay modifiers can create CN/HCN after the initial decode.
+		// Normalize once more immediately before gameplay is initialized.
+		BMSIRLongNotePolicy.normalizeModel(model);
 
 		if(HSReplay != null && HSReplay.config != null) {
 			//保存されたHSオプションログからHSオプション再現

@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 
 import bms.player.beatoraja.SQLiteDatabaseAccessor;
 import bms.player.beatoraja.Validatable;
+import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import javafx.util.Pair;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
@@ -629,6 +630,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 				if (model == null) {
 					continue;
 				}
+				BMSIRLongNotePolicy.normalizeModel(model);
                 try {
 					final SongData sd = new SongData(model, txt);
 					if (sd.getNotes() != 0 || model.getWavList().length != 0) {
