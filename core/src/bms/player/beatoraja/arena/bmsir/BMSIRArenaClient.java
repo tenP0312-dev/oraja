@@ -16,7 +16,8 @@ import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.JudgeTrainer;
 import bms.player.beatoraja.modmenu.RandomTrainer;
 import bms.player.beatoraja.select.MusicSelector;
-import bms.player.beatoraja.select.bar.HashBar;
+import bms.player.beatoraja.select.bar.Bar;
+import bms.player.beatoraja.select.bar.DirectoryBar;
 import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.select.bar.TableBar;
 import bms.player.beatoraja.song.SongData;
@@ -53,7 +54,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.6-dev";
+    private static final String CLIENT_VERSION = "0.1.7-dev";
     private static final int PROTOCOL_VERSION = 1;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -95,6 +96,38 @@ public final class BMSIRArenaClient {
     private static volatile int nominationTargetBand;
 
     private BMSIRArenaClient() {
+    }
+
+    static final class ArenaNominationBar extends DirectoryBar {
+        private final String title;
+        private final SongData[] songs;
+
+        ArenaNominationBar(
+                MusicSelector selector,
+                String title,
+                SongData[] songs
+        ) {
+            super(selector);
+            this.title = title;
+            this.songs = songs;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public Bar[] getChildren() {
+            return Arrays.stream(songs)
+                    .map(SongBar::new)
+                    .toArray(Bar[]::new);
+        }
+
+        @Override
+        public void updateFolderStatus() {
+            updateFolderStatus(songs);
+        }
     }
 
     public static synchronized void initialize(MainController controller) {
@@ -407,10 +440,12 @@ public final class BMSIRArenaClient {
                 );
                 return;
             }
-            SongData[] owned = selector.getSongDatabase().getSongDatas(
-                    Arrays.stream(candidates)
-                            .map(SongData::getMd5)
-                            .toArray(String[]::new)
+            SongData[] owned = playableOwnedSongs(
+                    selector.getSongDatabase().getSongDatas(
+                            Arrays.stream(candidates)
+                                    .map(SongData::getMd5)
+                                    .toArray(String[]::new)
+                    )
             );
             if (owned.length == 0) {
                 arenaUiMessage =
@@ -422,7 +457,7 @@ public final class BMSIRArenaClient {
                 );
                 return;
             }
-            HashBar arenaFolder = new HashBar(
+            ArenaNominationBar arenaFolder = new ArenaNominationBar(
                     selector,
                     "BMS-IR Arena ★1～★" + targetBand,
                     owned
@@ -436,6 +471,27 @@ public final class BMSIRArenaClient {
                 );
             }
         });
+    }
+
+    static SongData[] playableOwnedSongs(SongData[] songs) {
+        Map<String, SongData> playable = new LinkedHashMap<>();
+        if (songs == null) {
+            return SongData.EMPTY;
+        }
+        for (SongData song : songs) {
+            if (song == null || song.getPath() == null || song.getPath().isBlank()) {
+                continue;
+            }
+            String sha256 = song.getSha256();
+            String md5 = song.getMd5();
+            String key = sha256 != null && !sha256.isBlank()
+                    ? sha256.toLowerCase(Locale.ROOT)
+                    : md5 == null ? "" : md5.toLowerCase(Locale.ROOT);
+            if (!key.isBlank()) {
+                playable.putIfAbsent(key, song);
+            }
+        }
+        return playable.values().toArray(SongData[]::new);
     }
 
     public static void requestCurrentChartNomination() {

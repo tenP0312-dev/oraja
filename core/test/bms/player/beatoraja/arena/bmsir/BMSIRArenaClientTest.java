@@ -4,6 +4,8 @@ import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
+import bms.player.beatoraja.select.bar.Bar;
+import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -152,6 +154,33 @@ class BMSIRArenaClientTest {
         assertEquals(2, candidates.length);
         assertEquals("a", candidates[0].getMd5());
         assertEquals("b", candidates[1].getMd5());
+    }
+
+    @Test
+    void nominationFolderRetainsOnlyPlayableLocalSongPaths() {
+        SongData owned = song("a");
+        owned.setSha256("sha-a");
+        owned.setPath("/songs/a/chart.bms");
+        SongData missing = song("b");
+        missing.setSha256("sha-b");
+
+        SongData[] playable = BMSIRArenaClient.playableOwnedSongs(
+                new SongData[]{owned, missing, owned}
+        );
+        BMSIRArenaClient.ArenaNominationBar folder =
+                new BMSIRArenaClient.ArenaNominationBar(
+                        null,
+                        "Arena",
+                        playable
+                );
+        Bar[] children = folder.getChildren();
+
+        assertEquals(1, children.length);
+        assertEquals(
+                "/songs/a/chart.bms",
+                ((SongBar) children[0]).getSongData().getPath()
+        );
+        assertEquals("/songs/a/chart.bms", owned.getPath());
     }
 
     private static TableData.TableFolder folder(
