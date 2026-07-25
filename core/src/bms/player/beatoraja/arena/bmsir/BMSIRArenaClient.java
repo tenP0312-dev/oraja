@@ -62,6 +62,7 @@ public final class BMSIRArenaClient {
     private static volatile long serverStartMillis;
     private static volatile long serverClockOffsetMillis;
     private static volatile ObjectNode pendingFinal;
+    private static volatile int currentPlayOption;
     private static final AtomicLong sequence = new AtomicLong();
     private static volatile long lastLiveNanos;
     private static volatile OptionSnapshot savedOptions;
@@ -114,6 +115,7 @@ public final class BMSIRArenaClient {
         currentPlayerId = 0;
         currentMatchId = "";
         pendingFinal = null;
+        currentPlayOption = 0;
         serverClockOffsetMillis = 0L;
         restoreOptions();
         ArenaSocket old = socket;
@@ -265,6 +267,7 @@ public final class BMSIRArenaClient {
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
         message.put("processed_notes", processedNotes(score));
+        message.put("play_option", currentPlayOption);
         send(message);
     }
 
@@ -277,6 +280,8 @@ public final class BMSIRArenaClient {
         message.put("exscore", score.getExscore());
         message.put("processed_notes", processedNotes(score));
         message.put("state", hardFail ? "hard_fail" : "complete");
+        message.put("clear_type", score.getClear());
+        message.put("play_option", currentPlayOption);
         pendingFinal = message;
         send(message);
         arenaPlayActive = false;
@@ -353,6 +358,7 @@ public final class BMSIRArenaClient {
                         arenaPlayActive = false;
                         currentMatchId = "";
                         pendingFinal = null;
+                        currentPlayOption = 0;
                         forfeitRequested = false;
                         restoreOptionsWhenSafe();
                         ImGuiNotify.info("Arenaの試合状態を同期しました", 8000);
@@ -376,6 +382,7 @@ public final class BMSIRArenaClient {
                             normalResultReady = false;
                         }
                         sequence.set(0);
+                        currentPlayOption = 0;
                         forfeitRequested = false;
                         ImGuiNotify.info("マッチングしました！ 現在のプレイ終了後にArenaへ移動します", 8000);
                     }
@@ -407,6 +414,7 @@ public final class BMSIRArenaClient {
                     forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
+                    currentPlayOption = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.info(
                             autoReentered
@@ -423,6 +431,7 @@ public final class BMSIRArenaClient {
                     forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
+                    currentPlayOption = 0;
                     normalResultReady = true;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
@@ -435,6 +444,7 @@ public final class BMSIRArenaClient {
                     forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
+                    currentPlayOption = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
                 }
@@ -445,6 +455,7 @@ public final class BMSIRArenaClient {
                     forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
+                    currentPlayOption = 0;
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning(
                             message.path("queue_retained").asBoolean()
@@ -533,6 +544,7 @@ public final class BMSIRArenaClient {
                 return;
             }
             applyFixedOptions(main.getPlayerConfig());
+            currentPlayOption = encodePlayOption(main.getPlayerConfig());
             arenaPlayActive = true;
             arenaPlayPending = false;
             normalResultReady = false;
@@ -545,9 +557,15 @@ public final class BMSIRArenaClient {
         if (savedOptions == null) {
             savedOptions = new OptionSnapshot(config);
         }
-        config.setRandom(0);
-        config.setRandom2(0);
-        config.setDoubleoption(0);
+        if (config.getRandom() < 0 || config.getRandom() > 5) {
+            config.setRandom(0);
+        }
+        if (config.getRandom2() < 0 || config.getRandom2() > 5) {
+            config.setRandom2(0);
+        }
+        if (config.getDoubleoption() < 0 || config.getDoubleoption() > 1) {
+            config.setDoubleoption(0);
+        }
         config.setLnmode(0);
         config.setMineMode(0);
         config.setScrollMode(0);
@@ -560,6 +578,12 @@ public final class BMSIRArenaClient {
         FreqTrainerMenu.FREQ_TRAINER_ENABLED.set(false);
         JudgeTrainer.setActive(false);
         RandomTrainer.setActive(false);
+    }
+
+    private static int encodePlayOption(PlayerConfig config) {
+        return config.getRandom()
+                + config.getRandom2() * 10
+                + config.getDoubleoption() * 100;
     }
 
     private static void restoreOptions() {

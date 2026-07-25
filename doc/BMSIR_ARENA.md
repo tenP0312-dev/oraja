@@ -38,8 +38,10 @@ whether the player is actually queued.
 - The server selects an official 発狂BMS table chart. The client checks the
   exact MD5 before accepting it; the server validates the LN-scale processed
   note count during play.
-- Arena play uses NORMAL and LN. Gauge and ordinary visual/timing preferences
-  remain available.
+- Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, S-RANDOM, or
+  SPIRAL lane option and uses LN. H-RANDOM, ALL-SCR, RANDOM-EX, and
+  S-RANDOM-EX are assist-class options for Arena and are clamped to NORMAL.
+  Gauge and ordinary visual/timing preferences remain available.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
   CONSTANT, battle, and mode conversion are disabled for that Arena play and
   restored afterward.
@@ -50,9 +52,10 @@ whether the player is actually queued.
   applies only while the Arena play is active; Arena OFF and ordinary play keep
   their normal input behavior.
 - The client sends current EX and processed-note count at most once per second,
-  followed by one immediate final packet. The processed-note count uses the
-  larger of the play counter and judged-note total so skins or rules that keep
-  the in-play pass counter stale still update spectators.
+  together with the selected OP, followed by one immediate final packet with
+  the result ClearType. The processed-note count uses the larger of the play
+  counter and judged-note total so skins or rules that keep the in-play pass
+  counter stale still update spectators.
 - After Arena play, the result screen remains until the ordinary IR submission
   finishes. Fixed Arena options are restored only after that submission has
   captured the Arena score.
