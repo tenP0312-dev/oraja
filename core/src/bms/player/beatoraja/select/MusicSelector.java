@@ -336,7 +336,7 @@ public final class MusicSelector extends MainState {
 	}
 	
 	public void select(Bar current) {
-		if (BMSIRArenaClient.isSelectionBlocked()) {
+		if (BMSIRArenaClient.isSelectionBlocked() && !BMSIRArenaClient.isNominationOpen()) {
 			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
 			return;
 		}
@@ -689,6 +689,10 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void selectSong(BMSPlayerMode mode) {
+		if (BMSIRArenaClient.isNominationOpen()) {
+			BMSIRArenaClient.requestCurrentChartNomination();
+			return;
+		}
 		if (BMSIRArenaClient.isSelectionBlocked()) {
 			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
 			return;

@@ -76,4 +76,20 @@ class BMSIRArenaClientTest {
         assertEquals("queued", BMSIRArenaClient.queueStatus());
         assertEquals(3, BMSIRArenaClient.rankingView().path("current").path("rank").asInt());
     }
+
+    @Test
+    void nominationCountdownRoundsUpAndStopsAtZero() {
+        assertEquals(
+                20,
+                BMSIRArenaClient.nominationCountdownSeconds(21_000, 1_000)
+        );
+        assertEquals(
+                1,
+                BMSIRArenaClient.nominationCountdownSeconds(21_000, 20_999)
+        );
+        assertEquals(
+                0,
+                BMSIRArenaClient.nominationCountdownSeconds(21_000, 21_000)
+        );
+    }
 }

@@ -2,6 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.player.beatoraja.modmenu.FontAwesomeIcons;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
+import bms.player.beatoraja.song.SongData;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import imgui.ImColor;
@@ -442,6 +443,9 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderMatch() {
+        if (renderNomination()) {
+            return;
+        }
         JsonNode match = BMSIRArenaClient.currentMatchView();
         if (!match.isObject() || match.size() == 0) {
             ImGui.textDisabled("現在の試合はありません");
@@ -514,6 +518,136 @@ public final class BMSIRArenaOverlay {
                 } else {
                     tableText("-");
                 }
+            }
+            ImGui.endTable();
+        }
+    }
+
+    private static boolean renderNomination() {
+        JsonNode nomination = BMSIRArenaClient.nominationView();
+        if (!nomination.isObject() || nomination.size() == 0) {
+            return false;
+        }
+        if (nomination.has("nominations")) {
+            renderRevealedNominations(nomination);
+            return true;
+        }
+        if (!BMSIRArenaClient.isNominationOpen()) {
+            return false;
+        }
+
+        long seconds = BMSIRArenaClient.nominationSecondsRemaining();
+        int targetBand = nomination.path("target_band").asInt(1);
+        ImGui.text(FontAwesomeIcons.Clock + " 選曲受付");
+        ImGui.sameLine();
+        ImGui.textDisabled(seconds + "秒");
+        ImGui.sameLine();
+        ImGui.text("★1～★" + targetBand);
+        ImGui.separator();
+
+        SongData current = BMSIRArenaClient.currentNominationSong();
+        if (current != null) {
+            ImGui.textWrapped(current.getTitle());
+            String artist = current.getArtist();
+            if (artist != null && !artist.isBlank()) {
+                ImGui.textDisabled(artist);
+            }
+        } else {
+            ImGui.textDisabled("選択中の楽曲譜面なし");
+        }
+        ImGui.beginDisabled(!BMSIRArenaClient.isConnected() || current == null);
+        if (ImGui.button(FontAwesomeIcons.Music + " この曲を選曲")) {
+            BMSIRArenaClient.requestCurrentChartNomination();
+        }
+        ImGui.endDisabled();
+        ImGui.sameLine();
+        ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
+        if (ImGui.button(FontAwesomeIcons.Dice + " ランダムに任せる")) {
+            BMSIRArenaClient.requestRandomNomination();
+        }
+        ImGui.endDisabled();
+
+        JsonNode own = nomination.path("your_nomination");
+        String ownSource = nomination.path("your_source").asText();
+        if (own.isObject() && own.size() > 0) {
+            ImGui.textWrapped(
+                    "登録済み: "
+                            + own.path("level").asText()
+                            + "  "
+                            + own.path("title").asText()
+            );
+        } else if ("server_random".equals(ownSource)) {
+            ImGui.textDisabled("登録済み: サーバーランダム");
+        }
+
+        ImGui.separator();
+        int flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg;
+        if (ImGui.beginTable("##bmsir-arena-nomination-status", 2, flags)) {
+            ImGui.tableSetupColumn("Player");
+            ImGui.tableSetupColumn("Status");
+            ImGui.tableHeadersRow();
+            for (JsonNode player : nomination.path("players")) {
+                ImGui.tableNextRow();
+                String name = player.path("name").asText(
+                        Integer.toString(player.path("player_id").asInt())
+                );
+                if (player.path("player_id").asInt() == BMSIRArenaClient.currentPlayerId()) {
+                    name = "> " + name;
+                }
+                tableText(name);
+                tableText(player.path("submitted").asBoolean() ? "選曲済み" : "選曲中");
+            }
+            ImGui.endTable();
+        }
+        return true;
+    }
+
+    private static void renderRevealedNominations(JsonNode nomination) {
+        JsonNode selectedChart = nomination.path("chart");
+        int selectedPlayerId = nomination.path("selected_player_id").asInt();
+        int rerollCount = nomination.path("reroll_count").asInt();
+        ImGui.text(
+                rerollCount > 0
+                        ? FontAwesomeIcons.Random + " 再抽選結果"
+                        : FontAwesomeIcons.CheckCircle + " 抽選結果"
+        );
+        String selectedLevel = selectedChart.path("level").asText();
+        String selectedTitle = selectedChart.path("title").asText();
+        ImGui.textWrapped(
+                (selectedLevel.isBlank() ? "" : selectedLevel + "  ")
+                        + selectedTitle
+        );
+        String selectedArtist = selectedChart.path("artist").asText();
+        if (!selectedArtist.isBlank()) {
+            ImGui.textDisabled(selectedArtist);
+        }
+        ImGui.separator();
+
+        int flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg;
+        if (ImGui.beginTable("##bmsir-arena-nominations", 3, flags)) {
+            ImGui.tableSetupColumn("Player");
+            ImGui.tableSetupColumn("Candidate");
+            ImGui.tableSetupColumn("Source");
+            ImGui.tableHeadersRow();
+            for (JsonNode item : nomination.path("nominations")) {
+                ImGui.tableNextRow();
+                int playerId = item.path("player_id").asInt();
+                String name = item.path("name").asText(Integer.toString(playerId));
+                if (playerId == selectedPlayerId) {
+                    name = "> " + name;
+                }
+                JsonNode chart = item.path("chart");
+                String level = chart.path("level").asText();
+                tableText(name);
+                tableText(
+                        (level.isBlank() ? "" : level + "  ")
+                                + chart.path("title").asText()
+                );
+                tableText(
+                        "player_selected".equals(item.path("source").asText())
+                                ? "PLAYER"
+                                : "RANDOM"
+                );
             }
             ImGui.endTable();
         }

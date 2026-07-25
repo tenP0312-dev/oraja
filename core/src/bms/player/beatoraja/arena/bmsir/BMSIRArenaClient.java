@@ -14,6 +14,8 @@ import bms.player.beatoraja.modmenu.FreqTrainerMenu;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.JudgeTrainer;
 import bms.player.beatoraja.modmenu.RandomTrainer;
+import bms.player.beatoraja.select.MusicSelector;
+import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.song.SongData;
 
 import com.badlogic.gdx.Gdx;
@@ -44,7 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.4-dev";
+    private static final String CLIENT_VERSION = "0.1.5-dev";
     private static final int PROTOCOL_VERSION = 1;
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
@@ -76,6 +78,9 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode rankingView = JSON.createObjectNode();
     private static volatile JsonNode liveView = JSON.createObjectNode();
     private static volatile JsonNode resultView = JSON.createObjectNode();
+    private static volatile JsonNode nominationView = JSON.createObjectNode();
+    private static volatile boolean nominationOpen;
+    private static volatile long nominationDeadlineMillis;
 
     private BMSIRArenaClient() {
     }
@@ -136,6 +141,7 @@ public final class BMSIRArenaClient {
         rankingView = JSON.createObjectNode();
         liveView = JSON.createObjectNode();
         resultView = JSON.createObjectNode();
+        clearNominationState();
         restoreOptions();
         ArenaSocket old = socket;
         socket = null;
@@ -201,6 +207,12 @@ public final class BMSIRArenaClient {
         return reserved;
     }
 
+    public static boolean isNominationOpen() {
+        return nominationOpen
+                && reserved
+                && !currentMatchId.isBlank();
+    }
+
     static int currentPlayerId() {
         return currentPlayerId;
     }
@@ -229,6 +241,72 @@ public final class BMSIRArenaClient {
         return resultView.isObject() && resultView.size() > 0
                 ? resultView
                 : liveView;
+    }
+
+    static JsonNode nominationView() {
+        return nominationView;
+    }
+
+    static long nominationSecondsRemaining() {
+        return nominationSecondsRemaining(
+                System.currentTimeMillis() + serverClockOffsetMillis
+        );
+    }
+
+    static long nominationSecondsRemaining(long serverNowMillis) {
+        if (!nominationOpen || nominationDeadlineMillis <= 0L) {
+            return 0L;
+        }
+        return nominationCountdownSeconds(
+                nominationDeadlineMillis,
+                serverNowMillis
+        );
+    }
+
+    static long nominationCountdownSeconds(
+            long deadlineMillis,
+            long serverNowMillis
+    ) {
+        return Math.max(
+                0L,
+                (deadlineMillis - serverNowMillis + 999L) / 1000L
+        );
+    }
+
+    static SongData currentNominationSong() {
+        if (
+                main == null
+                        || !(main.getCurrentState() instanceof MusicSelector selector)
+                        || !(selector.getSelectedBar() instanceof SongBar songBar)
+                        || !songBar.existsSong()
+        ) {
+            return null;
+        }
+        SongData song = songBar.getSongData();
+        return song != null && !song.getMd5().isBlank() ? song : null;
+    }
+
+    public static void requestCurrentChartNomination() {
+        if (!isNominationOpen()) {
+            return;
+        }
+        SongData song = currentNominationSong();
+        if (song == null) {
+            ImGuiNotify.warning("Arena選曲: 通常の楽曲譜面を選んでください");
+            return;
+        }
+        ObjectNode message = baseMatchMessage("chart_nominate");
+        message.put("chart_hash", song.getMd5());
+        arenaUiMessage = "選曲を確認しています";
+        send(message);
+    }
+
+    static void requestRandomNomination() {
+        if (!isNominationOpen()) {
+            return;
+        }
+        arenaUiMessage = "ランダム選曲を登録しています";
+        send(baseMatchMessage("chart_nomination_skip"));
     }
 
     static boolean isShowingCompletedResult() {
@@ -474,6 +552,7 @@ public final class BMSIRArenaClient {
                         currentPlayMode = 0;
                         currentChartTotalNotes = 0;
                         forfeitRequested = false;
+                        clearNominationState();
                         restoreOptionsWhenSafe();
                         ImGuiNotify.info("Arenaの試合状態を同期しました", 8000);
                     }
@@ -503,10 +582,20 @@ public final class BMSIRArenaClient {
                         currentPlayMode = 0;
                         currentChartTotalNotes = 0;
                         forfeitRequested = false;
+                        clearNominationState();
                         ImGuiNotify.info("マッチングしました！ 現在のプレイ終了後にArenaへ移動します", 8000);
                     }
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                 }
+                case "nomination_started", "nomination_status" ->
+                        receiveNominationStatus(message);
+                case "nomination_accepted" -> {
+                    if (currentMatchId.equals(message.path("match_id").asText())) {
+                        arenaUiMessage = "選曲を受け付けました";
+                        ImGuiNotify.info("Arena選曲を受け付けました", 3000);
+                    }
+                }
+                case "nominations_revealed" -> receiveNominationsRevealed(message);
                 case "chart" -> receiveChart(message);
                 case "start" -> scheduleArenaStart(message);
                 case "live" -> receiveLiveView(message);
@@ -550,6 +639,7 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    clearNominationState();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.info(
                             autoReentered
@@ -573,6 +663,7 @@ public final class BMSIRArenaClient {
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
                     normalResultReady = true;
+                    clearNominationState();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
                     sendState(normalizeCurrentState(), false);
@@ -589,6 +680,7 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    clearNominationState();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
                     requestArenaStatus();
@@ -608,6 +700,7 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    clearNominationState();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning(
                             queueRetained
@@ -617,7 +710,13 @@ public final class BMSIRArenaClient {
                 }
                 case "replaced" -> ImGuiNotify.warning("BMS-IR Arena: 同じアカウントの別本体へ接続を移しました");
                 case "error" -> {
-                    arenaUiMessage = message.path("message").asText(message.path("code").asText());
+                    String code = message.path("code").asText();
+                    arenaUiMessage = switch (code) {
+                        case "nomination_rejected" ->
+                                "選曲できません。発狂難易度表と★上限を確認してください";
+                        case "nomination_closed" -> "選曲受付は終了しました";
+                        default -> message.path("message").asText(code);
+                    };
                     ImGuiNotify.error("BMS-IR Arena: " + arenaUiMessage);
                 }
                 default -> {
@@ -642,6 +741,39 @@ public final class BMSIRArenaClient {
             case "withdraw_requested" -> "棄権処理中です";
             default -> "エントリーできます";
         };
+    }
+
+    static void receiveNominationStatus(JsonNode message) {
+        if (!currentMatchId.equals(message.path("match_id").asText())) {
+            return;
+        }
+        nominationView = message;
+        nominationOpen = true;
+        nominationDeadlineMillis = Math.round(
+                message.path("deadline").asDouble() * 1000.0
+        );
+        queueStatus = "matched";
+        arenaUiMessage = "次のArena課題曲を選んでください";
+    }
+
+    static void receiveNominationsRevealed(JsonNode message) {
+        if (!currentMatchId.equals(message.path("match_id").asText())) {
+            return;
+        }
+        nominationView = message;
+        nominationOpen = false;
+        nominationDeadlineMillis = 0L;
+        JsonNode chart = message.path("chart");
+        String title = chart.path("title").asText();
+        arenaUiMessage = title.isBlank()
+                ? "抽選結果を確認しています"
+                : "採用曲: " + title;
+    }
+
+    private static void clearNominationState() {
+        nominationView = JSON.createObjectNode();
+        nominationOpen = false;
+        nominationDeadlineMillis = 0L;
     }
 
     private static void receiveLiveView(JsonNode message) {
@@ -739,6 +871,7 @@ public final class BMSIRArenaClient {
             );
             arenaPlayActive = true;
             arenaPlayPending = false;
+            clearNominationState();
             normalResultReady = false;
             lastLiveNanos = 0L;
             ArenaMenu.startCurrentLobbySong();

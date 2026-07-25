@@ -39,10 +39,19 @@ same queue controls, spectating, and durable match history.
 - Courses, practice, autoplay, and replay are not eligible matching states.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
-- After reservation, the next manual selection is blocked.
-- The server selects an official 発狂BMS table chart. The client checks the
-  exact MD5 before accepting it; the server validates the LN-scale processed
-  note count during play.
+- After the fill window closes, a 20-second nomination phase opens. The normal
+  selector stays navigable, and selecting a song nominates that exact chart
+  instead of starting ordinary play. The overlay also provides an explicit
+  server-random choice.
+- Each participant contributes one candidate slot. A missing nomination at
+  the deadline becomes a server-random official-table chart. Candidate charts
+  remain hidden until every slot is filled; the server then reveals all
+  candidates, selects one slot uniformly, and highlights the selected chart
+  in the overlay.
+- Every nominated or random candidate must be a positive-note-count official
+  発狂BMS table chart between ★1 and the weakest participant's rating ceiling.
+  The client checks the selected MD5 before accepting it; the server validates
+  the LN-scale processed-note count during play.
 - Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, S-RANDOM, or
   SPIRAL lane option and uses LN. H-RANDOM, ALL-SCR, RANDOM-EX, and
   S-RANDOM-EX are assist-class options for Arena and are clamped to NORMAL.
@@ -94,7 +103,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.4-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.5-dev-macos-aarch64.jar
 ```
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
