@@ -2,8 +2,8 @@
 
 Status: controlled BMS-IR Arena v1 canary. The direct service and OS-specific
 downloads are live, but global Web navigation and announcement are not.
-The `0.1.12-dev` casual/private-room source is implemented but not yet in the
-live release gate or downloads.
+The current `0.1.12-dev` release includes casual/private rooms and the F5-menu
+recovery path for a hidden Arena overlay.
 
 ## Enabling
 
@@ -23,7 +23,9 @@ at the bottom center and can be moved and resized; ImGui stores the adjusted
 position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
 play-time mouse cursor, and enables optional mutual unrestricted matching and
-a mirrored synchronized-RANDOM layout. Ctrl+Shift+F5 toggles visibility.
+a mirrored synchronized-RANDOM layout. Ctrl+Shift+F5 toggles visibility. If
+that shortcut opens the Endless Dream menu instead, use
+`Show BMS-IR Arena Overlay` in the F5 menu to restore the overlay.
 The graph uses the actual available plot height and keeps bars and the selected
 outline inside the MAX guide even at the minimum window height. Each new
 nomination round returns to the selector root before opening

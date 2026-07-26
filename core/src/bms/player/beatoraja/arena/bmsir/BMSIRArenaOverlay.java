@@ -135,11 +135,27 @@ public final class BMSIRArenaOverlay {
         }
         int current = config.getBmsirArenaOverlayMode();
         if (current == 2) {
-            config.setBmsirArenaOverlayMode(lastVisibleMode == 1 ? 1 : 0);
+            restoreVisibility();
         } else {
             lastVisibleMode = current;
             config.setBmsirArenaOverlayMode(2);
         }
+    }
+
+    public static boolean isHidden() {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        return config != null && config.getBmsirArenaOverlayMode() == 2;
+    }
+
+    public static void restoreVisibility() {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        if (config != null) {
+            config.setBmsirArenaOverlayMode(restoredVisibleMode(lastVisibleMode));
+        }
+    }
+
+    static int restoredVisibleMode(int previousVisibleMode) {
+        return previousVisibleMode == 1 ? 1 : 0;
     }
 
     private static void renderCompactOverlay() {
@@ -1114,7 +1130,7 @@ public final class BMSIRArenaOverlay {
         if (ImGui.radioButton("非表示", config.getBmsirArenaOverlayMode() == 2)) {
             config.setBmsirArenaOverlayMode(2);
         }
-        ImGui.textDisabled("Ctrl+Shift+F5で表示／非表示を切り替え");
+        ImGui.textDisabled("Ctrl+Shift+F5で切替。戻らない場合はF5メニューから再表示");
 
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
         if (ImGui.checkbox("プレイ中もマウスカーソルを表示", cursor)) {

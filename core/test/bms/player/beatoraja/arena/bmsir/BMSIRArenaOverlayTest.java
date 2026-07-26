@@ -53,4 +53,12 @@ class BMSIRArenaOverlayTest {
         assertEquals(520.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(1080));
         assertEquals(300.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(360));
     }
+
+    @Test
+    void overlayRecoveryRestoresOnlyAVisibleMode() {
+        assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(0));
+        assertEquals(1, BMSIRArenaOverlay.restoredVisibleMode(1));
+        assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(2));
+        assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(-1));
+    }
 }

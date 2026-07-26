@@ -132,6 +132,13 @@ public class ImGuiRenderer {
             ImGui.checkbox("Show Misc Setting Window", SHOW_MISC_SETTING);
             ImGui.checkbox("Show Arena Menu", SHOW_ARENA_MENU);
             ImGui.checkbox("Show Graph", SHOW_GRAPH_MENU);
+            if (BMSIRArenaOverlay.isHidden()) {
+                ImGui.separator();
+                if (ImGui.button("Show BMS-IR Arena Overlay")) {
+                    BMSIRArenaOverlay.restoreVisibility();
+                }
+                ImGui.textDisabled("Arena overlay recovery");
+            }
 
             if (SHOW_FREQ_PLUS.get()) {
                 FreqTrainerMenu.show(SHOW_FREQ_PLUS);
