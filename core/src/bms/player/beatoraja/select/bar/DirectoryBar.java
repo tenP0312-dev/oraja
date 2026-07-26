@@ -77,6 +77,10 @@ public abstract class DirectoryBar extends Bar {
 	public boolean isSortable() {
         return isSortable;
     }
+
+	public boolean usesTableFolderStyle() {
+		return false;
+	}
 	
 	public void setSortable(boolean val) {
         isSortable = val;

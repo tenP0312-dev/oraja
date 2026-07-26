@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.8-dev";
+    private static final String CLIENT_VERSION = "0.1.9-dev";
     private static final int PROTOCOL_VERSION = 1;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -127,6 +127,11 @@ public final class BMSIRArenaClient {
             return Arrays.stream(songs)
                     .map(SongBar::new)
                     .toArray(Bar[]::new);
+        }
+
+        @Override
+        public boolean usesTableFolderStyle() {
+            return true;
         }
 
         @Override

@@ -150,7 +150,8 @@ public final class BarRenderer {
 				Bar sd = manager.currentsongs[index];
 				ba.sd = sd;
 
-				if (sd instanceof TableBar || sd instanceof HashBar || sd instanceof ExecutableBar || sd instanceof ArenaBar) {
+				if (sd instanceof TableBar || sd instanceof HashBar || sd instanceof ExecutableBar || sd instanceof ArenaBar
+						|| sd instanceof DirectoryBar && ((DirectoryBar) sd).usesTableFolderStyle()) {
 					ba.value = 2;
 				} else if (sd instanceof GradeBar) {
 					ba.value = ((GradeBar) sd).existsAllSongs() ? 3 : 4;

@@ -219,6 +219,8 @@ class BMSIRArenaClientTest {
         assertEquals(2, levelFolders.length);
         assertEquals("★1 (1譜面)", levelFolders[0].getTitle());
         assertEquals("★2 (1譜面)", levelFolders[1].getTitle());
+        assertTrue(((DirectoryBar) levelFolders[0]).usesTableFolderStyle());
+        assertTrue(((DirectoryBar) levelFolders[1]).usesTableFolderStyle());
         Bar[] levelOneSongs = ((DirectoryBar) levelFolders[0]).getChildren();
         Bar[] levelTwoSongs = ((DirectoryBar) levelFolders[1]).getChildren();
         assertEquals(1, levelOneSongs.length);
