@@ -36,6 +36,15 @@ class BMSIRArenaOverlayTest {
     }
 
     @Test
+    void scoreGraphStaysInsideTheActualPlotBounds() {
+        assertEquals(110.0f, BMSIRArenaOverlay.scorePlotHeight(210.0f));
+        assertEquals(10.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 1.0));
+        assertEquals(10.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 1.1));
+        assertEquals(120.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 0.0));
+        assertEquals(120.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, -0.1));
+    }
+
+    @Test
     void gameplayWindowDefaultsScaleWithinTheViewport() {
         assertEquals(640.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1280));
         assertEquals(760.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1920));

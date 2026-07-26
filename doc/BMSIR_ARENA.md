@@ -22,6 +22,11 @@ position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
 play-time mouse cursor, and enables optional mutual unrestricted matching and
 a mirrored synchronized-RANDOM layout. Ctrl+Shift+F5 toggles visibility.
+The graph uses the actual available plot height and keeps bars and the selected
+outline inside the MAX guide even at the minimum window height. Each new
+nomination round returns to the selector root before opening
+`BMS-IR Arena 選曲候補`, so temporary folder labels do not accumulate across
+auto-requeued matches.
 The Web Arena page remains available for the same queue controls, spectating,
 and durable match history.
 

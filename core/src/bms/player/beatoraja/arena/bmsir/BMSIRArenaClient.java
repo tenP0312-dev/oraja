@@ -663,6 +663,10 @@ public final class BMSIRArenaClient {
                     selector,
                     ownedByLevel
             );
+            // A completed Arena round can leave the previous temporary folder
+            // in the selector stack. Reopen from root so the directory label
+            // does not grow by another Arena folder on every auto-requeue.
+            selector.getBarManager().updateBar(null);
             if (selector.getBarManager().updateBar(arenaFolder)) {
                 ImGuiNotify.info(
                         "Arena選曲候補を表示しました（所持"

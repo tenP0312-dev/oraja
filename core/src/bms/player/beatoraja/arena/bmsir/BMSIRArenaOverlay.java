@@ -49,6 +49,8 @@ public final class BMSIRArenaOverlay {
     private static final float GAMEPLAY_WINDOW_MAX_HEIGHT = 520.0f;
     private static final float GAMEPLAY_GRAPH_MIN_HEIGHT = 210.0f;
     private static final float MATCH_GRAPH_HEIGHT = 350.0f;
+    private static final float GRAPH_PLOT_TOP_PADDING = 8.0f;
+    private static final float GRAPH_LABEL_HEIGHT = 92.0f;
 
     private static boolean confirmWithdrawal;
     private static int lastVisibleMode;
@@ -303,13 +305,12 @@ public final class BMSIRArenaOverlay {
         float originY = ImGui.getCursorScreenPosY();
         float width = Math.max(1.0f, ImGui.getContentRegionAvailX());
         float axisWidth = 44.0f;
-        float labelHeight = 92.0f;
         float plotLeft = originX + axisWidth;
         float plotRight = originX + width;
-        float plotTop = originY + 8.0f;
-        float plotBottom = originY + height - labelHeight;
+        float plotTop = originY + GRAPH_PLOT_TOP_PADDING;
+        float plotHeight = scorePlotHeight(height);
+        float plotBottom = plotTop + plotHeight;
         float plotWidth = Math.max(1.0f, plotRight - plotLeft);
-        float plotHeight = Math.max(120.0f, plotBottom - plotTop);
         ImDrawList drawList = ImGui.getWindowDrawList();
 
         drawList.addRectFilled(plotLeft, plotTop, plotRight, plotBottom, GRAPH_BACKGROUND);
@@ -333,7 +334,7 @@ public final class BMSIRArenaOverlay {
             float barWidth = Math.max(10.0f, Math.min(48.0f, columnWidth * 0.58f));
             float barLeft = centerX - barWidth / 2.0f;
             float barRight = centerX + barWidth / 2.0f;
-            float barTop = plotBottom - (float) rate * plotHeight;
+            float barTop = scoreBarTop(plotTop, plotBottom, rate);
             int color = GRAPH_COLORS[index % GRAPH_COLORS.length];
             boolean selected = player.path("player_id").asInt() == BMSIRArenaClient.currentPlayerId();
 
@@ -341,9 +342,9 @@ public final class BMSIRArenaOverlay {
             drawList.addRectFilled(barLeft, barTop, barRight, plotBottom, color);
             drawList.addRect(
                     barLeft - (selected ? 2.0f : 0.0f),
-                    barTop - (selected ? 2.0f : 0.0f),
+                    Math.max(plotTop, barTop - (selected ? 2.0f : 0.0f)),
                     barRight + (selected ? 2.0f : 0.0f),
-                    plotBottom + (selected ? 2.0f : 0.0f),
+                    plotBottom,
                     selected ? GRAPH_SELECTED : color,
                     0.0f,
                     0,
@@ -449,6 +450,26 @@ public final class BMSIRArenaOverlay {
             return 0.0;
         }
         return Math.max(0.0, Math.min(1.0, exscore / (totalNotes * 2.0)));
+    }
+
+    static float scorePlotHeight(float graphHeight) {
+        return Math.max(
+                1.0f,
+                graphHeight - GRAPH_PLOT_TOP_PADDING - GRAPH_LABEL_HEIGHT
+        );
+    }
+
+    static float scoreBarTop(float plotTop, float plotBottom, double rate) {
+        double clampedRate = Math.max(0.0, Math.min(1.0, rate));
+        return Math.max(
+                plotTop,
+                Math.min(
+                        plotBottom,
+                        plotBottom
+                                - (float) clampedRate
+                                * Math.max(0.0f, plotBottom - plotTop)
+                )
+        );
     }
 
     private static String graphClearLabel(JsonNode player) {
