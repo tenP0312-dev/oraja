@@ -30,11 +30,33 @@ class BMSIRArenaClientTest {
         assertTrue(config.isBmsirArenaShowCursor());
         assertFalse(config.isBmsirArenaUnrestrictedRating());
         assertFalse(config.isBmsirArenaRandomMirror());
+        assertTrue(config.isBmsirArenaStayInRoom());
 
         config.setBmsirArenaOverlayMode(99);
         assertEquals(2, config.getBmsirArenaOverlayMode());
         config.setBmsirArenaOverlayMode(-1);
         assertEquals(0, config.getBmsirArenaOverlayMode());
+    }
+
+    @Test
+    void forcedGaugeNamesMapToNativeGaugeOptions() {
+        assertEquals(-1, BMSIRArenaClient.forcedGaugeOption("free"));
+        assertEquals(2, BMSIRArenaClient.forcedGaugeOption("normal"));
+        assertEquals(3, BMSIRArenaClient.forcedGaugeOption("hard"));
+        assertEquals(4, BMSIRArenaClient.forcedGaugeOption("exhard"));
+        assertEquals(5, BMSIRArenaClient.forcedGaugeOption("hazard"));
+    }
+
+    @Test
+    void liveBpFallsBackFromUnsetStoredMinimumToJudgeCounts() {
+        ScoreData score = new ScoreData();
+        score.addJudgeCount(3, true, 2);
+        score.addJudgeCount(4, false, 3);
+        score.addJudgeCount(5, true, 1);
+        assertEquals(6, BMSIRArenaClient.arenaMinBp(score));
+
+        score.setMinbp(4);
+        assertEquals(4, BMSIRArenaClient.arenaMinBp(score));
     }
 
     @Test
@@ -112,7 +134,14 @@ class BMSIRArenaClientTest {
                   "player": {
                     "rating_exact": 1234.5,
                     "matches_played": 9,
-                    "queue": {"status": "queued"}
+                    "queue": {
+                      "status": "queued",
+                      "match_mode": "casual",
+                      "score_rule": "minbp",
+                      "forced_gauge": "hard",
+                      "chart_scope": "free",
+                      "room_code": "C123456"
+                    }
                   },
                   "ranking": {
                     "current": {"rank": 3},
@@ -124,6 +153,11 @@ class BMSIRArenaClientTest {
         assertEquals(1234.5, BMSIRArenaClient.arenaRating());
         assertEquals(9, BMSIRArenaClient.arenaMatchesPlayed());
         assertEquals("queued", BMSIRArenaClient.queueStatus());
+        assertEquals("casual", BMSIRArenaClient.currentMatchMode());
+        assertEquals("minbp", BMSIRArenaClient.currentScoreRule());
+        assertEquals("hard", BMSIRArenaClient.currentForcedGauge());
+        assertEquals("free", BMSIRArenaClient.currentChartScope());
+        assertEquals("C123456", BMSIRArenaClient.currentRoomCode());
         assertEquals(3, BMSIRArenaClient.rankingView().path("current").path("rank").asInt());
     }
 

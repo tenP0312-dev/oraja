@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.11-dev";
+    private static final String CLIENT_VERSION = "0.1.12-dev";
     private static final int PROTOCOL_VERSION = 2;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -101,6 +101,8 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode liveView = JSON.createObjectNode();
     private static volatile JsonNode resultView = JSON.createObjectNode();
     private static volatile JsonNode nominationView = JSON.createObjectNode();
+    private static volatile JsonNode rulesView = JSON.createObjectNode();
+    private static volatile JsonNode queueView = JSON.createObjectNode();
     private static volatile boolean nominationOpen;
     private static volatile long nominationDeadlineMillis;
     private static volatile int nominationTargetBand;
@@ -249,6 +251,8 @@ public final class BMSIRArenaClient {
         queueStatus = "idle";
         arenaUiMessage = "";
         rankingView = JSON.createObjectNode();
+        rulesView = JSON.createObjectNode();
+        queueView = JSON.createObjectNode();
         liveView = JSON.createObjectNode();
         resultView = JSON.createObjectNode();
         clearNominationState();
@@ -412,6 +416,40 @@ public final class BMSIRArenaClient {
 
     static JsonNode nominationView() {
         return nominationView;
+    }
+
+    static JsonNode rulesView() {
+        return rulesView;
+    }
+
+    static JsonNode queueView() {
+        return queueView;
+    }
+
+    private static JsonNode activeRulesOrQueue() {
+        return reserved && rulesView.isObject() && rulesView.size() > 0
+                ? rulesView
+                : queueView;
+    }
+
+    static String currentMatchMode() {
+        return activeRulesOrQueue().path("match_mode").asText("ranked");
+    }
+
+    static String currentScoreRule() {
+        return activeRulesOrQueue().path("score_rule").asText("exscore");
+    }
+
+    static String currentForcedGauge() {
+        return activeRulesOrQueue().path("forced_gauge").asText("free");
+    }
+
+    static String currentChartScope() {
+        return activeRulesOrQueue().path("chart_scope").asText("official");
+    }
+
+    static String currentRoomCode() {
+        return activeRulesOrQueue().path("room_code").asText("");
     }
 
     static boolean isFillWaiting() {
@@ -678,6 +716,31 @@ public final class BMSIRArenaClient {
         });
     }
 
+    private static void openFreeNominationRoot() {
+        MainController controller = main;
+        String matchId = currentMatchId;
+        if (controller == null || Gdx.app == null) {
+            return;
+        }
+        Gdx.app.postRunnable(() -> {
+            if (
+                    controller != main
+                            || !isNominationOpen()
+                            || !matchId.equals(currentMatchId)
+                            || !(controller.getCurrentState()
+                                    instanceof MusicSelector selector)
+            ) {
+                return;
+            }
+            selector.getBarManager().updateBar(null);
+            arenaUiMessage = "所持譜面から自由に選曲してください";
+            ImGuiNotify.info(
+                    "Arena自由選曲: 所持譜面から1曲選んでください",
+                    5000
+            );
+        });
+    }
+
     static SongData[] playableOwnedSongs(SongData[] songs) {
         Map<String, SongData> playable = new LinkedHashMap<>();
         if (songs == null) {
@@ -783,6 +846,38 @@ public final class BMSIRArenaClient {
         send(message);
     }
 
+    static void requestRoomEntry(
+            String matchMode,
+            String scoreRule,
+            String forcedGauge,
+            String chartScope,
+            String roomCode
+    ) {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "room_entry");
+        message.put("match_mode", matchMode);
+        message.put("score_rule", scoreRule);
+        message.put("forced_gauge", forcedGauge);
+        message.put("chart_scope", chartScope);
+        message.put("room_code", roomCode == null ? "" : roomCode.trim());
+        message.put(
+                "stay_in_room",
+                main != null && main.getPlayerConfig().isBmsirArenaStayInRoom()
+        );
+        arenaUiMessage = "部屋へ参加しています";
+        send(message);
+    }
+
+    static void requestRoomStay(boolean stayInRoom) {
+        if ("ranked".equals(currentMatchMode())) {
+            return;
+        }
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "room_stay");
+        message.put("stay_in_room", stayInRoom);
+        send(message);
+    }
+
     static void requestChat(String text) {
         if (!reserved || currentMatchId.isBlank()) {
             return;
@@ -884,7 +979,10 @@ public final class BMSIRArenaClient {
 
     public static void enforceArenaOptions() {
         if (arenaPlayActive && main != null) {
-            applyFixedOptions(main.getPlayerConfig());
+            applyFixedOptions(
+                    main.getPlayerConfig(),
+                    currentForcedGauge()
+            );
             if (main.getPlayerResource().getBMSModel() != null && savedOptions != null) {
                 savedOptions.disableConstant(
                         main.getPlayerConfig(),
@@ -975,6 +1073,8 @@ public final class BMSIRArenaClient {
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
         message.put("processed_notes", processedNotes(score));
+        message.put("minbp", arenaMinBp(score));
+        message.put("max_combo", Math.max(0, score.getCombo()));
         message.put("play_option", currentPlayOption);
         if (currentPlayMode > 0) {
             message.put("play_mode", currentPlayMode);
@@ -993,6 +1093,8 @@ public final class BMSIRArenaClient {
                 "processed_notes",
                 finalProcessedNotes(score, hardFail, currentChartTotalNotes)
         );
+        message.put("minbp", arenaMinBp(score));
+        message.put("max_combo", Math.max(0, score.getCombo()));
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
         message.put("play_option", currentPlayOption);
@@ -1015,6 +1117,21 @@ public final class BMSIRArenaClient {
         int processed = Math.max(Math.max(0, score.getPassnotes()), judged);
         int total = score.getNotes();
         return total > 0 ? Math.min(processed, total) : processed;
+    }
+
+    static int arenaMinBp(ScoreData score) {
+        if (score == null) {
+            return 0;
+        }
+        int stored = score.getMinbp();
+        if (stored >= 0 && stored <= 1_000_000) {
+            return stored;
+        }
+        int current = 0;
+        for (int judge = 3; judge <= 5; judge++) {
+            current += Math.max(0, score.getJudgeCount(judge));
+        }
+        return current;
     }
 
     static int finalProcessedNotes(
@@ -1124,6 +1241,7 @@ public final class BMSIRArenaClient {
                     reserved = true;
                     queueStatus = "reserved";
                     arenaUiMessage = "マッチングしました";
+                    receiveRules(message);
                     if (!sameMatch) {
                         String currentState = normalizeCurrentState();
                         if ("select".equals(currentState)) {
@@ -1171,6 +1289,7 @@ public final class BMSIRArenaClient {
                     }
                 }
                 case "result" -> {
+                    receiveRules(message);
                     resultView = message;
                     liveView = message;
                     boolean autoReentered = false;
@@ -1183,13 +1302,19 @@ public final class BMSIRArenaClient {
                     for (JsonNode player : message.path("players")) {
                         if (player.path("player_id").asInt() == currentPlayerId) {
                             arenaRating = player.path("after").asDouble(arenaRating);
-                            arenaMatchesPlayed++;
+                            if (message.path("rated").asBoolean(false)) {
+                                arenaMatchesPlayed++;
+                            }
                             break;
                         }
                     }
                     queueStatus = autoReentered ? "queued" : "cancelled";
+                    boolean roomMatch =
+                            !"ranked".equals(currentMatchMode());
                     arenaUiMessage = autoReentered
-                            ? "対戦終了。次の対戦を待機しています"
+                            ? (roomMatch
+                                    ? "対戦終了。この部屋で次の対戦を待っています"
+                                    : "対戦終了。次の対戦を待機しています")
                             : "対戦終了。自動エントリーを終了しました";
                     reserved = false;
                     arenaPlayPending = false;
@@ -1207,7 +1332,9 @@ public final class BMSIRArenaClient {
                     restoreOptionsWhenSafe();
                     ImGuiNotify.info(
                             autoReentered
-                                    ? "Arena終了。次の対戦を待機しています"
+                                    ? (roomMatch
+                                            ? "Arena終了。この部屋に残りました"
+                                            : "Arena終了。次の対戦を待機しています")
                                     : "Arena終了。自動エントリーを終了しました",
                             8000
                     );
@@ -1289,7 +1416,10 @@ public final class BMSIRArenaClient {
                     String code = message.path("code").asText();
                     arenaUiMessage = switch (code) {
                         case "nomination_rejected" ->
-                                "選曲できません。発狂難易度表と★上限を確認してください";
+                                "選曲できません。部屋の選曲範囲と所持譜面を確認してください";
+                        case "room_entry_failed" ->
+                                "部屋へ参加できません: "
+                                        + message.path("message").asText(code);
                         case "nomination_closed" -> "選曲受付は終了しました";
                         default -> message.path("message").asText(code);
                     };
@@ -1309,7 +1439,8 @@ public final class BMSIRArenaClient {
                 player.path("rating").asDouble(1000.0)
         );
         arenaMatchesPlayed = player.path("matches_played").asInt(0);
-        queueStatus = player.path("queue").path("status").asText("idle");
+        queueView = player.path("queue");
+        queueStatus = queueView.path("status").asText("idle");
         rankingView = message.path("ranking");
         arenaUiMessage = switch (queueStatus) {
             case "queued" -> "対戦相手を待っています";
@@ -1319,14 +1450,27 @@ public final class BMSIRArenaClient {
         };
     }
 
+    private static void receiveRules(JsonNode message) {
+        JsonNode incoming = message.path("rules");
+        if (incoming.isObject() && incoming.size() > 0) {
+            rulesView = incoming;
+        }
+    }
+
     static void receiveNominationStatus(JsonNode message) {
         if (!currentMatchId.equals(message.path("match_id").asText())) {
             return;
         }
         clearFillState();
+        receiveRules(message);
         int targetBand = message.path("target_band").asInt(1);
+        String chartScope = message.path("chart_scope").asText(
+                currentChartScope()
+        );
         boolean shouldOpenCandidates =
-                !nominationOpen || nominationTargetBand != targetBand;
+                !nominationOpen
+                        || nominationTargetBand != targetBand
+                        || !chartScope.equals(currentChartScope());
         nominationView = message;
         nominationOpen = true;
         nominationTargetBand = targetBand;
@@ -1336,7 +1480,11 @@ public final class BMSIRArenaClient {
         queueStatus = "matched";
         arenaUiMessage = "次のArena課題曲を選んでください";
         if (shouldOpenCandidates) {
-            openNominationCandidateFolder(targetBand);
+            if ("free".equals(chartScope)) {
+                openFreeNominationRoot();
+            } else {
+                openNominationCandidateFolder(targetBand);
+            }
         }
     }
 
@@ -1345,6 +1493,7 @@ public final class BMSIRArenaClient {
             return;
         }
         clearFillState();
+        receiveRules(message);
         nominationView = message;
         nominationOpen = false;
         nominationDeadlineMillis = 0L;
@@ -1398,6 +1547,7 @@ public final class BMSIRArenaClient {
         if (!currentMatchId.equals(message.path("match_id").asText())) {
             return;
         }
+        receiveRules(message);
         liveView = message;
         String state = message.path("state").asText();
         if ("filling".equals(state)) {
@@ -1469,6 +1619,7 @@ public final class BMSIRArenaClient {
         if (!currentMatchId.equals(message.path("match_id").asText()) || main == null) {
             return;
         }
+        receiveRules(message);
         JsonNode chart = message.path("chart");
         currentRandomSeed = message.path("random_seed").asLong(-1L);
         String md5 = chart.path("md5").asText();
@@ -1521,13 +1672,17 @@ public final class BMSIRArenaClient {
         if (arenaPlayActive || !arenaPlayPending || main == null) {
             return;
         }
+        receiveRules(message);
         currentRandomSeed = message.path("random_seed").asLong(currentRandomSeed);
         resultView = JSON.createObjectNode();
         Gdx.app.postRunnable(() -> {
             if (!reserved || !arenaPlayPending || main == null) {
                 return;
             }
-            applyFixedOptions(main.getPlayerConfig());
+            applyFixedOptions(
+                    main.getPlayerConfig(),
+                    currentForcedGauge()
+            );
             currentPlayOption = encodePlayOption(
                     main.getPlayerConfig(),
                     currentPlayMode
@@ -1554,7 +1709,10 @@ public final class BMSIRArenaClient {
         arenaUiMessage = "全員準備完了。まもなく開始します";
     }
 
-    private static void applyFixedOptions(PlayerConfig config) {
+    private static void applyFixedOptions(
+            PlayerConfig config,
+            String forcedGauge
+    ) {
         if (savedOptions == null) {
             savedOptions = new OptionSnapshot(config);
         }
@@ -1576,6 +1734,11 @@ public final class BMSIRArenaClient {
         config.setExtranoteDepth(0);
         config.setBpmguide(false);
         config.setCustomJudge(false);
+        int gauge = forcedGaugeOption(forcedGauge);
+        if (gauge >= 0) {
+            config.setGauge(gauge);
+            config.setGaugeAutoShift(PlayerConfig.GAUGEAUTOSHIFT_NONE);
+        }
         FreqTrainerMenu.FREQ_TRAINER_ENABLED.set(false);
         JudgeTrainer.setActive(false);
         RandomTrainer.setActive(false);
@@ -1587,6 +1750,16 @@ public final class BMSIRArenaClient {
                 || option == 2
                 || option == 3
                 || option == 5;
+    }
+
+    static int forcedGaugeOption(String forcedGauge) {
+        return switch (forcedGauge == null ? "" : forcedGauge) {
+            case "normal" -> 2;
+            case "hard" -> 3;
+            case "exhard" -> 4;
+            case "hazard" -> 5;
+            default -> -1;
+        };
     }
 
     static int chartCheckTotalNotes(SongData song, int expectedTotalNotes) {
@@ -1645,6 +1818,8 @@ public final class BMSIRArenaClient {
         private final int sevenToNinePattern;
         private final int sevenToNineType;
         private final int extraNoteDepth;
+        private final int gauge;
+        private final int gaugeAutoShift;
         private final boolean bpmGuide;
         private final boolean customJudge;
         private final boolean frequencyTrainer;
@@ -1664,6 +1839,8 @@ public final class BMSIRArenaClient {
             sevenToNinePattern = config.getSevenToNinePattern();
             sevenToNineType = config.getSevenToNineType();
             extraNoteDepth = config.getExtranoteDepth();
+            gauge = config.getGauge();
+            gaugeAutoShift = config.getGaugeAutoShift();
             bpmGuide = config.isBpmguide();
             customJudge = config.isCustomJudge();
             frequencyTrainer = FreqTrainerMenu.isFreqTrainerEnabled();
@@ -1690,6 +1867,8 @@ public final class BMSIRArenaClient {
             config.setSevenToNinePattern(sevenToNinePattern);
             config.setSevenToNineType(sevenToNineType);
             config.setExtranoteDepth(extraNoteDepth);
+            config.setGauge(gauge);
+            config.setGaugeAutoShift(gaugeAutoShift);
             config.setBpmguide(bpmGuide);
             config.setCustomJudge(customJudge);
             FreqTrainerMenu.FREQ_TRAINER_ENABLED.set(frequencyTrainer);

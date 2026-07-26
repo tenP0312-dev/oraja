@@ -2,6 +2,8 @@
 
 Status: controlled BMS-IR Arena v1 canary. The direct service and OS-specific
 downloads are live, but global Web navigation and announcement are not.
+The `0.1.12-dev` casual/private-room source is implemented but not yet in the
+live release gate or downloads.
 
 ## Enabling
 
@@ -45,6 +47,12 @@ and durable match history.
 ## Match behavior
 
 - Ordinary single-song play remains available while queued.
+- The normal `対戦` tab enters the existing rated queue. The
+  `カジュアル／プラベ` tab creates unrated casual matching or a private room
+  with a six-character code. Room rules choose EX SCORE, BP, or MAX COMBO;
+  free/NORMAL/HARD/EXHARD/HAZARD gauge; and official-table or free selection.
+- `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
+  code and rules. Turning it off leaves after the current result.
 - Courses, practice, autoplay, and replay are not eligible matching states.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
@@ -67,12 +75,19 @@ and durable match history.
   発狂BMS table chart between ★1 and the weakest participant's rating ceiling.
   The client checks the selected MD5 before accepting it; the server validates
   the LN-scale processed-note count during play.
+- In a free-selection casual/private room, the selector returns to its normal
+  root and accepts any positive-note server-catalog chart. At least one player
+  must nominate explicitly; timeout and missing-chart rerolls stay within the
+  submitted room candidates instead of choosing an unrelated random chart.
 - Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, or SPIRAL
   lane option and uses LN. S-RANDOM, H-RANDOM, ALL-SCR, RANDOM-EX, and
   S-RANDOM-EX are unavailable for Arena and are clamped to NORMAL.
   Normal RANDOM receives one shared match seed. The mirror checkbox locally
   reverses that seven-key order; R-RANDOM and SPIRAL are not synchronized.
-  Gauge and ordinary visual/timing preferences remain available.
+  Gauge and ordinary visual/timing preferences remain available in ranked
+  play. A casual/private forced gauge temporarily replaces the gauge and
+  disables Gauge Auto Shift for that Arena chart; both values are restored
+  afterward.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
   CONSTANT, battle, and mode conversion are disabled for that Arena play and
   restored afterward.
@@ -81,7 +96,8 @@ and durable match history.
 - Start+Select and Escape cannot abort a server-selected Arena chart. This
   applies only while the Arena play is active; Arena OFF and ordinary play keep
   their normal input behavior.
-- The client sends current EX and processed-note count at most once per second,
+- The client sends current EX, BP, MAX COMBO, and processed-note count at most
+  once per second,
   together with the selected OP, followed by one immediate final packet with
   the result ClearType. The processed-note count uses the larger of the play
   counter and judged-note total so skins or rules that keep the in-play pass
@@ -123,7 +139,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.11-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.12-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 while retaining the FFmpeg

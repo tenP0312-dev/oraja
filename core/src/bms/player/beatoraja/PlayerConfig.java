@@ -257,6 +257,8 @@ public final class PlayerConfig {
 	private int bmsirArenaOverlayMode = 0;
 
 	private boolean bmsirArenaShowCursor = true;
+	/** Keep this player in an unrated Arena room after each result. */
+	private boolean bmsirArenaStayInRoom = true;
 	
 	private String twitterConsumerKey;
 
@@ -628,6 +630,14 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaShowCursor(boolean bmsirArenaShowCursor) {
 		this.bmsirArenaShowCursor = bmsirArenaShowCursor;
+	}
+
+	public boolean isBmsirArenaStayInRoom() {
+		return bmsirArenaStayInRoom;
+	}
+
+	public void setBmsirArenaStayInRoom(boolean bmsirArenaStayInRoom) {
+		this.bmsirArenaStayInRoom = bmsirArenaStayInRoom;
 	}
 
 	public String getTargetid() {
