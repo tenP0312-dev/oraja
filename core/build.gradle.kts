@@ -1,4 +1,7 @@
 import java.nio.file.FileSystems
+import java.util.Properties
+import java.util.zip.ZipFile
+import org.gradle.api.GradleException
 
 plugins {
     id("java-library")
@@ -54,6 +57,8 @@ tasks {
 
         val platformProp = System.getProperty("platform")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
         val archProp = System.getProperty("arch")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val targetPlatform = platformProp ?: "windows"
+        val targetArch = archProp ?: "x86-64"
         val platformClassifier = listOfNotNull(platformProp, archProp).joinToString("-")
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))
@@ -61,6 +66,94 @@ tasks {
         archiveVersion.set("0.1.11-dev")
         archiveClassifier.set(platformClassifier)
         mergeServiceFiles()
+
+        doLast {
+            val nativeClassifier = when (targetPlatform to targetArch) {
+                "windows" to "x86-64" -> "windows-x86_64"
+                "macos" to "aarch64" -> "macosx-arm64"
+                "macos" to "x86-64" -> "macosx-x86_64"
+                "linux" to "aarch64" -> "linux-arm64"
+                "linux" to "x86-64" -> "linux-x86_64"
+                else -> throw GradleException(
+                    "Unsupported JavaCPP target: platform=$targetPlatform arch=$targetArch"
+                )
+            }
+            val javaCppPrefix = "org/bytedeco/javacpp/$nativeClassifier/"
+            val ffmpegPrefix = "org/bytedeco/ffmpeg/$nativeClassifier/"
+            val requiredEntries = when (targetPlatform) {
+                "windows" -> listOf(
+                    "${javaCppPrefix}jnijavacpp.dll",
+                    "${javaCppPrefix}msvcp140.dll",
+                    "${javaCppPrefix}vcruntime140.dll",
+                    "${javaCppPrefix}vcruntime140_1.dll",
+                    "${javaCppPrefix}ucrtbase.dll",
+                    "${ffmpegPrefix}jniavformat.dll",
+                    "${ffmpegPrefix}avformat-60.dll",
+                )
+                "macos" -> listOf(
+                    "${javaCppPrefix}libjnijavacpp.dylib",
+                    "${ffmpegPrefix}libjniavformat.dylib",
+                    "${ffmpegPrefix}libavformat.60.dylib",
+                )
+                else -> listOf(
+                    "${javaCppPrefix}libjnijavacpp.so",
+                    "${ffmpegPrefix}libjniavformat.so",
+                    "${ffmpegPrefix}libavformat.so.60",
+                )
+            }
+            val knownNativeClassifiers = listOf(
+                "windows-x86_64",
+                "macosx-arm64",
+                "macosx-x86_64",
+                "linux-arm64",
+                "linux-x86_64",
+            )
+            val expectedVersions = mapOf(
+                "META-INF/maven/org.bytedeco/javacpp/pom.properties" to "1.5.11",
+                "META-INF/maven/org.bytedeco/javacv/pom.properties" to "1.5.11",
+                "META-INF/maven/org.bytedeco/ffmpeg/pom.properties" to "6.0-1.5.9",
+            )
+
+            ZipFile(archiveFile.get().asFile).use { jar ->
+                val missing = requiredEntries.filter { jar.getEntry(it) == null }
+                if (missing.isNotEmpty()) {
+                    throw GradleException(
+                        "Shadow JAR is missing required $nativeClassifier runtime entries: " +
+                            missing.joinToString()
+                    )
+                }
+
+                val entries = jar.entries().asSequence().map { it.name }.toSet()
+                val unexpected = knownNativeClassifiers
+                    .filterNot { it == nativeClassifier }
+                    .flatMap { classifier ->
+                        listOf(
+                            "org/bytedeco/javacpp/$classifier/",
+                            "org/bytedeco/ffmpeg/$classifier/",
+                        )
+                    }
+                    .filter { prefix -> entries.any { it.startsWith(prefix) } }
+                if (unexpected.isNotEmpty()) {
+                    throw GradleException(
+                        "Shadow JAR contains native entries for another target: " +
+                            unexpected.joinToString()
+                    )
+                }
+
+                expectedVersions.forEach { (path, expectedVersion) ->
+                    val entry = jar.getEntry(path)
+                        ?: throw GradleException("Shadow JAR is missing $path")
+                    val properties = Properties()
+                    jar.getInputStream(entry).use(properties::load)
+                    val actualVersion = properties.getProperty("version")
+                    if (actualVersion != expectedVersion) {
+                        throw GradleException(
+                            "$path has version $actualVersion; expected $expectedVersion"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     // shadow task that extends java `application` plugin JavaExec to cover fatjars

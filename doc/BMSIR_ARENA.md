@@ -126,6 +126,13 @@ The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 BMS-IR-Arena-ED-0.1.11-dev-macos-aarch64.jar
 ```
 
+The release build uses JavaCPP and JavaCV 1.5.11 while retaining the FFmpeg
+6.0-1.5.9 preset. `shadowJar` fails when the target JavaCPP runtime, the FFmpeg
+runtime, or the expected dependency versions are missing, or when native
+libraries for another OS are mixed into the artifact. The Windows x86-64
+artifact must therefore contain `jnijavacpp.dll`, its bundled Visual C++
+runtime DLLs, and the FFmpeg JNI/runtime DLLs before it can be distributed.
+
 Movie decoding copies JavaCV frames into an independent RGB888 Pixmap with
 stride/channel handling and decoder/render locking. It recreates resources on
 size changes, reopens the grabber after a failed loop seek, and logs open,

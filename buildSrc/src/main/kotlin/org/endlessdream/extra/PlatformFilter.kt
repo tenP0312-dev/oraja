@@ -52,9 +52,6 @@ abstract class PlatformFilter : TransformAction<PlatformFilter.Parameters> {
                 return
             }
         }
-        if (fileName.contains("javacpp-1.5.9-windows-x86_64")) return
-        if (fileName.contains("javacpp-1.5.9-macos-arm64")) return
-
         outputs.file(primaryInput)
     }
 
