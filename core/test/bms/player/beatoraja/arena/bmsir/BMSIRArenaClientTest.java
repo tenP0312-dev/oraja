@@ -120,6 +120,46 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void arenaStartRemainsBlockedUntilReadyAndServerEpoch() {
+        assertTrue(BMSIRArenaClient.arenaStartReleased(
+                false,
+                false,
+                0L,
+                1_000L
+        ));
+        assertFalse(BMSIRArenaClient.arenaStartReleased(
+                true,
+                false,
+                2_000L,
+                2_000L
+        ));
+        assertFalse(BMSIRArenaClient.arenaStartReleased(
+                true,
+                true,
+                2_000L,
+                1_999L
+        ));
+        assertTrue(BMSIRArenaClient.arenaStartReleased(
+                true,
+                true,
+                2_000L,
+                2_000L
+        ));
+    }
+
+    @Test
+    void clockOffsetUsesThePingRoundTripMidpoint() {
+        assertEquals(
+                100L,
+                BMSIRArenaClient.clockOffsetMillis(
+                        2.1,
+                        1_900L,
+                        2_100L
+                )
+        );
+    }
+
+    @Test
     void officialArenaLevelsExcludeZeroUnknownAndOutOfRangeFolders() {
         assertEquals(1, BMSIRArenaClient.officialArenaLevel("★1"));
         assertEquals(25, BMSIRArenaClient.officialArenaLevel("★25"));

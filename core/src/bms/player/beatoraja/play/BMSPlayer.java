@@ -620,7 +620,8 @@ public class BMSPlayer extends MainState {
 		if(micronow > skin.getInput() * 1000){
 			timer.switchTimer(TIMER_STARTINPUT, true);
 		}
-		if(input.startPressed() || input.isSelectPressed()){
+		if(!BMSIRArenaClient.ignoresArenaPreloadInputDelay()
+				&& (input.startPressed() || input.isSelectPressed())){
 			startpressedtime = micronow;
 		}
 		
@@ -684,6 +685,7 @@ public class BMSPlayer extends MainState {
 						state = STATE_READY;
 						timer.setTimerOn(TIMER_READY);
 						play(PLAY_READY);
+						BMSIRArenaClient.onArenaPlayReady();
 						logger.info("STATE_READYに移行");
 					}
 				}
@@ -784,7 +786,8 @@ public class BMSPlayer extends MainState {
 			}
 			// GET READY
 			case STATE_READY -> {
-				if (timer.getNowTime(TIMER_READY) > skin.getPlaystart()) {
+				if (timer.getNowTime(TIMER_READY) > skin.getPlaystart()
+						&& BMSIRArenaClient.isArenaStartReleased()) {
 					replayConfig = lanerender.getPlayConfig().clone();
 					state = STATE_PLAY;
 					timer.setMicroTimer(TIMER_PLAY, micronow - starttimeoffset * 1000);
