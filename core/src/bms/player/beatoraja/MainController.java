@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.modmenu.*;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
 import bms.tool.mdprocessor.HttpDownloadSource;
@@ -766,7 +767,14 @@ public class MainController {
             	input.setMouseMoved(false);
             	mouseMovedTime = time;
 			}
-            if (!getShowModMenu() && current instanceof BMSPlayer && !player.isBmsirArenaEnabled()) {
+            if (
+                    !getShowModMenu()
+                            && current instanceof BMSPlayer
+                            && (
+                                    !player.isBmsirArenaEnabled()
+                                            || !player.isBmsirArenaShowCursor()
+                            )
+            ) {
                 Gdx.input.setCursorCatched(time > mouseMovedTime + 2000);
             } else {
                 Gdx.input.setCursorCatched(false);
@@ -860,6 +868,10 @@ public class MainController {
                     screenshot.start();
                 }
             }
+
+			if (input.isActivated(KeyCommand.TOGGLE_BMSIR_ARENA_OVERLAY)) {
+				BMSIRArenaOverlay.toggleVisibility();
+			}
 
 			if (input.isActivated(KeyCommand.TOGGLE_MOD_MENU)) {
 				imGui.toggleMenu();

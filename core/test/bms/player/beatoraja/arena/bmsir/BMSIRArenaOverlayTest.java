@@ -6,6 +6,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BMSIRArenaOverlayTest {
     @Test
+    void gameplayLayoutUsesSeparatePersistentIdsForSpAndDp() {
+        assertEquals(
+                "##gameplay-sp",
+                BMSIRArenaOverlay.gameplayWindowId(false, false)
+        );
+        assertEquals(
+                "##gameplay-dp",
+                BMSIRArenaOverlay.gameplayWindowId(false, true)
+        );
+        assertEquals(
+                "##compact-play-sp",
+                BMSIRArenaOverlay.gameplayWindowId(true, false)
+        );
+        assertEquals(
+                "##compact-play-dp",
+                BMSIRArenaOverlay.gameplayWindowId(true, true)
+        );
+    }
+
+    @Test
     void scoreRateUsesTheChartMaximumAndClampsInvalidScores() {
         assertEquals(0.0, BMSIRArenaOverlay.scoreRate(0, 100));
         assertEquals(0.5, BMSIRArenaOverlay.scoreRate(100, 100));

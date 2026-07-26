@@ -425,6 +425,11 @@ public class BMSPlayerInputProcessor {
 			return isControlKeyPressed(ControlKeys.F12);
 		case TOGGLE_MOD_MENU:
 			return isControlKeyPressed(ControlKeys.F5) || isControlKeyPressed(ControlKeys.INSERT);
+		case TOGGLE_BMSIR_ARENA_OVERLAY:
+			return isControlKeyPressed(
+					ControlKeys.F5,
+					MASK_CTRL_SHIFT
+			);
 		}
 		return false;
 	}

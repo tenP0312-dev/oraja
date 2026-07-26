@@ -18,8 +18,12 @@ It also shows the current rating, an up-to-eight-player real-time vertical EX
 graph with MAX/AAA/AA/A guides and per-player OP, live/final result details
 with clear lamps, and the Arena rating leaders. During play, the graph opens
 at the bottom center and can be moved and resized; ImGui stores the adjusted
-position and size in `layout.ini`. The Web Arena page remains available for the
-same queue controls, spectating, and durable match history.
+position and size in `layout.ini`. SP and DP use separate saved layouts.
+The settings tab selects normal, compact, or hidden display, controls the
+play-time mouse cursor, and enables optional mutual unrestricted matching and
+a mirrored synchronized-RANDOM layout. Ctrl+Shift+F5 toggles visibility.
+The Web Arena page remains available for the same queue controls, spectating,
+and durable match history.
 
 ## Dedicated-client long-note policy
 
@@ -39,7 +43,13 @@ same queue controls, spectating, and durable match history.
 - Courses, practice, autoplay, and replay are not eligible matching states.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
-- After the fill window closes, a 20-second nomination phase opens. The normal
+- Two READY players open a 30-second fill window. Four READY players reduce
+  the remaining wait to at most ten seconds, and eight READY players start
+  immediately.
+- The normal rating windows remain ±100, then ±300, then unrestricted. The
+  unrestricted-match option bypasses the wait early only when every
+  out-of-range pair enabled it.
+- After the fill window closes, a 60-second nomination phase opens. The normal
   selector stays navigable, and selecting a song nominates that exact chart
   instead of starting ordinary play. The overlay also provides an explicit
   server-random choice.
@@ -52,16 +62,17 @@ same queue controls, spectating, and durable match history.
   発狂BMS table chart between ★1 and the weakest participant's rating ceiling.
   The client checks the selected MD5 before accepting it; the server validates
   the LN-scale processed-note count during play.
-- Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, S-RANDOM, or
-  SPIRAL lane option and uses LN. H-RANDOM, ALL-SCR, RANDOM-EX, and
-  S-RANDOM-EX are assist-class options for Arena and are clamped to NORMAL.
+- Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, or SPIRAL
+  lane option and uses LN. S-RANDOM, H-RANDOM, ALL-SCR, RANDOM-EX, and
+  S-RANDOM-EX are unavailable for Arena and are clamped to NORMAL.
+  Normal RANDOM receives one shared match seed. The mirror checkbox locally
+  reverses that seven-key order; R-RANDOM and SPIRAL are not synchronized.
   Gauge and ordinary visual/timing preferences remain available.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
   CONSTANT, battle, and mode conversion are disabled for that Arena play and
   restored afterward.
-- When BMS-IR Arena is enabled, the game does not auto-catch the OS mouse
-  cursor during play. The canary client must not prevent desktop mouse
-  movement while waiting, playing, or returning from an Arena match.
+- The cursor checkbox chooses whether Arena play keeps the OS pointer available
+  or uses the ordinary inactivity-based catch behavior.
 - Start+Select and Escape cannot abort a server-selected Arena chart. This
   applies only while the Arena play is active; Arena OFF and ordinary play keep
   their normal input behavior.
@@ -73,6 +84,10 @@ same queue controls, spectating, and durable match history.
   server-selected chart total; hard fail keeps the actual processed count.
 - SP sends only the active 1P lane option even if stale 2P/FLIP settings exist.
   DP sends both sides and FLIP together with the chart play mode.
+- The chat tab talks only to participants in the current match. Messages are
+  limited to 200 normalized characters and one accepted message per second;
+  the latest 50 return after reconnect and disappear when the match ends.
+  Gameplay displays only recent chat read-only so input cannot capture keys.
 - After Arena play, the result screen remains until the ordinary IR submission
   finishes. Fixed Arena options are restored only after that submission has
   captured the Arena score.
@@ -103,8 +118,15 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.10-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.11-dev-macos-aarch64.jar
 ```
+
+Movie decoding copies JavaCV frames into an independent RGB888 Pixmap with
+stride/channel handling and decoder/render locking. It recreates resources on
+size changes, reopens the grabber after a failed loop seek, and logs open,
+metadata, first-frame, first-Texture, and failure details through the normal
+application logger. Release acceptance must test both skin movies and in-play
+BGA on the target Windows/Java 17 body.
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
 commit, record the artifact hashes privately for rollout, and configure the

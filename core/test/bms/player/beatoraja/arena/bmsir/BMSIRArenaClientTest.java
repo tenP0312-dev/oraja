@@ -4,6 +4,7 @@ import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
+import bms.player.beatoraja.pattern.LR2RandomPattern;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
 import bms.player.beatoraja.select.bar.SongBar;
@@ -21,6 +22,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRArenaClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    @Test
+    void arenaOverlaySettingsHaveSafeDefaultsAndClampTheMode() {
+        PlayerConfig config = new PlayerConfig();
+        assertEquals(0, config.getBmsirArenaOverlayMode());
+        assertTrue(config.isBmsirArenaShowCursor());
+        assertFalse(config.isBmsirArenaUnrestrictedRating());
+        assertFalse(config.isBmsirArenaRandomMirror());
+
+        config.setBmsirArenaOverlayMode(99);
+        assertEquals(2, config.getBmsirArenaOverlayMode());
+        config.setBmsirArenaOverlayMode(-1);
+        assertEquals(0, config.getBmsirArenaOverlayMode());
+    }
+
+    @Test
+    void arenaAllowsSupportedRandomsButRejectsSRandomAndAssistOptions() {
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(0));
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(1));
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(2));
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(3));
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(5));
+        assertFalse(BMSIRArenaClient.isAllowedArenaRandom(4));
+        assertFalse(BMSIRArenaClient.isAllowedArenaRandom(6));
+    }
+
+    @Test
+    void synchronizedRandomCanPreserveOrMirrorTheServerSeed() {
+        long seed = 123456789L;
+        assertEquals(seed, BMSIRArenaClient.synchronizedRandomSeed(seed, false));
+
+        long mirrored = BMSIRArenaClient.synchronizedRandomSeed(seed, true);
+        assertEquals(
+                new StringBuilder(
+                        LR2RandomPattern.getRajaLaneOrder(seed, false)
+                ).reverse().toString(),
+                LR2RandomPattern.getRajaLaneOrder(mirrored, false)
+        );
+    }
 
     @Test
     void spOptionDoesNotIncludeStaleSecondSideOrFlipSettings() {

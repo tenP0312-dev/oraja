@@ -156,7 +156,6 @@ public class BMSPlayer extends MainState {
 			playinfo.doubleoption = chartOption.doubleoption;
 			playinfo.rand = chartOption.rand;
 		}
-
 		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 			if (resource.getCourseBMSModels() != null) {
 				// コースモードのリプレイ読み込み
@@ -390,6 +389,7 @@ public class BMSPlayer extends MainState {
 				playinfo.randomoption2seed = rd.randomoption2seed;
 				playinfo.doubleoption = rd.doubleoption;
 			}
+			BMSIRArenaClient.applySynchronizedRandomSeed(playinfo);
 
 			Array<PatternModifier> mods = new Array<PatternModifier>();
 			// DP譜面オプション

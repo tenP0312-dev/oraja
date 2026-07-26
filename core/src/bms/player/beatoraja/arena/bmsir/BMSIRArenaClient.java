@@ -6,6 +6,7 @@ import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.MainState.MainStateType;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.ReplayData;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.Version;
@@ -15,6 +16,7 @@ import bms.player.beatoraja.modmenu.FreqTrainerMenu;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.JudgeTrainer;
 import bms.player.beatoraja.modmenu.RandomTrainer;
+import bms.player.beatoraja.pattern.LR2RandomPattern;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
@@ -34,10 +36,12 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -57,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.10-dev";
+    private static final String CLIENT_VERSION = "0.1.11-dev";
     private static final int PROTOCOL_VERSION = 2;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -85,6 +89,7 @@ public final class BMSIRArenaClient {
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
     private static volatile int currentChartTotalNotes;
+    private static volatile long currentRandomSeed = -1L;
     private static final AtomicLong sequence = new AtomicLong();
     private static volatile long lastLiveNanos;
     private static volatile OptionSnapshot savedOptions;
@@ -102,6 +107,8 @@ public final class BMSIRArenaClient {
     private static volatile long fillDeadlineMillis;
     private static volatile int fillPlayerCount;
     private static volatile int fillMaxPlayers = 8;
+    private static final Object CHAT_LOCK = new Object();
+    private static final List<JsonNode> chatMessages = new ArrayList<>();
 
     private BMSIRArenaClient() {
     }
@@ -230,6 +237,7 @@ public final class BMSIRArenaClient {
         currentPlayOption = 0;
         currentPlayMode = 0;
         currentChartTotalNotes = 0;
+        currentRandomSeed = -1L;
         serverClockOffsetMillis = 0L;
         ScheduledFuture<?> oldClockSyncTask = clockSyncTask;
         clockSyncTask = null;
@@ -244,6 +252,7 @@ public final class BMSIRArenaClient {
         liveView = JSON.createObjectNode();
         resultView = JSON.createObjectNode();
         clearNominationState();
+        clearChatMessages();
         restoreOptions();
         ArenaSocket old = socket;
         socket = null;
@@ -345,6 +354,16 @@ public final class BMSIRArenaClient {
         return initialized
                 && main != null
                 && main.getPlayerConfig().isBmsirArenaEnabled();
+    }
+
+    static PlayerConfig playerConfig() {
+        return main == null ? null : main.getPlayerConfig();
+    }
+
+    static boolean isCurrentPlayDouble() {
+        return main != null
+                && main.getPlayerResource().getBMSModel() != null
+                && main.getPlayerResource().getBMSModel().getMode().player == 2;
     }
 
     static boolean isConnected() {
@@ -751,8 +770,89 @@ public final class BMSIRArenaClient {
     static void requestQueueEntry() {
         ObjectNode message = JSON.createObjectNode();
         message.put("type", "queue_entry");
+        message.put(
+                "unrestricted_rating",
+                main != null
+                        && main.getPlayerConfig().isBmsirArenaUnrestrictedRating()
+        );
         arenaUiMessage = "エントリーを送信しています";
         send(message);
+    }
+
+    static void requestChat(String text) {
+        if (!reserved || currentMatchId.isBlank()) {
+            return;
+        }
+        ObjectNode message = baseMatchMessage("chat_send");
+        message.put("text", text == null ? "" : text);
+        send(message);
+    }
+
+    static List<JsonNode> chatMessages() {
+        synchronized (CHAT_LOCK) {
+            return List.copyOf(chatMessages);
+        }
+    }
+
+    private static void clearChatMessages() {
+        synchronized (CHAT_LOCK) {
+            chatMessages.clear();
+        }
+    }
+
+    private static void receiveChat(JsonNode message) {
+        if (!currentMatchId.equals(message.path("match_id").asText())) {
+            return;
+        }
+        synchronized (CHAT_LOCK) {
+            if ("chat_history".equals(message.path("type").asText())) {
+                chatMessages.clear();
+                message.path("messages").forEach(chatMessages::add);
+            } else {
+                chatMessages.add(message);
+                while (chatMessages.size() > 50) {
+                    chatMessages.remove(0);
+                }
+            }
+        }
+    }
+
+    public static void applySynchronizedRandomSeed(ReplayData playinfo) {
+        if (
+                !arenaPlayActive
+                        || playinfo == null
+                        || currentRandomSeed < 0L
+                        || main == null
+        ) {
+            return;
+        }
+        long seed = synchronizedRandomSeed(
+                currentRandomSeed,
+                main.getPlayerConfig().isBmsirArenaRandomMirror()
+        );
+        if (playinfo.randomoption == 2) {
+            playinfo.randomoptionseed = seed;
+        }
+        if (playinfo.randomoption2 == 2) {
+            playinfo.randomoption2seed = seed;
+        }
+    }
+
+    static long synchronizedRandomSeed(long seed, boolean mirror) {
+        if (!mirror) {
+            return seed;
+        }
+        new RandomTrainer();
+        if (RandomTrainer.getRandomSeedMap() == null) {
+            return seed;
+        }
+        String reversed = new StringBuilder(
+                LR2RandomPattern.getRajaLaneOrder(seed, false)
+        ).reverse().toString();
+        Long mirrored = RandomTrainer.getRandomSeedMap().get(
+                Integer.parseInt(reversed)
+        );
+        return mirrored == null ? seed : mirrored;
     }
 
     static void requestQueueCancel() {
@@ -988,6 +1088,7 @@ public final class BMSIRArenaClient {
                         currentPlayOption = 0;
                         currentPlayMode = 0;
                         currentChartTotalNotes = 0;
+                        currentRandomSeed = -1L;
                         forfeitRequested = false;
                         clearNominationState();
                         restoreOptionsWhenSafe();
@@ -1011,6 +1112,7 @@ public final class BMSIRArenaClient {
                 case "pong" -> updateServerClock(message);
                 case "fill_started" -> receiveFillStarted(message);
                 case "players_updated" -> receivePlayersUpdated(message);
+                case "chat", "chat_history" -> receiveChat(message);
                 case "match_reserved" -> {
                     String incomingMatchId = message.path("match_id").asText();
                     boolean sameMatch = reserved && currentMatchId.equals(incomingMatchId);
@@ -1029,10 +1131,12 @@ public final class BMSIRArenaClient {
                         currentPlayOption = 0;
                         currentPlayMode = 0;
                         currentChartTotalNotes = 0;
+                        currentRandomSeed = -1L;
                         playReadySent = false;
                         serverStartMillis = 0L;
                         forfeitRequested = false;
                         clearNominationState();
+                        clearChatMessages();
                         ImGuiNotify.info("マッチングしました！ 現在のプレイ終了後にArenaへ移動します", 8000);
                     }
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
@@ -1054,6 +1158,7 @@ public final class BMSIRArenaClient {
                     String incomingMatchId = message.path("match_id").asText();
                     currentMatchId = incomingMatchId;
                     reserved = true;
+                    currentRandomSeed = message.path("random_seed").asLong(-1L);
                     clearFillState();
                     if ("countdown".equals(message.path("state").asText()) && arenaPlayActive) {
                         receiveArenaStart(message);
@@ -1092,6 +1197,7 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    currentRandomSeed = -1L;
                     serverStartMillis = 0L;
                     clearNominationState();
                     restoreOptionsWhenSafe();
@@ -1117,9 +1223,11 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    currentRandomSeed = -1L;
                     serverStartMillis = 0L;
                     normalResultReady = true;
                     clearNominationState();
+                    clearChatMessages();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの対戦を棄権しました。自動エントリーを終了します");
                     sendState(normalizeCurrentState(), false);
@@ -1137,8 +1245,10 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    currentRandomSeed = -1L;
                     serverStartMillis = 0L;
                     clearNominationState();
+                    clearChatMessages();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
                     requestArenaStatus();
@@ -1159,8 +1269,10 @@ public final class BMSIRArenaClient {
                     currentPlayOption = 0;
                     currentPlayMode = 0;
                     currentChartTotalNotes = 0;
+                    currentRandomSeed = -1L;
                     serverStartMillis = 0L;
                     clearNominationState();
+                    clearChatMessages();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning(
                             queueRetained
@@ -1354,6 +1466,7 @@ public final class BMSIRArenaClient {
             return;
         }
         JsonNode chart = message.path("chart");
+        currentRandomSeed = message.path("random_seed").asLong(-1L);
         String md5 = chart.path("md5").asText();
         int expectedTotalNotes = Math.max(0, chart.path("totalnotes").asInt());
         Gdx.app.postRunnable(() -> {
@@ -1404,6 +1517,7 @@ public final class BMSIRArenaClient {
         if (arenaPlayActive || !arenaPlayPending || main == null) {
             return;
         }
+        currentRandomSeed = message.path("random_seed").asLong(currentRandomSeed);
         resultView = JSON.createObjectNode();
         Gdx.app.postRunnable(() -> {
             if (!reserved || !arenaPlayPending || main == null) {
@@ -1440,10 +1554,10 @@ public final class BMSIRArenaClient {
         if (savedOptions == null) {
             savedOptions = new OptionSnapshot(config);
         }
-        if (config.getRandom() < 0 || config.getRandom() > 5) {
+        if (!isAllowedArenaRandom(config.getRandom())) {
             config.setRandom(0);
         }
-        if (config.getRandom2() < 0 || config.getRandom2() > 5) {
+        if (!isAllowedArenaRandom(config.getRandom2())) {
             config.setRandom2(0);
         }
         if (config.getDoubleoption() < 0 || config.getDoubleoption() > 1) {
@@ -1461,6 +1575,14 @@ public final class BMSIRArenaClient {
         FreqTrainerMenu.FREQ_TRAINER_ENABLED.set(false);
         JudgeTrainer.setActive(false);
         RandomTrainer.setActive(false);
+    }
+
+    static boolean isAllowedArenaRandom(int option) {
+        return option == 0
+                || option == 1
+                || option == 2
+                || option == 3
+                || option == 5;
     }
 
     static int chartCheckTotalNotes(SongData song, int expectedTotalNotes) {

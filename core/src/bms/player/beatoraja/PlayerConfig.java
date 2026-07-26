@@ -246,6 +246,17 @@ public final class PlayerConfig {
 	private boolean bmsirArenaEnabled = false;
 
 	private String bmsirArenaServer = "wss://www.bms-ir.org/new/arena/ws/client";
+
+	private boolean bmsirArenaUnrestrictedRating = false;
+
+	private boolean bmsirArenaRandomMirror = false;
+
+	/**
+	 * 0: normal, 1: compact, 2: hidden.
+	 */
+	private int bmsirArenaOverlayMode = 0;
+
+	private boolean bmsirArenaShowCursor = true;
 	
 	private String twitterConsumerKey;
 
@@ -582,6 +593,41 @@ public final class PlayerConfig {
 		this.bmsirArenaServer = bmsirArenaServer == null || bmsirArenaServer.isBlank()
 				? "wss://www.bms-ir.org/new/arena/ws/client"
 				: bmsirArenaServer.trim();
+	}
+
+	public boolean isBmsirArenaUnrestrictedRating() {
+		return bmsirArenaUnrestrictedRating;
+	}
+
+	public void setBmsirArenaUnrestrictedRating(boolean bmsirArenaUnrestrictedRating) {
+		this.bmsirArenaUnrestrictedRating = bmsirArenaUnrestrictedRating;
+	}
+
+	public boolean isBmsirArenaRandomMirror() {
+		return bmsirArenaRandomMirror;
+	}
+
+	public void setBmsirArenaRandomMirror(boolean bmsirArenaRandomMirror) {
+		this.bmsirArenaRandomMirror = bmsirArenaRandomMirror;
+	}
+
+	public int getBmsirArenaOverlayMode() {
+		if (bmsirArenaOverlayMode < 0 || bmsirArenaOverlayMode > 2) {
+			bmsirArenaOverlayMode = 0;
+		}
+		return bmsirArenaOverlayMode;
+	}
+
+	public void setBmsirArenaOverlayMode(int bmsirArenaOverlayMode) {
+		this.bmsirArenaOverlayMode = Math.max(0, Math.min(2, bmsirArenaOverlayMode));
+	}
+
+	public boolean isBmsirArenaShowCursor() {
+		return bmsirArenaShowCursor;
+	}
+
+	public void setBmsirArenaShowCursor(boolean bmsirArenaShowCursor) {
+		this.bmsirArenaShowCursor = bmsirArenaShowCursor;
 	}
 
 	public String getTargetid() {
