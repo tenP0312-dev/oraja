@@ -5,10 +5,15 @@ import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.select.bar.Bar;
+import bms.player.beatoraja.select.bar.DirectoryBar;
 import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -99,6 +104,22 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void fillCountdownRoundsUpAndStopsAtZero() {
+        assertEquals(
+                30,
+                BMSIRArenaClient.fillCountdownSeconds(31_000, 1_000)
+        );
+        assertEquals(
+                1,
+                BMSIRArenaClient.fillCountdownSeconds(31_000, 30_999)
+        );
+        assertEquals(
+                0,
+                BMSIRArenaClient.fillCountdownSeconds(31_000, 31_000)
+        );
+    }
+
+    @Test
     void officialArenaLevelsExcludeZeroUnknownAndOutOfRangeFolders() {
         assertEquals(1, BMSIRArenaClient.officialArenaLevel("★1"));
         assertEquals(25, BMSIRArenaClient.officialArenaLevel("★25"));
@@ -139,8 +160,8 @@ class BMSIRArenaClientTest {
         table.setName("発狂BMS難易度表");
         table.setFolder(new TableData.TableFolder[]{
                 folder("★0", song("z")),
-                folder("★1", levelOne),
                 folder("★2", levelOne, levelTwo),
+                folder("★1", levelOne),
                 folder("★3", levelThree),
                 folder("★???", song("x"))
         });
@@ -154,33 +175,64 @@ class BMSIRArenaClientTest {
         assertEquals(2, candidates.length);
         assertEquals("a", candidates[0].getMd5());
         assertEquals("b", candidates[1].getMd5());
+        Map<Integer, SongData[]> levels =
+                BMSIRArenaClient.nominationCandidateElementsByLevel(
+                        new TableData[]{table},
+                        2
+                );
+        assertEquals(List.of(1, 2), List.copyOf(levels.keySet()));
+        assertEquals(1, levels.get(1).length);
+        assertEquals(1, levels.get(2).length);
+        Map<Integer, SongData[]> initialLevels =
+                BMSIRArenaClient.nominationCandidateElementsByLevel(
+                        new TableData[]{table},
+                        1
+                );
+        assertEquals(List.of(1), List.copyOf(initialLevels.keySet()));
     }
 
     @Test
-    void nominationFolderRetainsOnlyPlayableLocalSongPaths() {
-        SongData owned = song("a");
-        owned.setSha256("sha-a");
-        owned.setPath("/songs/a/chart.bms");
-        SongData missing = song("b");
-        missing.setSha256("sha-b");
+    void nominationFoldersSplitLevelsAndRetainOnlyPlayableLocalPaths() {
+        SongData ownedOne = song("a");
+        ownedOne.setSha256("sha-a");
+        ownedOne.setPath("/songs/a/chart.bms");
+        SongData ownedTwo = song("b");
+        ownedTwo.setSha256("sha-b");
+        ownedTwo.setPath("/songs/b/chart.bms");
+        SongData missing = song("c");
+        Map<Integer, SongData[]> candidates = new LinkedHashMap<>();
+        candidates.put(1, new SongData[]{song("a"), missing});
+        candidates.put(2, new SongData[]{song("b")});
 
-        SongData[] playable = BMSIRArenaClient.playableOwnedSongs(
-                new SongData[]{owned, missing, owned}
-        );
-        BMSIRArenaClient.ArenaNominationBar folder =
-                new BMSIRArenaClient.ArenaNominationBar(
+        Map<Integer, SongData[]> playable =
+                BMSIRArenaClient.playableOwnedSongsByLevel(
+                        candidates,
+                        new SongData[]{ownedOne, ownedTwo, ownedOne}
+                );
+        BMSIRArenaClient.ArenaNominationRootBar root =
+                new BMSIRArenaClient.ArenaNominationRootBar(
                         null,
-                        "Arena",
                         playable
                 );
-        Bar[] children = folder.getChildren();
+        Bar[] levelFolders = root.getChildren();
 
-        assertEquals(1, children.length);
+        assertEquals(2, levelFolders.length);
+        assertEquals("★1 (1譜面)", levelFolders[0].getTitle());
+        assertEquals("★2 (1譜面)", levelFolders[1].getTitle());
+        Bar[] levelOneSongs = ((DirectoryBar) levelFolders[0]).getChildren();
+        Bar[] levelTwoSongs = ((DirectoryBar) levelFolders[1]).getChildren();
+        assertEquals(1, levelOneSongs.length);
+        assertEquals(1, levelTwoSongs.length);
         assertEquals(
                 "/songs/a/chart.bms",
-                ((SongBar) children[0]).getSongData().getPath()
+                ((SongBar) levelOneSongs[0]).getSongData().getPath()
         );
-        assertEquals("/songs/a/chart.bms", owned.getPath());
+        assertEquals(
+                "/songs/b/chart.bms",
+                ((SongBar) levelTwoSongs[0]).getSongData().getPath()
+        );
+        assertEquals("/songs/a/chart.bms", ownedOne.getPath());
+        assertEquals("/songs/b/chart.bms", ownedTwo.getPath());
     }
 
     private static TableData.TableFolder folder(

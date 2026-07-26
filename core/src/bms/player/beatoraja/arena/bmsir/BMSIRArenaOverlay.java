@@ -130,6 +130,7 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderGameplayStatusOverlay() {
+        boolean filling = BMSIRArenaClient.isFillWaiting();
         float width = Math.min(360.0f, maximumGameplayWindowWidth(ImGuiRenderer.windowWidth));
         ImGui.setNextWindowPos(
                 ImGuiRenderer.windowWidth / 2.0f,
@@ -138,7 +139,7 @@ public final class BMSIRArenaOverlay {
                 0.5f,
                 1.0f
         );
-        ImGui.setNextWindowSize(width, 48.0f, ImGuiCond.Always);
+        ImGui.setNextWindowSize(width, filling ? 82.0f : 48.0f, ImGuiCond.Always);
         ImGui.setNextWindowBgAlpha(0.88f);
         int flags = ImGuiWindowFlags.NoDecoration
                 | ImGuiWindowFlags.NoInputs
@@ -150,9 +151,21 @@ public final class BMSIRArenaOverlay {
             ImGui.end();
             return;
         }
-        ImGui.text("BMS-IR Arena");
-        ImGui.sameLine();
-        ImGui.textDisabled(BMSIRArenaClient.arenaUiMessage());
+        if (filling) {
+            ImGui.text(FontAwesomeIcons.UserClock + " 追加の参加者を待っています");
+            ImGui.text(String.format(
+                    Locale.ROOT,
+                    "開始まで %d秒  /  %d / %d人",
+                    BMSIRArenaClient.fillSecondsRemaining(),
+                    BMSIRArenaClient.fillPlayerCount(),
+                    BMSIRArenaClient.fillMaxPlayers()
+            ));
+            ImGui.textDisabled("この待機中の退出はレート・戦績に影響しません");
+        } else {
+            ImGui.text("BMS-IR Arena");
+            ImGui.sameLine();
+            ImGui.textDisabled(BMSIRArenaClient.arenaUiMessage());
+        }
         ImGui.end();
     }
 
@@ -378,10 +391,22 @@ public final class BMSIRArenaOverlay {
     private static void renderQueueActions() {
         String status = BMSIRArenaClient.queueStatus();
         boolean connected = BMSIRArenaClient.isConnected();
+        boolean filling = BMSIRArenaClient.isFillWaiting();
         if (confirmWithdrawal) {
-            ImGui.text("この対戦を棄権しますか？");
+            ImGui.text(
+                    filling
+                            ? "このマッチから抜けますか？"
+                            : "この対戦を棄権しますか？"
+            );
+            if (filling) {
+                ImGui.textDisabled("レート・戦績には影響しません");
+            }
             ImGui.beginDisabled(!connected);
-            if (ImGui.button(FontAwesomeIcons.StopCircle + " 棄権する")) {
+            if (ImGui.button(
+                    filling
+                            ? FontAwesomeIcons.TimesCircle + " マッチから抜ける"
+                            : FontAwesomeIcons.StopCircle + " 棄権する"
+            )) {
                 BMSIRArenaClient.requestQueueCancel();
                 confirmWithdrawal = false;
             }
@@ -405,7 +430,11 @@ public final class BMSIRArenaOverlay {
         }
         if ("reserved".equals(status) || "matched".equals(status)) {
             ImGui.beginDisabled(!connected);
-            if (ImGui.button(FontAwesomeIcons.StopCircle + " 対戦を棄権")) {
+            if (ImGui.button(
+                    filling
+                            ? FontAwesomeIcons.TimesCircle + " マッチから抜ける"
+                            : FontAwesomeIcons.StopCircle + " 対戦を棄権"
+            )) {
                 confirmWithdrawal = true;
             }
             ImGui.endDisabled();
@@ -415,7 +444,10 @@ public final class BMSIRArenaOverlay {
         }
         if ("withdraw_requested".equals(status)) {
             ImGui.beginDisabled();
-            ImGui.button(FontAwesomeIcons.UserClock + " 棄権処理中");
+            ImGui.button(
+                    FontAwesomeIcons.UserClock
+                            + (filling ? " 退出処理中" : " 棄権処理中")
+            );
             ImGui.endDisabled();
             ImGui.sameLine();
             refreshButton(connected);
@@ -446,10 +478,17 @@ public final class BMSIRArenaOverlay {
         if (renderNomination()) {
             return;
         }
+        boolean filling = renderFillWaiting();
         JsonNode match = BMSIRArenaClient.currentMatchView();
         if (!match.isObject() || match.size() == 0) {
-            ImGui.textDisabled("現在の試合はありません");
+            if (!filling) {
+                ImGui.textDisabled("現在の試合はありません");
+            }
             return;
+        }
+        if (filling) {
+            ImGui.separator();
+            ImGui.textDisabled("前回の対戦結果");
         }
         JsonNode chart = match.path("chart");
         String level = chart.path("level").asText();
@@ -521,6 +560,34 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.endTable();
         }
+    }
+
+    private static boolean renderFillWaiting() {
+        if (!BMSIRArenaClient.isFillWaiting()) {
+            return false;
+        }
+        ImGui.setWindowFontScale(1.35f);
+        ImGui.textWrapped(
+                FontAwesomeIcons.UserClock
+                        + " 追加の参加者を待っています"
+        );
+        ImGui.textWrapped(
+                FontAwesomeIcons.Clock
+                        + " 対戦開始まで "
+                        + BMSIRArenaClient.fillSecondsRemaining()
+                        + "秒"
+        );
+        ImGui.setWindowFontScale(1.0f);
+        ImGui.text(String.format(
+                Locale.ROOT,
+                "現在 %d / %d人",
+                BMSIRArenaClient.fillPlayerCount(),
+                BMSIRArenaClient.fillMaxPlayers()
+        ));
+        ImGui.textWrapped(
+                "この待機中はマッチから抜けても、レート・戦績に影響しません。"
+        );
+        return true;
     }
 
     private static boolean renderNomination() {
