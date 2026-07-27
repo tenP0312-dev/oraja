@@ -1,9 +1,8 @@
 # BMS-IR Arena client
 
-Status: controlled BMS-IR Arena v1 canary. The direct service and OS-specific
-downloads are live, but global Web navigation and announcement are not.
-The current `0.1.12-dev` release includes casual/private rooms and the F5-menu
-recovery path for a hidden Arena overlay.
+Status: BMS-IR Arena v1 public beta. The `0.1.15-dev` source labels rated,
+casual, and private play explicitly and supports the fallback CPU policy
+described below.
 
 ## Enabling
 
@@ -53,6 +52,13 @@ and durable match history.
   `カジュアル／プラベ` tab creates unrated casual matching or a private room
   with a six-character code. Room rules choose EX SCORE, BP, or MAX COMBO;
   free/NORMAL/HARD/EXHARD/HAZARD gauge; and official-table or free selection.
+- Every overlay layout names the current mode and states whether rating can
+  change. Rated play is blue, casual play is green, and private play is purple;
+  the text remains authoritative when colors are hard to distinguish.
+- When only one real player is waiting, the fallback opponent is displayed as
+  `CPU`. The server fixes the CPU's final EX SCORE at the minimum AA boundary.
+  A strict EX SCORE win over the CPU adds exactly one Arena rating point; a
+  tie, loss, or forfeit adds none, and the CPU itself has no rating result.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
 - Courses, practice, autoplay, and replay are not eligible matching states.
@@ -141,7 +147,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.14-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.15-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

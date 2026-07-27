@@ -100,6 +100,7 @@ public final class BMSIRArenaOverlay {
         }
 
         renderConnectionSummary();
+        renderModeBanner();
         ImGui.separator();
         if (ImGui.beginTabBar("##bmsir-arena-tabs")) {
             if (ImGui.beginTabItem("対戦")) {
@@ -174,6 +175,7 @@ public final class BMSIRArenaOverlay {
             ImGui.end();
             return;
         }
+        renderModeBanner();
         String status = BMSIRArenaClient.arenaUiMessage();
         ImGui.textWrapped(status.isBlank() ? "Arena待機中" : status);
         if (BMSIRArenaClient.isFillWaiting()) {
@@ -245,6 +247,7 @@ public final class BMSIRArenaOverlay {
         if (!title.isBlank()) {
             ImGui.textWrapped(title);
         }
+        renderModeBanner();
         renderChatPreview();
         renderScoreGraph(match, Math.max(GAMEPLAY_GRAPH_MIN_HEIGHT, ImGui.getContentRegionAvailY()));
         ImGui.end();
@@ -273,6 +276,7 @@ public final class BMSIRArenaOverlay {
             ImGui.end();
             return;
         }
+        renderModeBanner();
         if (filling) {
             ImGui.text(FontAwesomeIcons.UserClock + " 追加の参加者を待っています");
             ImGui.text(String.format(
@@ -527,6 +531,27 @@ public final class BMSIRArenaOverlay {
         if (!message.isBlank()) {
             ImGui.textWrapped(message);
         }
+    }
+
+    private static void renderModeBanner() {
+        String mode = BMSIRArenaClient.currentMatchMode();
+        int color = switch (mode) {
+            case "casual" -> ImColor.rgb(101, 207, 145);
+            case "private" -> ImColor.rgb(211, 164, 255);
+            default -> ImColor.rgb(106, 169, 255);
+        };
+        ImGui.textColored(color, modeDisplayText(mode));
+        if ("cpu_bonus".equals(BMSIRArenaClient.currentRatingPolicy())) {
+            ImGui.textDisabled("CPU戦: AAを超えて勝利するとレート +1");
+        }
+    }
+
+    static String modeDisplayText(String mode) {
+        return switch (mode) {
+            case "casual" -> "カジュアル  |  レート変動なし";
+            case "private" -> "プライベート  |  レート変動なし";
+            default -> "レートArena  |  レート変動あり";
+        };
     }
 
     private static void renderQueueActions() {

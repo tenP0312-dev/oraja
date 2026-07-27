@@ -61,4 +61,20 @@ class BMSIRArenaOverlayTest {
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(2));
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(-1));
     }
+
+    @Test
+    void matchModesAlwaysStateWhetherRatingChanges() {
+        assertEquals(
+                "レートArena  |  レート変動あり",
+                BMSIRArenaOverlay.modeDisplayText("ranked")
+        );
+        assertEquals(
+                "カジュアル  |  レート変動なし",
+                BMSIRArenaOverlay.modeDisplayText("casual")
+        );
+        assertEquals(
+                "プライベート  |  レート変動なし",
+                BMSIRArenaOverlay.modeDisplayText("private")
+        );
+    }
 }

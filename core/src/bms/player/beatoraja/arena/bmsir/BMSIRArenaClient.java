@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.14-dev";
+    private static final String CLIENT_VERSION = "0.1.15-dev";
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -475,6 +475,12 @@ public final class BMSIRArenaClient {
 
     static String currentRoomCode() {
         return activeRulesOrQueue().path("room_code").asText("");
+    }
+
+    static String currentRatingPolicy() {
+        return rulesView.path("rating_policy").asText(
+                "ranked".equals(currentMatchMode()) ? "elo" : "none"
+        );
     }
 
     static boolean isFillWaiting() {
