@@ -679,6 +679,27 @@ public final class BMSIRArenaOverlay {
         String status = BMSIRArenaClient.queueStatus();
         boolean connected = BMSIRArenaClient.isConnected();
         boolean filling = BMSIRArenaClient.isFillWaiting();
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        boolean entryActive = "queued".equals(status)
+                || "reserved".equals(status)
+                || "matched".equals(status)
+                || "withdraw_requested".equals(status);
+        if (config != null && !entryActive) {
+            ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
+            if (ImGui.checkbox("BOT戦を許可", allowCpu)) {
+                config.setBmsirArenaAllowCpu(allowCpu.get());
+            }
+            ImGui.sameLine();
+            ImGui.textDisabled(
+                    allowCpu.get() ? "1人待機時はCPU補完あり" : "有人戦のみ"
+            );
+        } else if (entryActive) {
+            ImGui.textDisabled(
+                    BMSIRArenaClient.currentQueueAllowsCpu()
+                            ? "BOT戦: 許可"
+                            : "BOT戦: 無効（有人戦のみ）"
+            );
+        }
         if (confirmWithdrawal) {
             ImGui.text(
                     filling
@@ -1422,6 +1443,11 @@ public final class BMSIRArenaOverlay {
             config.setBmsirArenaUnrestrictedRating(unrestricted.get());
         }
         ImGui.textDisabled("距離のある即時マッチは相手も許可した場合だけ成立します");
+        ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
+        if (ImGui.checkbox("レートArenaでBOT戦を許可", allowCpu)) {
+            config.setBmsirArenaAllowCpu(allowCpu.get());
+        }
+        ImGui.textDisabled("OFFの場合はCPUと組まず、有人が来るまで待機します");
         ImBoolean mirror = new ImBoolean(config.isBmsirArenaRandomMirror());
         if (ImGui.checkbox("同期RANDOMを左右反転して受け取る", mirror)) {
             config.setBmsirArenaRandomMirror(mirror.get());

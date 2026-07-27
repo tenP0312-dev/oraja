@@ -29,6 +29,7 @@ class BMSIRArenaClientTest {
         assertEquals(0, config.getBmsirArenaOverlayMode());
         assertFalse(config.isBmsirArenaShowCursor());
         assertFalse(config.isBmsirArenaUnrestrictedRating());
+        assertTrue(config.isBmsirArenaAllowCpu());
         assertFalse(config.isBmsirArenaRandomMirror());
         assertTrue(config.isBmsirArenaStayInRoom());
         assertEquals("all", config.getBmsirArenaNominationPolicy());
@@ -40,6 +41,24 @@ class BMSIRArenaClientTest {
         assertEquals(2, config.getBmsirArenaOverlayMode());
         config.setBmsirArenaOverlayMode(-1);
         assertEquals(0, config.getBmsirArenaOverlayMode());
+    }
+
+    @Test
+    void rankedQueueMessageCarriesTheSavedCpuPreference() {
+        PlayerConfig config = new PlayerConfig();
+        config.setBmsirArenaUnrestrictedRating(true);
+        config.setBmsirArenaAllowCpu(false);
+
+        var message = BMSIRArenaClient.queueEntryMessage(config);
+
+        assertEquals("queue_entry", message.path("type").asText());
+        assertTrue(message.path("unrestricted_rating").asBoolean());
+        assertFalse(message.path("allow_cpu").asBoolean());
+        assertTrue(
+                BMSIRArenaClient.queueEntryMessage(null)
+                        .path("allow_cpu")
+                        .asBoolean()
+        );
     }
 
     @Test

@@ -249,6 +249,8 @@ public final class PlayerConfig {
 
 	private boolean bmsirArenaUnrestrictedRating = false;
 
+	private boolean bmsirArenaAllowCpu = true;
+
 	private boolean bmsirArenaRandomMirror = false;
 
 	/**
@@ -608,6 +610,14 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaUnrestrictedRating(boolean bmsirArenaUnrestrictedRating) {
 		this.bmsirArenaUnrestrictedRating = bmsirArenaUnrestrictedRating;
+	}
+
+	public boolean isBmsirArenaAllowCpu() {
+		return bmsirArenaAllowCpu;
+	}
+
+	public void setBmsirArenaAllowCpu(boolean bmsirArenaAllowCpu) {
+		this.bmsirArenaAllowCpu = bmsirArenaAllowCpu;
 	}
 
 	public boolean isBmsirArenaRandomMirror() {

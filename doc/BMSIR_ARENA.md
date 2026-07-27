@@ -1,8 +1,8 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public beta. The `0.1.15-dev` source labels rated,
-casual, and private play explicitly and supports the fallback CPU policy
-described below.
+Status: BMS-IR Arena v1 public beta. The `0.1.17-dev` source labels rated,
+casual, and private play explicitly and lets each rated-queue player opt out
+of the fallback CPU policy described below.
 
 ## Enabling
 
@@ -59,6 +59,9 @@ and durable match history.
   `CPU`. The server fixes the CPU's final EX SCORE at the minimum AA boundary.
   A strict EX SCORE win over the CPU adds exactly one Arena rating point; a
   tie, loss, or forfeit adds none, and the CPU itself has no rating result.
+  `BOT戦を許可` is on by default for compatibility. Turn it off before
+  entering the rated queue to wait for human opponents only; ordinary play
+  remains available while waiting.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
 - Courses, practice, autoplay, and replay are not eligible matching states.
@@ -147,7 +150,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.15-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.17-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

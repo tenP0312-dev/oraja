@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.16-dev";
+    private static final String CLIENT_VERSION = "0.1.17-dev";
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -447,6 +447,15 @@ public final class BMSIRArenaClient {
 
     static String queueStatus() {
         return queueStatus;
+    }
+
+    static boolean currentQueueAllowsCpu() {
+        JsonNode value = queueView.get("allow_cpu");
+        if (value != null && value.isBoolean()) {
+            return value.asBoolean();
+        }
+        PlayerConfig config = playerConfig();
+        return config == null || config.isBmsirArenaAllowCpu();
     }
 
     static String arenaUiMessage() {
@@ -914,15 +923,23 @@ public final class BMSIRArenaClient {
     }
 
     static void requestQueueEntry() {
+        ObjectNode message = queueEntryMessage(playerConfig());
+        arenaUiMessage = "エントリーを送信しています";
+        send(message);
+    }
+
+    static ObjectNode queueEntryMessage(PlayerConfig config) {
         ObjectNode message = JSON.createObjectNode();
         message.put("type", "queue_entry");
         message.put(
                 "unrestricted_rating",
-                main != null
-                        && main.getPlayerConfig().isBmsirArenaUnrestrictedRating()
+                config != null && config.isBmsirArenaUnrestrictedRating()
         );
-        arenaUiMessage = "エントリーを送信しています";
-        send(message);
+        message.put(
+                "allow_cpu",
+                config == null || config.isBmsirArenaAllowCpu()
+        );
+        return message;
     }
 
     static void requestRoomEntry(
