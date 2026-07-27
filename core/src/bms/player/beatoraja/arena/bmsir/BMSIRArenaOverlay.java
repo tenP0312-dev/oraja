@@ -87,7 +87,6 @@ public final class BMSIRArenaOverlay {
         if (config == null || config.getBmsirArenaOverlayMode() == 2) {
             return;
         }
-        renderPlayModeNotice();
         if (config.getBmsirArenaOverlayMode() == 1) {
             renderCompactOverlay();
             return;
@@ -140,35 +139,6 @@ public final class BMSIRArenaOverlay {
         ImGui.end();
     }
 
-    private static void renderPlayModeNotice() {
-        if (!BMSIRArenaClient.shouldShowPlayModeNotice()) {
-            return;
-        }
-        String label = BMSIRArenaClient.currentPlayModeLabel();
-        if (label.isBlank()) {
-            return;
-        }
-        ImGui.setNextWindowPos(
-                ImGuiRenderer.windowWidth / 2.0f,
-                ImGuiRenderer.windowHeight * 0.24f,
-                ImGuiCond.Always,
-                0.5f,
-                0.5f
-        );
-        ImGui.setNextWindowBgAlpha(0.92f);
-        int flags = ImGuiWindowFlags.NoDecoration
-                | ImGuiWindowFlags.NoInputs
-                | ImGuiWindowFlags.NoNav
-                | ImGuiWindowFlags.NoSavedSettings
-                | ImGuiWindowFlags.AlwaysAutoResize;
-        if (ImGui.begin("BMS-IR Arena##play-mode-notice", flags)) {
-            ImGui.setWindowFontScale(2.0f);
-            ImGui.text(label);
-            ImGui.setWindowFontScale(1.0f);
-        }
-        ImGui.end();
-    }
-
     public static void toggleVisibility() {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config == null) {
@@ -208,7 +178,7 @@ public final class BMSIRArenaOverlay {
                 )
                 : "##compact-select-" + currentLayoutKey();
         ImGui.setNextWindowPos(18, 72, ImGuiCond.FirstUseEver);
-        ImGui.setNextWindowSize(250, 110, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(300, 150, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowBgAlpha(0.88f);
         int flags = ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus
@@ -218,13 +188,11 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
-        String status = BMSIRArenaClient.arenaUiMessage();
-        ImGui.textWrapped(status.isBlank() ? "Arena待機中" : status);
+        renderPhaseBanner(true);
         if (BMSIRArenaClient.isFillWaiting()) {
             ImGui.text(String.format(
                     Locale.ROOT,
-                    "%d秒  /  %d / %d人",
-                    BMSIRArenaClient.fillSecondsRemaining(),
+                    "%d / %d人",
                     BMSIRArenaClient.fillPlayerCount(),
                     BMSIRArenaClient.fillMaxPlayers()
             ));
@@ -304,7 +272,7 @@ public final class BMSIRArenaOverlay {
 
     private static void renderGameplayStatusOverlay() {
         boolean filling = BMSIRArenaClient.isFillWaiting();
-        float width = Math.min(360.0f, maximumGameplayWindowWidth(ImGuiRenderer.windowWidth));
+        float width = Math.min(400.0f, maximumGameplayWindowWidth(ImGuiRenderer.windowWidth));
         ImGui.setNextWindowPos(
                 ImGuiRenderer.windowWidth / 2.0f,
                 Math.max(VIEWPORT_MARGIN, ImGuiRenderer.windowHeight - VIEWPORT_MARGIN),
@@ -314,7 +282,7 @@ public final class BMSIRArenaOverlay {
         );
         ImGui.setNextWindowSize(
                 width,
-                filling ? 112.0f : 72.0f,
+                filling ? 150.0f : 120.0f,
                 ImGuiCond.FirstUseEver
         );
         ImGui.setNextWindowBgAlpha(0.88f);
@@ -329,22 +297,60 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
+        renderPhaseBanner(true);
         if (filling) {
-            ImGui.text(FontAwesomeIcons.UserClock + " 追加の参加者を待っています");
             ImGui.text(String.format(
                     Locale.ROOT,
-                    "開始まで %d秒  /  %d / %d人",
-                    BMSIRArenaClient.fillSecondsRemaining(),
+                    "%d / %d人",
                     BMSIRArenaClient.fillPlayerCount(),
                     BMSIRArenaClient.fillMaxPlayers()
             ));
             ImGui.textDisabled("この待機中の退出はレート・戦績に影響しません");
-        } else {
-            ImGui.text("BMS-IR Arena");
-            ImGui.sameLine();
-            ImGui.textDisabled(BMSIRArenaClient.arenaUiMessage());
         }
         ImGui.end();
+    }
+
+    private static void renderPhaseBanner(boolean compact) {
+        String action = BMSIRArenaClient.currentPhaseAction();
+        if (action.isBlank()) {
+            return;
+        }
+        ImGui.setWindowFontScale(compact ? 1.15f : 1.4f);
+        ImGui.textWrapped(action);
+        ImGui.setWindowFontScale(1.0f);
+        if (BMSIRArenaClient.currentPhaseHasCountdown()) {
+            long seconds = BMSIRArenaClient.currentPhaseSecondsRemaining();
+            ImGui.setWindowFontScale(compact ? 1.15f : 1.35f);
+            ImGui.textColored(
+                    phaseCountdownColor(seconds),
+                    phaseCountdownText(seconds)
+            );
+            ImGui.setWindowFontScale(1.0f);
+        }
+        String playMode = BMSIRArenaClient.currentMatchPlayModeLabel();
+        if (!playMode.isBlank()) {
+            ImGui.setWindowFontScale(compact ? 1.05f : 1.25f);
+            ImGui.textColored(ImColor.rgb(121, 223, 139), playMode);
+            ImGui.setWindowFontScale(1.0f);
+        }
+    }
+
+    static String phaseCountdownText(long seconds) {
+        return String.format(
+                Locale.ROOT,
+                "残り %02d秒",
+                Math.max(0L, seconds)
+        );
+    }
+
+    static int phaseCountdownColor(long seconds) {
+        if (seconds <= 3L) {
+            return ImColor.rgb(255, 115, 115);
+        }
+        if (seconds <= 5L) {
+            return ImColor.rgb(255, 211, 106);
+        }
+        return ImColor.rgb(106, 169, 255);
     }
 
     static float defaultGameplayWindowWidth(int viewportWidth) {
@@ -783,6 +789,8 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderMatch() {
+        renderPhaseBanner(false);
+        ImGui.separator();
         if (renderNomination()) {
             return;
         }
@@ -886,19 +894,6 @@ public final class BMSIRArenaOverlay {
         if (!BMSIRArenaClient.isOptionSelectionOpen()) {
             return false;
         }
-        ImGui.separator();
-        ImGui.setWindowFontScale(1.25f);
-        ImGui.textWrapped(
-                FontAwesomeIcons.SlidersH
-                        + " OP選択中  残り"
-                        + BMSIRArenaClient.optionSecondsRemaining()
-                        + "秒"
-        );
-        ImGui.setWindowFontScale(1.0f);
-        ImGui.textColored(
-                ImColor.rgb(121, 223, 139),
-                BMSIRArenaClient.currentPlayModeLabel()
-        );
         ImGui.text("現在: " + BMSIRArenaClient.currentOptionLabel());
         ImGui.textDisabled("S-RANDOMとアシスト系OPは使用できません");
         ImGui.textDisabled(String.format(
@@ -924,18 +919,6 @@ public final class BMSIRArenaOverlay {
         if (!BMSIRArenaClient.isFillWaiting()) {
             return false;
         }
-        ImGui.setWindowFontScale(1.35f);
-        ImGui.textWrapped(
-                FontAwesomeIcons.UserClock
-                        + " 追加の参加者を待っています"
-        );
-        ImGui.textWrapped(
-                FontAwesomeIcons.Clock
-                        + " 対戦開始まで "
-                        + BMSIRArenaClient.fillSecondsRemaining()
-                        + "秒"
-        );
-        ImGui.setWindowFontScale(1.0f);
         ImGui.text(String.format(
                 Locale.ROOT,
                 "現在 %d / %d人",
@@ -961,7 +944,6 @@ public final class BMSIRArenaOverlay {
             return false;
         }
 
-        long seconds = BMSIRArenaClient.nominationSecondsRemaining();
         int targetBand = nomination.path("target_band").asInt(1);
         boolean freeSelection = "free".equals(
                 nomination.path("chart_scope").asText(
@@ -969,14 +951,6 @@ public final class BMSIRArenaOverlay {
                 )
         );
         boolean canNominate = nomination.path("can_nominate").asBoolean(true);
-        ImGui.setWindowFontScale(1.45f);
-        ImGui.textWrapped(
-                canNominate
-                        ? FontAwesomeIcons.Music + " 選曲してください"
-                        : FontAwesomeIcons.UserClock + " 部屋主の選曲待ち"
-        );
-        ImGui.textWrapped(FontAwesomeIcons.Clock + " 残り " + seconds + "秒");
-        ImGui.setWindowFontScale(1.0f);
         ImGui.spacing();
         ImGui.text(
                 freeSelection

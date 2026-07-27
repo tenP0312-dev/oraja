@@ -183,6 +183,52 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void phaseBannerAlwaysNamesTheActionRequiredNow() {
+        assertEquals(
+                "OPを選んでください",
+                BMSIRArenaClient.phaseAction(
+                        true, false, false, false, false,
+                        "", false, false, "matched"
+                )
+        );
+        assertEquals(
+                "曲を選んでください",
+                BMSIRArenaClient.phaseAction(
+                        false, false, true, true, false,
+                        "", false, false, "matched"
+                )
+        );
+        assertEquals(
+                "部屋主の選曲を待っています",
+                BMSIRArenaClient.phaseAction(
+                        false, false, true, false, false,
+                        "", false, false, "matched"
+                )
+        );
+        assertEquals(
+                "ほかの参加者の読込を待っています",
+                BMSIRArenaClient.phaseAction(
+                        false, false, false, false, false,
+                        "loading", true, false, "matched"
+                )
+        );
+        assertEquals(
+                "対戦開始を待っています",
+                BMSIRArenaClient.phaseAction(
+                        false, false, false, false, false,
+                        "countdown", false, false, "matched"
+                )
+        );
+        assertEquals(
+                "対戦相手を待っています",
+                BMSIRArenaClient.phaseAction(
+                        false, false, false, false, false,
+                        "", false, false, "queued"
+                )
+        );
+    }
+
+    @Test
     void completedFinalUsesTheServerSelectedChartTotal() {
         ScoreData score = new ScoreData();
         score.setNotes(100);

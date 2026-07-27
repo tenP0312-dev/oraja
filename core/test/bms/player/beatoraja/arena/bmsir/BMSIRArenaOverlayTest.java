@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.Mode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import imgui.ImColor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -127,6 +128,24 @@ class BMSIRArenaOverlayTest {
         assertEquals(
                 "プライベート  |  レート変動なし",
                 BMSIRArenaOverlay.modeDisplayText("private")
+        );
+    }
+
+    @Test
+    void phaseCountdownIsLargeFriendlyAndWarnsNearTheDeadline() {
+        assertEquals("残り 08秒", BMSIRArenaOverlay.phaseCountdownText(8));
+        assertEquals("残り 00秒", BMSIRArenaOverlay.phaseCountdownText(-1));
+        assertEquals(
+                ImColor.rgb(106, 169, 255),
+                BMSIRArenaOverlay.phaseCountdownColor(6)
+        );
+        assertEquals(
+                ImColor.rgb(255, 211, 106),
+                BMSIRArenaOverlay.phaseCountdownColor(5)
+        );
+        assertEquals(
+                ImColor.rgb(255, 115, 115),
+                BMSIRArenaOverlay.phaseCountdownColor(3)
         );
     }
 }

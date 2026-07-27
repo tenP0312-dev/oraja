@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.17-dev";
+    private static final String CLIENT_VERSION = "0.1.18-dev";
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -83,6 +83,7 @@ public final class BMSIRArenaClient {
     private static volatile int currentPlayerId;
     private static volatile String currentMatchId = "";
     private static volatile long serverStartMillis;
+    private static volatile long loadDeadlineMillis;
     private static volatile long serverClockOffsetMillis;
     private static volatile ScheduledFuture<?> clockSyncTask;
     private static volatile ScheduledFuture<?> optionReadyTask;
@@ -90,7 +91,6 @@ public final class BMSIRArenaClient {
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
     private static volatile int lastKnownPlayMode;
-    private static volatile long playModeNoticeUntilMillis;
     private static volatile int currentChartTotalNotes;
     private static volatile long currentRandomSeed = -1L;
     private static volatile boolean optionSelectionOpen;
@@ -266,7 +266,8 @@ public final class BMSIRArenaClient {
         currentPlayOption = 0;
         currentPlayMode = 0;
         lastKnownPlayMode = 0;
-        playModeNoticeUntilMillis = 0L;
+        loadDeadlineMillis = 0L;
+        serverStartMillis = 0L;
         currentChartTotalNotes = 0;
         currentRandomSeed = -1L;
         serverClockOffsetMillis = 0L;
@@ -414,9 +415,21 @@ public final class BMSIRArenaClient {
         return playModeLabel(currentPlayModeForLayout());
     }
 
-    static boolean shouldShowPlayModeNotice() {
-        return !currentPlayModeLabel().isBlank()
-                && System.currentTimeMillis() < playModeNoticeUntilMillis;
+    static String currentMatchPlayModeLabel() {
+        if (reserved && !currentMatchId.isBlank()) {
+            return currentPlayMode > 0
+                    ? playModeLabel(currentPlayMode)
+                    : "";
+        }
+        JsonNode chart = resultView.path("chart");
+        if (
+                !isShowingCompletedResult()
+                        || !chart.isObject()
+                        || chart.size() == 0
+        ) {
+            return "";
+        }
+        return playModeLabel(lastKnownPlayMode);
     }
 
     static boolean isConnected() {
@@ -596,6 +609,109 @@ public final class BMSIRArenaClient {
             long serverNowMillis
     ) {
         return fillCountdownSeconds(deadlineMillis, serverNowMillis);
+    }
+
+    static long loadSecondsRemaining() {
+        return fillCountdownSeconds(
+                loadDeadlineMillis,
+                System.currentTimeMillis() + serverClockOffsetMillis
+        );
+    }
+
+    static long startSecondsRemaining() {
+        return fillCountdownSeconds(
+                serverStartMillis,
+                System.currentTimeMillis() + serverClockOffsetMillis
+        );
+    }
+
+    static String currentPhaseAction() {
+        return phaseAction(
+                isOptionSelectionOpen(),
+                optionReadySent,
+                isNominationOpen(),
+                nominationView.path("can_nominate").asBoolean(true),
+                isFillWaiting(),
+                currentMatchView().path("state").asText(""),
+                playReadySent,
+                isShowingCompletedResult(),
+                queueStatus
+        );
+    }
+
+    static String phaseAction(
+            boolean optionOpen,
+            boolean optionReady,
+            boolean nominationOpen,
+            boolean canNominate,
+            boolean fillWaiting,
+            String matchState,
+            boolean loadReady,
+            boolean completedResult,
+            String currentQueueStatus
+    ) {
+        if (optionOpen) {
+            return optionReady
+                    ? "ほかの参加者のOP確定を待っています"
+                    : "OPを選んでください";
+        }
+        if (nominationOpen) {
+            return canNominate
+                    ? "曲を選んでください"
+                    : "部屋主の選曲を待っています";
+        }
+        if (fillWaiting) {
+            return "追加の参加者を待っています";
+        }
+        if ("loading".equals(matchState)) {
+            return loadReady
+                    ? "ほかの参加者の読込を待っています"
+                    : "譜面を読み込んでいます";
+        }
+        if ("countdown".equals(matchState)) {
+            return "対戦開始を待っています";
+        }
+        if ("playing".equals(matchState)) {
+            return "プレイ中";
+        }
+        if (completedResult) {
+            return "対戦結果を確認してください";
+        }
+        return switch (currentQueueStatus) {
+            case "queued" -> "対戦相手を待っています";
+            case "reserved", "matched" -> "対戦準備中です";
+            case "withdraw_requested" -> "退出処理を待っています";
+            default -> "エントリーしてください";
+        };
+    }
+
+    static boolean currentPhaseHasCountdown() {
+        if (isOptionSelectionOpen() || isNominationOpen() || isFillWaiting()) {
+            return true;
+        }
+        String state = currentMatchView().path("state").asText("");
+        return ("loading".equals(state) && loadDeadlineMillis > 0L)
+                || ("countdown".equals(state) && serverStartMillis > 0L);
+    }
+
+    static long currentPhaseSecondsRemaining() {
+        if (isOptionSelectionOpen()) {
+            return optionSecondsRemaining();
+        }
+        if (isNominationOpen()) {
+            return nominationSecondsRemaining();
+        }
+        if (isFillWaiting()) {
+            return fillSecondsRemaining();
+        }
+        String state = currentMatchView().path("state").asText("");
+        if ("loading".equals(state)) {
+            return loadSecondsRemaining();
+        }
+        if ("countdown".equals(state)) {
+            return startSecondsRemaining();
+        }
+        return 0L;
     }
 
     static SongData currentNominationSong() {
@@ -2106,7 +2222,6 @@ public final class BMSIRArenaClient {
                 currentPlayMode = supportedPlayMode(song.getMode()) ? song.getMode() : 0;
                 if (currentPlayMode > 0) {
                     lastKnownPlayMode = currentPlayMode;
-                    playModeNoticeUntilMillis = System.currentTimeMillis() + 4000L;
                 }
                 currentChartTotalNotes = expectedTotalNotes;
             }
@@ -2135,10 +2250,12 @@ public final class BMSIRArenaClient {
         currentRandomSeed = message.path("random_seed").asLong(currentRandomSeed);
         int lockedPlayMode = message.path("play_mode").asInt(currentPlayMode);
         int lockedPlayOption = message.path("play_option").asInt(0);
+        loadDeadlineMillis = Math.round(
+                message.path("load_deadline").asDouble() * 1000.0
+        );
         if (supportedPlayMode(lockedPlayMode)) {
             currentPlayMode = lockedPlayMode;
             lastKnownPlayMode = lockedPlayMode;
-            playModeNoticeUntilMillis = System.currentTimeMillis() + 4000L;
         }
         clearOptionSelection();
         resultView = JSON.createObjectNode();
@@ -2175,6 +2292,7 @@ public final class BMSIRArenaClient {
         serverStartMillis = Math.round(
                 message.path("start_at").asDouble() * 1000.0
         );
+        loadDeadlineMillis = 0L;
         arenaUiMessage = "全員準備完了。まもなく開始します";
     }
 

@@ -1,6 +1,6 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public beta. The `0.1.17-dev` source labels rated,
+Status: BMS-IR Arena v1 public beta. The `0.1.18-dev` source labels rated,
 casual, and private play explicitly and lets each rated-queue player opt out
 of the fallback CPU policy described below.
 
@@ -30,6 +30,11 @@ outline inside the MAX guide even at the minimum window height. Each new
 nomination round returns to the selector root before opening
 `BMS-IR Arena 選曲候補`, so temporary folder labels do not accumulate across
 auto-requeued matches.
+The normal and compact overlays use one persistent phase banner. It emphasizes
+the action required now, shows server-clock remaining seconds for fill,
+nomination, option selection, chart loading, and synchronized start, and keeps
+the selected chart's KEY count plus SINGLE/DOUBLE PLAY visible in the same
+panel. The older separate four-second KEY popup is not used.
 The Web Arena page remains available for the same queue controls, spectating,
 and durable match history.
 
@@ -150,7 +155,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.17-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.18-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
