@@ -1,10 +1,15 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.model.Mode;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BMSIRArenaOverlayTest {
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     @Test
     void gameplayLayoutUsesSeparatePersistentIdsForSpAndDp() {
         assertEquals(
@@ -22,6 +27,30 @@ class BMSIRArenaOverlayTest {
         assertEquals(
                 "##compact-play-dp",
                 BMSIRArenaOverlay.gameplayWindowId(true, true)
+        );
+    }
+
+    @Test
+    void gameplayLayoutUsesPersistentIdsForEverySupportedKeyCount() {
+        assertEquals(
+                "##gameplay-5",
+                BMSIRArenaOverlay.gameplayWindowId(false, Mode.BEAT_5K.id)
+        );
+        assertEquals(
+                "##gameplay-7",
+                BMSIRArenaOverlay.gameplayWindowId(false, Mode.BEAT_7K.id)
+        );
+        assertEquals(
+                "##compact-play-9",
+                BMSIRArenaOverlay.gameplayWindowId(true, Mode.POPN_9K.id)
+        );
+        assertEquals(
+                "##gameplay-10",
+                BMSIRArenaOverlay.gameplayWindowId(false, Mode.BEAT_10K.id)
+        );
+        assertEquals(
+                "##gameplay-14",
+                BMSIRArenaOverlay.gameplayWindowId(false, Mode.BEAT_14K.id)
         );
     }
 
@@ -48,10 +77,33 @@ class BMSIRArenaOverlayTest {
     void gameplayWindowDefaultsScaleWithinTheViewport() {
         assertEquals(640.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1280));
         assertEquals(760.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(1920));
-        assertEquals(420.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(640));
+        assertEquals(320.0f, BMSIRArenaOverlay.defaultGameplayWindowWidth(640));
         assertEquals(396.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(720));
         assertEquals(520.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(1080));
         assertEquals(300.0f, BMSIRArenaOverlay.defaultGameplayWindowHeight(360));
+    }
+
+    @Test
+    void battleGraphsAlwaysGrowTowardTheWinningDirection() throws Exception {
+        JsonNode player = JSON.readTree("""
+                {
+                  "exscore": 180,
+                  "minbp": 5,
+                  "max_combo": 80
+                }
+                """);
+        assertEquals(180, BMSIRArenaOverlay.battleValue("exscore", player, 100));
+        assertEquals(95, BMSIRArenaOverlay.battleValue("minbp", player, 100));
+        assertEquals(80, BMSIRArenaOverlay.battleValue("max_combo", player, 100));
+        assertEquals(200, BMSIRArenaOverlay.battleMaximum("exscore", player, 100));
+        assertEquals(100, BMSIRArenaOverlay.battleMaximum("minbp", player, 100));
+        assertEquals(0.95, BMSIRArenaOverlay.battleRate(95, 100));
+        assertEquals("BP 5", BMSIRArenaOverlay.ruleMetricLabel("minbp", player));
+        assertEquals(
+                "COMBO 80",
+                BMSIRArenaOverlay.ruleMetricLabel("max_combo", player)
+        );
+        assertEquals("LOWEST BP WINS", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
     }
 
     @Test

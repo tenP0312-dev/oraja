@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
@@ -473,6 +474,7 @@ public class BMSPlayer extends MainState {
 			}
 //			playinfo.pattern = pattern.toArray(new PatternModifyLog[pattern.size()]);
 			playinfo.laneShufflePattern = patternArray;
+			BMSIROrajaHelperBridge.publishArenaPlacement(model, playinfo);
 
 		}
 

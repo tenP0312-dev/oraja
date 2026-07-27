@@ -775,7 +775,8 @@ public class MainController {
                                             || !player.isBmsirArenaShowCursor()
                             )
             ) {
-                Gdx.input.setCursorCatched(time > mouseMovedTime + 2000);
+                long hideDelay = player.isBmsirArenaEnabled() ? 250L : 2000L;
+                Gdx.input.setCursorCatched(time > mouseMovedTime + hideDelay);
             } else {
                 Gdx.input.setCursorCatched(false);
             }

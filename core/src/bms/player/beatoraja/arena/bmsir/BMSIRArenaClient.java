@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.15-dev";
+    private static final String CLIENT_VERSION = "0.1.16-dev";
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -89,6 +89,8 @@ public final class BMSIRArenaClient {
     private static volatile ObjectNode pendingFinal;
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
+    private static volatile int lastKnownPlayMode;
+    private static volatile long playModeNoticeUntilMillis;
     private static volatile int currentChartTotalNotes;
     private static volatile long currentRandomSeed = -1L;
     private static volatile boolean optionSelectionOpen;
@@ -263,6 +265,8 @@ public final class BMSIRArenaClient {
         pendingFinal = null;
         currentPlayOption = 0;
         currentPlayMode = 0;
+        lastKnownPlayMode = 0;
+        playModeNoticeUntilMillis = 0L;
         currentChartTotalNotes = 0;
         currentRandomSeed = -1L;
         serverClockOffsetMillis = 0L;
@@ -390,9 +394,29 @@ public final class BMSIRArenaClient {
     }
 
     static boolean isCurrentPlayDouble() {
-        return main != null
-                && main.getPlayerResource().getBMSModel() != null
-                && main.getPlayerResource().getBMSModel().getMode().player == 2;
+        return isDoublePlayMode(currentPlayModeForLayout());
+    }
+
+    static int currentPlayModeForLayout() {
+        if (currentPlayMode > 0) {
+            return currentPlayMode;
+        }
+        if (
+                main != null
+                        && main.getPlayerResource().getBMSModel() != null
+        ) {
+            return main.getPlayerResource().getBMSModel().getMode().id;
+        }
+        return lastKnownPlayMode;
+    }
+
+    static String currentPlayModeLabel() {
+        return playModeLabel(currentPlayModeForLayout());
+    }
+
+    static boolean shouldShowPlayModeNotice() {
+        return !currentPlayModeLabel().isBlank()
+                && System.currentTimeMillis() < playModeNoticeUntilMillis;
     }
 
     static boolean isConnected() {
@@ -475,6 +499,30 @@ public final class BMSIRArenaClient {
 
     static String currentRoomCode() {
         return activeRulesOrQueue().path("room_code").asText("");
+    }
+
+    static int currentRoomHostId() {
+        return activeRulesOrQueue().path("room_host_id").asInt(0);
+    }
+
+    static boolean isCurrentRoomHost() {
+        return currentPlayerId > 0 && currentPlayerId == currentRoomHostId();
+    }
+
+    static String currentNominationPolicy() {
+        return activeRulesOrQueue().path("nomination_policy").asText("all");
+    }
+
+    static int currentNominationSeconds() {
+        return activeRulesOrQueue().path("nomination_seconds").asInt(60);
+    }
+
+    static int currentOptionSeconds() {
+        return activeRulesOrQueue().path("option_seconds").asInt(10);
+    }
+
+    static int currentIntermissionSeconds() {
+        return activeRulesOrQueue().path("intermission_seconds").asInt(0);
     }
 
     static String currentRatingPolicy() {
@@ -890,12 +938,59 @@ public final class BMSIRArenaClient {
         message.put("score_rule", scoreRule);
         message.put("forced_gauge", forcedGauge);
         message.put("chart_scope", chartScope);
-        message.put("room_code", roomCode == null ? "" : roomCode.trim());
+        message.put("room_code", normalizeRoomCode(roomCode));
+        PlayerConfig config = playerConfig();
+        message.put(
+                "nomination_policy",
+                config == null ? "all" : config.getBmsirArenaNominationPolicy()
+        );
+        message.put(
+                "nomination_seconds",
+                config == null ? 60 : config.getBmsirArenaNominationSeconds()
+        );
+        message.put(
+                "option_seconds",
+                config == null ? 10 : config.getBmsirArenaOptionSeconds()
+        );
+        message.put(
+                "intermission_seconds",
+                config == null ? 0 : config.getBmsirArenaIntermissionSeconds()
+        );
         message.put(
                 "stay_in_room",
-                main != null && main.getPlayerConfig().isBmsirArenaStayInRoom()
+                config != null && config.isBmsirArenaStayInRoom()
         );
         arenaUiMessage = "部屋へ参加しています";
+        send(message);
+    }
+
+    static String normalizeRoomCode(String roomCode) {
+        return roomCode == null
+                ? ""
+                : roomCode.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+    }
+
+    static void requestRoomSettings() {
+        PlayerConfig config = playerConfig();
+        if (config == null || !isCurrentRoomHost()) {
+            return;
+        }
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "room_settings");
+        message.put("nomination_policy", config.getBmsirArenaNominationPolicy());
+        message.put("nomination_seconds", config.getBmsirArenaNominationSeconds());
+        message.put("option_seconds", config.getBmsirArenaOptionSeconds());
+        message.put("intermission_seconds", config.getBmsirArenaIntermissionSeconds());
+        arenaUiMessage = "部屋設定を更新しています";
+        send(message);
+    }
+
+    static void requestRoomDisband() {
+        if (!isCurrentRoomHost()) {
+            return;
+        }
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "room_disband");
         send(message);
     }
 
@@ -1319,6 +1414,22 @@ public final class BMSIRArenaClient {
                         ImGuiNotify.info("Arena選曲を受け付けました", 3000);
                     }
                 }
+                case "chart_candidate_rejected" -> {
+                    if (isCurrentMatchMessage(message)) {
+                        int missingCount = message.path("missing_player_ids").size();
+                        arenaUiMessage = missingCount > 0
+                                ? "未所持者がいるため別の候補を確認しています"
+                                : "この候補は使用できないため再抽選しています";
+                        ImGuiNotify.warning(
+                                "Arena: "
+                                        + arenaUiMessage
+                                        + (missingCount > 0
+                                                ? "（" + missingCount + "人）"
+                                                : ""),
+                                5000
+                        );
+                    }
+                }
                 case "nominations_revealed" -> receiveNominationsRevealed(message);
                 case "chart" -> receiveChart(message);
                 case "option_select" -> receiveOptionSelection(message);
@@ -1485,6 +1596,34 @@ public final class BMSIRArenaClient {
                     ImGuiNotify.warning("Arenaの試合がキャンセルされました");
                     requestArenaStatus();
                 }
+                case "room_disbanded" -> {
+                    if (
+                            !message.path("match_id").asText("").isBlank()
+                                    && !isCurrentMatchMessage(message)
+                    ) {
+                        return;
+                    }
+                    queueStatus = "cancelled";
+                    arenaUiMessage = "プライベートルームが解体されました";
+                    reserved = false;
+                    arenaPlayPending = false;
+                    arenaPlayActive = false;
+                    playReadySent = false;
+                    forfeitRequested = false;
+                    currentMatchId = "";
+                    pendingFinal = null;
+                    currentPlayOption = 0;
+                    currentPlayMode = 0;
+                    currentChartTotalNotes = 0;
+                    currentRandomSeed = -1L;
+                    serverStartMillis = 0L;
+                    clearNominationState();
+                    clearFillState();
+                    clearChatMessages();
+                    restoreOptionsWhenSafe();
+                    ImGuiNotify.info("Arenaプライベートルームを解体しました", 5000);
+                    requestArenaStatus();
+                }
                 case "match_released" -> {
                     if (!isCurrentMatchMessage(message)) {
                         BMSIRArenaLog.event(
@@ -1534,6 +1673,12 @@ public final class BMSIRArenaClient {
                         case "room_entry_failed" ->
                                 "部屋へ参加できません: "
                                         + message.path("message").asText(code);
+                        case "room_settings_failed" ->
+                                "部屋設定を変更できません: "
+                                        + message.path("message").asText(code);
+                        case "room_disband_failed" ->
+                                "部屋を解体できません: "
+                                        + message.path("message").asText(code);
                         case "nomination_closed" -> "選曲受付は終了しました";
                         default -> message.path("message").asText(code);
                     };
@@ -1573,6 +1718,26 @@ public final class BMSIRArenaClient {
         queueView = player.path("queue");
         queueStatus = queueView.path("status").asText("idle");
         rankingView = message.path("ranking");
+        PlayerConfig config = playerConfig();
+        if (
+                config != null
+                        && currentPlayerId > 0
+                        && queueView.path("room_host_id").asInt(0)
+                                == currentPlayerId
+        ) {
+            config.setBmsirArenaNominationPolicy(
+                    queueView.path("nomination_policy").asText("all")
+            );
+            config.setBmsirArenaNominationSeconds(
+                    queueView.path("nomination_seconds").asInt(60)
+            );
+            config.setBmsirArenaOptionSeconds(
+                    queueView.path("option_seconds").asInt(10)
+            );
+            config.setBmsirArenaIntermissionSeconds(
+                    queueView.path("intermission_seconds").asInt(0)
+            );
+        }
         arenaUiMessage = switch (queueStatus) {
             case "queued" -> "対戦相手を待っています";
             case "reserved", "matched" -> "対戦準備中です";
@@ -1598,6 +1763,7 @@ public final class BMSIRArenaClient {
         String chartScope = message.path("chart_scope").asText(
                 currentChartScope()
         );
+        boolean canNominate = message.path("can_nominate").asBoolean(true);
         boolean shouldOpenCandidates =
                 !nominationOpen
                         || nominationTargetBand != targetBand
@@ -1609,8 +1775,13 @@ public final class BMSIRArenaClient {
                 message.path("deadline").asDouble() * 1000.0
         );
         queueStatus = "matched";
-        arenaUiMessage = "次のArena課題曲を選んでください";
-        if (shouldOpenCandidates) {
+        String retryReason = message.path("retry_reason").asText();
+        arenaUiMessage = !canNominate
+                ? "部屋主の選曲を待っています"
+                : retryReason.isBlank()
+                        ? "次のArena課題曲を選んでください"
+                        : "共通して所持する候補がないため、選曲し直してください";
+        if (shouldOpenCandidates && canNominate) {
             if ("free".equals(chartScope)) {
                 openFreeNominationRoot();
             } else {
@@ -1652,6 +1823,11 @@ public final class BMSIRArenaClient {
             return;
         }
         receiveRules(message);
+        int incomingPlayMode = message.path("play_mode").asInt(0);
+        if (supportedPlayMode(incomingPlayMode)) {
+            currentPlayMode = incomingPlayMode;
+            lastKnownPlayMode = incomingPlayMode;
+        }
         boolean wasOpen = optionSelectionOpen;
         optionSelectionOpen = true;
         optionReadySent = message.path("ready").asBoolean(optionReadySent);
@@ -1806,6 +1982,11 @@ public final class BMSIRArenaClient {
         }
         receiveRules(message);
         liveView = message;
+        int incomingPlayMode = message.path("play_mode").asInt(0);
+        if (supportedPlayMode(incomingPlayMode)) {
+            currentPlayMode = incomingPlayMode;
+            lastKnownPlayMode = incomingPlayMode;
+        }
         String state = message.path("state").asText();
         if ("filling".equals(state)) {
             double deadline = message.path("fill_deadline").asDouble();
@@ -1906,6 +2087,10 @@ public final class BMSIRArenaClient {
                     serverStartMillis = 0L;
                 }
                 currentPlayMode = supportedPlayMode(song.getMode()) ? song.getMode() : 0;
+                if (currentPlayMode > 0) {
+                    lastKnownPlayMode = currentPlayMode;
+                    playModeNoticeUntilMillis = System.currentTimeMillis() + 4000L;
+                }
                 currentChartTotalNotes = expectedTotalNotes;
             }
             ObjectNode reply = baseMatchMessage("chart_check");
@@ -1935,6 +2120,8 @@ public final class BMSIRArenaClient {
         int lockedPlayOption = message.path("play_option").asInt(0);
         if (supportedPlayMode(lockedPlayMode)) {
             currentPlayMode = lockedPlayMode;
+            lastKnownPlayMode = lockedPlayMode;
+            playModeNoticeUntilMillis = System.currentTimeMillis() + 4000L;
         }
         clearOptionSelection();
         resultView = JSON.createObjectNode();
@@ -2071,9 +2258,44 @@ public final class BMSIRArenaClient {
             return first;
         }
         String second = randomOptionLabel((playOption / 10) % 10);
-        return "1P " + first
-                + " / 2P " + second
+        return "1P: " + first
+                + " / 2P: " + second
                 + (((playOption / 100) % 10) == 1 ? " / FLIP" : "");
+    }
+
+    static String playModeLabel(int playMode) {
+        // POPN_5K and POPN_9K share the legacy protocol id 9. Arena exposes
+        // that id as the supported 9KEY/PMS mode.
+        if (playMode == Mode.POPN_9K.id) {
+            return "9KEY / PMS";
+        }
+        for (Mode mode : Mode.values()) {
+            if (mode.id != playMode) {
+                continue;
+            }
+            int keys = mode.key - mode.scratchKey.length;
+            if (mode.player == 2) {
+                return keys + "KEY / DOUBLE PLAY";
+            }
+            if (mode == Mode.POPN_9K || keys == 9) {
+                return "9KEY / PMS";
+            }
+            return keys + "KEY / SINGLE PLAY";
+        }
+        return "";
+    }
+
+    static String playModeLayoutKey(int playMode) {
+        if (playMode == Mode.POPN_9K.id) {
+            return "9";
+        }
+        for (Mode mode : Mode.values()) {
+            if (mode.id == playMode) {
+                int keys = mode.key - mode.scratchKey.length;
+                return Integer.toString(keys);
+            }
+        }
+        return "unknown";
     }
 
     private static boolean isDoublePlayMode(int playMode) {

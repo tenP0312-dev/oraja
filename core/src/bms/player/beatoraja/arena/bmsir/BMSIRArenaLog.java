@@ -61,6 +61,7 @@ final class BMSIRArenaLog {
             return;
         }
         JsonNode chart = message.path("chart");
+        JsonNode rules = message.path("rules");
         event(
                 direction + "_message",
                 "type", message.path("type").asText(""),
@@ -77,7 +78,26 @@ final class BMSIRArenaLog {
                 "max_combo", numberOrNull(message, "max_combo"),
                 "play_mode", numberOrNull(message, "play_mode"),
                 "play_option", numberOrNull(message, "play_option"),
+                "play_option_1p", numberOrNull(message, "play_option_1p"),
+                "play_option_2p", numberOrNull(message, "play_option_2p"),
+                "flip", message.path("flip").isBoolean()
+                        ? message.path("flip").asBoolean()
+                        : null,
                 "ln_mode", message.path("ln_mode").asText(""),
+                "match_mode", rules.path("match_mode").asText(
+                        message.path("match_mode").asText("")
+                ),
+                "score_rule", rules.path("score_rule").asText(
+                        message.path("score_rule").asText("")
+                ),
+                "room_code", rules.path("room_code").asText(
+                        message.path("room_code").asText("")
+                ),
+                "nomination_policy", rules.path("nomination_policy").asText(""),
+                "retry_reason", message.path("retry_reason").asText(""),
+                "missing_player_count", message.path("missing_player_ids").isArray()
+                        ? message.path("missing_player_ids").size()
+                        : null,
                 "chart_hash", chart.path("md5").asText(
                         message.path("chart_hash").asText("")
                 ),

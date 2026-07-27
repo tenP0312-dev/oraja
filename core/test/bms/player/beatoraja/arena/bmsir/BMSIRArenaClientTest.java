@@ -27,10 +27,14 @@ class BMSIRArenaClientTest {
     void arenaOverlaySettingsHaveSafeDefaultsAndClampTheMode() {
         PlayerConfig config = new PlayerConfig();
         assertEquals(0, config.getBmsirArenaOverlayMode());
-        assertTrue(config.isBmsirArenaShowCursor());
+        assertFalse(config.isBmsirArenaShowCursor());
         assertFalse(config.isBmsirArenaUnrestrictedRating());
         assertFalse(config.isBmsirArenaRandomMirror());
         assertTrue(config.isBmsirArenaStayInRoom());
+        assertEquals("all", config.getBmsirArenaNominationPolicy());
+        assertEquals(60, config.getBmsirArenaNominationSeconds());
+        assertEquals(10, config.getBmsirArenaOptionSeconds());
+        assertEquals(0, config.getBmsirArenaIntermissionSeconds());
 
         config.setBmsirArenaOverlayMode(99);
         assertEquals(2, config.getBmsirArenaOverlayMode());
@@ -113,7 +117,7 @@ class BMSIRArenaClientTest {
         assertEquals(1, config.getRandom2());
         assertEquals(1, config.getDoubleoption());
         assertEquals(
-                "1P RANDOM / 2P MIRROR / FLIP",
+                "1P: RANDOM / 2P: MIRROR / FLIP",
                 BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
         );
 
@@ -128,6 +132,34 @@ class BMSIRArenaClientTest {
         assertEquals(
                 "R-RANDOM",
                 BMSIRArenaClient.playOptionLabel(3, Mode.BEAT_7K.id)
+        );
+    }
+
+    @Test
+    void roomCodesAcceptClipboardWhitespaceAndModeLabelsCoverArenaKeys() {
+        assertEquals(
+                "ABC234",
+                BMSIRArenaClient.normalizeRoomCode(" a b c 2 3 4\n")
+        );
+        assertEquals(
+                "5KEY / SINGLE PLAY",
+                BMSIRArenaClient.playModeLabel(Mode.BEAT_5K.id)
+        );
+        assertEquals(
+                "7KEY / SINGLE PLAY",
+                BMSIRArenaClient.playModeLabel(Mode.BEAT_7K.id)
+        );
+        assertEquals(
+                "9KEY / PMS",
+                BMSIRArenaClient.playModeLabel(Mode.POPN_9K.id)
+        );
+        assertEquals(
+                "10KEY / DOUBLE PLAY",
+                BMSIRArenaClient.playModeLabel(Mode.BEAT_10K.id)
+        );
+        assertEquals(
+                "14KEY / DOUBLE PLAY",
+                BMSIRArenaClient.playModeLabel(Mode.BEAT_14K.id)
         );
     }
 

@@ -256,9 +256,14 @@ public final class PlayerConfig {
 	 */
 	private int bmsirArenaOverlayMode = 0;
 
-	private boolean bmsirArenaShowCursor = true;
+	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
 	private boolean bmsirArenaStayInRoom = true;
+	/** Which players nominate charts in a private room: all or host. */
+	private String bmsirArenaNominationPolicy = "all";
+	private int bmsirArenaNominationSeconds = 60;
+	private int bmsirArenaOptionSeconds = 10;
+	private int bmsirArenaIntermissionSeconds = 0;
 	
 	private String twitterConsumerKey;
 
@@ -638,6 +643,45 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaStayInRoom(boolean bmsirArenaStayInRoom) {
 		this.bmsirArenaStayInRoom = bmsirArenaStayInRoom;
+	}
+
+	public String getBmsirArenaNominationPolicy() {
+		if (!"host".equals(bmsirArenaNominationPolicy)) {
+			bmsirArenaNominationPolicy = "all";
+		}
+		return bmsirArenaNominationPolicy;
+	}
+
+	public void setBmsirArenaNominationPolicy(String bmsirArenaNominationPolicy) {
+		this.bmsirArenaNominationPolicy =
+				"host".equalsIgnoreCase(bmsirArenaNominationPolicy) ? "host" : "all";
+	}
+
+	public int getBmsirArenaNominationSeconds() {
+		bmsirArenaNominationSeconds = Math.max(10, Math.min(180, bmsirArenaNominationSeconds));
+		return bmsirArenaNominationSeconds;
+	}
+
+	public void setBmsirArenaNominationSeconds(int bmsirArenaNominationSeconds) {
+		this.bmsirArenaNominationSeconds = Math.max(10, Math.min(180, bmsirArenaNominationSeconds));
+	}
+
+	public int getBmsirArenaOptionSeconds() {
+		bmsirArenaOptionSeconds = Math.max(5, Math.min(60, bmsirArenaOptionSeconds));
+		return bmsirArenaOptionSeconds;
+	}
+
+	public void setBmsirArenaOptionSeconds(int bmsirArenaOptionSeconds) {
+		this.bmsirArenaOptionSeconds = Math.max(5, Math.min(60, bmsirArenaOptionSeconds));
+	}
+
+	public int getBmsirArenaIntermissionSeconds() {
+		bmsirArenaIntermissionSeconds = Math.max(0, Math.min(60, bmsirArenaIntermissionSeconds));
+		return bmsirArenaIntermissionSeconds;
+	}
+
+	public void setBmsirArenaIntermissionSeconds(int bmsirArenaIntermissionSeconds) {
+		this.bmsirArenaIntermissionSeconds = Math.max(0, Math.min(60, bmsirArenaIntermissionSeconds));
 	}
 
 	public String getTargetid() {
