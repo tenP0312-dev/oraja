@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +32,13 @@ public class FFmpegProcessor implements MovieProcessor {
 	private enum ProcessorStatus {
 		TEXTURE_INACTIVE,
 		TEXTURE_ACTIVE,
+		DISPOSED,
+	}
+	enum DecoderState {
+		NEW,
+		INITIALIZING,
+		READY,
+		FAILED,
 		DISPOSED,
 	}
 
@@ -123,9 +131,12 @@ public class FFmpegProcessor implements MovieProcessor {
 		/**
 		 * コマンドキュー
 		 */
-		private final LinkedBlockingDeque<Command> commands = new LinkedBlockingDeque<>(4);
+		private final MovieCommandQueue commands = new MovieCommandQueue();
 
 		private boolean eof = true;
+		private boolean halt;
+		private boolean loop;
+		private volatile DecoderState decoderState = DecoderState.NEW;
 
 		private Pixmap pixmap;
 		private byte[] frameRow;
@@ -147,6 +158,9 @@ public class FFmpegProcessor implements MovieProcessor {
 		}
 
 		public void run() {
+			decoderState = DecoderState.INITIALIZING;
+			logger.info("movie decoder state INITIALIZING: {}", filepath);
+			boolean failed = false;
 			try {
 				movieBytes = Files.readAllBytes(Paths.get(filepath));
 				logger.info(
@@ -165,23 +179,30 @@ public class FFmpegProcessor implements MovieProcessor {
 						grabber.getFrameRate(),
 						grabber.getLengthInFrames(),
 						grabber.getLengthInTime()
-				);
+					);
 
+				decoderState = DecoderState.READY;
+				logger.info("movie decoder state READY: {}", filepath);
 				offset = grabber.getTimestamp();
 				Frame frame = null;
-				boolean halt = false;
-				boolean loop = false;
 				while (!halt) {
+					Command command = commands.poll();
+					if (command != null) {
+						processCommand(command);
+						continue;
+					}
+
 					final long microtime = time * 1000 + offset;
 					if (eof) {
+						if (loop) {
+							restart();
+							continue;
+						}
 						if (processorStatus != ProcessorStatus.DISPOSED) {
 							processorStatus = ProcessorStatus.TEXTURE_INACTIVE;
 						}
-						try {
-							sleep(3600000);
-						} catch (InterruptedException e) {
-
-						}
+						processCommand(waitForCommand());
+						continue;
 					} else if (microtime >= grabber.getTimestamp()) {
 						while (microtime >= grabber.getTimestamp() || framecount % fpsd != 0) {
 							frame = grabber.grabImage();
@@ -193,9 +214,6 @@ public class FFmpegProcessor implements MovieProcessor {
 						}
 						if (frame == null) {
 							eof = true;
-							if (loop) {
-								commands.offerLast(Command.LOOP);
-							}
 						} else if (frame.image != null && frame.image[0] != null) {
 							try {
 								logFirstFrame(frame);
@@ -268,34 +286,17 @@ public class FFmpegProcessor implements MovieProcessor {
 					} else {
 						final long sleeptime = (grabber.getTimestamp() - microtime) / 1000 - 1;
 						if (sleeptime > 0) {
-							try {
-								sleep(sleeptime);
-							} catch (InterruptedException e) {
-
+							command = waitForCommand(sleeptime);
+							if (command != null) {
+								processCommand(command);
 							}
-						}
-					}
-
-					if (!commands.isEmpty()) {
-						switch (commands.pollFirst()) {
-						case PLAY:
-							loop = false;
-							restart();
-							break;
-						case LOOP:
-							loop = true;
-							restart();
-							break;
-						case STOP:
-							eof = true;
-							break;
-						case HALT:
-							halt = true;
 						}
 					}
 				}
 			} catch (Throwable e) {
-				logger.error("movie decode failed: {}", filepath, e);
+				failed = true;
+				decoderState = DecoderState.FAILED;
+				logger.error("movie decode failed; decoder state FAILED: {}", filepath, e);
 			} finally {
 				try {
 					synchronized (pixmapLock) {
@@ -308,7 +309,59 @@ public class FFmpegProcessor implements MovieProcessor {
 					logger.info("動画リソースの開放 : {}", filepath);
 				} catch (Throwable e) {
 					logger.error("movie resource release failed: {}", filepath, e);
+				} finally {
+					if (!failed) {
+						decoderState = DecoderState.DISPOSED;
+						logger.info("movie decoder state DISPOSED: {}", filepath);
+					}
 				}
+			}
+		}
+
+		private void processCommand(Command command) throws Exception {
+			switch (command) {
+			case PLAY:
+				loop = false;
+				restart();
+				break;
+			case LOOP:
+				loop = true;
+				restart();
+				break;
+			case STOP:
+				loop = false;
+				eof = true;
+				break;
+			case HALT:
+				halt = true;
+				break;
+			}
+		}
+
+		private Command waitForCommand() {
+			while (true) {
+				try {
+					return commands.take();
+				} catch (InterruptedException e) {
+					logger.warn(
+							"movie command wait interrupted without a queued command: {}",
+							filepath,
+							e
+					);
+				}
+			}
+		}
+
+		private Command waitForCommand(long timeoutMillis) {
+			try {
+				return commands.poll(timeoutMillis);
+			} catch (InterruptedException e) {
+				logger.warn(
+						"movie timed command wait interrupted without a queued command: {}",
+						filepath,
+						e
+				);
+				return commands.poll();
 			}
 		}
 
@@ -464,13 +517,38 @@ public class FFmpegProcessor implements MovieProcessor {
 		}
 
 		public void exec(Command com) {
-			if (com == Command.HALT) {
+			commands.submit(com);
+		}
+	}
+
+	static final class MovieCommandQueue {
+		private final LinkedBlockingDeque<Command> commands = new LinkedBlockingDeque<>();
+		private boolean haltRequested;
+
+		synchronized void submit(Command command) {
+			if (command == Command.HALT) {
+				haltRequested = true;
 				commands.clear();
-				commands.offerFirst(com);
-			} else {
-				commands.offerLast(com);
+				commands.offerFirst(command);
+			} else if (!haltRequested) {
+				commands.offerLast(command);
 			}
-			interrupt();
+		}
+
+		Command poll() {
+			return commands.pollFirst();
+		}
+
+		Command poll(long timeoutMillis) throws InterruptedException {
+			return commands.pollFirst(timeoutMillis, TimeUnit.MILLISECONDS);
+		}
+
+		Command take() throws InterruptedException {
+			return commands.takeFirst();
+		}
+
+		int size() {
+			return commands.size();
 		}
 	}
 

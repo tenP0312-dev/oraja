@@ -39,6 +39,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.launcher.PlayConfigurationView;
+import bms.player.beatoraja.play.bga.FFmpegNativeLoader;
 import bms.player.beatoraja.song.SQLiteSongDatabaseAccessor;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
@@ -146,6 +147,7 @@ public class MainLoader extends Application {
 		}
 
 		try {
+			FFmpegNativeLoader.preload();
 			MainController main = new MainController(bmsPath, config, player, playerMode, songUpdated);
 
 			Lwjgl3ApplicationConfiguration gdxConfig = new Lwjgl3ApplicationConfiguration();

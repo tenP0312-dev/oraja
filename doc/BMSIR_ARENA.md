@@ -141,22 +141,26 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies this as the dedicated BMS-IR Arena ED client:
 
 ```text
-BMS-IR-Arena-ED-0.1.12-dev-macos-aarch64.jar
+BMS-IR-Arena-ED-0.1.13-dev-macos-aarch64.jar
 ```
 
-The release build uses JavaCPP and JavaCV 1.5.11 while retaining the FFmpeg
-6.0-1.5.9 preset. `shadowJar` fails when the target JavaCPP runtime, the FFmpeg
-runtime, or the expected dependency versions are missing, or when native
-libraries for another OS are mixed into the artifact. The Windows x86-64
-artifact must therefore contain `jnijavacpp.dll`, its bundled Visual C++
-runtime DLLs, and the FFmpeg JNI/runtime DLLs before it can be distributed.
+The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
+7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the
+complete FFmpeg decoder runtime, or the expected dependency versions are
+missing, or when native libraries for another OS are mixed into the artifact.
+The Windows x86-64 artifact must therefore contain `jnijavacpp.dll`, its
+bundled Visual C++ runtime DLLs, and the FFmpeg JNI/runtime DLLs before it can
+be distributed.
 
 Movie decoding copies JavaCV frames into an independent RGB888 Pixmap with
 stride/channel handling and decoder/render locking. It recreates resources on
 size changes, reopens the grabber after a failed loop seek, and logs open,
 metadata, first-frame, first-Texture, and failure details through the normal
-application logger. Release acceptance must test both skin movies and in-play
-BGA on the target Windows/Java 17 body.
+application logger. FFmpeg native loading completes synchronously before the
+first decoder thread starts. Playback commands wake an unbounded blocking
+queue without interrupting JavaCPP file extraction, including commands queued
+during decoder initialization. Release acceptance must test both skin movies
+and in-play BGA on the target Windows/Java 17 body.
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
 commit, record the artifact hashes privately for rollout, and configure the

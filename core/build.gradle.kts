@@ -87,18 +87,54 @@ tasks {
                     "${javaCppPrefix}vcruntime140.dll",
                     "${javaCppPrefix}vcruntime140_1.dll",
                     "${javaCppPrefix}ucrtbase.dll",
+                    "${ffmpegPrefix}jniavutil.dll",
+                    "${ffmpegPrefix}avutil-59.dll",
+                    "${ffmpegPrefix}jniswresample.dll",
+                    "${ffmpegPrefix}swresample-5.dll",
+                    "${ffmpegPrefix}jniavcodec.dll",
+                    "${ffmpegPrefix}avcodec-61.dll",
                     "${ffmpegPrefix}jniavformat.dll",
-                    "${ffmpegPrefix}avformat-60.dll",
+                    "${ffmpegPrefix}avformat-61.dll",
+                    "${ffmpegPrefix}jniavfilter.dll",
+                    "${ffmpegPrefix}avfilter-10.dll",
+                    "${ffmpegPrefix}jniavdevice.dll",
+                    "${ffmpegPrefix}avdevice-61.dll",
+                    "${ffmpegPrefix}jniswscale.dll",
+                    "${ffmpegPrefix}swscale-8.dll",
                 )
                 "macos" -> listOf(
                     "${javaCppPrefix}libjnijavacpp.dylib",
+                    "${ffmpegPrefix}libjniavutil.dylib",
+                    "${ffmpegPrefix}libavutil.59.dylib",
+                    "${ffmpegPrefix}libjniswresample.dylib",
+                    "${ffmpegPrefix}libswresample.5.dylib",
+                    "${ffmpegPrefix}libjniavcodec.dylib",
+                    "${ffmpegPrefix}libavcodec.61.dylib",
                     "${ffmpegPrefix}libjniavformat.dylib",
-                    "${ffmpegPrefix}libavformat.60.dylib",
+                    "${ffmpegPrefix}libavformat.61.dylib",
+                    "${ffmpegPrefix}libjniavfilter.dylib",
+                    "${ffmpegPrefix}libavfilter.10.dylib",
+                    "${ffmpegPrefix}libjniavdevice.dylib",
+                    "${ffmpegPrefix}libavdevice.61.dylib",
+                    "${ffmpegPrefix}libjniswscale.dylib",
+                    "${ffmpegPrefix}libswscale.8.dylib",
                 )
                 else -> listOf(
                     "${javaCppPrefix}libjnijavacpp.so",
+                    "${ffmpegPrefix}libjniavutil.so",
+                    "${ffmpegPrefix}libavutil.so.59",
+                    "${ffmpegPrefix}libjniswresample.so",
+                    "${ffmpegPrefix}libswresample.so.5",
+                    "${ffmpegPrefix}libjniavcodec.so",
+                    "${ffmpegPrefix}libavcodec.so.61",
                     "${ffmpegPrefix}libjniavformat.so",
-                    "${ffmpegPrefix}libavformat.so.60",
+                    "${ffmpegPrefix}libavformat.so.61",
+                    "${ffmpegPrefix}libjniavfilter.so",
+                    "${ffmpegPrefix}libavfilter.so.10",
+                    "${ffmpegPrefix}libjniavdevice.so",
+                    "${ffmpegPrefix}libavdevice.so.61",
+                    "${ffmpegPrefix}libjniswscale.so",
+                    "${ffmpegPrefix}libswscale.so.8",
                 )
             }
             val knownNativeClassifiers = listOf(
@@ -111,7 +147,7 @@ tasks {
             val expectedVersions = mapOf(
                 "META-INF/maven/org.bytedeco/javacpp/pom.properties" to "1.5.11",
                 "META-INF/maven/org.bytedeco/javacv/pom.properties" to "1.5.11",
-                "META-INF/maven/org.bytedeco/ffmpeg/pom.properties" to "6.0-1.5.9",
+                "META-INF/maven/org.bytedeco/ffmpeg/pom.properties" to "7.1-1.5.11",
             )
 
             ZipFile(archiveFile.get().asFile).use { jar ->
