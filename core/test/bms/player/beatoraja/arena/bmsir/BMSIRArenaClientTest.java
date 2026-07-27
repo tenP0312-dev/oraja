@@ -102,6 +102,36 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void serverLockedOptionsAreAppliedForSpAndDp() {
+        PlayerConfig config = new PlayerConfig();
+        BMSIRArenaClient.applyLockedPlayOption(
+                config,
+                Mode.BEAT_14K.id,
+                112
+        );
+        assertEquals(2, config.getRandom());
+        assertEquals(1, config.getRandom2());
+        assertEquals(1, config.getDoubleoption());
+        assertEquals(
+                "1P RANDOM / 2P MIRROR / FLIP",
+                BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
+        );
+
+        BMSIRArenaClient.applyLockedPlayOption(
+                config,
+                Mode.BEAT_7K.id,
+                3
+        );
+        assertEquals(3, config.getRandom());
+        assertEquals(0, config.getRandom2());
+        assertEquals(0, config.getDoubleoption());
+        assertEquals(
+                "R-RANDOM",
+                BMSIRArenaClient.playOptionLabel(3, Mode.BEAT_7K.id)
+        );
+    }
+
+    @Test
     void completedFinalUsesTheServerSelectedChartTotal() {
         ScoreData score = new ScoreData();
         score.setNotes(100);
@@ -219,6 +249,23 @@ class BMSIRArenaClientTest {
                 2_000L,
                 2_000L
         ));
+    }
+
+    @Test
+    void matchScopedMessagesRejectMissingAndDifferentMatchIds() throws Exception {
+        assertTrue(BMSIRArenaClient.matchMessageMatches(
+                "match-a",
+                JSON.readTree("{\"match_id\":\"match-a\"}")
+        ));
+        assertFalse(BMSIRArenaClient.matchMessageMatches(
+                "match-a",
+                JSON.readTree("{\"match_id\":\"match-b\"}")
+        ));
+        assertFalse(BMSIRArenaClient.matchMessageMatches(
+                "",
+                JSON.readTree("{\"match_id\":\"match-a\"}")
+        ));
+        assertFalse(BMSIRArenaClient.matchMessageMatches("match-a", null));
     }
 
     @Test

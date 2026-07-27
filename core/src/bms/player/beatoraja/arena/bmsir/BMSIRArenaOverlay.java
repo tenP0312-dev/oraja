@@ -2,6 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.player.beatoraja.modmenu.FontAwesomeIcons;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
+import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.song.SongData;
 
@@ -647,6 +648,9 @@ public final class BMSIRArenaOverlay {
                             + " / UNRATED"
             );
         }
+        if (renderOptionSelection()) {
+            return;
+        }
 
         List<JsonNode> players = sortedPlayers(match);
         if (players.isEmpty()) {
@@ -709,6 +713,40 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.endTable();
         }
+    }
+
+    private static boolean renderOptionSelection() {
+        if (!BMSIRArenaClient.isOptionSelectionOpen()) {
+            return false;
+        }
+        ImGui.separator();
+        ImGui.setWindowFontScale(1.25f);
+        ImGui.textWrapped(
+                FontAwesomeIcons.SlidersH
+                        + " OP選択中  残り"
+                        + BMSIRArenaClient.optionSecondsRemaining()
+                        + "秒"
+        );
+        ImGui.setWindowFontScale(1.0f);
+        ImGui.text("現在: " + BMSIRArenaClient.currentOptionLabel());
+        ImGui.textDisabled("S-RANDOMとアシスト系OPは使用できません");
+        ImGui.textDisabled(String.format(
+                Locale.ROOT,
+                "READY %d / %d",
+                BMSIRArenaClient.optionReadyCount(),
+                BMSIRArenaClient.optionPlayerCount()
+        ));
+        ImGui.beginDisabled(BMSIRArenaClient.isOptionReadySent());
+        if (ImGui.button(
+                BMSIRArenaClient.isOptionReadySent()
+                        ? "準備完了"
+                        : "このOPで準備完了"
+        )) {
+            BMSIRArenaClient.requestOptionReady();
+        }
+        ImGui.endDisabled();
+        ImGui.textDisabled("操作がなければ時間切れ時のOPで自動確定します");
+        return true;
     }
 
     private static boolean renderFillWaiting() {
@@ -1131,6 +1169,14 @@ public final class BMSIRArenaOverlay {
             config.setBmsirArenaOverlayMode(2);
         }
         ImGui.textDisabled("Ctrl+Shift+F5で切替。戻らない場合はF5メニューから再表示");
+        if (ImGui.button("Arenaログフォルダを開く")) {
+            if (!BMSIRArenaLog.openLogFolder()) {
+                ImGuiNotify.warning("Arenaログフォルダを開けませんでした");
+            }
+        }
+        ImGui.sameLine();
+        ImGui.textDisabled(BMSIRArenaLog.logFileName());
+        ImGui.textDisabled("認証情報とチャット本文はログへ記録しません");
 
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
         if (ImGui.checkbox("プレイ中もマウスカーソルを表示", cursor)) {

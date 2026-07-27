@@ -61,8 +61,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.12-dev";
-    private static final int PROTOCOL_VERSION = 2;
+    private static final String CLIENT_VERSION = "0.1.13-dev";
+    private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
     private static final String OFFICIAL_ARENA_TABLE_URL =
@@ -85,11 +85,15 @@ public final class BMSIRArenaClient {
     private static volatile long serverStartMillis;
     private static volatile long serverClockOffsetMillis;
     private static volatile ScheduledFuture<?> clockSyncTask;
+    private static volatile ScheduledFuture<?> optionReadyTask;
     private static volatile ObjectNode pendingFinal;
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
     private static volatile int currentChartTotalNotes;
     private static volatile long currentRandomSeed = -1L;
+    private static volatile boolean optionSelectionOpen;
+    private static volatile boolean optionReadySent;
+    private static volatile long optionDeadlineMillis;
     private static final AtomicLong sequence = new AtomicLong();
     private static volatile long lastLiveNanos;
     private static volatile OptionSnapshot savedOptions;
@@ -194,12 +198,20 @@ public final class BMSIRArenaClient {
         shutdown();
         main = controller;
         initialized = true;
+        BMSIRArenaLog.event(
+                "initialize",
+                "client_version", CLIENT_VERSION,
+                "body_version", Version.getVersion(),
+                "client_flavor", "endless-dream"
+        );
         if (!controller.getPlayerConfig().isBmsirArenaEnabled()) {
             logger.info("BMS-IR Arena is disabled");
+            BMSIRArenaLog.event("disabled");
             return;
         }
         IRConfig config = findBmsirConfig(controller.getPlayerConfig());
         if (config == null) {
+            BMSIRArenaLog.event("configuration_missing");
             ImGuiNotify.warning("BMS-IR Arena: BMS-IRのIR設定が見つかりません");
             return;
         }
@@ -207,6 +219,7 @@ public final class BMSIRArenaClient {
         try {
             playerId = Integer.parseInt(config.getUserid().trim());
         } catch (NumberFormatException e) {
+            BMSIRArenaLog.event("configuration_invalid_player_id");
             ImGuiNotify.error("BMS-IR Arena: User IDが不正です");
             return;
         }
@@ -217,14 +230,26 @@ public final class BMSIRArenaClient {
             ArenaSocket next = new ArenaSocket(uri, playerId, passmd5);
             next.setConnectionLostTimeout(15);
             socket = next;
+            BMSIRArenaLog.event("connect_requested", "player_id", playerId);
             next.connect();
         } catch (Exception e) {
             logger.warn("BMS-IR Arena connection setup failed", e);
+            BMSIRArenaLog.event(
+                    "connect_setup_failed",
+                    "error", e.getClass().getSimpleName(),
+                    "message", e.getMessage()
+            );
             ImGuiNotify.error("BMS-IR Arena: 接続先が不正です");
         }
     }
 
     public static synchronized void shutdown() {
+        BMSIRArenaLog.event(
+                "shutdown",
+                "match_id", currentMatchId,
+                "reserved", reserved,
+                "play_active", arenaPlayActive
+        );
         sendForfeit("client_shutdown");
         initialized = false;
         connected = false;
@@ -1076,6 +1101,7 @@ public final class BMSIRArenaClient {
         message.put("minbp", arenaMinBp(score));
         message.put("max_combo", Math.max(0, score.getCombo()));
         message.put("play_option", currentPlayOption);
+        message.put("ln_mode", "LN");
         if (currentPlayMode > 0) {
             message.put("play_mode", currentPlayMode);
         }
@@ -1098,6 +1124,7 @@ public final class BMSIRArenaClient {
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
         message.put("play_option", currentPlayOption);
+        message.put("ln_mode", "LN");
         if (currentPlayMode > 0) {
             message.put("play_mode", currentPlayMode);
         }
@@ -1179,18 +1206,33 @@ public final class BMSIRArenaClient {
     private static void send(ObjectNode message) {
         ArenaSocket current = socket;
         if (current == null || !current.isOpen()) {
+            BMSIRArenaLog.event(
+                    "send_skipped",
+                    "type", message.path("type").asText(""),
+                    "match_id", message.path("match_id").asText(""),
+                    "reason", "socket_not_open"
+            );
             return;
         }
         try {
+            BMSIRArenaLog.message("outbound", message);
             current.send(JSON.writeValueAsString(message));
         } catch (Exception e) {
             logger.warn("BMS-IR Arena send failed: {}", e.getMessage());
+            BMSIRArenaLog.event(
+                    "send_failed",
+                    "type", message.path("type").asText(""),
+                    "match_id", message.path("match_id").asText(""),
+                    "error", e.getClass().getSimpleName(),
+                    "message", e.getMessage()
+            );
         }
     }
 
     private static void handleMessage(String raw) {
         try {
             JsonNode message = JSON.readTree(raw);
+            BMSIRArenaLog.message("inbound", message);
             switch (message.path("type").asText()) {
                 case "hello_ok" -> {
                     connected = true;
@@ -1273,10 +1315,24 @@ public final class BMSIRArenaClient {
                 }
                 case "nominations_revealed" -> receiveNominationsRevealed(message);
                 case "chart" -> receiveChart(message);
+                case "option_select" -> receiveOptionSelection(message);
                 case "prepare" -> prepareArenaPlay(message);
                 case "start" -> receiveArenaStart(message);
                 case "live" -> receiveLiveView(message);
                 case "match_resume" -> {
+                    if (!isCurrentMatchMessage(message)) {
+                        BMSIRArenaLog.event(
+                                "message_ignored",
+                                "type", "match_resume",
+                                "match_id", message.path("match_id").asText(""),
+                                "active_match_id", currentMatchId
+                        );
+                        logger.debug(
+                                "Ignoring Arena match_resume for another match: {}",
+                                message.path("match_id").asText()
+                        );
+                        return;
+                    }
                     String incomingMatchId = message.path("match_id").asText();
                     currentMatchId = incomingMatchId;
                     reserved = true;
@@ -1289,6 +1345,19 @@ public final class BMSIRArenaClient {
                     }
                 }
                 case "result" -> {
+                    if (!isCurrentMatchMessage(message)) {
+                        BMSIRArenaLog.event(
+                                "message_ignored",
+                                "type", "result",
+                                "match_id", message.path("match_id").asText(""),
+                                "active_match_id", currentMatchId
+                        );
+                        logger.debug(
+                                "Ignoring Arena result for another match: {}",
+                                message.path("match_id").asText()
+                        );
+                        return;
+                    }
                     receiveRules(message);
                     resultView = message;
                     liveView = message;
@@ -1342,6 +1411,19 @@ public final class BMSIRArenaClient {
                     requestArenaStatus();
                 }
                 case "forfeit_accepted" -> {
+                    if (!isCurrentMatchMessage(message)) {
+                        BMSIRArenaLog.event(
+                                "message_ignored",
+                                "type", "forfeit_accepted",
+                                "match_id", message.path("match_id").asText(""),
+                                "active_match_id", currentMatchId
+                        );
+                        logger.debug(
+                                "Ignoring Arena forfeit_accepted for another match: {}",
+                                message.path("match_id").asText()
+                        );
+                        return;
+                    }
                     queueStatus = "cancelled";
                     arenaUiMessage = "対戦を棄権しました";
                     reserved = false;
@@ -1365,6 +1447,19 @@ public final class BMSIRArenaClient {
                     requestArenaStatus();
                 }
                 case "match_cancelled" -> {
+                    if (!isCurrentMatchMessage(message)) {
+                        BMSIRArenaLog.event(
+                                "message_ignored",
+                                "type", "match_cancelled",
+                                "match_id", message.path("match_id").asText(""),
+                                "active_match_id", currentMatchId
+                        );
+                        logger.debug(
+                                "Ignoring Arena match_cancelled for another match: {}",
+                                message.path("match_id").asText()
+                        );
+                        return;
+                    }
                     arenaUiMessage = "試合がキャンセルされました";
                     reserved = false;
                     arenaPlayPending = false;
@@ -1385,6 +1480,19 @@ public final class BMSIRArenaClient {
                     requestArenaStatus();
                 }
                 case "match_released" -> {
+                    if (!isCurrentMatchMessage(message)) {
+                        BMSIRArenaLog.event(
+                                "message_ignored",
+                                "type", "match_released",
+                                "match_id", message.path("match_id").asText(""),
+                                "active_match_id", currentMatchId
+                        );
+                        logger.debug(
+                                "Ignoring Arena match_released for another match: {}",
+                                message.path("match_id").asText()
+                        );
+                        return;
+                    }
                     boolean queueRetained = message.path("queue_retained").asBoolean();
                     queueStatus = queueRetained ? "queued" : "cancelled";
                     arenaUiMessage = queueRetained
@@ -1430,7 +1538,24 @@ public final class BMSIRArenaClient {
             }
         } catch (Exception e) {
             logger.warn("BMS-IR Arena message parse failed", e);
+            BMSIRArenaLog.event(
+                    "message_parse_failed",
+                    "error", e.getClass().getSimpleName(),
+                    "message", e.getMessage(),
+                    "raw_length", raw == null ? 0 : raw.length()
+            );
         }
+    }
+
+    static boolean isCurrentMatchMessage(JsonNode message) {
+        return matchMessageMatches(currentMatchId, message);
+    }
+
+    static boolean matchMessageMatches(String activeMatchId, JsonNode message) {
+        return activeMatchId != null
+                && !activeMatchId.isBlank()
+                && message != null
+                && activeMatchId.equals(message.path("match_id").asText());
     }
 
     static void receiveArenaStatus(JsonNode message) {
@@ -1510,6 +1635,132 @@ public final class BMSIRArenaClient {
         nominationDeadlineMillis = 0L;
         nominationTargetBand = 0;
         clearFillState();
+        clearOptionSelection();
+    }
+
+    private static void receiveOptionSelection(JsonNode message) {
+        if (
+                !currentMatchId.equals(message.path("match_id").asText())
+                        || main == null
+        ) {
+            return;
+        }
+        receiveRules(message);
+        boolean wasOpen = optionSelectionOpen;
+        optionSelectionOpen = true;
+        optionReadySent = message.path("ready").asBoolean(optionReadySent);
+        optionDeadlineMillis = Math.round(
+                message.path("deadline").asDouble() * 1000.0
+        );
+        queueStatus = "matched";
+        arenaUiMessage = optionReadySent
+                ? "OP確定済み。他の参加者を待っています"
+                : "OPを選択してください";
+        if (!wasOpen) {
+            Gdx.app.postRunnable(() -> {
+                if (!optionSelectionOpen || main == null) {
+                    return;
+                }
+                applyFixedOptions(main.getPlayerConfig(), currentForcedGauge());
+            });
+        }
+        scheduleOptionReady();
+    }
+
+    static boolean isOptionSelectionOpen() {
+        return optionSelectionOpen
+                && reserved
+                && !currentMatchId.isBlank();
+    }
+
+    static boolean isOptionReadySent() {
+        return optionReadySent;
+    }
+
+    static long optionSecondsRemaining() {
+        return fillCountdownSeconds(
+                optionDeadlineMillis,
+                System.currentTimeMillis() + serverClockOffsetMillis
+        );
+    }
+
+    static int optionReadyCount() {
+        return currentMatchView()
+                .path("option_selection")
+                .path("ready_count")
+                .asInt(0);
+    }
+
+    static int optionPlayerCount() {
+        return currentMatchView()
+                .path("option_selection")
+                .path("player_count")
+                .asInt(0);
+    }
+
+    static String currentOptionLabel() {
+        PlayerConfig config = playerConfig();
+        if (config == null) {
+            return "-";
+        }
+        return playOptionLabel(encodePlayOption(config, currentPlayMode), currentPlayMode);
+    }
+
+    static void requestOptionReady() {
+        if (
+                !isOptionSelectionOpen()
+                        || optionReadySent
+                        || main == null
+                        || currentPlayMode <= 0
+        ) {
+            return;
+        }
+        PlayerConfig config = main.getPlayerConfig();
+        applyFixedOptions(config, currentForcedGauge());
+        currentPlayOption = encodePlayOption(config, currentPlayMode);
+        optionReadySent = true;
+        ObjectNode message = baseMatchMessage("option_ready");
+        message.put("play_option", currentPlayOption);
+        message.put("play_mode", currentPlayMode);
+        message.put("ln_mode", "LN");
+        send(message);
+        arenaUiMessage = "OP確定済み。他の参加者を待っています";
+        BMSIRArenaLog.event(
+                "option_ready",
+                "match_id", currentMatchId,
+                "play_mode", currentPlayMode,
+                "play_option", currentPlayOption
+        );
+        cancelOptionReadyTask();
+    }
+
+    private static synchronized void scheduleOptionReady() {
+        cancelOptionReadyTask();
+        if (!isOptionSelectionOpen() || optionReadySent || optionDeadlineMillis <= 0L) {
+            return;
+        }
+        long serverNow = System.currentTimeMillis() + serverClockOffsetMillis;
+        long delayMillis = Math.max(0L, optionDeadlineMillis - serverNow - 250L);
+        optionReadyTask = SCHEDULER.schedule(() -> {
+            if (Gdx.app != null) {
+                Gdx.app.postRunnable(BMSIRArenaClient::requestOptionReady);
+            }
+        }, delayMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private static synchronized void cancelOptionReadyTask() {
+        ScheduledFuture<?> task = optionReadyTask;
+        optionReadyTask = null;
+        if (task != null) {
+            task.cancel(false);
+        }
+    }
+
+    private static void clearOptionSelection() {
+        optionSelectionOpen = false;
+        optionReadySent = false;
+        optionDeadlineMillis = 0L;
+        cancelOptionReadyTask();
     }
 
     static void receiveFillStarted(JsonNode message) {
@@ -1674,6 +1925,12 @@ public final class BMSIRArenaClient {
         }
         receiveRules(message);
         currentRandomSeed = message.path("random_seed").asLong(currentRandomSeed);
+        int lockedPlayMode = message.path("play_mode").asInt(currentPlayMode);
+        int lockedPlayOption = message.path("play_option").asInt(0);
+        if (supportedPlayMode(lockedPlayMode)) {
+            currentPlayMode = lockedPlayMode;
+        }
+        clearOptionSelection();
         resultView = JSON.createObjectNode();
         Gdx.app.postRunnable(() -> {
             if (!reserved || !arenaPlayPending || main == null) {
@@ -1683,10 +1940,12 @@ public final class BMSIRArenaClient {
                     main.getPlayerConfig(),
                     currentForcedGauge()
             );
-            currentPlayOption = encodePlayOption(
+            applyLockedPlayOption(
                     main.getPlayerConfig(),
-                    currentPlayMode
+                    currentPlayMode,
+                    lockedPlayOption
             );
+            currentPlayOption = lockedPlayOption;
             arenaPlayActive = true;
             arenaPlayPending = false;
             playReadySent = false;
@@ -1783,6 +2042,51 @@ public final class BMSIRArenaClient {
             }
         }
         return option;
+    }
+
+    static void applyLockedPlayOption(
+            PlayerConfig config,
+            int playMode,
+            int playOption
+    ) {
+        config.setRandom(playOption % 10);
+        if (isDoublePlayMode(playMode)) {
+            config.setRandom2((playOption / 10) % 10);
+            config.setDoubleoption((playOption / 100) % 10);
+        } else {
+            config.setRandom2(0);
+            config.setDoubleoption(0);
+        }
+    }
+
+    static String playOptionLabel(int playOption, int playMode) {
+        String first = randomOptionLabel(playOption % 10);
+        if (!isDoublePlayMode(playMode)) {
+            return first;
+        }
+        String second = randomOptionLabel((playOption / 10) % 10);
+        return "1P " + first
+                + " / 2P " + second
+                + (((playOption / 100) % 10) == 1 ? " / FLIP" : "");
+    }
+
+    private static boolean isDoublePlayMode(int playMode) {
+        for (Mode mode : Mode.values()) {
+            if (mode.id == playMode) {
+                return mode.player == 2;
+            }
+        }
+        return false;
+    }
+
+    private static String randomOptionLabel(int option) {
+        return switch (option) {
+            case 1 -> "MIRROR";
+            case 2 -> "RANDOM";
+            case 3 -> "R-RANDOM";
+            case 5 -> "SPIRAL";
+            default -> "NORMAL";
+        };
     }
 
     private static boolean supportedPlayMode(int playMode) {
@@ -1892,6 +2196,13 @@ public final class BMSIRArenaClient {
 
         @Override
         public void onOpen(ServerHandshake handshake) {
+            BMSIRArenaLog.event(
+                    "socket_open",
+                    "player_id", playerId,
+                    "client_version", CLIENT_VERSION,
+                    "body_version", Version.getVersion(),
+                    "client_flavor", "endless-dream"
+            );
             ObjectNode hello = JSON.createObjectNode();
             hello.put("type", "hello");
             hello.put("protocol", PROTOCOL_VERSION);
@@ -1905,6 +2216,11 @@ public final class BMSIRArenaClient {
                 send(JSON.writeValueAsString(hello));
                 startClockSync(this);
             } catch (Exception e) {
+                BMSIRArenaLog.event(
+                        "hello_send_failed",
+                        "error", e.getClass().getSimpleName(),
+                        "message", e.getMessage()
+                );
                 close();
             }
         }
@@ -1919,6 +2235,14 @@ public final class BMSIRArenaClient {
             stopClockSync();
             connected = false;
             arenaUiMessage = "Arenaサーバーから切断されました。再接続します";
+            BMSIRArenaLog.event(
+                    "socket_close",
+                    "code", code,
+                    "reason", reason,
+                    "remote", remote,
+                    "match_id", currentMatchId,
+                    "queue_status", queueStatus
+            );
             if (initialized && main != null && main.getPlayerConfig().isBmsirArenaEnabled()) {
                 SCHEDULER.schedule(() -> {
                     synchronized (BMSIRArenaClient.class) {
@@ -1927,6 +2251,11 @@ public final class BMSIRArenaClient {
                                 reconnect();
                             } catch (Exception e) {
                                 logger.debug("Arena reconnect failed: {}", e.getMessage());
+                                BMSIRArenaLog.event(
+                                        "reconnect_failed",
+                                        "error", e.getClass().getSimpleName(),
+                                        "message", e.getMessage()
+                                );
                             }
                         }
                     }
@@ -1939,6 +2268,12 @@ public final class BMSIRArenaClient {
             connected = false;
             arenaUiMessage = "Arenaサーバーへ接続できません";
             logger.warn("BMS-IR Arena socket error: {}", e.getMessage());
+            BMSIRArenaLog.event(
+                    "socket_error",
+                    "error", e == null ? "" : e.getClass().getSimpleName(),
+                    "message", e == null ? "" : e.getMessage(),
+                    "match_id", currentMatchId
+            );
         }
     }
 
