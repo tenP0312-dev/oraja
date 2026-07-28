@@ -271,6 +271,7 @@ public final class BMSIRArenaOverlay {
         }
         renderModeBanner();
         renderChatPreview();
+        renderSeriesBanner(true);
         renderScoreGraph(match, Math.max(GAMEPLAY_GRAPH_MIN_HEIGHT, ImGui.getContentRegionAvailY()));
         ImGui.end();
     }
@@ -317,12 +318,11 @@ public final class BMSIRArenaOverlay {
 
     private static void renderPhaseBanner(boolean compact) {
         String action = BMSIRArenaClient.currentPhaseAction();
-        if (action.isBlank()) {
-            return;
+        if (!action.isBlank()) {
+            ImGui.setWindowFontScale(compact ? 1.15f : 1.4f);
+            ImGui.textWrapped(action);
+            ImGui.setWindowFontScale(1.0f);
         }
-        ImGui.setWindowFontScale(compact ? 1.15f : 1.4f);
-        ImGui.textWrapped(action);
-        ImGui.setWindowFontScale(1.0f);
         if (BMSIRArenaClient.currentPhaseHasCountdown()) {
             long seconds = BMSIRArenaClient.currentPhaseSecondsRemaining();
             ImGui.setWindowFontScale(compact ? 1.15f : 1.35f);
@@ -338,6 +338,45 @@ public final class BMSIRArenaOverlay {
             ImGui.textColored(ImColor.rgb(121, 223, 139), playMode);
             ImGui.setWindowFontScale(1.0f);
         }
+        renderSeriesBanner(compact);
+    }
+
+    private static void renderSeriesBanner(boolean compact) {
+        String format = BMSIRArenaClient.currentSeriesFormat();
+        if ("single".equals(format)) {
+            return;
+        }
+        JsonNode rules = BMSIRArenaClient.rulesView();
+        int remaining = rules.path("series_remaining_charts").asInt(-1);
+        StringBuilder summary = new StringBuilder(
+                seriesFormatLabel(format, BMSIRArenaClient.currentFirstToWins())
+        );
+        summary.append(" / 第")
+                .append(Math.max(1, BMSIRArenaClient.currentSeriesRound()))
+                .append("曲");
+        if (remaining >= 0) {
+            summary.append(" / 残り").append(remaining).append("曲");
+        }
+        ImGui.setWindowFontScale(compact ? 1.0f : 1.15f);
+        ImGui.textColored(ImColor.rgb(255, 211, 106), summary.toString());
+        ImGui.setWindowFontScale(1.0f);
+
+        JsonNode players = BMSIRArenaClient.currentMatchView().path("players");
+        if (!players.isArray() || players.isEmpty()) {
+            return;
+        }
+        List<String> standings = new ArrayList<>();
+        for (JsonNode player : players) {
+            standings.add(
+                    player.path("name").asText(
+                            Integer.toString(player.path("player_id").asInt())
+                    )
+                            + " "
+                            + player.path("series_wins").asInt()
+                            + "勝"
+            );
+        }
+        ImGui.textWrapped("戦績: " + String.join(" / ", standings));
     }
 
     static String phaseCountdownText(long seconds) {
