@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.2.0-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+0.3.0-dev` candidate replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 ## Enabling
@@ -26,6 +26,14 @@ sets. Arena temporarily applies the server-selected profile and restores the
 launcher setting after the chart. The normal IR plugin uses the rule saved in
 the completed score, so changing the launcher setting afterward does not move
 an LR2 result into the oraja ranking or vice versa.
+
+Rated Arena remains one chart. Casual/private rooms can select one chart,
+play one shuffled nomination from every participant, or run a shuffled
+first-to-2..5 series. Multi-chart formats show round wins and nomination
+progress. Private single-chart rooms can use all-player, host-only, or
+rotating selectors; the host can assign the selector, transfer HOST, or kick
+a participant. Participant roles, READY state, and chat are shown together in
+the room lobby.
 
 The startup switch controls the real-time connection. The authenticated
 in-game overlay controls entry, waiting cancellation, and match withdrawal.
@@ -170,7 +178,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.2.0-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.0-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

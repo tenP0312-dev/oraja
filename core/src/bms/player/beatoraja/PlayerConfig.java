@@ -267,8 +267,11 @@ public final class PlayerConfig {
 	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
 	private boolean bmsirArenaStayInRoom = true;
-	/** Which players nominate charts in a private room: all or host. */
+	/** Which players nominate charts in a private room: all, host, or rotate. */
 	private String bmsirArenaNominationPolicy = "all";
+	/** single, all_picks, or first_to. Ranked Arena is always single. */
+	private String bmsirArenaSeriesFormat = "single";
+	private int bmsirArenaFirstToWins = 2;
 	private int bmsirArenaNominationSeconds = 60;
 	private int bmsirArenaOptionSeconds = 10;
 	private int bmsirArenaIntermissionSeconds = 0;
@@ -676,15 +679,46 @@ public final class PlayerConfig {
 	}
 
 	public String getBmsirArenaNominationPolicy() {
-		if (!"host".equals(bmsirArenaNominationPolicy)) {
+		if (!"host".equals(bmsirArenaNominationPolicy)
+				&& !"rotate".equals(bmsirArenaNominationPolicy)) {
 			bmsirArenaNominationPolicy = "all";
 		}
 		return bmsirArenaNominationPolicy;
 	}
 
 	public void setBmsirArenaNominationPolicy(String bmsirArenaNominationPolicy) {
+		String normalized = bmsirArenaNominationPolicy == null
+				? "all"
+				: bmsirArenaNominationPolicy.toLowerCase();
 		this.bmsirArenaNominationPolicy =
-				"host".equalsIgnoreCase(bmsirArenaNominationPolicy) ? "host" : "all";
+				"host".equals(normalized) || "rotate".equals(normalized)
+						? normalized : "all";
+	}
+
+	public String getBmsirArenaSeriesFormat() {
+		if (!"all_picks".equals(bmsirArenaSeriesFormat)
+				&& !"first_to".equals(bmsirArenaSeriesFormat)) {
+			bmsirArenaSeriesFormat = "single";
+		}
+		return bmsirArenaSeriesFormat;
+	}
+
+	public void setBmsirArenaSeriesFormat(String bmsirArenaSeriesFormat) {
+		String normalized = bmsirArenaSeriesFormat == null
+				? "single"
+				: bmsirArenaSeriesFormat.toLowerCase();
+		this.bmsirArenaSeriesFormat =
+				"all_picks".equals(normalized) || "first_to".equals(normalized)
+						? normalized : "single";
+	}
+
+	public int getBmsirArenaFirstToWins() {
+		bmsirArenaFirstToWins = Math.max(2, Math.min(5, bmsirArenaFirstToWins));
+		return bmsirArenaFirstToWins;
+	}
+
+	public void setBmsirArenaFirstToWins(int bmsirArenaFirstToWins) {
+		this.bmsirArenaFirstToWins = Math.max(2, Math.min(5, bmsirArenaFirstToWins));
 	}
 
 	public int getBmsirArenaNominationSeconds() {

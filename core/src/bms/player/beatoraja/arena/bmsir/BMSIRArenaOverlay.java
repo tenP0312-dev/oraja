@@ -65,6 +65,8 @@ public final class BMSIRArenaOverlay {
     private static final ImInt CHART_SCOPE = new ImInt(0);
     private static final ImInt RULESET_PROFILE = new ImInt(0);
     private static final ImInt NOMINATION_POLICY = new ImInt(0);
+    private static final ImInt SERIES_FORMAT = new ImInt(0);
+    private static final ImInt FIRST_TO_WINS = new ImInt(2);
     private static final ImInt NOMINATION_SECONDS = new ImInt(60);
     private static final ImInt OPTION_SECONDS = new ImInt(10);
     private static final ImInt INTERMISSION_SECONDS = new ImInt(0);
@@ -75,7 +77,12 @@ public final class BMSIRArenaOverlay {
     };
     private static final String[] CHART_SCOPES = {"公式発狂表", "自由選曲"};
     private static final String[] RULESET_PROFILES = {"LR2", "oraja"};
-    private static final String[] NOMINATION_POLICIES = {"全員が選曲", "部屋主だけ選曲"};
+    private static final String[] NOMINATION_POLICIES = {
+            "全員が選曲", "部屋主だけ選曲", "選曲担当を交代"
+    };
+    private static final String[] SERIES_FORMATS = {
+            "1曲", "全員の曲を回す", "N本先取"
+    };
 
     private BMSIRArenaOverlay() {
     }
@@ -126,10 +133,6 @@ public final class BMSIRArenaOverlay {
             }
             if (ImGui.beginTabItem(FontAwesomeIcons.Trophy + " レートランキング")) {
                 renderRanking();
-                ImGui.endTabItem();
-            }
-            if (ImGui.beginTabItem("チャット")) {
-                renderChat(true);
                 ImGui.endTabItem();
             }
             if (ImGui.beginTabItem("設定")) {
@@ -957,6 +960,10 @@ public final class BMSIRArenaOverlay {
                 )
         );
         boolean canNominate = nomination.path("can_nominate").asBoolean(true);
+        int submittedCount = nomination.path("submitted_count").asInt();
+        int requiredCount = nomination.path("required_count").asInt(1);
+        boolean quotaComplete = requiredCount <= 0
+                || submittedCount >= requiredCount;
         ImGui.spacing();
         ImGui.text(
                 freeSelection
@@ -964,6 +971,9 @@ public final class BMSIRArenaOverlay {
                         : "選曲可能: ★1～★" + targetBand
         );
         ImGui.separator();
+        if (requiredCount > 0) {
+            ImGui.text("選曲進捗: " + submittedCount + " / " + requiredCount);
+        }
 
         SongData current = BMSIRArenaClient.currentNominationSong();
         if (current != null) {
@@ -977,6 +987,7 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.beginDisabled(
                 !canNominate
+                        || quotaComplete
                         || !BMSIRArenaClient.isConnected()
                         || current == null
         );
@@ -984,7 +995,8 @@ public final class BMSIRArenaOverlay {
             BMSIRArenaClient.requestCurrentChartNomination();
         }
         ImGui.endDisabled();
-        if (!freeSelection) {
+        if (!freeSelection
+                && "single".equals(BMSIRArenaClient.currentSeriesFormat())) {
             ImGui.sameLine();
             ImGui.beginDisabled(
                     !canNominate || !BMSIRArenaClient.isConnected()
@@ -996,6 +1008,7 @@ public final class BMSIRArenaOverlay {
         }
 
         JsonNode own = nomination.path("your_nomination");
+        JsonNode ownList = nomination.path("your_nominations");
         String ownSource = nomination.path("your_source").asText();
         if (own.isObject() && own.size() > 0) {
             ImGui.textWrapped(
@@ -1006,6 +1019,18 @@ public final class BMSIRArenaOverlay {
             );
         } else if ("server_random".equals(ownSource)) {
             ImGui.textDisabled("登録済み: サーバーランダム");
+        }
+        if (ownList.isArray() && ownList.size() > 1) {
+            for (int index = 0; index < ownList.size(); index++) {
+                JsonNode item = ownList.get(index);
+                ImGui.textDisabled(
+                        (index + 1)
+                                + ". "
+                                + item.path("level").asText()
+                                + " "
+                                + item.path("title").asText()
+                );
+            }
         }
 
         ImGui.separator();
@@ -1023,7 +1048,15 @@ public final class BMSIRArenaOverlay {
                     name = "> " + name;
                 }
                 tableText(name);
-                tableText(player.path("submitted").asBoolean() ? "選曲済み" : "選曲中");
+                int playerSubmitted = player.path("submitted_count").asInt(
+                        player.path("submitted").asBoolean() ? 1 : 0
+                );
+                int playerRequired = player.path("required_count").asInt(1);
+                tableText(
+                        playerRequired <= 0
+                                ? "待機"
+                                : playerSubmitted + " / " + playerRequired
+                );
             }
             ImGui.endTable();
         }
@@ -1152,6 +1185,18 @@ public final class BMSIRArenaOverlay {
                 }
             }
             ImGui.text("勝敗: " + scoreRuleLabel(BMSIRArenaClient.currentScoreRule()));
+            ImGui.text(
+                    "試合形式: "
+                            + seriesFormatLabel(
+                                    BMSIRArenaClient.currentSeriesFormat(),
+                                    BMSIRArenaClient.currentFirstToWins()
+                            )
+            );
+            if (!"single".equals(BMSIRArenaClient.currentSeriesFormat())) {
+                ImGui.text(
+                        "第" + BMSIRArenaClient.currentSeriesRound() + "曲"
+                );
+            }
             ImGui.text("ゲージ: " + gaugeLabel(BMSIRArenaClient.currentForcedGauge()));
             ImGui.text("判定・ゲージ仕様: " + rulesetProfileLabel(
                     BMSIRArenaClient.currentRulesetProfile()
@@ -1196,6 +1241,7 @@ public final class BMSIRArenaOverlay {
                     confirmRoomDisband = true;
                 }
             }
+            renderRoomParticipants();
             ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
             if (ImGui.button("この部屋から退出")) {
                 BMSIRArenaClient.requestQueueCancel();
@@ -1203,6 +1249,9 @@ public final class BMSIRArenaOverlay {
             ImGui.endDisabled();
             ImGui.separator();
             renderMatch();
+            ImGui.separator();
+            ImGui.text("ルームチャット");
+            renderChat(true, 160);
             return;
         }
         confirmRoomDisband = false;
@@ -1219,6 +1268,9 @@ public final class BMSIRArenaOverlay {
         ImGui.textDisabled("このモードの対戦は常にunratedです");
 
         boolean privateMode = ROOM_MODE.get() == 1;
+        if (!privateMode) {
+            renderSeriesFormatSettings(config);
+        }
         if (privateMode) {
             ImGui.inputText("部屋コード", PRIVATE_ROOM_CODE);
             ImGui.sameLine();
@@ -1267,17 +1319,29 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderPrivateRoomSettings(PlayerConfig config) {
+        renderSeriesFormatSettings(config);
         NOMINATION_POLICY.set(
-                "host".equals(config.getBmsirArenaNominationPolicy()) ? 1 : 0
+                "host".equals(config.getBmsirArenaNominationPolicy())
+                        ? 1
+                        : "rotate".equals(config.getBmsirArenaNominationPolicy())
+                                ? 2 : 0
         );
-        if (ImGui.combo(
-                "選曲担当",
-                NOMINATION_POLICY,
-                NOMINATION_POLICIES
-        )) {
-            config.setBmsirArenaNominationPolicy(
-                    NOMINATION_POLICY.get() == 1 ? "host" : "all"
-            );
+        if (SERIES_FORMAT.get() == 0) {
+            if (ImGui.combo(
+                    "選曲担当",
+                    NOMINATION_POLICY,
+                    NOMINATION_POLICIES
+            )) {
+                config.setBmsirArenaNominationPolicy(switch (
+                        NOMINATION_POLICY.get()
+                ) {
+                    case 1 -> "host";
+                    case 2 -> "rotate";
+                    default -> "all";
+                });
+            }
+        } else {
+            config.setBmsirArenaNominationPolicy("all");
         }
         NOMINATION_SECONDS.set(config.getBmsirArenaNominationSeconds());
         if (ImGui.inputInt("選曲時間（10～180秒）", NOMINATION_SECONDS)) {
@@ -1292,6 +1356,30 @@ public final class BMSIRArenaOverlay {
             config.setBmsirArenaIntermissionSeconds(
                     INTERMISSION_SECONDS.get()
             );
+        }
+    }
+
+    private static void renderSeriesFormatSettings(PlayerConfig config) {
+        SERIES_FORMAT.set(switch (config.getBmsirArenaSeriesFormat()) {
+            case "all_picks" -> 1;
+            case "first_to" -> 2;
+            default -> 0;
+        });
+        if (ImGui.combo("試合形式", SERIES_FORMAT, SERIES_FORMATS)) {
+            config.setBmsirArenaSeriesFormat(switch (SERIES_FORMAT.get()) {
+                case 1 -> "all_picks";
+                case 2 -> "first_to";
+                default -> "single";
+            });
+        }
+        if (SERIES_FORMAT.get() == 2) {
+            FIRST_TO_WINS.set(config.getBmsirArenaFirstToWins());
+            if (ImGui.inputInt("先取本数（2～5）", FIRST_TO_WINS)) {
+                config.setBmsirArenaFirstToWins(FIRST_TO_WINS.get());
+            }
+            ImGui.textDisabled("各プレイヤーが先取本数ぶん選曲し、重複なしで抽選します");
+        } else if (SERIES_FORMAT.get() == 1) {
+            ImGui.textDisabled("全員が1曲ずつ選び、全候補を重複なしで回します");
         }
     }
 
@@ -1335,6 +1423,62 @@ public final class BMSIRArenaOverlay {
         return "oraja".equals(profile) ? "oraja" : "LR2";
     }
 
+    private static String seriesFormatLabel(String format, int firstToWins) {
+        return switch (format) {
+            case "all_picks" -> "全員の曲を回す";
+            case "first_to" -> Math.max(2, Math.min(5, firstToWins)) + "本先取";
+            default -> "1曲";
+        };
+    }
+
+    private static void renderRoomParticipants() {
+        JsonNode match = BMSIRArenaClient.currentMatchView();
+        if (!match.isObject() || !match.path("players").isArray()) {
+            return;
+        }
+        ImGui.separator();
+        ImGui.text("参加者");
+        boolean host = BMSIRArenaClient.isCurrentRoomHost();
+        boolean single = "single".equals(BMSIRArenaClient.currentSeriesFormat());
+        for (JsonNode player : match.path("players")) {
+            int playerId = player.path("player_id").asInt();
+            StringBuilder label = new StringBuilder(
+                    player.path("name").asText(Integer.toString(playerId))
+            );
+            if (player.path("host").asBoolean()) {
+                label.append(" [HOST]");
+            }
+            if (player.path("selector").asBoolean()) {
+                label.append(" [SELECT]");
+            }
+            if (player.path("ready").asBoolean()) {
+                label.append(" [READY]");
+            }
+            int wins = player.path("series_wins").asInt();
+            if (!single) {
+                label.append("  ").append(wins).append("勝");
+            }
+            ImGui.text(label.toString());
+            if (!host || playerId == BMSIRArenaClient.currentPlayerId()) {
+                continue;
+            }
+            ImGui.sameLine();
+            if (ImGui.smallButton("キック##room-kick-" + playerId)) {
+                BMSIRArenaClient.requestRoomKick(playerId);
+            }
+            ImGui.sameLine();
+            if (ImGui.smallButton("HOST移譲##room-host-" + playerId)) {
+                BMSIRArenaClient.requestRoomTransferHost(playerId);
+            }
+            if (single) {
+                ImGui.sameLine();
+                if (ImGui.smallButton("選曲担当##room-selector-" + playerId)) {
+                    BMSIRArenaClient.requestRoomSetSelector(playerId);
+                }
+            }
+        }
+    }
+
     private static void renderRanking() {
         JsonNode ranking = BMSIRArenaClient.rankingView();
         JsonNode current = ranking.path("current");
@@ -1372,9 +1516,9 @@ public final class BMSIRArenaOverlay {
         }
     }
 
-    private static void renderChat(boolean allowInput) {
+    private static void renderChat(boolean allowInput, float height) {
         List<JsonNode> messages = BMSIRArenaClient.chatMessages();
-        if (ImGui.beginChild("##bmsir-arena-chat-log", 0, 330, true)) {
+        if (ImGui.beginChild("##bmsir-arena-chat-log", 0, height, true)) {
             if (messages.isEmpty()) {
                 ImGui.textDisabled("メッセージはまだありません");
             }
