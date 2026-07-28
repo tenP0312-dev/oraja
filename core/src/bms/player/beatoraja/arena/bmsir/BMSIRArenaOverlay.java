@@ -63,6 +63,7 @@ public final class BMSIRArenaOverlay {
     private static final ImInt SCORE_RULE = new ImInt(0);
     private static final ImInt FORCED_GAUGE = new ImInt(0);
     private static final ImInt CHART_SCOPE = new ImInt(0);
+    private static final ImInt RULESET_PROFILE = new ImInt(0);
     private static final ImInt NOMINATION_POLICY = new ImInt(0);
     private static final ImInt NOMINATION_SECONDS = new ImInt(60);
     private static final ImInt OPTION_SECONDS = new ImInt(10);
@@ -73,6 +74,7 @@ public final class BMSIRArenaOverlay {
             "自由", "NORMAL", "HARD", "EXHARD", "HAZARD"
     };
     private static final String[] CHART_SCOPES = {"公式発狂表", "自由選曲"};
+    private static final String[] RULESET_PROFILES = {"LR2", "oraja"};
     private static final String[] NOMINATION_POLICIES = {"全員が選曲", "部屋主だけ選曲"};
 
     private BMSIRArenaOverlay() {
@@ -668,6 +670,10 @@ public final class BMSIRArenaOverlay {
             default -> ImColor.rgb(106, 169, 255);
         };
         ImGui.textColored(color, modeDisplayText(mode));
+        ImGui.sameLine();
+        ImGui.textDisabled(
+                "| " + rulesetProfileLabel(BMSIRArenaClient.currentRulesetProfile()) + "仕様"
+        );
         if ("cpu_bonus".equals(BMSIRArenaClient.currentRatingPolicy())) {
             ImGui.textDisabled("CPU戦: AAを超えて勝利するとレート +1");
         }
@@ -1147,6 +1153,9 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.text("勝敗: " + scoreRuleLabel(BMSIRArenaClient.currentScoreRule()));
             ImGui.text("ゲージ: " + gaugeLabel(BMSIRArenaClient.currentForcedGauge()));
+            ImGui.text("判定・ゲージ仕様: " + rulesetProfileLabel(
+                    BMSIRArenaClient.currentRulesetProfile()
+            ));
             ImGui.text(
                     "選曲: "
                             + ("free".equals(BMSIRArenaClient.currentChartScope())
@@ -1162,6 +1171,7 @@ public final class BMSIRArenaOverlay {
             if ("private".equals(mode) && BMSIRArenaClient.isCurrentRoomHost()) {
                 ImGui.separator();
                 ImGui.text("部屋主設定（変更は次の曲から）");
+                renderRulesetProfileSetting(config, "##private-room-ruleset");
                 renderPrivateRoomSettings(config);
                 ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
                 if (ImGui.button("設定を次の曲へ反映")) {
@@ -1201,6 +1211,7 @@ public final class BMSIRArenaOverlay {
         ImGui.combo("勝敗ルール", SCORE_RULE, SCORE_RULES);
         ImGui.combo("強制ゲージ", FORCED_GAUGE, FORCED_GAUGES);
         ImGui.combo("選曲範囲", CHART_SCOPE, CHART_SCOPES);
+        renderRulesetProfileSetting(config, "##room-entry-ruleset");
         ImBoolean stay = new ImBoolean(config.isBmsirArenaStayInRoom());
         if (ImGui.checkbox("対戦後もこの部屋に残る", stay)) {
             config.setBmsirArenaStayInRoom(stay.get());
@@ -1284,6 +1295,24 @@ public final class BMSIRArenaOverlay {
         }
     }
 
+    private static void renderRulesetProfileSetting(
+            PlayerConfig config,
+            String idSuffix
+    ) {
+        RULESET_PROFILE.set(
+                "oraja".equals(config.getBmsirRulesetProfile()) ? 1 : 0
+        );
+        if (ImGui.combo(
+                "判定・ゲージ仕様" + idSuffix,
+                RULESET_PROFILE,
+                RULESET_PROFILES
+        )) {
+            BMSIRArenaClient.setConfiguredRulesetProfile(
+                    RULESET_PROFILE.get() == 1 ? "oraja" : "lr2"
+            );
+        }
+    }
+
     private static String scoreRuleLabel(String rule) {
         return switch (rule) {
             case "minbp" -> "BP（少ない順）";
@@ -1300,6 +1329,10 @@ public final class BMSIRArenaOverlay {
             case "hazard" -> "HAZARD";
             default -> "自由";
         };
+    }
+
+    private static String rulesetProfileLabel(String profile) {
+        return "oraja".equals(profile) ? "oraja" : "LR2";
     }
 
     private static void renderRanking() {

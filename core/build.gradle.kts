@@ -62,8 +62,8 @@ tasks {
         val platformClassifier = listOfNotNull(platformProp, archProp).joinToString("-")
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))
-        archiveBaseName.set("BMS-IR-Arena-ED")
-        archiveVersion.set("0.1.18-dev")
+        archiveBaseName.set("BMS-IR-Arena-oraja")
+        archiveVersion.set("0.2.0-dev")
         archiveClassifier.set(platformClassifier)
         mergeServiceFiles()
 

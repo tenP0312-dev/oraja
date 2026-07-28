@@ -1,8 +1,8 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public beta. The `0.1.18-dev` source labels rated,
-casual, and private play explicitly and lets each rated-queue player opt out
-of the fallback CPU policy described below.
+Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
+0.2.0-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 ## Enabling
 
@@ -12,6 +12,20 @@ of the fallback CPU policy described below.
 3. Keep the default WSS server unless a developer is running a controlled
    local service.
 4. Start the client, then use the `BMS-IR Arena` overlay to enter matchmaking.
+
+The launcher setting `判定・ゲージ` selects the rule profile used for ordinary
+play and for creating casual/private rooms:
+
+- `LR2`: LR2 judge windows, gauge behavior, and default TOTAL.
+- `oraja`: the original beatoraja rule set for each key mode.
+
+Rated Arena is always LR2. Casual rooms use the creator's selected profile,
+and private rooms use the host's selected profile. Every participant must use
+a client compatible with that room profile; a match never mixes the two rule
+sets. Arena temporarily applies the server-selected profile and restores the
+launcher setting after the chart. The normal IR plugin uses the rule saved in
+the completed score, so changing the launcher setting afterward does not move
+an LR2 result into the oraja ranking or vice versa.
 
 The startup switch controls the real-time connection. The authenticated
 in-game overlay controls entry, waiting cancellation, and match withdrawal.
@@ -57,9 +71,10 @@ and durable match history.
   `カジュアル／プラベ` tab creates unrated casual matching or a private room
   with a six-character code. Room rules choose EX SCORE, BP, or MAX COMBO;
   free/NORMAL/HARD/EXHARD/HAZARD gauge; and official-table or free selection.
-- Every overlay layout names the current mode and states whether rating can
-  change. Rated play is blue, casual play is green, and private play is purple;
-  the text remains authoritative when colors are hard to distinguish.
+- Every overlay layout names the current mode, active LR2/oraja rule profile,
+  and whether rating can change. Rated play is blue, casual play is green, and
+  private play is purple; the text remains authoritative when colors are hard
+  to distinguish.
 - When only one real player is waiting, the fallback opponent is displayed as
   `CPU`. The server fixes the CPU's final EX SCORE at the minimum AA boundary.
   A strict EX SCORE win over the CPU adds exactly one Arena rating point; a
@@ -152,10 +167,10 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 ./gradlew clean shadowJar --no-daemon -Dplatform=macos -Darch=aarch64
 ```
 
-The artifact name identifies this as the dedicated BMS-IR Arena ED client:
+The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-ED-0.1.18-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.2.0-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

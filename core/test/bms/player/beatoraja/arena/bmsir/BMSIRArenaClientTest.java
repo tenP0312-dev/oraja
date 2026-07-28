@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.1.19-dev", Version.getArenaClientVersion());
+        assertEquals("0.2.0-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena 0.1.19-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.2.0-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -48,6 +48,7 @@ class BMSIRArenaClientTest {
         assertEquals(60, config.getBmsirArenaNominationSeconds());
         assertEquals(10, config.getBmsirArenaOptionSeconds());
         assertEquals(0, config.getBmsirArenaIntermissionSeconds());
+        assertEquals("lr2", config.getBmsirRulesetProfile());
 
         config.setBmsirArenaOverlayMode(99);
         assertEquals(2, config.getBmsirArenaOverlayMode());
@@ -64,6 +65,7 @@ class BMSIRArenaClientTest {
         var message = BMSIRArenaClient.queueEntryMessage(config);
 
         assertEquals("queue_entry", message.path("type").asText());
+        assertEquals("lr2", message.path("ruleset_profile").asText());
         assertTrue(message.path("unrestricted_rating").asBoolean());
         assertFalse(message.path("allow_cpu").asBoolean());
         assertTrue(

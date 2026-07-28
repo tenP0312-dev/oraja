@@ -254,6 +254,12 @@ public final class PlayerConfig {
 	private boolean bmsirArenaRandomMirror = false;
 
 	/**
+	 * Gameplay rule profile used outside Arena and requested for unrated rooms.
+	 * Ranked Arena always uses the server-selected LR2 profile.
+	 */
+	private String bmsirRulesetProfile = "lr2";
+
+	/**
 	 * 0: normal, 1: compact, 2: hidden.
 	 */
 	private int bmsirArenaOverlayMode = 0;
@@ -626,6 +632,20 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaRandomMirror(boolean bmsirArenaRandomMirror) {
 		this.bmsirArenaRandomMirror = bmsirArenaRandomMirror;
+	}
+
+	public String getBmsirRulesetProfile() {
+		if (!"oraja".equalsIgnoreCase(bmsirRulesetProfile)) {
+			bmsirRulesetProfile = "lr2";
+		} else {
+			bmsirRulesetProfile = "oraja";
+		}
+		return bmsirRulesetProfile;
+	}
+
+	public void setBmsirRulesetProfile(String bmsirRulesetProfile) {
+		this.bmsirRulesetProfile =
+				"oraja".equalsIgnoreCase(bmsirRulesetProfile) ? "oraja" : "lr2";
 	}
 
 	public int getBmsirArenaOverlayMode() {

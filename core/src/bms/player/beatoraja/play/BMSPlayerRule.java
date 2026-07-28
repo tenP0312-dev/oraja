@@ -9,7 +9,6 @@ import bms.model.Mode;
  * @author exch
  */
 public enum BMSPlayerRule {
-
 	Beatoraja_5(GaugeProperty.FIVEKEYS, JudgeProperty.FIVEKEYS, Mode.BEAT_5K, Mode.BEAT_10K),
 	Beatoraja_7(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, Mode.BEAT_7K, Mode.BEAT_14K),
 	Beatoraja_9(GaugeProperty.PMS, JudgeProperty.PMS, Mode.POPN_5K, Mode.POPN_9K),
@@ -20,6 +19,12 @@ public enum BMSPlayerRule {
 
 	Default(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS),
 ;
+
+	public static final String PROFILE_LR2 = "lr2";
+	public static final String PROFILE_ORAJA = "oraja";
+
+	private static volatile String configuredProfile = PROFILE_LR2;
+	private static volatile String arenaProfileOverride;
 
 	/**
 	 * ゲージ仕様
@@ -40,8 +45,36 @@ public enum BMSPlayerRule {
         this.mode = mode;
     }
 
+	public static String normalizeRuleProfile(String profile) {
+		return PROFILE_ORAJA.equalsIgnoreCase(profile) ? PROFILE_ORAJA : PROFILE_LR2;
+	}
+
+	public static void setConfiguredRuleProfile(String profile) {
+		configuredProfile = normalizeRuleProfile(profile);
+	}
+
+	public static String getConfiguredRuleProfileId() {
+		return configuredProfile;
+	}
+
+	public static String getActiveRuleProfileId() {
+		String override = arenaProfileOverride;
+		return override == null ? configuredProfile : override;
+	}
+
+	public static void setArenaRuleProfileOverride(String profile) {
+		arenaProfileOverride = normalizeRuleProfile(profile);
+	}
+
+	public static void clearArenaRuleProfileOverride() {
+		arenaProfileOverride = null;
+	}
+
     public static BMSPlayerRule getBMSPlayerRule(Mode mode) {
-        for(BMSPlayerRule bmsrule : BMSPlayerRuleSet.LR2.ruleset) {
+		BMSPlayerRuleSet activeSet = PROFILE_ORAJA.equals(getActiveRuleProfileId())
+				? BMSPlayerRuleSet.Beatoraja
+				: BMSPlayerRuleSet.LR2;
+        for(BMSPlayerRule bmsrule : activeSet.ruleset) {
         	if(bmsrule.mode.length == 0) {
     			return bmsrule; 
         	}
@@ -51,7 +84,7 @@ public enum BMSPlayerRule {
         		}
         	}
         }
-        return LR2;
+        return activeSet == BMSPlayerRuleSet.LR2 ? LR2 : Beatoraja_Other;
     }
     
     public static void validate(BMSModel model) {
@@ -85,9 +118,10 @@ public enum BMSPlayerRule {
     	model.setTotalType(BMSModel.TotalType.BMS);
     }
     
-	private static double calculateDefaultTotal(Mode mode, int totalnotes) {
-        return 160.0 + (totalnotes + Math.min(Math.max(totalnotes-400, 0), 200))*0.16;
-        /*
+	static double calculateDefaultTotal(Mode mode, int totalnotes) {
+		if (PROFILE_LR2.equals(getActiveRuleProfileId())) {
+			return 160.0 + (totalnotes + Math.min(Math.max(totalnotes - 400, 0), 200)) * 0.16;
+		}
 		switch (mode) {
 		case BEAT_7K:
 		case BEAT_5K:
@@ -102,7 +136,6 @@ public enum BMSPlayerRule {
 		default:
 			return Math.max(260.0, 7.605 * totalnotes / (0.01 * totalnotes + 6.5));
 		}
-        */
 	}
 }
 

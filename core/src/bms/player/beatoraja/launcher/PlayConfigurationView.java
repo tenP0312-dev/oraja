@@ -67,6 +67,8 @@ public class PlayConfigurationView implements Initializable {
     private Hyperlink changelog;
     @FXML
     private Label arenaIdentity;
+    @FXML
+    private ComboBox<String> bmsirRulesetProfile;
 
     @FXML
 	private VBox root;
@@ -320,6 +322,7 @@ public class PlayConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		arenaIdentity.setText(Version.getArenaDisplayName());
+		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
 		lr2configuration.setHgap(25);
 		lr2configuration.setVgap(4);
 		lr2configurationassist.setHgap(25);
@@ -539,6 +542,9 @@ public class PlayConfigurationView implements Initializable {
 			player = PlayerConfig.validatePlayerConfig("player1", new PlayerConfig());
         }
         playername.setText(player.getName());
+		bmsirRulesetProfile.getSelectionModel().select(
+				"oraja".equals(player.getBmsirRulesetProfile()) ? 1 : 0
+		);
 
 		videoController.updatePlayer(player);
 		musicselectController.updatePlayer(player);
@@ -654,6 +660,11 @@ public class PlayConfigurationView implements Initializable {
 		if(playername.getText().length() > 0) {
 			player.setName(playername.getText());
 		}
+		player.setBmsirRulesetProfile(
+				bmsirRulesetProfile.getSelectionModel().getSelectedIndex() == 1
+						? "oraja"
+						: "lr2"
+		);
 
 		videoController.commitPlayer(player);
 		musicselectController.commitPlayer();

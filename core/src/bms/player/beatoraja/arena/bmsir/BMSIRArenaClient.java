@@ -17,6 +17,7 @@ import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.JudgeTrainer;
 import bms.player.beatoraja.modmenu.RandomTrainer;
 import bms.player.beatoraja.pattern.LR2RandomPattern;
+import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
@@ -62,6 +63,7 @@ public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
+    private static final String CLIENT_FLAVOR = "arena-oraja";
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -208,7 +210,8 @@ public final class BMSIRArenaClient {
                 "initialize",
                 "client_version", CLIENT_VERSION,
                 "body_version", Version.getVersion(),
-                "client_flavor", "endless-dream"
+                "client_flavor", CLIENT_FLAVOR,
+                "ruleset_profile", BMSPlayerRule.getConfiguredRuleProfileId()
         );
         if (!controller.getPlayerConfig().isBmsirArenaEnabled()) {
             logger.info("BMS-IR Arena is disabled");
@@ -517,6 +520,24 @@ public final class BMSIRArenaClient {
 
     static String currentForcedGauge() {
         return activeRulesOrQueue().path("forced_gauge").asText("free");
+    }
+
+    static String currentRulesetProfile() {
+        String fallback = "ranked".equals(currentMatchMode())
+                ? BMSPlayerRule.PROFILE_LR2
+                : BMSPlayerRule.getConfiguredRuleProfileId();
+        return BMSPlayerRule.normalizeRuleProfile(
+                activeRulesOrQueue().path("ruleset_profile").asText(fallback)
+        );
+    }
+
+    static void setConfiguredRulesetProfile(String profile) {
+        String normalized = BMSPlayerRule.normalizeRuleProfile(profile);
+        PlayerConfig config = playerConfig();
+        if (config != null) {
+            config.setBmsirRulesetProfile(normalized);
+        }
+        BMSPlayerRule.setConfiguredRuleProfile(normalized);
     }
 
     static String currentChartScope() {
@@ -1051,6 +1072,7 @@ public final class BMSIRArenaClient {
     static ObjectNode queueEntryMessage(PlayerConfig config) {
         ObjectNode message = JSON.createObjectNode();
         message.put("type", "queue_entry");
+        message.put("ruleset_profile", BMSPlayerRule.PROFILE_LR2);
         message.put(
                 "unrestricted_rating",
                 config != null && config.isBmsirArenaUnrestrictedRating()
@@ -1077,6 +1099,12 @@ public final class BMSIRArenaClient {
         message.put("chart_scope", chartScope);
         message.put("room_code", normalizeRoomCode(roomCode));
         PlayerConfig config = playerConfig();
+        message.put(
+                "ruleset_profile",
+                config == null
+                        ? BMSPlayerRule.PROFILE_LR2
+                        : config.getBmsirRulesetProfile()
+        );
         message.put(
                 "nomination_policy",
                 config == null ? "all" : config.getBmsirArenaNominationPolicy()
@@ -1118,6 +1146,7 @@ public final class BMSIRArenaClient {
         message.put("nomination_seconds", config.getBmsirArenaNominationSeconds());
         message.put("option_seconds", config.getBmsirArenaOptionSeconds());
         message.put("intermission_seconds", config.getBmsirArenaIntermissionSeconds());
+        message.put("ruleset_profile", config.getBmsirRulesetProfile());
         arenaUiMessage = "部屋設定を更新しています";
         send(message);
     }
@@ -2304,6 +2333,7 @@ public final class BMSIRArenaClient {
             PlayerConfig config,
             String forcedGauge
     ) {
+        BMSPlayerRule.setArenaRuleProfileOverride(currentRulesetProfile());
         if (savedOptions == null) {
             savedOptions = new OptionSnapshot(config);
         }
@@ -2470,6 +2500,7 @@ public final class BMSIRArenaClient {
             savedOptions.restore(main.getPlayerConfig());
         }
         savedOptions = null;
+        BMSPlayerRule.clearArenaRuleProfileOverride();
     }
 
     private static void restoreOptionsWhenSafe() {
@@ -2568,7 +2599,8 @@ public final class BMSIRArenaClient {
                     "player_id", playerId,
                     "client_version", CLIENT_VERSION,
                     "body_version", Version.getVersion(),
-                    "client_flavor", "endless-dream"
+                    "client_flavor", CLIENT_FLAVOR,
+                    "ruleset_profile", BMSPlayerRule.getConfiguredRuleProfileId()
             );
             ObjectNode hello = JSON.createObjectNode();
             hello.put("type", "hello");
@@ -2578,6 +2610,8 @@ public final class BMSIRArenaClient {
             hello.put("client_version", CLIENT_VERSION);
             hello.put("body_version", Version.getVersion());
             hello.put("build_hash", Version.getGitCommitHash());
+            hello.put("client_flavor", CLIENT_FLAVOR);
+            hello.put("ruleset_profile", BMSPlayerRule.getConfiguredRuleProfileId());
             hello.put("arena_enabled", main != null && main.getPlayerConfig().isBmsirArenaEnabled());
             try {
                 send(JSON.writeValueAsString(hello));
