@@ -1,14 +1,13 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.1-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+0.3.2-dev` candidate replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
-This release adds the combined GENOCIDE normal ☆1--☆12 and official発狂
-★1--★25 rated nomination folders, private-room participant/spectator
-switching, all-spectator rest lobbies, public or room-code Web spectating,
-host lane-option forcing for SP/DP plus FLIP, room chat across rounds, and
-local chat mute.
+This release adds named public/code-only rooms, optional room passwords,
+explicit between-game READY, public-lobby and spectator chat, unanimous
+in-play finish voting, match-relative BP graphs, and the restored combined
+GENOCIDE normal ☆1--☆12 / official発狂 ★1--★25 rated ceiling.
 
 ## Enabling
 
@@ -20,23 +19,23 @@ local chat mute.
 4. Start the client, then use the `BMS-IR Arena` overlay to enter matchmaking.
 
 The launcher setting `判定・ゲージ` selects the rule profile used for ordinary
-play and for creating casual/private rooms:
+play and for creating managed rooms:
 
 - `LR2`: LR2 judge windows, gauge behavior, and default TOTAL.
 - `oraja`: the original beatoraja rule set for each key mode.
 
-Rated Arena is always LR2. Casual rooms use the creator's selected profile,
-and private rooms use the host's selected profile. Every participant must use
+Rated Arena is always LR2. Managed rooms use the host's selected profile.
+Every participant must use
 a client compatible with that room profile; a match never mixes the two rule
 sets. Arena temporarily applies the server-selected profile and restores the
 launcher setting after the chart. The normal IR plugin uses the rule saved in
 the completed score, so changing the launcher setting afterward does not move
 an LR2 result into the oraja ranking or vice versa.
 
-Rated Arena remains one chart. Casual/private rooms can select one chart,
+Rated Arena remains one chart. Managed rooms can select one chart,
 play one shuffled nomination from every participant, or run a shuffled
 first-to-2..5 series. Multi-chart formats show round wins and nomination
-progress. Private single-chart rooms can use all-player, host-only, or
+progress. Single-chart rooms can use all-player, host-only, or
 rotating selectors; the host can assign the selector, transfer HOST, or kick
 a participant. Participant roles, READY state, and chat are shown together in
 the room lobby.
@@ -82,13 +81,13 @@ and durable match history.
 
 - Ordinary single-song play remains available while queued.
 - The normal `対戦` tab enters the existing rated queue. The
-  `カジュアル／プラベ` tab creates unrated casual matching or a private room
-  with a six-character code. Room rules choose EX SCORE, BP, or MAX COMBO;
+  `公開ロビー／ルーム` tab creates or joins an unrated six-character-code
+  room. A room may be public or code-only, named, unlocked, or
+  password-protected. Room rules choose EX SCORE, BP, or MAX COMBO;
   free/NORMAL/HARD/EXHARD/HAZARD gauge; and official-table or free selection.
 - Every overlay layout names the current mode, active LR2/oraja rule profile,
-  and whether rating can change. Rated play is blue, casual play is green, and
-  private play is purple; the text remains authoritative when colors are hard
-  to distinguish.
+  and whether rating can change. Rated and room play remain textually distinct
+  even when colors are hard to distinguish.
 - When only one real player is waiting, the fallback opponent is displayed as
   `CPU`. The server fixes the CPU's final EX SCORE at the minimum AA boundary.
   A strict EX SCORE win over the CPU adds exactly one Arena rating point; a
@@ -98,6 +97,14 @@ and durable match history.
   remains available while waiting.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
+- Every participant returns unready between room games. The host may update
+  room/rule settings during this pause; an accepted update clears all READY
+  state. The next nomination begins only after all participating members press
+  `準備OK`.
+- During active play, the remaining participants may unanimously end the
+  chart. Connected voters are finalized from their last validated live values
+  as FAILED. A player whose disconnect grace expired or who left is already
+  DNF and no longer blocks the vote.
 - Courses, practice, autoplay, and replay are not eligible matching states.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
@@ -116,21 +123,23 @@ and durable match history.
   remain hidden until every slot is filled; the server then reveals all
   candidates, selects one slot uniformly, and highlights the selected chart
   in the overlay.
-- Every nominated or random candidate must be a positive-note-count official
-  発狂BMS table chart between ★1 and the weakest participant's rating ceiling.
+- Every nominated or random candidate must be a positive-note-count
+  GENOCIDE-normal or official発狂 chart between ☆1 and the weakest
+  participant's rating ceiling. Rating 1000 has a ☆10 ceiling and each 100
+  rating advances one combined normal/発狂 band.
   The client checks the selected MD5 before accepting it; the server validates
   the LN-scale processed-note count during play.
-- In a free-selection casual/private room, the selector returns to its normal
+- In a free-selection managed room, the selector returns to its normal
   root and accepts any positive-note server-catalog chart. At least one player
   must nominate explicitly; timeout and missing-chart rerolls stay within the
   submitted room candidates instead of choosing an unrelated random chart.
-- Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, or SPIRAL
-  lane option and uses LN. S-RANDOM, H-RANDOM, ALL-SCR, RANDOM-EX, and
-  S-RANDOM-EX are unavailable for Arena and are clamped to NORMAL.
+- Arena play keeps the selected NORMAL, MIRROR, RANDOM, R-RANDOM, S-RANDOM,
+  or SPIRAL lane option and uses LN. H-RANDOM, ALL-SCR, RANDOM-EX, and
+  S-RANDOM-EX remain unavailable for Arena and are clamped to NORMAL.
   Normal RANDOM receives one shared match seed. The mirror checkbox locally
   reverses that seven-key order; R-RANDOM and SPIRAL are not synchronized.
   Gauge and ordinary visual/timing preferences remain available in ranked
-  play. A casual/private forced gauge temporarily replaces the gauge and
+  play. A managed-room forced gauge temporarily replaces the gauge and
   disables Gauge Auto Shift for that Arena chart; both values are restored
   afterward.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
@@ -184,7 +193,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.1-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.2-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
