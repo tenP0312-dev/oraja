@@ -943,7 +943,7 @@ public final class BMSIRArenaOverlay {
             return false;
         }
         ImGui.text("現在: " + BMSIRArenaClient.currentOptionLabel());
-        ImGui.textDisabled("S-RANDOMとアシスト系OPは使用できません");
+        ImGui.textDisabled("H-RANDOMなどのアシスト系OPは使用できません");
         ImGui.textDisabled(String.format(
                 Locale.ROOT,
                 "READY %d / %d",

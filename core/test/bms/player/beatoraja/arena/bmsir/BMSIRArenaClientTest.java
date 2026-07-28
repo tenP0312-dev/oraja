@@ -105,14 +105,16 @@ class BMSIRArenaClientTest {
     }
 
     @Test
-    void arenaAllowsSupportedRandomsButRejectsSRandomAndAssistOptions() {
+    void arenaAllowsSRandomButRejectsAssistOptions() {
         assertTrue(BMSIRArenaClient.isAllowedArenaRandom(0));
         assertTrue(BMSIRArenaClient.isAllowedArenaRandom(1));
         assertTrue(BMSIRArenaClient.isAllowedArenaRandom(2));
         assertTrue(BMSIRArenaClient.isAllowedArenaRandom(3));
+        assertTrue(BMSIRArenaClient.isAllowedArenaRandom(4));
         assertTrue(BMSIRArenaClient.isAllowedArenaRandom(5));
-        assertFalse(BMSIRArenaClient.isAllowedArenaRandom(4));
         assertFalse(BMSIRArenaClient.isAllowedArenaRandom(6));
+        assertTrue(BMSIRArenaClient.usesSynchronizedRandomSeed(2));
+        assertFalse(BMSIRArenaClient.usesSynchronizedRandomSeed(4));
     }
 
     @Test
@@ -173,6 +175,10 @@ class BMSIRArenaClientTest {
         assertEquals(
                 "R-RANDOM",
                 BMSIRArenaClient.playOptionLabel(3, Mode.BEAT_7K.id)
+        );
+        assertEquals(
+                "S-RANDOM",
+                BMSIRArenaClient.playOptionLabel(4, Mode.BEAT_7K.id)
         );
     }
 

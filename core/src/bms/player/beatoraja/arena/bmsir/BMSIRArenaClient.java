@@ -1277,12 +1277,16 @@ public final class BMSIRArenaClient {
                 currentRandomSeed,
                 main.getPlayerConfig().isBmsirArenaRandomMirror()
         );
-        if (playinfo.randomoption == 2) {
+        if (usesSynchronizedRandomSeed(playinfo.randomoption)) {
             playinfo.randomoptionseed = seed;
         }
-        if (playinfo.randomoption2 == 2) {
+        if (usesSynchronizedRandomSeed(playinfo.randomoption2)) {
             playinfo.randomoption2seed = seed;
         }
+    }
+
+    static boolean usesSynchronizedRandomSeed(int option) {
+        return option == 2;
     }
 
     static long synchronizedRandomSeed(long seed, boolean mirror) {
@@ -2462,6 +2466,7 @@ public final class BMSIRArenaClient {
                 || option == 1
                 || option == 2
                 || option == 3
+                || option == 4
                 || option == 5;
     }
 
@@ -2573,6 +2578,7 @@ public final class BMSIRArenaClient {
             case 1 -> "MIRROR";
             case 2 -> "RANDOM";
             case 3 -> "R-RANDOM";
+            case 4 -> "S-RANDOM";
             case 5 -> "SPIRAL";
             default -> "NORMAL";
         };
