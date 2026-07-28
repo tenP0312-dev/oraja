@@ -267,6 +267,14 @@ public final class PlayerConfig {
 	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
 	private boolean bmsirArenaStayInRoom = true;
+	/** Participate in the next private-room series instead of watching it. */
+	private boolean bmsirArenaRoomParticipating = true;
+	/** Allow Web spectators to discover and watch this private room. */
+	private boolean bmsirArenaSpectatorPublic = false;
+	/** Copy the host's complete lane option to every participant. */
+	private boolean bmsirArenaForceHostOption = false;
+	/** Hide Arena chat locally without changing room/server state. */
+	private boolean bmsirArenaMuteChat = false;
 	/** Which players nominate charts in a private room: all, host, or rotate. */
 	private String bmsirArenaNominationPolicy = "all";
 	/** single, all_picks, or first_to. Ranked Arena is always single. */
@@ -676,6 +684,38 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaStayInRoom(boolean bmsirArenaStayInRoom) {
 		this.bmsirArenaStayInRoom = bmsirArenaStayInRoom;
+	}
+
+	public boolean isBmsirArenaRoomParticipating() {
+		return bmsirArenaRoomParticipating;
+	}
+
+	public void setBmsirArenaRoomParticipating(boolean bmsirArenaRoomParticipating) {
+		this.bmsirArenaRoomParticipating = bmsirArenaRoomParticipating;
+	}
+
+	public boolean isBmsirArenaSpectatorPublic() {
+		return bmsirArenaSpectatorPublic;
+	}
+
+	public void setBmsirArenaSpectatorPublic(boolean bmsirArenaSpectatorPublic) {
+		this.bmsirArenaSpectatorPublic = bmsirArenaSpectatorPublic;
+	}
+
+	public boolean isBmsirArenaForceHostOption() {
+		return bmsirArenaForceHostOption;
+	}
+
+	public void setBmsirArenaForceHostOption(boolean bmsirArenaForceHostOption) {
+		this.bmsirArenaForceHostOption = bmsirArenaForceHostOption;
+	}
+
+	public boolean isBmsirArenaMuteChat() {
+		return bmsirArenaMuteChat;
+	}
+
+	public void setBmsirArenaMuteChat(boolean bmsirArenaMuteChat) {
+		this.bmsirArenaMuteChat = bmsirArenaMuteChat;
 	}
 
 	public String getBmsirArenaNominationPolicy() {

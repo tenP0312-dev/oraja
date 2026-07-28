@@ -81,7 +81,13 @@ public class ImGuiRenderer {
         // This line is provided for "reverse difficult table lookup" feature. Because some difficult tables' symbol
         // is not baked in above glyph ranges, this line manually adds them into the ranges. Otherwise, the symbol
         // would be rendered as a '?' in ImGUI window.
-        rangesBuilder.addText("☆★▽▼δ白黒◆◎縦≡田⇒●∽");
+        rangesBuilder.addText(
+                "☆★▽▼白黒◆◎縦≡田⇒●∽"
+                        + "αβγδεζηθικλμνξοπρστυφχψω"
+                        + "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
+                        + "←↑→↓↔↕↖↗↘↙"
+                        + "±×÷≠≤≥∞≈≒≡∴∵○●□■△▲▽▼◇◆◎"
+        );
 
         // Font config for additional fonts
         // This is a natively allocated struct so don't forget to call destroy after atlas is built

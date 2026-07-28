@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.0-dev", Version.getArenaClientVersion());
+        assertEquals("0.3.1-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.0-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.1-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -44,6 +44,10 @@ class BMSIRArenaClientTest {
         assertTrue(config.isBmsirArenaAllowCpu());
         assertFalse(config.isBmsirArenaRandomMirror());
         assertTrue(config.isBmsirArenaStayInRoom());
+        assertTrue(config.isBmsirArenaRoomParticipating());
+        assertFalse(config.isBmsirArenaSpectatorPublic());
+        assertFalse(config.isBmsirArenaForceHostOption());
+        assertFalse(config.isBmsirArenaMuteChat());
         assertEquals("all", config.getBmsirArenaNominationPolicy());
         assertEquals("single", config.getBmsirArenaSeriesFormat());
         assertEquals(2, config.getBmsirArenaFirstToWins());
@@ -438,41 +442,73 @@ class BMSIRArenaClientTest {
     }
 
     @Test
-    void nominationCandidatesUseOwnedOfficialLevelsThroughTheCeiling() {
-        SongData levelOne = song("a");
-        SongData levelTwo = song("b");
-        SongData levelThree = song("c");
-        TableData table = new TableData();
-        table.setName("発狂BMS難易度表");
-        table.setFolder(new TableData.TableFolder[]{
-                folder("★0", song("z")),
-                folder("★2", levelOne, levelTwo),
-                folder("★1", levelOne),
-                folder("★3", levelThree),
+    void normalArenaTableMatchesTheKnownNameOrUrl() {
+        assertTrue(
+                BMSIRArenaClient.isNormalArenaTable(
+                        "GENOCIDE 通常難易度表",
+                        ""
+                )
+        );
+        assertTrue(
+                BMSIRArenaClient.isNormalArenaTable(
+                        "",
+                        "https://darksabun.club/table/archive/normal1/"
+                )
+        );
+        assertFalse(
+                BMSIRArenaClient.isNormalArenaTable(
+                        "NEW GENERATION 通常難易度表",
+                        "https://example.invalid/normal"
+                )
+        );
+    }
+
+    @Test
+    void nominationCandidatesCombineNormalThenOfficialThroughTheCeiling() {
+        SongData normalOne = song("a");
+        SongData normalTwelve = song("b");
+        SongData officialOne = song("c");
+        SongData officialTwo = song("d");
+        TableData normal = new TableData();
+        normal.setUrl("https://darksabun.club/table/archive/normal1/");
+        normal.setFolder(new TableData.TableFolder[]{
+                folder("☆0", song("z")),
+                folder("☆1", normalOne),
+                folder("☆12", normalTwelve),
+                folder("☆13", song("x"))
+        });
+        TableData official = new TableData();
+        official.setName("発狂BMS難易度表");
+        official.setFolder(new TableData.TableFolder[]{
+                folder("★1", officialOne),
+                folder("★2", officialTwo),
                 folder("★???", song("x"))
         });
 
         SongData[] candidates =
                 BMSIRArenaClient.nominationCandidateElements(
-                        new TableData[]{table},
-                        2
+                        new TableData[]{official, normal},
+                        13
                 );
 
-        assertEquals(2, candidates.length);
+        assertEquals(3, candidates.length);
         assertEquals("a", candidates[0].getMd5());
         assertEquals("b", candidates[1].getMd5());
+        assertEquals("c", candidates[2].getMd5());
         Map<Integer, SongData[]> levels =
                 BMSIRArenaClient.nominationCandidateElementsByLevel(
-                        new TableData[]{table},
-                        2
+                        new TableData[]{official, normal},
+                        14
                 );
-        assertEquals(List.of(1, 2), List.copyOf(levels.keySet()));
+        assertEquals(List.of(1, 12, 13, 14), List.copyOf(levels.keySet()));
         assertEquals(1, levels.get(1).length);
-        assertEquals(1, levels.get(2).length);
+        assertEquals(1, levels.get(12).length);
+        assertEquals(1, levels.get(13).length);
+        assertEquals(1, levels.get(14).length);
         Map<Integer, SongData[]> initialLevels =
                 BMSIRArenaClient.nominationCandidateElementsByLevel(
-                        new TableData[]{table},
-                        1
+                        new TableData[]{official, normal},
+                        10
                 );
         assertEquals(List.of(1), List.copyOf(initialLevels.keySet()));
     }
@@ -503,8 +539,8 @@ class BMSIRArenaClientTest {
         Bar[] levelFolders = root.getChildren();
 
         assertEquals(2, levelFolders.length);
-        assertEquals("★1 (1譜面)", levelFolders[0].getTitle());
-        assertEquals("★2 (1譜面)", levelFolders[1].getTitle());
+        assertEquals("☆1 (1譜面)", levelFolders[0].getTitle());
+        assertEquals("☆2 (1譜面)", levelFolders[1].getTitle());
         assertTrue(((DirectoryBar) levelFolders[0]).usesTableFolderStyle());
         assertTrue(((DirectoryBar) levelFolders[1]).usesTableFolderStyle());
         Bar[] levelOneSongs = ((DirectoryBar) levelFolders[0]).getChildren();

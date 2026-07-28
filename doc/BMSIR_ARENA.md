@@ -1,8 +1,14 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.0-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+0.3.1-dev` candidate replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
+
+This release adds the combined GENOCIDE normal ☆1--☆12 and official発狂
+★1--★25 rated nomination folders, private-room participant/spectator
+switching, all-spectator rest lobbies, public or room-code Web spectating,
+host lane-option forcing for SP/DP plus FLIP, room chat across rounds, and
+local chat mute.
 
 ## Enabling
 
@@ -178,7 +184,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.0-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.1-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

@@ -65,7 +65,13 @@ public final class BMSIRArenaClient {
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final String CLIENT_FLAVOR = "arena-oraja";
     private static final int PROTOCOL_VERSION = 4;
+    private static final int MAX_NORMAL_ARENA_LEVEL = 12;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
+    private static final int MAX_ARENA_RATING_BAND =
+            MAX_NORMAL_ARENA_LEVEL + MAX_OFFICIAL_ARENA_LEVEL;
+    private static final String NORMAL_ARENA_TABLE_NAME = "GENOCIDE 通常難易度表";
+    private static final String NORMAL_ARENA_TABLE_URL =
+            "https://darksabun.club/table/archive/normal1/";
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
     private static final String OFFICIAL_ARENA_TABLE_URL =
             "https://darksabun.club/table/archive/insane1/";
@@ -111,6 +117,7 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode nominationView = JSON.createObjectNode();
     private static volatile JsonNode rulesView = JSON.createObjectNode();
     private static volatile JsonNode queueView = JSON.createObjectNode();
+    private static volatile JsonNode roomView = JSON.createObjectNode();
     private static volatile boolean nominationOpen;
     private static volatile long nominationDeadlineMillis;
     private static volatile int nominationTargetBand;
@@ -137,7 +144,7 @@ public final class BMSIRArenaClient {
                 SongData[] songs
         ) {
             super(selector);
-            this.title = "★" + level + " (" + songs.length + "譜面)";
+            this.title = arenaBandLabel(level) + " (" + songs.length + "譜面)";
             this.songs = songs;
         }
 
@@ -290,6 +297,7 @@ public final class BMSIRArenaClient {
         rankingView = JSON.createObjectNode();
         rulesView = JSON.createObjectNode();
         queueView = JSON.createObjectNode();
+        roomView = JSON.createObjectNode();
         liveView = JSON.createObjectNode();
         resultView = JSON.createObjectNode();
         clearNominationState();
@@ -489,7 +497,9 @@ public final class BMSIRArenaClient {
     static JsonNode currentMatchView() {
         return resultView.isObject() && resultView.size() > 0
                 ? resultView
-                : liveView;
+                : liveView.isObject() && liveView.size() > 0
+                        ? liveView
+                        : roomView;
     }
 
     static JsonNode nominationView() {
@@ -502,6 +512,10 @@ public final class BMSIRArenaClient {
 
     static JsonNode queueView() {
         return queueView;
+    }
+
+    static JsonNode roomView() {
+        return roomView;
     }
 
     private static JsonNode activeRulesOrQueue() {
@@ -554,6 +568,26 @@ public final class BMSIRArenaClient {
 
     static boolean isCurrentRoomHost() {
         return currentPlayerId > 0 && currentPlayerId == currentRoomHostId();
+    }
+
+    static boolean isRoomParticipating() {
+        return queueView.path("room_participating").asBoolean(true);
+    }
+
+    static boolean isRoomParticipationPending() {
+        return !queueView.path("participation_after_series_id").asText("").isBlank();
+    }
+
+    static boolean isRoomPaused() {
+        return roomView.path("paused").asBoolean(false);
+    }
+
+    static boolean isSpectatorPublic() {
+        return activeRulesOrQueue().path("spectator_public").asBoolean(false);
+    }
+
+    static boolean isForceHostOption() {
+        return activeRulesOrQueue().path("force_host_option").asBoolean(false);
     }
 
     static String currentNominationPolicy() {
@@ -667,6 +701,9 @@ public final class BMSIRArenaClient {
     }
 
     static String currentPhaseAction() {
+        if (isRoomPaused()) {
+            return "休憩中（全員観戦）";
+        }
         return phaseAction(
                 isOptionSelectionOpen(),
                 optionReadySent,
@@ -777,6 +814,37 @@ public final class BMSIRArenaClient {
                 || OFFICIAL_ARENA_TABLE_URL.equals(normalizedUrl);
     }
 
+    static boolean isNormalArenaTable(String name, String url) {
+        String normalizedName = name == null ? "" : name.trim();
+        String normalizedUrl = url == null
+                ? ""
+                : url.trim().toLowerCase(Locale.ROOT);
+        return NORMAL_ARENA_TABLE_NAME.equals(normalizedName)
+                || "通常難易度表".equals(normalizedName)
+                || NORMAL_ARENA_TABLE_URL.equals(normalizedUrl);
+    }
+
+    static int normalArenaLevel(String label) {
+        if (label == null || !label.startsWith("☆")) {
+            return -1;
+        }
+        try {
+            int level = Integer.parseInt(label.substring(1));
+            return level >= 1 && level <= MAX_NORMAL_ARENA_LEVEL
+                    ? level
+                    : -1;
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    static String arenaBandLabel(int band) {
+        int value = Math.max(1, Math.min(MAX_ARENA_RATING_BAND, band));
+        return value <= MAX_NORMAL_ARENA_LEVEL
+                ? "☆" + value
+                : "★" + (value - MAX_NORMAL_ARENA_LEVEL);
+    }
+
     static int officialArenaLevel(String label) {
         if (label == null || !label.startsWith("★")) {
             return -1;
@@ -834,25 +902,31 @@ public final class BMSIRArenaClient {
     ) {
         int ceiling = Math.max(
                 1,
-                Math.min(MAX_OFFICIAL_ARENA_LEVEL, targetBand)
+                Math.min(MAX_ARENA_RATING_BAND, targetBand)
         );
         Map<Integer, Map<String, SongData>> candidates = new LinkedHashMap<>();
         if (tables == null) {
             return new LinkedHashMap<>();
         }
         for (TableData table : tables) {
-            if (
-                    table == null
-                            || !isOfficialArenaTable(
-                                    table.getName(),
-                                    table.getUrl()
-                            )
-            ) {
+            if (table == null) {
+                continue;
+            }
+            boolean normalTable = isNormalArenaTable(table.getName(), table.getUrl());
+            boolean officialTable = isOfficialArenaTable(table.getName(), table.getUrl());
+            if (!normalTable && !officialTable) {
                 continue;
             }
             for (TableData.TableFolder folder : table.getFolder()) {
-                int level = officialArenaLevel(folder.getName());
-                if (level < 1 || level > ceiling) {
+                int tableLevel = normalTable
+                        ? normalArenaLevel(folder.getName())
+                        : officialArenaLevel(folder.getName());
+                int band = normalTable
+                        ? tableLevel
+                        : tableLevel < 1
+                                ? -1
+                                : MAX_NORMAL_ARENA_LEVEL + tableLevel;
+                if (band < 1 || band > ceiling) {
                     continue;
                 }
                 for (SongData song : folder.getSong()) {
@@ -862,18 +936,17 @@ public final class BMSIRArenaClient {
                             : md5.toLowerCase(Locale.ROOT);
                     if (!key.isBlank()) {
                         candidates.computeIfAbsent(
-                                level,
+                                band,
                                 ignored -> new LinkedHashMap<>()
                         ).putIfAbsent(key, song);
                     }
                 }
             }
-            break;
         }
         Map<Integer, SongData[]> result = new LinkedHashMap<>();
         Set<String> seen = new HashSet<>();
-        for (int level = 1; level <= ceiling; level++) {
-            Map<String, SongData> levelSongs = candidates.get(level);
+        for (int band = 1; band <= ceiling; band++) {
+            Map<String, SongData> levelSongs = candidates.get(band);
             if (levelSongs == null || levelSongs.isEmpty()) {
                 continue;
             }
@@ -882,7 +955,7 @@ public final class BMSIRArenaClient {
                     .map(Map.Entry::getValue)
                     .toArray(SongData[]::new);
             if (uniqueSongs.length > 0) {
-                result.put(level, uniqueSongs);
+                result.put(band, uniqueSongs);
             }
         }
         return result;
@@ -914,9 +987,9 @@ public final class BMSIRArenaClient {
                     .toArray(SongData[]::new);
             if (candidates.length == 0) {
                 arenaUiMessage =
-                        "発狂BMS難易度表が見つかりません。現在の一覧から選曲してください";
+                        "通常／発狂BMS難易度表が見つかりません。現在の一覧から選曲してください";
                 ImGuiNotify.warning(
-                        "Arena選曲: 発狂BMS難易度表の候補を読み込めませんでした"
+                        "Arena選曲: 通常／発狂BMS難易度表の候補を読み込めませんでした"
                 );
                 return;
             }
@@ -936,8 +1009,8 @@ public final class BMSIRArenaClient {
                 arenaUiMessage =
                         "選曲可能な所持譜面がありません。ランダム選曲を利用できます";
                 ImGuiNotify.warning(
-                        "Arena選曲: ★1～★"
-                                + targetBand
+                        "Arena選曲: ☆1～"
+                                + arenaBandLabel(targetBand)
                                 + "の所持譜面がありません"
                 );
                 return;
@@ -1149,6 +1222,18 @@ public final class BMSIRArenaClient {
                 "stay_in_room",
                 config != null && config.isBmsirArenaStayInRoom()
         );
+        message.put(
+                "room_participating",
+                config == null || config.isBmsirArenaRoomParticipating()
+        );
+        message.put(
+                "spectator_public",
+                config != null && config.isBmsirArenaSpectatorPublic()
+        );
+        message.put(
+                "force_host_option",
+                config != null && config.isBmsirArenaForceHostOption()
+        );
         arenaUiMessage = "部屋へ参加しています";
         send(message);
     }
@@ -1173,7 +1258,20 @@ public final class BMSIRArenaClient {
         message.put("series_format", config.getBmsirArenaSeriesFormat());
         message.put("first_to_wins", config.getBmsirArenaFirstToWins());
         message.put("ruleset_profile", config.getBmsirRulesetProfile());
+        message.put("spectator_public", config.isBmsirArenaSpectatorPublic());
+        message.put("force_host_option", config.isBmsirArenaForceHostOption());
         arenaUiMessage = "部屋設定を更新しています";
+        send(message);
+    }
+
+    static void requestRoomParticipation(boolean participating) {
+        PlayerConfig config = playerConfig();
+        if (config != null) {
+            config.setBmsirArenaRoomParticipating(participating);
+        }
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "room_participation");
+        message.put("participating", participating);
         send(message);
     }
 
@@ -1227,10 +1325,18 @@ public final class BMSIRArenaClient {
     }
 
     static void requestChat(String text) {
-        if (!reserved || currentMatchId.isBlank()) {
+        String roomCode = currentRoomCode();
+        if ((!reserved || currentMatchId.isBlank()) && roomCode.isBlank()) {
             return;
         }
-        ObjectNode message = baseMatchMessage("chat_send");
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "chat_send");
+        if (!currentMatchId.isBlank()) {
+            message.put("match_id", currentMatchId);
+        }
+        if (!roomCode.isBlank()) {
+            message.put("room_code", roomCode);
+        }
         message.put("text", text == null ? "" : text);
         send(message);
     }
@@ -1248,7 +1354,13 @@ public final class BMSIRArenaClient {
     }
 
     private static void receiveChat(JsonNode message) {
-        if (!currentMatchId.equals(message.path("match_id").asText())) {
+        String incomingMatchId = message.path("match_id").asText("");
+        String incomingRoomCode = message.path("room_code").asText("");
+        boolean matchScoped = !currentMatchId.isBlank()
+                && currentMatchId.equals(incomingMatchId);
+        boolean roomScoped = !currentRoomCode().isBlank()
+                && currentRoomCode().equals(incomingRoomCode);
+        if (!matchScoped && !roomScoped) {
             return;
         }
         synchronized (CHAT_LOCK) {
@@ -1602,6 +1714,7 @@ public final class BMSIRArenaClient {
                 case "pong" -> updateServerClock(message);
                 case "fill_started" -> receiveFillStarted(message);
                 case "players_updated" -> receivePlayersUpdated(message);
+                case "room_status" -> roomView = message;
                 case "chat", "chat_history" -> receiveChat(message);
                 case "match_reserved" -> {
                     String incomingMatchId = message.path("match_id").asText();
@@ -1846,6 +1959,7 @@ public final class BMSIRArenaClient {
                     clearNominationState();
                     clearFillState();
                     clearChatMessages();
+                    roomView = JSON.createObjectNode();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.info("Arenaプライベートルームを解体しました", 5000);
                     requestArenaStatus();
@@ -1863,6 +1977,7 @@ public final class BMSIRArenaClient {
                     clearNominationState();
                     clearFillState();
                     clearChatMessages();
+                    roomView = JSON.createObjectNode();
                     restoreOptionsWhenSafe();
                     ImGuiNotify.warning("部屋主によって退出されました", 6000);
                     requestArenaStatus();
@@ -1994,6 +2109,17 @@ public final class BMSIRArenaClient {
             );
             config.setBmsirArenaFirstToWins(
                     queueView.path("first_to_wins").asInt(2)
+            );
+            config.setBmsirArenaSpectatorPublic(
+                    queueView.path("spectator_public").asBoolean(false)
+            );
+            config.setBmsirArenaForceHostOption(
+                    queueView.path("force_host_option").asBoolean(false)
+            );
+        }
+        if (config != null && "private".equals(queueView.path("match_mode").asText())) {
+            config.setBmsirArenaRoomParticipating(
+                    queueView.path("room_participating").asBoolean(true)
             );
         }
         arenaUiMessage = switch (queueStatus) {

@@ -75,7 +75,10 @@ public final class BMSIRArenaOverlay {
     private static final String[] FORCED_GAUGES = {
             "自由", "NORMAL", "HARD", "EXHARD", "HAZARD"
     };
-    private static final String[] CHART_SCOPES = {"公式発狂表", "自由選曲"};
+    private static final String[] CHART_SCOPES = {
+            "通常＋発狂難易度表",
+            "自由選曲"
+    };
     private static final String[] RULESET_PROFILES = {"LR2", "oraja"};
     private static final String[] NOMINATION_POLICIES = {
             "全員が選曲", "部屋主だけ選曲", "選曲担当を交代"
@@ -944,6 +947,15 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.text("現在: " + BMSIRArenaClient.currentOptionLabel());
         ImGui.textDisabled("H-RANDOMなどのアシスト系OPは使用できません");
+        if (
+                BMSIRArenaClient.isForceHostOption()
+                        && !BMSIRArenaClient.isCurrentRoomHost()
+        ) {
+            ImGui.textColored(
+                    ImColor.rgb(255, 211, 106),
+                    "部屋主の左右OP・FLIPが全員へ適用されます"
+            );
+        }
         ImGui.textDisabled(String.format(
                 Locale.ROOT,
                 "READY %d / %d",
@@ -1244,9 +1256,30 @@ public final class BMSIRArenaOverlay {
                     "選曲: "
                             + ("free".equals(BMSIRArenaClient.currentChartScope())
                                     ? "自由選曲"
-                                    : "公式発狂表")
+                                    : "通常＋発狂難易度表")
             );
             ImGui.textDisabled("カジュアル／プラベはレート・レート戦績に影響しません");
+            if ("private".equals(mode)) {
+                ImBoolean participating = new ImBoolean(
+                        BMSIRArenaClient.isRoomParticipating()
+                );
+                if (ImGui.checkbox("次のシリーズに参加する", participating)) {
+                    BMSIRArenaClient.requestRoomParticipation(participating.get());
+                }
+                if (BMSIRArenaClient.isRoomParticipationPending()) {
+                    ImGui.textColored(
+                            ImColor.rgb(255, 211, 106),
+                            "参加ONは進行中シリーズ終了後から有効です"
+                    );
+                }
+                if (BMSIRArenaClient.isRoomPaused()) {
+                    ImGui.textColored(
+                            ImColor.rgb(121, 223, 139),
+                            "休憩中（全員観戦）"
+                    );
+                    ImGui.textDisabled("2人以上が参加ONになると次の対戦を開始できます");
+                }
+            }
             ImBoolean stay = new ImBoolean(config.isBmsirArenaStayInRoom());
             if (ImGui.checkbox("対戦後もこの部屋に残る", stay)) {
                 config.setBmsirArenaStayInRoom(stay.get());
@@ -1320,6 +1353,13 @@ public final class BMSIRArenaOverlay {
                 );
             }
             ImGui.textDisabled("空欄で新規作成、6文字を入力すると既存部屋へ参加");
+            ImBoolean participating = new ImBoolean(
+                    config.isBmsirArenaRoomParticipating()
+            );
+            if (ImGui.checkbox("参加者として入室", participating)) {
+                config.setBmsirArenaRoomParticipating(participating.get());
+            }
+            ImGui.textDisabled("OFFなら観戦・チャットだけ行い、参加枠を消費しません");
             if (PRIVATE_ROOM_CODE.get().isBlank()) {
                 renderPrivateRoomSettings(config);
             }
@@ -1359,6 +1399,20 @@ public final class BMSIRArenaOverlay {
 
     private static void renderPrivateRoomSettings(PlayerConfig config) {
         renderSeriesFormatSettings(config);
+        ImBoolean publicSpectators = new ImBoolean(
+                config.isBmsirArenaSpectatorPublic()
+        );
+        if (ImGui.checkbox("Web観戦へ公開", publicSpectators)) {
+            config.setBmsirArenaSpectatorPublic(publicSpectators.get());
+        }
+        ImGui.textDisabled("非公開でも部屋コードを知る人はWebから観戦できます");
+        ImBoolean forceHostOption = new ImBoolean(
+                config.isBmsirArenaForceHostOption()
+        );
+        if (ImGui.checkbox("部屋主の左右OP・FLIPを全員へ強制", forceHostOption)) {
+            config.setBmsirArenaForceHostOption(forceHostOption.get());
+        }
+        ImGui.textDisabled("強制ゲージと併用可。S-RANDOMの配置自体は各プレイヤー別です");
         NOMINATION_POLICY.set(
                 "host".equals(config.getBmsirArenaNominationPolicy())
                         ? 1
@@ -1471,7 +1525,10 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderRoomParticipants() {
-        JsonNode match = BMSIRArenaClient.currentMatchView();
+        JsonNode room = BMSIRArenaClient.roomView();
+        JsonNode match = room.isObject() && room.path("players").isArray()
+                ? room
+                : BMSIRArenaClient.currentMatchView();
         if (!match.isObject() || !match.path("players").isArray()) {
             return;
         }
@@ -1492,6 +1549,12 @@ public final class BMSIRArenaOverlay {
             }
             if (player.path("ready").asBoolean()) {
                 label.append(" [READY]");
+            }
+            if (player.has("participating") && !player.path("participating").asBoolean()) {
+                label.append(" [観戦]");
+            }
+            if (player.path("pending").asBoolean()) {
+                label.append(" [次戦参加]");
             }
             int wins = player.path("series_wins").asInt();
             if (!single) {
@@ -1556,6 +1619,15 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderChat(boolean allowInput, float height) {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        ImBoolean muted = new ImBoolean(config != null && config.isBmsirArenaMuteChat());
+        if (ImGui.checkbox("チャットをミュート", muted) && config != null) {
+            config.setBmsirArenaMuteChat(muted.get());
+        }
+        if (muted.get()) {
+            ImGui.textDisabled("チャットはこの本体でのみ非表示です");
+            return;
+        }
         List<JsonNode> messages = BMSIRArenaClient.chatMessages();
         if (ImGui.beginChild("##bmsir-arena-chat-log", 0, height, true)) {
             if (messages.isEmpty()) {
@@ -1570,7 +1642,11 @@ public final class BMSIRArenaOverlay {
             }
         }
         ImGui.endChild();
-        if (!allowInput || !BMSIRArenaClient.isReserved()) {
+        if (
+                !allowInput
+                        || (!BMSIRArenaClient.isReserved()
+                                && BMSIRArenaClient.currentRoomCode().isBlank())
+        ) {
             ImGui.textDisabled("対戦中の入力は無効です");
             return;
         }
@@ -1584,6 +1660,10 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderChatPreview() {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        if (config != null && config.isBmsirArenaMuteChat()) {
+            return;
+        }
         List<JsonNode> messages = BMSIRArenaClient.chatMessages();
         if (messages.isEmpty()) {
             return;
