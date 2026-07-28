@@ -65,6 +65,8 @@ public class PlayConfigurationView implements Initializable {
 	private Hyperlink newversion;
     @FXML
     private Hyperlink changelog;
+    @FXML
+    private Label arenaIdentity;
 
     @FXML
 	private VBox root;
@@ -317,6 +319,7 @@ public class PlayConfigurationView implements Initializable {
 
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
+		arenaIdentity.setText(Version.getArenaDisplayName());
 		lr2configuration.setHgap(25);
 		lr2configuration.setVgap(4);
 		lr2configurationassist.setHgap(25);
@@ -375,7 +378,7 @@ public class PlayConfigurationView implements Initializable {
                     whatsNewStage.setResizable(true);
                     // This modality freezes the launcher/primary stage
                     whatsNewStage.initModality(Modality.APPLICATION_MODAL);
-                    whatsNewStage.setTitle("What's New");
+                    whatsNewStage.setTitle(Version.getArenaDisplayName() + " — What's New");
                     whatsNewStage.initStyle(StageStyle.DECORATED);
 
                     WebView webView = new WebView();

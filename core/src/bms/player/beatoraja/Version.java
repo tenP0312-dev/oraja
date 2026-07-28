@@ -11,14 +11,18 @@ public class Version {
     public static final int VERSION_MAJOR = 0;
     public static final int VERSION_MINOR = 5;
     public static final int VERSION_PATCH = 0;
+    public static final String ARENA_CLIENT_VERSION = "0.1.19-dev";
 
     public static final BuildType BUILD_TYPE;
     public static final String version;
     public static final String unqualifiedVersion;
     public static final String versionLong;
+    public static final String arenaDisplayName;
 
     public static String getVersion() { return version; }
     public static String getLongVersion() { return versionLong; }
+    public static String getArenaClientVersion() { return ARENA_CLIENT_VERSION; }
+    public static String getArenaDisplayName() { return arenaDisplayName; }
 
     private static final Properties buildMetaInfo = new Properties();
 
@@ -27,6 +31,7 @@ public class Version {
         unqualifiedVersion = String.valueOf(VERSION_MAJOR) + '.' + VERSION_MINOR + '.' + VERSION_PATCH;
         version = BUILD_TYPE.prefix + unqualifiedVersion;
         versionLong = "LR2oraja Endless Dream " + (BUILD_TYPE.prefix.isBlank() ? "" : "pre-release ") + unqualifiedVersion;
+        arenaDisplayName = "BMS-IR Arena " + ARENA_CLIENT_VERSION + " — " + versionLong;
         tryLoadingBuildMetaInfo();
     }
 

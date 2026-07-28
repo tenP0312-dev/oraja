@@ -4,6 +4,7 @@ import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
+import bms.player.beatoraja.Version;
 import bms.player.beatoraja.pattern.LR2RandomPattern;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
@@ -22,6 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRArenaClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    @Test
+    void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
+        assertEquals("0.1.19-dev", Version.getArenaClientVersion());
+        assertEquals(
+                Version.getArenaClientVersion(),
+                BMSIRArenaClient.clientVersion()
+        );
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena 0.1.19-dev"));
+        assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
+    }
 
     @Test
     void arenaOverlaySettingsHaveSafeDefaultsAndClampTheMode() {

@@ -265,7 +265,7 @@ public class MainLoader extends Application {
 				}
 
 				public void create() {
-					logger.info("Starting {}", Version.versionLong);
+					logger.info("Starting {}", Version.getArenaDisplayName());
 					logger.info("[Build info] Commit: {}", Version.getGitCommitHash());
 					main.create();
 					if (displaymode == Config.DisplayMode.FULLSCREEN) {
@@ -338,7 +338,7 @@ public class MainLoader extends Application {
             config = Config.read();
         } catch (PlayerConfigException e) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
-			alert.setTitle("Config error");
+			alert.setTitle(Version.getArenaDisplayName() + " — Configuration Error");
 			alert.setHeaderText("Config failed to load");
 			alert.setContentText(String.format("Failed to load config: %s", e.getMessage()));
 			alert.showAndWait();
@@ -356,7 +356,7 @@ public class MainLoader extends Application {
 			bmsinfo.update(config);
 			Scene scene = new Scene(stackPane, stackPane.getPrefWidth(), stackPane.getPrefHeight());
 			primaryStage.setScene(scene);
-			primaryStage.setTitle(MainController.getVersion() + " configuration");
+			primaryStage.setTitle(MainController.getVersion() + " — Configuration");
 			primaryStage.setOnCloseRequest((event) -> {
 				bmsinfo.exit();
 			});

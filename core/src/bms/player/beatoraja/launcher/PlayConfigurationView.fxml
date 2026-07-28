@@ -32,7 +32,8 @@
 <!-- Pref height must not be 700 due to incredibly rare bug with TableView https://bugs.openjdk.org/browse/JDK-8320245?attachmentOrder=asc -->
 
 <VBox fx:id="root" prefHeight="725.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="bms.player.beatoraja.launcher.PlayConfigurationView">
-    <HBox fx:id="topBar">
+    <HBox fx:id="topBar" alignment="CENTER_LEFT" spacing="10.0">
+        <Label fx:id="arenaIdentity" minWidth="520.0" style="-fx-font-size: 15px; -fx-font-weight: bold;" text="BMS-IR Arena" />
         <Hyperlink fx:id="newversion" alignment="CENTER_LEFT" text="" />
         <Region minWidth="10.0" HBox.hgrow="ALWAYS" />
         <Hyperlink fx:id="changelog" onAction="#whatsNewPopup" alignment="CENTER_RIGHT" text="What's new in this version" />

@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BMSIRArenaClient {
     private static final Logger logger = LoggerFactory.getLogger(BMSIRArenaClient.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String CLIENT_VERSION = "0.1.18-dev";
+    private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final int PROTOCOL_VERSION = 3;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
@@ -119,6 +119,10 @@ public final class BMSIRArenaClient {
     private static final List<JsonNode> chatMessages = new ArrayList<>();
 
     private BMSIRArenaClient() {
+    }
+
+    static String clientVersion() {
+        return CLIENT_VERSION;
     }
 
     static final class ArenaNominationLevelBar extends DirectoryBar {

@@ -58,7 +58,7 @@ import static bms.player.beatoraja.modmenu.ImGuiRenderer.getShowModMenu;
 public class MainController {
 	private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
-	private static final String VERSION = Version.versionLong;
+	private static final String VERSION = Version.getArenaDisplayName();
 
 	public static final boolean debug = false;
 	public static final int debugTextXpos = 10;
