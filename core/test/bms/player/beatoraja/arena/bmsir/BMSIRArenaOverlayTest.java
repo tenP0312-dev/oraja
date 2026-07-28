@@ -137,15 +137,35 @@ class BMSIRArenaOverlayTest {
         assertEquals("残り 00秒", BMSIRArenaOverlay.phaseCountdownText(-1));
         assertEquals(
                 ImColor.rgb(106, 169, 255),
-                BMSIRArenaOverlay.phaseCountdownColor(6)
+                BMSIRArenaOverlay.phaseCountdownColor(11)
         );
         assertEquals(
                 ImColor.rgb(255, 211, 106),
-                BMSIRArenaOverlay.phaseCountdownColor(5)
+                BMSIRArenaOverlay.phaseCountdownColor(10)
+        );
+        assertEquals(
+                ImColor.rgb(255, 211, 106),
+                BMSIRArenaOverlay.phaseCountdownColor(6)
         );
         assertEquals(
                 ImColor.rgb(255, 115, 115),
-                BMSIRArenaOverlay.phaseCountdownColor(3)
+                BMSIRArenaOverlay.phaseCountdownColor(5)
+        );
+    }
+
+    @Test
+    void completedRatedResultUsesOneLargeReadableDeltaLine() {
+        assertEquals(
+                "レート 1000 → 1001 (+1.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 1001, 1)
+        );
+        assertEquals(
+                "レート 1000 → 999 (-1.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 999, -1)
+        );
+        assertEquals(
+                "レート 1000 → 1000 (+0.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 1000, 0)
         );
     }
 }

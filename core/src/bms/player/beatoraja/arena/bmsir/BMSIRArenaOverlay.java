@@ -141,6 +141,10 @@ public final class BMSIRArenaOverlay {
                 renderRanking();
                 ImGui.endTabItem();
             }
+            if (ImGui.beginTabItem("マニュアル")) {
+                renderManual();
+                ImGui.endTabItem();
+            }
             if (ImGui.beginTabItem("設定")) {
                 renderSettings(config);
                 ImGui.endTabItem();
@@ -395,10 +399,10 @@ public final class BMSIRArenaOverlay {
     }
 
     static int phaseCountdownColor(long seconds) {
-        if (seconds <= 3L) {
+        if (seconds <= 5L) {
             return ImColor.rgb(255, 115, 115);
         }
-        if (seconds <= 5L) {
+        if (seconds <= 10L) {
             return ImColor.rgb(255, 211, 106);
         }
         return ImColor.rgb(106, 169, 255);
@@ -756,7 +760,9 @@ public final class BMSIRArenaOverlay {
                 "| " + rulesetProfileLabel(BMSIRArenaClient.currentRulesetProfile()) + "仕様"
         );
         if ("cpu_bonus".equals(BMSIRArenaClient.currentRatingPolicy())) {
-            ImGui.textDisabled("CPU戦: AAを超えて勝利するとレート +1");
+            ImGui.textDisabled(
+                    "CPU戦: AA～MAX固定 / 勝利 +1 / 敗北 -1 / 同点 ±0"
+            );
         }
     }
 
@@ -902,6 +908,13 @@ public final class BMSIRArenaOverlay {
                         ? "RESULT"
                         : match.path("state").asText("MATCH").toUpperCase(Locale.ROOT)
         );
+        if (BMSIRArenaClient.isShowingCompletedResult()) {
+            renderRatingChange(match);
+            if (ImGui.button(FontAwesomeIcons.Times + " 結果を閉じる")) {
+                BMSIRArenaClient.dismissResult();
+                return;
+            }
+        }
         if (!"ranked".equals(BMSIRArenaClient.currentMatchMode())) {
             ImGui.textDisabled(
                     scoreRuleLabel(BMSIRArenaClient.currentScoreRule())
@@ -1806,6 +1819,83 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.endTable();
         }
+    }
+
+    private static void renderRatingChange(JsonNode match) {
+        if (!match.path("rated").asBoolean(false)) {
+            return;
+        }
+        JsonNode own = null;
+        for (JsonNode player : match.path("players")) {
+            if (
+                    player.path("player_id").asInt()
+                            == BMSIRArenaClient.currentPlayerId()
+            ) {
+                own = player;
+                break;
+            }
+        }
+        if (
+                own == null
+                        || !own.hasNonNull("before")
+                        || !own.hasNonNull("after")
+        ) {
+            return;
+        }
+        double delta = own.path("delta").asDouble();
+        int color = delta > 0.0
+                ? ImColor.rgb(121, 223, 139)
+                : delta < 0.0
+                        ? ImColor.rgb(255, 115, 115)
+                        : ImColor.rgb(255, 211, 106);
+        ImGui.setWindowFontScale(1.55f);
+        ImGui.textColored(
+                color,
+                ratingChangeText(
+                        own.path("before").asDouble(),
+                        own.path("after").asDouble(),
+                        delta
+                )
+        );
+        ImGui.setWindowFontScale(1.0f);
+    }
+
+    static String ratingChangeText(double before, double after, double delta) {
+        return String.format(
+                Locale.ROOT,
+                "レート %d → %d (%+.1f)",
+                Math.round(before),
+                Math.round(after),
+                delta
+        );
+    }
+
+    private static void renderManual() {
+        JsonNode manual = BMSIRArenaClient.manualView();
+        if (!manual.isObject() || manual.size() == 0) {
+            ImGui.textDisabled("マニュアルを取得できていません。");
+        } else {
+            ImGui.textWrapped(
+                    manual.path("title").asText("BMS-IR Arena マニュアル")
+            );
+            ImGui.sameLine();
+            ImGui.textDisabled("v" + manual.path("version").asText(""));
+            ImGui.separator();
+            for (JsonNode section : manual.path("sections")) {
+                if (ImGui.collapsingHeader(section.path("title").asText())) {
+                    for (JsonNode item : section.path("items")) {
+                        ImGui.bullet();
+                        ImGui.textWrapped(item.asText());
+                    }
+                }
+            }
+        }
+        if (ImGui.button(FontAwesomeIcons.SyncAlt + " マニュアルを更新")) {
+            BMSIRArenaClient.requestArenaManual();
+        }
+        ImGui.textDisabled(
+                "取得済みの内容はローカルに保存され、オフライン時も表示できます。"
+        );
     }
 
     private static void renderChat(boolean allowInput, float height) {

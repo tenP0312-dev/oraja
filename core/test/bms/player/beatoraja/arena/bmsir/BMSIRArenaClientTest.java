@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.2-dev", Version.getArenaClientVersion());
+        assertEquals("0.3.3-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.2-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.3-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -557,6 +557,23 @@ class BMSIRArenaClientTest {
         );
         assertEquals("/songs/a/chart.bms", ownedOne.getPath());
         assertEquals("/songs/b/chart.bms", ownedTwo.getPath());
+    }
+
+    @Test
+    void cpuAlwaysChoosesFromTheHighestOwnedEligibleBand() {
+        SongData low = song("low");
+        SongData highOne = song("high-one");
+        SongData highTwo = song("high-two");
+        Map<Integer, SongData[]> owned = new LinkedHashMap<>();
+        owned.put(5, new SongData[]{low});
+        owned.put(10, new SongData[]{highOne, highTwo});
+
+        SongData selected = BMSIRArenaClient.highestOwnedCpuChart(owned);
+
+        assertTrue(
+                selected == highOne || selected == highTwo,
+                "CPU must not fall back while the highest owned band has charts"
+        );
     }
 
     private static TableData.TableFolder folder(

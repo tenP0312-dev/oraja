@@ -1,13 +1,15 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.2-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+0.3.3-dev` candidate replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds named public/code-only rooms, optional room passwords,
 explicit between-game READY, public-lobby and spectator chat, unanimous
 in-play finish voting, match-relative BP graphs, and the restored combined
-GENOCIDE normal ☆1--☆12 / official発狂 ★1--★25 rated ceiling.
+GENOCIDE normal ☆1--☆12 / official発狂 ★1--★25 rated ceiling. It also
+replaces the external Bot with a server-managed CPU, adds a cached
+server-delivered Manual, and makes countdown/result state explicit.
 
 ## Enabling
 
@@ -62,6 +64,10 @@ the action required now, shows server-clock remaining seconds for fill,
 nomination, option selection, chart loading, and synchronized start, and keeps
 the selected chart's KEY count plus SINGLE/DOUBLE PLAY visible in the same
 panel. The older separate four-second KEY popup is not used.
+All phase countdowns use the normal color above ten seconds, yellow from ten
+through six, and red from five through zero. The Manual tab renders only
+bounded structured text received from the Arena service and caches the latest
+valid version locally.
 The Web Arena page remains available for the same queue controls, spectating,
 and durable match history.
 
@@ -89,12 +95,15 @@ and durable match history.
   and whether rating can change. Rated and room play remain textually distinct
   even when colors are hard to distinguish.
 - When only one real player is waiting, the fallback opponent is displayed as
-  `CPU`. The server fixes the CPU's final EX SCORE at the minimum AA boundary.
-  A strict EX SCORE win over the CPU adds exactly one Arena rating point; a
-  tie, loss, or forfeit adds none, and the CPU itself has no rating result.
-  `BOT戦を許可` is on by default for compatibility. Turn it off before
-  entering the rated queue to wait for human opponents only; ordinary play
-  remains available while waiting.
+  `CPU` if that unified client supports the server-managed flow and enabled
+  `BOT戦を許可`. The match is created immediately only while that player is
+  the sole active real Arena client. The CPU selects from the highest official
+  normal/発狂 band the player owns at or below the player's current rated
+  ceiling. Its final EX SCORE is selected once from inclusive AA through MAX
+  before play and is shown as a fixed target from the start. A human
+  win/loss/tie changes only that human by `+1`/`-1`/`0`; the CPU has no rating
+  or match count. A current CPU match finishes normally if another human
+  appears, but no new CPU match starts while both humans remain active.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
 - Every participant returns unready between room games. The host may update
@@ -163,9 +172,11 @@ and durable match history.
   limited to 200 normalized characters and one accepted message per second;
   the latest 50 return after reconnect and disappear when the match ends.
   Gameplay displays only recent chat read-only so input cannot capture keys.
-- After Arena play, the result screen remains until the ordinary IR submission
-  finishes. Fixed Arena options are restored only after that submission has
-  captured the Arena score.
+- After Arena play, the latest Arena result remains visible during the
+  between-match wait unless its explicit close button is pressed. Each new
+  result opens normally. A rated result shows the player's previous rating,
+  new rating, and delta prominently. Fixed Arena options are restored only
+  after the ordinary IR submission has captured the Arena score.
 - A normal result or hard fail automatically returns the account to the Arena
   queue. Client shutdown or an unexpected Arena play exit requests a
   zero-score forfeit and stops automatic entry. Entering the normal result
@@ -193,7 +204,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.2-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.3-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

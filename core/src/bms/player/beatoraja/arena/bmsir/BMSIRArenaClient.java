@@ -9,6 +9,7 @@ import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ReplayData;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.TableData;
+import bms.player.beatoraja.TableDataAccessor;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.modmenu.ArenaMenu;
@@ -52,6 +53,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -115,6 +117,7 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode rankingView = JSON.createObjectNode();
     private static volatile JsonNode liveView = JSON.createObjectNode();
     private static volatile JsonNode resultView = JSON.createObjectNode();
+    private static volatile JsonNode manualView = BMSIRArenaManual.load(JSON);
     private static volatile JsonNode nominationView = JSON.createObjectNode();
     private static volatile JsonNode rulesView = JSON.createObjectNode();
     private static volatile JsonNode queueView = JSON.createObjectNode();
@@ -500,6 +503,10 @@ public final class BMSIRArenaClient {
         return rankingView;
     }
 
+    static JsonNode manualView() {
+        return manualView;
+    }
+
     static JsonNode currentMatchView() {
         return resultView.isObject() && resultView.size() > 0
                 ? resultView
@@ -526,6 +533,22 @@ public final class BMSIRArenaClient {
 
     static JsonNode publicRoomsView() {
         return publicRoomsView;
+    }
+
+    static void dismissResult() {
+        JsonNode dismissed = resultView;
+        resultView = JSON.createObjectNode();
+        if (
+                currentMatchId.isBlank()
+                        && (
+                                liveView == dismissed
+                                        || "result".equals(
+                                                liveView.path("type").asText("")
+                                        )
+                        )
+        ) {
+            liveView = JSON.createObjectNode();
+        }
     }
 
     static boolean isRoomReady() {
@@ -727,6 +750,14 @@ public final class BMSIRArenaClient {
     static String currentPhaseAction() {
         if (isRoomPaused()) {
             return "休憩中（全員観戦）";
+        }
+        if (
+                isNominationOpen()
+                        && "cpu_chart_request".equals(
+                                nominationView.path("type").asText("")
+                        )
+        ) {
+            return "CPUが課題曲を選んでいます";
         }
         return phaseAction(
                 isOptionSelectionOpen(),
@@ -1145,6 +1176,91 @@ public final class BMSIRArenaClient {
         return result;
     }
 
+    static SongData highestOwnedCpuChart(
+            Map<Integer, SongData[]> ownedByLevel
+    ) {
+        if (ownedByLevel == null || ownedByLevel.isEmpty()) {
+            return null;
+        }
+        int highest = ownedByLevel.keySet().stream()
+                .mapToInt(Integer::intValue)
+                .max()
+                .orElse(-1);
+        SongData[] songs = ownedByLevel.get(highest);
+        if (songs == null || songs.length == 0) {
+            return null;
+        }
+        return songs[ThreadLocalRandom.current().nextInt(songs.length)];
+    }
+
+    private static void respondToCpuChartRequest(JsonNode message) {
+        if (!isCurrentMatchMessage(message)) {
+            return;
+        }
+        receiveRules(message);
+        nominationView = message;
+        nominationOpen = true;
+        nominationTargetBand = Math.max(
+                1,
+                message.path("target_band").asInt(1)
+        );
+        nominationDeadlineMillis = Math.round(
+                message.path("deadline").asDouble() * 1000.0
+        );
+        arenaUiMessage = "CPUの課題曲を所持譜面から選んでいます";
+        MainController controller = main;
+        if (controller == null || Gdx.app == null) {
+            sendCpuChartCandidate("");
+            return;
+        }
+        String matchId = currentMatchId;
+        Gdx.app.postRunnable(() -> {
+            if (
+                    controller != main
+                            || !matchId.equals(currentMatchId)
+                            || !isNominationOpen()
+            ) {
+                return;
+            }
+            try {
+                TableData[] tables = new TableDataAccessor(
+                        controller.getConfig().getTablepath()
+                ).readAll();
+                Map<Integer, SongData[]> candidates =
+                        nominationCandidateElementsByLevel(
+                                tables,
+                                nominationTargetBand
+                        );
+                String[] md5s = candidates.values().stream()
+                        .flatMap(Arrays::stream)
+                        .map(SongData::getMd5)
+                        .filter(value -> value != null && !value.isBlank())
+                        .toArray(String[]::new);
+                SongData[] localSongs = playableOwnedSongs(
+                        controller.getSongDatabase().getSongDatas(md5s)
+                );
+                SongData selected = highestOwnedCpuChart(
+                        playableOwnedSongsByLevel(candidates, localSongs)
+                );
+                sendCpuChartCandidate(
+                        selected == null ? "" : selected.getMd5()
+                );
+            } catch (RuntimeException exception) {
+                logger.warn(
+                        "BMS-IR Arena CPU chart lookup failed: {}",
+                        exception.getMessage()
+                );
+                sendCpuChartCandidate("");
+            }
+        });
+    }
+
+    private static void sendCpuChartCandidate(String chartHash) {
+        ObjectNode reply = baseMatchMessage("cpu_chart_candidate");
+        reply.put("chart_hash", chartHash == null ? "" : chartHash);
+        send(reply);
+    }
+
     public static void requestCurrentChartNomination() {
         if (!isNominationOpen()) {
             return;
@@ -1549,6 +1665,12 @@ public final class BMSIRArenaClient {
         send(message);
     }
 
+    static void requestArenaManual() {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "arena_manual");
+        send(message);
+    }
+
     public static boolean isAbortInputBlocked() {
         return arenaPlayActive
                 && main != null
@@ -1830,6 +1952,12 @@ public final class BMSIRArenaClient {
                     sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
                 }
                 case "arena_status" -> receiveArenaStatus(message);
+                case "arena_manual" -> {
+                    JsonNode accepted = BMSIRArenaManual.accept(message, JSON);
+                    if (accepted.isObject() && accepted.size() > 0) {
+                        manualView = accepted;
+                    }
+                }
                 case "pong" -> updateServerClock(message);
                 case "fill_started" -> receiveFillStarted(message);
                 case "players_updated" -> receivePlayersUpdated(message);
@@ -1879,6 +2007,8 @@ public final class BMSIRArenaClient {
                 }
                 case "nomination_started", "nomination_status" ->
                         receiveNominationStatus(message);
+                case "cpu_chart_request" ->
+                        respondToCpuChartRequest(message);
                 case "nomination_accepted" -> {
                     if (currentMatchId.equals(message.path("match_id").asText())) {
                         arenaUiMessage = "選曲を受け付けました";
@@ -3000,6 +3130,7 @@ public final class BMSIRArenaClient {
             hello.put("client_flavor", CLIENT_FLAVOR);
             hello.put("ruleset_profile", BMSPlayerRule.getConfiguredRuleProfileId());
             hello.put("arena_enabled", main != null && main.getPlayerConfig().isBmsirArenaEnabled());
+            hello.put("server_cpu_v1", true);
             try {
                 send(JSON.writeValueAsString(hello));
                 startClockSync(this);
