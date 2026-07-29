@@ -67,7 +67,7 @@ public final class BMSIRArenaClient {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final String CLIENT_FLAVOR = "arena-oraja";
-    private static final int PROTOCOL_VERSION = 5;
+    private static final int PROTOCOL_VERSION = 6;
     private static final int MAX_NORMAL_ARENA_LEVEL = 12;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final int MAX_ARENA_RATING_BAND =

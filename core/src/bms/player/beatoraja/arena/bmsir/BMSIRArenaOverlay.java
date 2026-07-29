@@ -378,16 +378,42 @@ public final class BMSIRArenaOverlay {
         }
         List<String> standings = new ArrayList<>();
         for (JsonNode player : players) {
-            standings.add(
-                    player.path("name").asText(
-                            Integer.toString(player.path("player_id").asInt())
-                    )
-                            + " "
-                            + player.path("series_wins").asInt()
-                            + "勝"
+            String name = player.path("name").asText(
+                    Integer.toString(player.path("player_id").asInt())
             );
+            if ("bo2".equals(format)) {
+                int total = player.path("series_max_exscore_total").asInt();
+                String rate = total > 0
+                        ? String.format(
+                                Locale.ROOT,
+                                "%.2f%%",
+                                player.path("series_exscore_total").asDouble()
+                                        * 100.0
+                                        / total
+                        )
+                        : "-";
+                int placement = player.path("series_placement").asInt();
+                standings.add(
+                        name
+                                + " "
+                                + player.path("series_points").asInt()
+                                + "pt / EX率 "
+                                + rate
+                                + (placement > 0 ? " / 総合" + placement + "位" : "")
+                );
+            } else {
+                standings.add(
+                        name
+                                + " "
+                                + player.path("series_wins").asInt()
+                                + "勝"
+                );
+            }
         }
-        ImGui.textWrapped("戦績: " + String.join(" / ", standings));
+        ImGui.textWrapped(
+                ("bo2".equals(format) ? "BO2総合: " : "戦績: ")
+                        + String.join(" / ", standings)
+        );
     }
 
     static String phaseCountdownText(long seconds) {
@@ -1719,8 +1745,9 @@ public final class BMSIRArenaOverlay {
         return "oraja".equals(profile) ? "oraja" : "LR2";
     }
 
-    private static String seriesFormatLabel(String format, int firstToWins) {
+    static String seriesFormatLabel(String format, int firstToWins) {
         return switch (format) {
+            case "bo2" -> "BO2（2曲総合）";
             case "all_picks" -> "全員の曲を回す";
             case "first_to" -> Math.max(2, Math.min(5, firstToWins)) + "本先取";
             default -> "1曲";

@@ -168,4 +168,9 @@ class BMSIRArenaOverlayTest {
                 BMSIRArenaOverlay.ratingChangeText(1000, 1000, 0)
         );
     }
+
+    @Test
+    void ratedBo2HasAnUnambiguousSeriesLabel() {
+        assertEquals("BO2（2曲総合）", BMSIRArenaOverlay.seriesFormatLabel("bo2", 2));
+    }
 }
