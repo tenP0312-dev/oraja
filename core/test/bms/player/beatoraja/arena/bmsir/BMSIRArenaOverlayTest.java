@@ -99,12 +99,15 @@ class BMSIRArenaOverlayTest {
         assertEquals(200, BMSIRArenaOverlay.battleMaximum("exscore", player, 100));
         assertEquals(100, BMSIRArenaOverlay.battleMaximum("minbp", player, 100));
         assertEquals(0.95, BMSIRArenaOverlay.battleRate(95, 100));
-        assertEquals("BP 5", BMSIRArenaOverlay.ruleMetricLabel("minbp", player));
+        assertEquals("CB 5", BMSIRArenaOverlay.ruleMetricLabel("minbp", player));
         assertEquals(
                 "COMBO 80",
                 BMSIRArenaOverlay.ruleMetricLabel("max_combo", player)
         );
-        assertEquals("LOWEST BP WINS", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals(
+                "LOWEST COMBO BREAK WINS",
+                BMSIRArenaOverlay.ruleBattleTitle("minbp")
+        );
     }
 
     @Test

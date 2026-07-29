@@ -273,6 +273,8 @@ public final class PlayerConfig {
 	private boolean bmsirArenaSpectatorPublic = false;
 	/** Copy the host's complete lane option to every participant. */
 	private boolean bmsirArenaForceHostOption = false;
+	private boolean bmsirArenaAlwaysReady = false;
+	private int bmsirArenaGraphHighlight = 0;
 	/** Hide Arena chat locally without changing room/server state. */
 	private boolean bmsirArenaMuteChat = false;
 	/** Which players nominate charts in a private room: all, host, or rotate. */
@@ -708,6 +710,23 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaForceHostOption(boolean bmsirArenaForceHostOption) {
 		this.bmsirArenaForceHostOption = bmsirArenaForceHostOption;
+	}
+
+	public boolean isBmsirArenaAlwaysReady() {
+		return bmsirArenaAlwaysReady;
+	}
+
+	public void setBmsirArenaAlwaysReady(boolean bmsirArenaAlwaysReady) {
+		this.bmsirArenaAlwaysReady = bmsirArenaAlwaysReady;
+	}
+
+	public int getBmsirArenaGraphHighlight() {
+		bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
+		return bmsirArenaGraphHighlight;
+	}
+
+	public void setBmsirArenaGraphHighlight(int bmsirArenaGraphHighlight) {
+		this.bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
 	}
 
 	public boolean isBmsirArenaMuteChat() {

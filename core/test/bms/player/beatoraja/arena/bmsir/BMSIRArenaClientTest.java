@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.4-dev", Version.getArenaClientVersion());
+        assertEquals("0.3.5-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.4-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.5-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -48,6 +48,8 @@ class BMSIRArenaClientTest {
         assertFalse(config.isBmsirArenaSpectatorPublic());
         assertFalse(config.isBmsirArenaForceHostOption());
         assertFalse(config.isBmsirArenaMuteChat());
+        assertFalse(config.isBmsirArenaAlwaysReady());
+        assertEquals(0, config.getBmsirArenaGraphHighlight());
         assertEquals("all", config.getBmsirArenaNominationPolicy());
         assertEquals("single", config.getBmsirArenaSeriesFormat());
         assertEquals(2, config.getBmsirArenaFirstToWins());
@@ -66,6 +68,8 @@ class BMSIRArenaClientTest {
         config.setBmsirArenaFirstToWins(99);
         assertEquals("first_to", config.getBmsirArenaSeriesFormat());
         assertEquals(5, config.getBmsirArenaFirstToWins());
+        config.setBmsirArenaGraphHighlight(99);
+        assertEquals(1, config.getBmsirArenaGraphHighlight());
     }
 
     @Test
@@ -106,6 +110,16 @@ class BMSIRArenaClientTest {
 
         score.setMinbp(4);
         assertEquals(4, BMSIRArenaClient.arenaMinBp(score));
+    }
+
+    @Test
+    void bpArenaUsesComboBreakJudgesOnly() {
+        ScoreData score = new ScoreData();
+        score.addJudgeCount(3, true, 2);
+        score.addJudgeCount(4, false, 3);
+        score.addJudgeCount(5, true, 7);
+
+        assertEquals(5, BMSIRArenaClient.arenaComboBreak(score));
     }
 
     @Test

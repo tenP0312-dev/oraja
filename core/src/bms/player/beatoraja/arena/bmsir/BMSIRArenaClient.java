@@ -30,6 +30,7 @@ import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.Gdx;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -67,7 +68,7 @@ public final class BMSIRArenaClient {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final String CLIENT_FLAVOR = "arena-oraja";
-    private static final int PROTOCOL_VERSION = 6;
+    private static final int PROTOCOL_VERSION = 7;
     private static final int MAX_NORMAL_ARENA_LEVEL = 12;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final int MAX_ARENA_RATING_BAND =
@@ -123,6 +124,13 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode queueView = JSON.createObjectNode();
     private static volatile JsonNode roomView = JSON.createObjectNode();
     private static volatile JsonNode publicRoomsView = JSON.createArrayNode();
+    private static volatile JsonNode customCatalogView = JSON.createObjectNode();
+    private static final Map<Integer, JsonNode> customUserCatalogs =
+            new LinkedHashMap<>();
+    private static volatile ArrayNode roomAllowedPlayModes =
+            JSON.createArrayNode().add(7);
+    private static volatile ObjectNode roomCustomSelection =
+            JSON.createObjectNode().set("tables", JSON.createArrayNode());
     private static volatile boolean roomReady;
     private static volatile boolean nominationOpen;
     private static volatile long nominationDeadlineMillis;
@@ -748,6 +756,9 @@ public final class BMSIRArenaClient {
     }
 
     static String currentPhaseAction() {
+        if ("private".equals(currentMatchMode()) && !isRoomParticipating()) {
+            return "観戦中";
+        }
         if (isRoomPaused()) {
             return "休憩中（全員観戦）";
         }
@@ -1396,6 +1407,8 @@ public final class BMSIRArenaClient {
                 "force_host_option",
                 config != null && config.isBmsirArenaForceHostOption()
         );
+        message.set("allowed_play_modes", roomAllowedPlayModes.deepCopy());
+        message.set("custom_selection", roomCustomSelection.deepCopy());
         arenaUiMessage = "部屋へ参加しています";
         roomReady = false;
         send(message);
@@ -1436,6 +1449,8 @@ public final class BMSIRArenaClient {
         message.put("ruleset_profile", config.getBmsirRulesetProfile());
         message.put("spectator_public", config.isBmsirArenaSpectatorPublic());
         message.put("force_host_option", config.isBmsirArenaForceHostOption());
+        message.set("allowed_play_modes", roomAllowedPlayModes.deepCopy());
+        message.set("custom_selection", roomCustomSelection.deepCopy());
         arenaUiMessage = "部屋設定を更新しています";
         send(message);
     }
@@ -1458,6 +1473,42 @@ public final class BMSIRArenaClient {
         message.put("ready", ready);
         send(message);
         sendState(normalizeCurrentState(), readyForArena(normalizeCurrentState()));
+    }
+
+    static JsonNode customCatalogView() {
+        return customCatalogView;
+    }
+
+    static List<JsonNode> customUserCatalogs() {
+        synchronized (customUserCatalogs) {
+            return new ArrayList<>(customUserCatalogs.values());
+        }
+    }
+
+    static void requestCustomCatalog() {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "custom_catalog_request");
+        send(message);
+    }
+
+    static void requestCustomUserCatalog(int tableId, String shareKey) {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("type", "custom_catalog_request");
+        message.put("table_id", Math.max(0, tableId));
+        message.put("share_key", shareKey == null ? "" : shareKey);
+        send(message);
+    }
+
+    static void setRoomCustomConfiguration(
+            ArrayNode allowedPlayModes,
+            ObjectNode customSelection
+    ) {
+        roomAllowedPlayModes = allowedPlayModes == null
+                ? JSON.createArrayNode().add(7)
+                : allowedPlayModes.deepCopy();
+        roomCustomSelection = customSelection == null
+                ? JSON.createObjectNode().set("tables", JSON.createArrayNode())
+                : customSelection.deepCopy();
     }
 
     static void requestRoomParticipation(boolean participating) {
@@ -1779,6 +1830,7 @@ public final class BMSIRArenaClient {
         message.put("exscore", score.getExscore());
         message.put("processed_notes", processedNotes(score));
         message.put("minbp", arenaMinBp(score));
+        message.put("combo_break", arenaComboBreak(score));
         message.put("max_combo", Math.max(0, score.getCombo()));
         message.put("play_option", currentPlayOption);
         message.put("ln_mode", "LN");
@@ -1800,6 +1852,7 @@ public final class BMSIRArenaClient {
                 finalProcessedNotes(score, hardFail, currentChartTotalNotes)
         );
         message.put("minbp", arenaMinBp(score));
+        message.put("combo_break", arenaComboBreak(score));
         message.put("max_combo", Math.max(0, score.getCombo()));
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
@@ -1839,6 +1892,14 @@ public final class BMSIRArenaClient {
             current += Math.max(0, score.getJudgeCount(judge));
         }
         return current;
+    }
+
+    static int arenaComboBreak(ScoreData score) {
+        if (score == null) {
+            return 0;
+        }
+        return Math.max(0, score.getJudgeCount(3))
+                + Math.max(0, score.getJudgeCount(4));
     }
 
     static int finalProcessedNotes(
@@ -1958,6 +2019,17 @@ public final class BMSIRArenaClient {
                         manualView = accepted;
                     }
                 }
+                case "custom_catalog" -> customCatalogView = message;
+                case "custom_user_catalog" -> {
+                    JsonNode table = message.path("table");
+                    int tableId = table.path("table_id").asInt();
+                    if (tableId > 0) {
+                        synchronized (customUserCatalogs) {
+                            customUserCatalogs.put(tableId, table);
+                        }
+                    }
+                    arenaUiMessage = "マイ難易度表を読み込みました";
+                }
                 case "pong" -> updateServerClock(message);
                 case "fill_started" -> receiveFillStarted(message);
                 case "players_updated" -> receivePlayersUpdated(message);
@@ -1971,6 +2043,16 @@ public final class BMSIRArenaClient {
                             roomReady = player.path("ready").asBoolean(false);
                             break;
                         }
+                    }
+                    PlayerConfig config = playerConfig();
+                    if (
+                            config != null
+                                    && config.isBmsirArenaAlwaysReady()
+                                    && isRoomParticipating()
+                                    && !roomReady
+                                    && isConnected()
+                    ) {
+                        requestRoomReady(true);
                     }
                 }
                 case "chat", "chat_history" -> receiveChat(message);
@@ -2463,7 +2545,7 @@ public final class BMSIRArenaClient {
                         )
                         : "共通して所持する候補がないため、選曲し直してください";
         if (shouldOpenCandidates && canNominate) {
-            if ("free".equals(chartScope)) {
+            if (!"official".equals(chartScope)) {
                 openFreeNominationRoot();
             } else {
                 openNominationCandidateFolder(targetBand);
