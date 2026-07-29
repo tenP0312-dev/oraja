@@ -884,11 +884,30 @@ public final class BMSIRArenaOverlay {
             ImGui.textDisabled(
                     allowCpu.get() ? "1人待機時はCPU補完あり" : "有人戦のみ"
             );
+            ImBoolean allowHigherSelection = new ImBoolean(
+                    config.isBmsirArenaAllowHigherSelection()
+            );
+            if (ImGui.checkbox(
+                    "高レート基準の選曲を許可",
+                    allowHigherSelection
+            )) {
+                config.setBmsirArenaAllowHigherSelection(
+                        allowHigherSelection.get()
+                );
+            }
+            ImGui.textDisabled(
+                    "ONなら自分の解放済み上限で部屋の選曲上限を下げません"
+            );
         } else if (entryActive) {
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsCpu()
                             ? "BOT戦: 許可"
                             : "BOT戦: 無効（有人戦のみ）"
+            );
+            ImGui.textDisabled(
+                    BMSIRArenaClient.currentQueueAllowsHigherSelection()
+                            ? "高レート基準の選曲: 許可"
+                            : "選曲上限: 自分の解放済み上限を反映"
             );
         }
         if (confirmWithdrawal) {
@@ -1172,6 +1191,16 @@ public final class BMSIRArenaOverlay {
                                 : "選曲可能: ☆1～"
                                         + BMSIRArenaClient.arenaBandLabel(targetBand)
         );
+        if (!freeSelection && !customSelection) {
+            double referenceRating = nomination.path("reference_rating")
+                    .asDouble(1000.0);
+            ImGui.textDisabled(String.format(
+                    Locale.ROOT,
+                    "基準レート %.0f / 上限 %s",
+                    referenceRating,
+                    BMSIRArenaClient.arenaBandLabel(targetBand)
+            ));
+        }
         ImGui.separator();
         if (requiredCount > 0) {
             ImGui.text("選曲進捗: " + submittedCount + " / " + requiredCount);
@@ -2321,6 +2350,20 @@ public final class BMSIRArenaOverlay {
             config.setBmsirArenaAllowCpu(allowCpu.get());
         }
         ImGui.textDisabled("OFFの場合はCPUと組まず、有人が来るまで待機します");
+        ImBoolean allowHigherSelection = new ImBoolean(
+                config.isBmsirArenaAllowHigherSelection()
+        );
+        if (ImGui.checkbox(
+                "高レート基準の選曲を許可",
+                allowHigherSelection
+        )) {
+            config.setBmsirArenaAllowHigherSelection(
+                    allowHigherSelection.get()
+            );
+        }
+        ImGui.textDisabled(
+                "ONの場合、自分の解放済み上限は部屋の最低選曲基準から除外されます"
+        );
         ImBoolean mirror = new ImBoolean(config.isBmsirArenaRandomMirror());
         if (ImGui.checkbox("同期RANDOMを左右反転して受け取る", mirror)) {
             config.setBmsirArenaRandomMirror(mirror.get());

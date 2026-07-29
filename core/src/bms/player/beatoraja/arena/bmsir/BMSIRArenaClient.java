@@ -69,7 +69,7 @@ public final class BMSIRArenaClient {
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final String CLIENT_FLAVOR = "arena-oraja";
     private static final int PROTOCOL_VERSION = 7;
-    private static final int MAX_NORMAL_ARENA_LEVEL = 12;
+    private static final int MAX_NORMAL_ARENA_LEVEL = 13;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final int MAX_ARENA_RATING_BAND =
             MAX_NORMAL_ARENA_LEVEL + MAX_OFFICIAL_ARENA_LEVEL;
@@ -501,6 +501,15 @@ public final class BMSIRArenaClient {
         }
         PlayerConfig config = playerConfig();
         return config == null || config.isBmsirArenaAllowCpu();
+    }
+
+    static boolean currentQueueAllowsHigherSelection() {
+        JsonNode value = queueView.get("allow_higher_selection");
+        if (value != null && value.isBoolean()) {
+            return value.asBoolean();
+        }
+        PlayerConfig config = playerConfig();
+        return config != null && config.isBmsirArenaAllowHigherSelection();
     }
 
     static String arenaUiMessage() {
@@ -1320,6 +1329,10 @@ public final class BMSIRArenaClient {
         message.put(
                 "allow_cpu",
                 config == null || config.isBmsirArenaAllowCpu()
+        );
+        message.put(
+                "allow_higher_selection",
+                config != null && config.isBmsirArenaAllowHigherSelection()
         );
         return message;
     }

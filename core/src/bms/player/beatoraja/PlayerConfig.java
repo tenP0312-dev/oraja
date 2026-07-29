@@ -251,6 +251,8 @@ public final class PlayerConfig {
 
 	private boolean bmsirArenaAllowCpu = true;
 
+	private boolean bmsirArenaAllowHigherSelection = false;
+
 	private boolean bmsirArenaRandomMirror = false;
 
 	/**
@@ -637,6 +639,14 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaAllowCpu(boolean bmsirArenaAllowCpu) {
 		this.bmsirArenaAllowCpu = bmsirArenaAllowCpu;
+	}
+
+	public boolean isBmsirArenaAllowHigherSelection() {
+		return bmsirArenaAllowHigherSelection;
+	}
+
+	public void setBmsirArenaAllowHigherSelection(boolean bmsirArenaAllowHigherSelection) {
+		this.bmsirArenaAllowHigherSelection = bmsirArenaAllowHigherSelection;
 	}
 
 	public boolean isBmsirArenaRandomMirror() {
