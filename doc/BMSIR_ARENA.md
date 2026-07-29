@@ -1,15 +1,17 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.3-dev` candidate replaces the separate Endless Dream and beatoraja Arena
+0.3.6-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
-This release adds named public/code-only rooms, optional room passwords,
-explicit between-game READY, public-lobby and spectator chat, unanimous
-in-play finish voting, match-relative BP graphs, and the restored combined
-GENOCIDE normal ☆1--☆12 / official発狂 ★1--★25 rated ceiling. It also
-replaces the external Bot with a server-managed CPU, adds a cached
-server-delivered Manual, and makes countdown/result state explicit.
+This release adds the default-OFF
+`高レート基準の選曲を許可` setting. Rated selection keeps every level reached
+by the player's active-season peak rating. Players who enable the setting no
+longer lower the room ceiling; when at least one player leaves it disabled,
+the lowest disabled player's peak remains the guard. It also includes named
+public/code-only rooms, explicit between-game READY, custom-table rooms,
+server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
+official発狂 ★1--★25 rated selection.
 
 ## Enabling
 
@@ -50,8 +52,9 @@ with clear lamps, and the Arena rating leaders. During play, the graph opens
 at the bottom center and can be moved and resized; ImGui stores the adjusted
 position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
-play-time mouse cursor, and enables optional mutual unrestricted matching and
-a mirrored synchronized-RANDOM layout. Ctrl+Shift+F5 toggles visibility. If
+play-time mouse cursor, and enables optional mutual unrestricted matching,
+higher-basis chart selection, and a mirrored synchronized-RANDOM layout.
+Ctrl+Shift+F5 toggles visibility. If
 that shortcut opens the Endless Dream menu instead, use
 `Show BMS-IR Arena Overlay` in the F5 menu to restore the overlay.
 The graph uses the actual available plot height and keeps bars and the selected
@@ -133,9 +136,13 @@ and durable match history.
   candidates, selects one slot uniformly, and highlights the selected chart
   in the overlay.
 - Every nominated or random candidate must be a positive-note-count
-  GENOCIDE-normal or official発狂 chart between ☆1 and the weakest
-  participant's rating ceiling. Rating 1000 has a ☆10 ceiling and each 100
-  rating advances one combined normal/発狂 band.
+  GENOCIDE-normal or official発狂 chart between ☆1 and the effective
+  participant ceiling. Rating 1000 has a ☆10 ceiling, 1050 reaches ★2,
+  and each later complete 50 points adds four insane levels through 1300=★22;
+  1350 and above are unrestricted through ☆13 / ★25. A player's active-season
+  peak preserves unlocked levels after rating loss. The default-OFF
+  `高レート基準の選曲を許可` setting keeps that player in the lowest-ceiling
+  guard; enabling it removes only that player's lower ceiling from the guard.
   The client checks the selected MD5 before accepting it; the server validates
   the LN-scale processed-note count during play.
 - In a free-selection managed room, the selector returns to its normal
@@ -204,7 +211,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.3-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.6-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
