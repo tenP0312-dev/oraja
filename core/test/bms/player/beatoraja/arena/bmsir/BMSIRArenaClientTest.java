@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.6-dev", Version.getArenaClientVersion());
+        assertEquals("0.3.7-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.6-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.7-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -356,6 +356,55 @@ class BMSIRArenaClientTest {
                 0,
                 BMSIRArenaClient.nominationCountdownSeconds(61_000, 61_000)
         );
+    }
+
+    @Test
+    void delayedNominationFolderRequestExpiresWithItsSelectionPhase() {
+        assertTrue(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                false,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-b",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                14,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "custom",
+                "official"
+        ));
     }
 
     @Test

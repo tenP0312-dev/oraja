@@ -79,6 +79,7 @@ public final class BMSIRArenaClient {
     private static final String OFFICIAL_ARENA_TABLE_NAME = "発狂BMS難易度表";
     private static final String OFFICIAL_ARENA_TABLE_URL =
             "https://darksabun.club/table/archive/insane1/";
+    private static final long NOMINATION_SELECTION_RETRY_MILLIS = 100L;
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
 
@@ -1036,20 +1037,81 @@ public final class BMSIRArenaClient {
         return result;
     }
 
+    static boolean nominationSelectionRequestIsCurrent(
+            boolean open,
+            String activeMatchId,
+            String requestMatchId,
+            int activeTargetBand,
+            int requestTargetBand,
+            String activeChartScope,
+            String requestChartScope
+    ) {
+        return open
+                && requestMatchId != null
+                && !requestMatchId.isBlank()
+                && requestMatchId.equals(activeMatchId)
+                && requestTargetBand == activeTargetBand
+                && Objects.equals(requestChartScope, activeChartScope);
+    }
+
+    private static boolean nominationSelectionRequestIsCurrent(
+            String matchId,
+            int targetBand,
+            String chartScope
+    ) {
+        return nominationSelectionRequestIsCurrent(
+                        isNominationOpen(),
+                        currentMatchId,
+                        matchId,
+                        nominationTargetBand,
+                        targetBand,
+                        nominationView.path("chart_scope").asText(
+                                currentChartScope()
+                        ),
+                        chartScope
+                )
+                && nominationView.path("can_nominate").asBoolean(true);
+    }
+
+    private static void retryNominationSelectionOpen(Runnable retry) {
+        SCHEDULER.schedule(
+                retry,
+                NOMINATION_SELECTION_RETRY_MILLIS,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
     private static void openNominationCandidateFolder(int targetBand) {
-        MainController controller = main;
-        String matchId = currentMatchId;
+        openNominationCandidateFolder(main, currentMatchId, targetBand);
+    }
+
+    private static void openNominationCandidateFolder(
+            MainController controller,
+            String matchId,
+            int targetBand
+    ) {
         if (controller == null || Gdx.app == null) {
             return;
         }
         Gdx.app.postRunnable(() -> {
             if (
                     controller != main
-                            || !isNominationOpen()
-                            || !matchId.equals(currentMatchId)
-                            || !(controller.getCurrentState()
-                                    instanceof MusicSelector selector)
+                            || !nominationSelectionRequestIsCurrent(
+                                    matchId,
+                                    targetBand,
+                                    "official"
+                            )
             ) {
+                return;
+            }
+            if (!(controller.getCurrentState() instanceof MusicSelector selector)) {
+                retryNominationSelectionOpen(
+                        () -> openNominationCandidateFolder(
+                                controller,
+                                matchId,
+                                targetBand
+                        )
+                );
                 return;
             }
             Map<Integer, SongData[]> candidatesByLevel =
@@ -1109,20 +1171,44 @@ public final class BMSIRArenaClient {
         });
     }
 
-    private static void openFreeNominationRoot() {
-        MainController controller = main;
-        String matchId = currentMatchId;
+    private static void openFreeNominationRoot(String chartScope) {
+        openFreeNominationRoot(
+                main,
+                currentMatchId,
+                nominationTargetBand,
+                chartScope
+        );
+    }
+
+    private static void openFreeNominationRoot(
+            MainController controller,
+            String matchId,
+            int targetBand,
+            String chartScope
+    ) {
         if (controller == null || Gdx.app == null) {
             return;
         }
         Gdx.app.postRunnable(() -> {
             if (
                     controller != main
-                            || !isNominationOpen()
-                            || !matchId.equals(currentMatchId)
-                            || !(controller.getCurrentState()
-                                    instanceof MusicSelector selector)
+                            || !nominationSelectionRequestIsCurrent(
+                                    matchId,
+                                    targetBand,
+                                    chartScope
+                            )
             ) {
+                return;
+            }
+            if (!(controller.getCurrentState() instanceof MusicSelector selector)) {
+                retryNominationSelectionOpen(
+                        () -> openFreeNominationRoot(
+                                controller,
+                                matchId,
+                                targetBand,
+                                chartScope
+                        )
+                );
                 return;
             }
             selector.getBarManager().updateBar(null);
@@ -2559,7 +2645,7 @@ public final class BMSIRArenaClient {
                         : "共通して所持する候補がないため、選曲し直してください";
         if (shouldOpenCandidates && canNominate) {
             if (!"official".equals(chartScope)) {
-                openFreeNominationRoot();
+                openFreeNominationRoot(chartScope);
             } else {
                 openNominationCandidateFolder(targetBand);
             }

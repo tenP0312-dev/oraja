@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.6-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.3.7-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -61,7 +61,9 @@ The graph uses the actual available plot height and keeps bars and the selected
 outline inside the MAX guide even at the minimum window height. Each new
 nomination round returns to the selector root before opening
 `BMS-IR Arena 選曲候補`, so temporary folder labels do not accumulate across
-auto-requeued matches.
+auto-requeued matches. If the nomination status arrives before the game has
+returned to music select, the client keeps the same match-scoped request
+pending and opens the folder as soon as music select is ready.
 The normal and compact overlays use one persistent phase banner. It emphasizes
 the action required now, shows server-clock remaining seconds for fill,
 nomination, option selection, chart loading, and synchronized start, and keeps
@@ -211,7 +213,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.6-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.3.7-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
