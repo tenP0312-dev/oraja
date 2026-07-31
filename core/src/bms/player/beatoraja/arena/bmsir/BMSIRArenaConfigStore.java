@@ -18,9 +18,9 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 
 /**
- * Persists BMS-IR Arena settings independently from config_player.json.
+ * Persists BMS-IR-specific settings independently from config_player.json.
  *
- * Older or non-Arena bodies rewrite PlayerConfig with only the fields they know.
+ * Older or non-BMS-IR bodies rewrite PlayerConfig with only the fields they know.
  * Keeping this deliberately allow-listed sidecar makes those rewrites harmless
  * without copying IR credentials or other unrelated player settings.
  */
@@ -33,7 +33,7 @@ public final class BMSIRArenaConfigStore {
     }
 
     /**
-     * Loads the sidecar when present. When absent, migrates the Arena values
+     * Loads the sidecar when present. When absent, migrates the BMS-IR values
      * already loaded from config_player.json and creates the sidecar once.
      */
     public static boolean loadOrMigrate(
@@ -122,7 +122,9 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 2;
+        private int schemaVersion = 3;
+        private Boolean oneBassEnabled;
+        private Boolean startHerePreviewEnabled;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
         private boolean unrestrictedRating = false;
@@ -156,6 +158,9 @@ public final class BMSIRArenaConfigStore {
 
         static Settings from(PlayerConfig player) {
             Settings settings = new Settings();
+            settings.oneBassEnabled = player.isBmsirOneBassEnabled();
+            settings.startHerePreviewEnabled =
+                    player.isBmsirStartHerePreviewEnabled();
             settings.enabled = player.isBmsirArenaEnabled();
             settings.server = player.getBmsirArenaServer();
             settings.unrestrictedRating = player.isBmsirArenaUnrestrictedRating();
@@ -191,6 +196,14 @@ public final class BMSIRArenaConfigStore {
         }
 
         void applyTo(PlayerConfig player) {
+            // Null means a schema 1/2 sidecar. Preserve the common-config value
+            // (or the new default) until the next write upgrades the sidecar.
+            if (oneBassEnabled != null) {
+                player.setBmsirOneBassEnabled(oneBassEnabled);
+            }
+            if (startHerePreviewEnabled != null) {
+                player.setBmsirStartHerePreviewEnabled(startHerePreviewEnabled);
+            }
             player.setBmsirArenaEnabled(enabled);
             player.setBmsirArenaServer(server);
             player.setBmsirArenaUnrestrictedRating(unrestrictedRating);

@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.4-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.5-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,10 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.4-dev` permits one-bass during ordinary play while the Arena WSS
+Version `0.4.5-dev` adds a startup `BMS-IR固有設定` tab for one-bass and the
+first-timing preview, persists both switches in the backup-safe BMS-IR
+sidecar, and displays the preview as soon as the loading play screen can draw
+the resolved chart and skin notes. Version `0.4.4-dev` permits one-bass during ordinary play while the Arena WSS
 is merely connected or queued, while continuing to block it after reservation
 and during Arena play. Version `0.4.3-dev` reduces the READY start-chart preview
 to the first playable timing and makes a new one-bass placement replayable from
@@ -70,9 +73,10 @@ release all of them to register the chord. Escape cancels capture, while
 Backspace or Delete alone clears it. Left/right Ctrl, Shift, and Alt are
 treated as the same logical modifier. The unmodified F5 menu and its
 `Show BMS-IR Arena Overlay` action remain a fixed recovery path.
-Arena settings are stored per player in the allow-listed
-`bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing Arena
-values from `config_player.json`; later saves by a non-Arena body cannot erase
+BMS-IR-specific settings are stored per player in the allow-listed
+`bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing
+Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
+first-timing preview switches. Later saves by a non-BMS-IR body cannot erase
 them. The sidecar uses the same backup-safe write mechanism as player config
 and never contains IR user IDs, passwords, or unrelated player settings.
 The graph uses the actual available plot height and keeps bars and the selected
@@ -268,6 +272,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Ordinary-play and skin additions
 
+The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
+first-timing preview default to ON and may be changed there. `全ロングノートを
+LONG NOTEとして扱う` is shown as an always-ON compatibility rule rather than
+an editable switch: BMS-IR rejects CN/HCN results, so disabling the rule would
+make chart note counts and submitted scores disagree.
+
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
   playable key through the DECIDE-to-READY transition to place the first source
   key on that destination. Once READY is visible the input has been captured
@@ -284,7 +294,10 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   `current.json` snapshot after a chart placement is resolved. Add that local
   HTML file as an OBS browser source. The last SP/DP placement remains visible
   through select, play, and result scenes.
-- READY shows only the notes at the chart's first playable timing. Simultaneous
+- The loading play screen and READY show only the notes at the chart's first
+  playable timing, beginning with the first drawable frame after the resolved
+  model and play-skin note images exist. Audio and BGA preload completion is
+  not required. Simultaneous
   notes are shown together, and an LN start uses the normal-note image as the
   marker. The resolved post-modifier lanes and the active play skin's normal
   note image, lane width, thickness, animation frame, and note offsets are
@@ -339,7 +352,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.4-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.5-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

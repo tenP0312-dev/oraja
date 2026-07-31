@@ -9,6 +9,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
     @Test
+    void showsFromPreloadThroughReadyAndStopsAtPlay() {
+        assertTrue(LaneRenderer.showsStartHerePreview(
+                BMSPlayer.STATE_PRELOAD,
+                true
+        ));
+        assertTrue(LaneRenderer.showsStartHerePreview(
+                BMSPlayer.STATE_READY,
+                true
+        ));
+        assertFalse(LaneRenderer.showsStartHerePreview(
+                BMSPlayer.STATE_PLAY,
+                true
+        ));
+        assertFalse(LaneRenderer.showsStartHerePreview(
+                BMSPlayer.STATE_PRELOAD,
+                false
+        ));
+    }
+
+    @Test
     void anchorsAtLaneTopWithoutLaneCover() {
         Rectangle lane = new Rectangle(10f, 20f, 30f, 100f);
 

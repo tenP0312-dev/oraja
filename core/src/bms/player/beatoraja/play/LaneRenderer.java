@@ -261,10 +261,10 @@ public class LaneRenderer {
 			offsetW += offset.w;
 			offsetH += offset.h;
 		}
-		if (
-				main.getState() == BMSPlayer.STATE_READY
-						&& playconfig.isStartHerePreviewEnabled()
-		) {
+		if (showsStartHerePreview(
+				main.getState(),
+				playconfig.isStartHerePreviewEnabled()
+		)) {
 			updatePlayCoverOffsets(lanes);
 			if (drawStartHerePreview(
 					sprite,
@@ -750,8 +750,13 @@ public class LaneRenderer {
 		return true;
 	}
 
+	static boolean showsStartHerePreview(int state, boolean enabled) {
+		return enabled
+				&& (state == BMSPlayer.STATE_PRELOAD || state == BMSPlayer.STATE_READY);
+	}
+
 	/**
-	 * READY marker's unmodified top edge. The note itself still receives the
+	 * Loading/READY marker's unmodified top edge. The note itself still receives the
 	 * same note offsets as ordinary gameplay drawing.
 	 */
 	static float startHerePreviewTop(

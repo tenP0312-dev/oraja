@@ -26,6 +26,8 @@ class BMSIRArenaConfigStoreTest {
         PlayerConfig player = player("player1");
         player.setBmsirArenaEnabled(true);
         player.setBmsirArenaAllowCpu(false);
+        player.setBmsirOneBassEnabled(false);
+        player.setBmsirStartHerePreviewEnabled(false);
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -46,6 +48,8 @@ class BMSIRArenaConfigStoreTest {
         );
         String serialized = Files.readString(sidecar);
         assertTrue(serialized.contains("\"enabled\": true"));
+        assertTrue(serialized.contains("\"oneBassEnabled\": false"));
+        assertTrue(serialized.contains("\"startHerePreviewEnabled\": false"));
         assertTrue(serialized.contains("\"overlayHotkeyFunction\": 9"));
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertFalse(serialized.contains("arena-user-secret"));
@@ -59,6 +63,8 @@ class BMSIRArenaConfigStoreTest {
         PlayerConfig arenaBody = player("player1");
         arenaBody.setBmsirArenaEnabled(true);
         arenaBody.setBmsirArenaAllowHigherSelection(true);
+        arenaBody.setBmsirOneBassEnabled(false);
+        arenaBody.setBmsirStartHerePreviewEnabled(false);
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -83,6 +89,8 @@ class BMSIRArenaConfigStoreTest {
         );
         assertTrue(restored.isBmsirArenaEnabled());
         assertTrue(restored.isBmsirArenaAllowHigherSelection());
+        assertFalse(restored.isBmsirOneBassEnabled());
+        assertFalse(restored.isBmsirStartHerePreviewEnabled());
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,
@@ -172,6 +180,8 @@ class BMSIRArenaConfigStoreTest {
                         .boxed()
                         .toList()
         );
+        assertTrue(restored.isBmsirOneBassEnabled());
+        assertTrue(restored.isBmsirStartHerePreviewEnabled());
     }
 
     private PlayerConfig player(String id) throws Exception {

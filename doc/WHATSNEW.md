@@ -1,3 +1,16 @@
+# BMS-IR Arena oraja 0.4.5-dev
+
+## BMS-IR-specific startup settings
+
+- Added a `BMS-IR固有設定` launcher tab.
+- One-bass input and the first-timing note preview can be enabled or disabled
+  independently and are preserved in the backup-safe BMS-IR sidecar.
+- The first-timing preview now appears during chart loading as soon as the
+  resolved chart and active skin notes can be rendered, then remains through
+  READY and disappears when play starts.
+- The mandatory BMS-IR LONG NOTE compatibility rule is shown read-only with an
+  explanation that CN/HCN scores are not accepted.
+
 # Endless Dream 0.3.1
 ## New features
 - #### Context Menu

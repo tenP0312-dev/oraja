@@ -10,6 +10,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory?>
 <?import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory?>
@@ -467,6 +468,22 @@
                </VBox>
                 </VBox>
             </AnchorPane>
+        </Tab>
+        <Tab fx:id="bmsirSpecificTab" closable="false" text="%TAB_BMSIR_SPECIFIC">
+            <ScrollPane fitToWidth="true">
+                <VBox spacing="12.0">
+                    <padding>
+                        <Insets bottom="18.0" left="18.0" right="18.0" top="18.0" />
+                    </padding>
+                    <CheckBox fx:id="bmsirOneBassEnabled" mnemonicParsing="false" text="%BMSIR_ONE_BASS_ENABLED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ONE_BASS_DESCRIPTION" wrapText="true" />
+                    <CheckBox fx:id="bmsirStartHerePreviewEnabled" mnemonicParsing="false" text="%BMSIR_START_HERE_PREVIEW_ENABLED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_START_HERE_PREVIEW_DESCRIPTION" wrapText="true" />
+                    <Separator />
+                    <CheckBox fx:id="bmsirLongNoteFixed" disable="true" mnemonicParsing="false" selected="true" text="%BMSIR_LONG_NOTE_FIXED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LONG_NOTE_FIXED_DESCRIPTION" wrapText="true" />
+                </VBox>
+            </ScrollPane>
         </Tab>
         <Tab fx:id="irTab" closable="false" text="IR">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">

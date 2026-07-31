@@ -91,6 +91,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private Tab otherTab;
 	@FXML
+	private Tab bmsirSpecificTab;
+	@FXML
 	private Tab irTab;
 	@FXML
 	private Tab courseTab;
@@ -107,6 +109,12 @@ public class PlayConfigurationView implements Initializable {
 	private ComboBox<String> players;
 	@FXML
 	private TextField playername;
+	@FXML
+	private CheckBox bmsirOneBassEnabled;
+	@FXML
+	private CheckBox bmsirStartHerePreviewEnabled;
+	@FXML
+	private CheckBox bmsirLongNoteFixed;
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -542,6 +550,12 @@ public class PlayConfigurationView implements Initializable {
 			player = PlayerConfig.validatePlayerConfig("player1", new PlayerConfig());
         }
         playername.setText(player.getName());
+		bmsirOneBassEnabled.setSelected(player.isBmsirOneBassEnabled());
+		bmsirStartHerePreviewEnabled.setSelected(
+				player.isBmsirStartHerePreviewEnabled()
+		);
+		bmsirLongNoteFixed.setSelected(true);
+		bmsirLongNoteFixed.setDisable(true);
 		bmsirRulesetProfile.getSelectionModel().select(
 				"oraja".equals(player.getBmsirRulesetProfile()) ? 1 : 0
 		);
@@ -664,6 +678,10 @@ public class PlayConfigurationView implements Initializable {
 				bmsirRulesetProfile.getSelectionModel().getSelectedIndex() == 1
 						? "oraja"
 						: "lr2"
+		);
+		player.setBmsirOneBassEnabled(bmsirOneBassEnabled.isSelected());
+		player.setBmsirStartHerePreviewEnabled(
+				bmsirStartHerePreviewEnabled.isSelected()
 		);
 
 		videoController.commitPlayer(player);
@@ -812,6 +830,7 @@ public class PlayConfigurationView implements Initializable {
 		resourceTab.setDisable(true);
 		optionTab.setDisable(true);
 		otherTab.setDisable(true);
+		bmsirSpecificTab.setDisable(true);
 		irTab.setDisable(true);
 		streamTab.setDisable(true);
 		discordTab.setDisable(true);

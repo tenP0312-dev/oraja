@@ -401,6 +401,7 @@ public class BMSPlayer extends MainState {
 					rd == null
 							&& autoplay.mode == BMSPlayerMode.Mode.PLAY
 							&& playinfo.doubleoption != 1
+							&& config.isBmsirOneBassEnabled()
 							&& !BMSIRArenaClient.blocksLocalOneBass()
 							&& !Client.connected.get();
 			if (rd == null && oneBassAllowed) {

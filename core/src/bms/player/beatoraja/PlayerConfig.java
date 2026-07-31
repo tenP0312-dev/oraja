@@ -242,6 +242,12 @@ public final class PlayerConfig {
 	private IRConfig[] irconfig;
 
 	/**
+	 * Accept START + exactly one playable key as the destination for the
+	 * original chart's 1-key lane when ordinary RANDOM is selected.
+	 */
+	private boolean bmsirOneBassEnabled = true;
+
+	/**
 	 * BMS-IR Arena connects only when this startup option is enabled.
 	 * Match entry itself is controlled from the authenticated BMS-IR Web page.
 	 */
@@ -620,6 +626,45 @@ public final class PlayerConfig {
 
 	public void setIrconfig(IRConfig[] irconfig) {
 		this.irconfig = irconfig;
+	}
+
+	public boolean isBmsirOneBassEnabled() {
+		return bmsirOneBassEnabled;
+	}
+
+	public void setBmsirOneBassEnabled(boolean bmsirOneBassEnabled) {
+		this.bmsirOneBassEnabled = bmsirOneBassEnabled;
+	}
+
+	/**
+	 * The startup launcher exposes the first-chord preview as one BMS-IR
+	 * setting, while PlayConfig keeps the rendering flag per play mode.
+	 */
+	public boolean isBmsirStartHerePreviewEnabled() {
+		for (Mode mode : bmsirSpecificPlayModes()) {
+			if (!getPlayConfig(mode).getPlayconfig().isStartHerePreviewEnabled()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public void setBmsirStartHerePreviewEnabled(boolean enabled) {
+		for (Mode mode : bmsirSpecificPlayModes()) {
+			getPlayConfig(mode).getPlayconfig().setStartHerePreviewEnabled(enabled);
+		}
+	}
+
+	private static Mode[] bmsirSpecificPlayModes() {
+		return new Mode[]{
+				Mode.BEAT_5K,
+				Mode.BEAT_7K,
+				Mode.BEAT_10K,
+				Mode.BEAT_14K,
+				Mode.POPN_9K,
+				Mode.KEYBOARD_24K,
+				Mode.KEYBOARD_24K_DOUBLE
+		};
 	}
 
 	public boolean isBmsirArenaEnabled() {
