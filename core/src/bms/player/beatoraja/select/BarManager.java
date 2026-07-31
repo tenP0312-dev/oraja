@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
+import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
@@ -134,8 +135,19 @@ public class BarManager {
 		}).forEach(table::add);;
 
 		if(select.main.getIRStatus().length > 0) {
-			IRResponse<IRTableData[]> response = select.main.getIRStatus()[0].connection.getTableDatas();
+			MainController.IRStatus primaryIr = select.main.getIRStatus()[0];
+			IRResponse<IRTableData[]> response = primaryIr.connection.getTableDatas();
 			if(response.isSucceeded()) {
+				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
+						&& BMSIRDanCourseCache.isBmsirPrimaryName(
+								primaryIr.config.getIrname()
+						)) {
+					BMSIRDanCourseCache.sync(
+							select.resource.getConfig().getPlayerpath(),
+							select.resource.getPlayerConfig().getId(),
+							response.getData()
+					);
+				}
 				for(IRTableData irtd : response.getData()) {
 					TableData td = new TableData();
 					td.setName(irtd.name);
@@ -214,7 +226,19 @@ public class BarManager {
 			public TableData read() {
 				TableData td = new TableData();
 				td.setName("COURSE");
-				td.setCourse(new CourseDataAccessor("course").readAll());
+				CourseData[] personalCourses = new CourseDataAccessor("course").readAll();
+				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()) {
+					CourseData[] bmsirCourses = BMSIRDanCourseCache.read(
+							select.resource.getConfig().getPlayerpath(),
+							select.resource.getPlayerConfig().getId()
+					);
+					td.setCourse(Stream.concat(
+							Stream.of(personalCourses),
+							Stream.of(bmsirCourses)
+					).toArray(CourseData[]::new));
+				} else {
+					td.setCourse(personalCourses);
+				}
 				return td;
 			}
 

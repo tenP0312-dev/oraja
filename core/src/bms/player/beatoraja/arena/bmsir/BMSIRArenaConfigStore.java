@@ -122,9 +122,10 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 3;
+        private int schemaVersion = 4;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
+        private Boolean danLocalSyncEnabled;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
         private boolean unrestrictedRating = false;
@@ -161,6 +162,7 @@ public final class BMSIRArenaConfigStore {
             settings.oneBassEnabled = player.isBmsirOneBassEnabled();
             settings.startHerePreviewEnabled =
                     player.isBmsirStartHerePreviewEnabled();
+            settings.danLocalSyncEnabled = player.isBmsirDanLocalSyncEnabled();
             settings.enabled = player.isBmsirArenaEnabled();
             settings.server = player.getBmsirArenaServer();
             settings.unrestrictedRating = player.isBmsirArenaUnrestrictedRating();
@@ -196,13 +198,16 @@ public final class BMSIRArenaConfigStore {
         }
 
         void applyTo(PlayerConfig player) {
-            // Null means a schema 1/2 sidecar. Preserve the common-config value
+            // Null means a schema 1/2/3 sidecar. Preserve the common-config value
             // (or the new default) until the next write upgrades the sidecar.
             if (oneBassEnabled != null) {
                 player.setBmsirOneBassEnabled(oneBassEnabled);
             }
             if (startHerePreviewEnabled != null) {
                 player.setBmsirStartHerePreviewEnabled(startHerePreviewEnabled);
+            }
+            if (danLocalSyncEnabled != null) {
+                player.setBmsirDanLocalSyncEnabled(danLocalSyncEnabled);
             }
             player.setBmsirArenaEnabled(enabled);
             player.setBmsirArenaServer(server);

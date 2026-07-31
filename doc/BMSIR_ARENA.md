@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.5-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.6-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,9 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.5-dev` adds a startup `BMS-IR固有設定` tab for one-bass and the
+Version `0.4.6-dev` adds backup-safe, per-player local synchronization of the
+class/Dan courses received from BMS-IR Primary IR. Version `0.4.5-dev` adds a
+startup `BMS-IR固有設定` tab for one-bass and the
 first-timing preview, persists both switches in the backup-safe BMS-IR
 sidecar, and displays the preview as soon as the loading play screen can draw
 the resolved chart and skin notes. Version `0.4.4-dev` permits one-bass during ordinary play while the Arena WSS
@@ -76,9 +78,23 @@ treated as the same logical modifier. The unmodified F5 menu and its
 BMS-IR-specific settings are stored per player in the allow-listed
 `bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing
 Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
-first-timing preview switches. Later saves by a non-BMS-IR body cannot erase
-them. The sidecar uses the same backup-safe write mechanism as player config
-and never contains IR user IDs, passwords, or unrelated player settings.
+first-timing preview switches, and 0.4.6-dev adds the Dan local-sync switch.
+Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
+backup-safe write mechanism as player config and never contains IR user IDs,
+passwords, or unrelated player settings.
+
+When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
+table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
+with a grade/class constraint. They are written to
+`player/<player-id>/bmsir_dan_courses.json` and added to the local `COURSE`
+root for that player. Score Attack and other non-class courses are excluded.
+An empty response, a communication failure, or invalid course data never
+replaces the last good cache. The managed file and its backup are separate
+from user-authored files under `course/`; turning the setting off hides the
+managed courses without deleting either cache or personal courses. A cached
+course can be browsed offline, but it still requires every chart to exist
+locally before play can start. Its chart hashes and constraints remain the
+same, so normal BMS-IR course-score submission uses the existing identity.
 The graph uses the actual available plot height and keeps bars and the selected
 outline inside the MAX guide even at the minimum window height. Each new
 nomination round returns to the selector root before opening
@@ -352,7 +368,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.5-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.6-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

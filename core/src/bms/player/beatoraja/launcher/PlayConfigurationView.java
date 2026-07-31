@@ -114,6 +114,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirStartHerePreviewEnabled;
 	@FXML
+	private CheckBox bmsirDanLocalSyncEnabled;
+	@FXML
 	private CheckBox bmsirLongNoteFixed;
 
 	@FXML
@@ -554,6 +556,9 @@ public class PlayConfigurationView implements Initializable {
 		bmsirStartHerePreviewEnabled.setSelected(
 				player.isBmsirStartHerePreviewEnabled()
 		);
+		bmsirDanLocalSyncEnabled.setSelected(
+				player.isBmsirDanLocalSyncEnabled()
+		);
 		bmsirLongNoteFixed.setSelected(true);
 		bmsirLongNoteFixed.setDisable(true);
 		bmsirRulesetProfile.getSelectionModel().select(
@@ -682,6 +687,9 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirOneBassEnabled(bmsirOneBassEnabled.isSelected());
 		player.setBmsirStartHerePreviewEnabled(
 				bmsirStartHerePreviewEnabled.isSelected()
+		);
+		player.setBmsirDanLocalSyncEnabled(
+				bmsirDanLocalSyncEnabled.isSelected()
 		);
 
 		videoController.commitPlayer(player);

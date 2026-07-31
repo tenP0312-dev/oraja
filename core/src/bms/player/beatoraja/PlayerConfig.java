@@ -247,6 +247,9 @@ public final class PlayerConfig {
 	 */
 	private boolean bmsirOneBassEnabled = true;
 
+	/** Keep the last successfully received BMS-IR class courses locally. */
+	private boolean bmsirDanLocalSyncEnabled = true;
+
 	/**
 	 * BMS-IR Arena connects only when this startup option is enabled.
 	 * Match entry itself is controlled from the authenticated BMS-IR Web page.
@@ -634,6 +637,14 @@ public final class PlayerConfig {
 
 	public void setBmsirOneBassEnabled(boolean bmsirOneBassEnabled) {
 		this.bmsirOneBassEnabled = bmsirOneBassEnabled;
+	}
+
+	public boolean isBmsirDanLocalSyncEnabled() {
+		return bmsirDanLocalSyncEnabled;
+	}
+
+	public void setBmsirDanLocalSyncEnabled(boolean enabled) {
+		this.bmsirDanLocalSyncEnabled = enabled;
 	}
 
 	/**

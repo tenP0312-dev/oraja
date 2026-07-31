@@ -1,3 +1,15 @@
+# BMS-IR Arena oraja 0.4.6-dev
+
+## BMS-IR Dan local sync
+
+- Added `BMS-IR段位をローカル同期する` to the startup `BMS-IR固有設定` tab.
+- Successful BMS-IR Primary IR table reads save only class/Dan courses to a
+  backup-safe per-player cache. Score Attack and ordinary course tables are not
+  imported.
+- The last good Dan cache remains available under the local `COURSE` root when
+  offline or when a later table request fails. Personal files in `course/` are
+  never replaced.
+
 # BMS-IR Arena oraja 0.4.5-dev
 
 ## BMS-IR-specific startup settings

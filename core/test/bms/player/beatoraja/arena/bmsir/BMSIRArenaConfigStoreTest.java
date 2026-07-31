@@ -28,6 +28,7 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirArenaAllowCpu(false);
         player.setBmsirOneBassEnabled(false);
         player.setBmsirStartHerePreviewEnabled(false);
+        player.setBmsirDanLocalSyncEnabled(false);
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -50,6 +51,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"enabled\": true"));
         assertTrue(serialized.contains("\"oneBassEnabled\": false"));
         assertTrue(serialized.contains("\"startHerePreviewEnabled\": false"));
+        assertTrue(serialized.contains("\"danLocalSyncEnabled\": false"));
         assertTrue(serialized.contains("\"overlayHotkeyFunction\": 9"));
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertFalse(serialized.contains("arena-user-secret"));
@@ -65,6 +67,7 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirArenaAllowHigherSelection(true);
         arenaBody.setBmsirOneBassEnabled(false);
         arenaBody.setBmsirStartHerePreviewEnabled(false);
+        arenaBody.setBmsirDanLocalSyncEnabled(false);
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -91,6 +94,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(restored.isBmsirArenaAllowHigherSelection());
         assertFalse(restored.isBmsirOneBassEnabled());
         assertFalse(restored.isBmsirStartHerePreviewEnabled());
+        assertFalse(restored.isBmsirDanLocalSyncEnabled());
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,
@@ -182,6 +186,7 @@ class BMSIRArenaConfigStoreTest {
         );
         assertTrue(restored.isBmsirOneBassEnabled());
         assertTrue(restored.isBmsirStartHerePreviewEnabled());
+        assertTrue(restored.isBmsirDanLocalSyncEnabled());
     }
 
     private PlayerConfig player(String id) throws Exception {
