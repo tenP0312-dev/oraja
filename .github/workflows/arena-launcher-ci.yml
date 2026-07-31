@@ -1,0 +1,49 @@
+name: Arena launcher CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launcher:
+    name: Unsigned CI validation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: arena-launcher/src-tauri
+
+      - name: Test launcher
+        working-directory: arena-launcher/src-tauri
+        run: cargo test --locked
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build unsigned validation bundle
+        working-directory: arena-launcher/src-tauri
+        run: cargo tauri build
+
+      - name: Upload short-lived unsigned CI output
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ci-only-arena-launcher-${{ matrix.os }}
+          path: arena-launcher/src-tauri/target/release/bundle/
+          retention-days: 3
+          if-no-files-found: error
+
+# These outputs are deliberately not releases. Official Windows and macOS
+# artifacts require the repository's reviewed Authenticode / Developer ID
+# signing and notarization workflow plus a compiled release verification key.
