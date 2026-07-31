@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.2-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.3-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,8 +13,10 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.1-dev` also adds ordinary-play LR2 one-bass RANDOM input,
-READY-time start-chart previews, Lua play-skin accessors for the live
+Version `0.4.3-dev` reduces the READY start-chart preview to the first playable
+timing and makes a new one-bass placement replayable from its ordinary RANDOM
+seed alone. Version `0.4.0-dev` added the original ordinary-play LR2 one-bass
+input and READY preview, Lua play-skin accessors for the live
 HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
 SP/DP random-placement browser view for OBS, progressive CPU score graphs,
 disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
@@ -265,10 +267,16 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 ## Ordinary-play and skin additions
 
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
-  playable key while the chart is decided to place the first source key on
-  that destination. DP reads each side independently. It is disabled for
-  replay, FLIP, nonstandard randoms, and both legacy/new Arena states; replay
-  files store the resolved destination so playback is stable.
+  playable key through the DECIDE-to-READY transition to place the first source
+  key on that destination. Once READY is visible the input has been captured
+  and may be released. With the DECIDE screen disabled, the keys must already
+  be held when the song is confirmed. DP reads each side independently. It is
+  disabled for replay, FLIP, nonstandard randoms, and both legacy/new Arena
+  states. New plays choose an ordinary 24-bit RANDOM seed that already places
+  the first source key at the requested destination, so replay-chart and IR
+  rival-chart borrowing reproduce the final placement from the seed alone.
+  Replay files retain the destination to reproduce the pre-0.4.3 swap-based
+  format as well.
 - `bmsir-helper/random_pattern_dp.html` is extracted next to the atomic
   `current.json` snapshot after a chart placement is resolved. Add that local
   HTML file as an OBS browser source. The last SP/DP placement remains visible
@@ -328,7 +336,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.2-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.3-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

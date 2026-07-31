@@ -184,7 +184,8 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 	}
 
 	/**
-	 * 標準RANDOMのseed結果を維持したまま、先頭ソースレーンだけを指定先へ置く。
+	 * 旧リプレイの交換前seedを再現しつつ、新形式の条件付き通常RANDOM seedも扱う。
+	 * 新形式では元1鍵が既に指定先へ来るため、この交換はno-opになる。
 	 */
 	public static final class OneBassLaneRandomShuffleModifier
 			extends LaneRandomShuffleModifier {
