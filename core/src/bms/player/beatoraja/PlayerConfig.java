@@ -10,6 +10,7 @@ import java.text.ParseException;
 
 import bms.player.beatoraja.system.RobustFile;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.pattern.*;
@@ -271,6 +272,11 @@ public final class PlayerConfig {
 	private int bmsirArenaOverlayHotkeyFunction = 5;
 	/** Shift=1, Ctrl=2, Alt=4. At least one modifier is required. */
 	private int bmsirArenaOverlayHotkeyModifiers = 3;
+	/**
+	 * Logical libGDX keyboard chord used to toggle the Arena overlay.
+	 * Null migrates the 0.4.1 F-key/modifier fields; empty disables the shortcut.
+	 */
+	private int[] bmsirArenaOverlayHotkeyKeys;
 
 	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
@@ -726,6 +732,22 @@ public final class PlayerConfig {
 		this.bmsirArenaOverlayHotkeyModifiers = modifiers == 0 ? 3 : modifiers;
 	}
 
+	public int[] getBmsirArenaOverlayHotkeyKeys() {
+		if (bmsirArenaOverlayHotkeyKeys == null) {
+			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.fromLegacy(
+					getBmsirArenaOverlayHotkeyFunction(),
+					getBmsirArenaOverlayHotkeyModifiers()
+			);
+		}
+		return bmsirArenaOverlayHotkeyKeys.clone();
+	}
+
+	public void setBmsirArenaOverlayHotkeyKeys(int[] keys) {
+		bmsirArenaOverlayHotkeyKeys = keys == null
+				? null
+				: BMSIRArenaHotkey.normalizeKeys(keys);
+	}
+
 	public boolean isBmsirArenaShowCursor() {
 		return bmsirArenaShowCursor;
 	}
@@ -1162,6 +1184,11 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		if (bmsirArenaOverlayHotkeyKeys != null) {
+			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.normalizeKeys(
+					bmsirArenaOverlayHotkeyKeys
+			);
+		}
 		if(skin == null) {
 			skin = new SkinConfig[SkinType.getMaxSkinTypeID() + 1];
 		}

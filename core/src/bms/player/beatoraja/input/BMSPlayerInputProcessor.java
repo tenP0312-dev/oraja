@@ -10,11 +10,14 @@ import java.util.stream.Stream;
 
 import bms.player.beatoraja.PlayModeConfig.*;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.input.BMSPlayerInputDevice.Type;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.utils.Array;
 
 /**
@@ -24,11 +27,13 @@ import com.badlogic.gdx.utils.Array;
  */
 public class BMSPlayerInputProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(BMSPlayerInputProcessor.class);
+	private static final int[] ARENA_RECOVERY_F5 = {Keys.F5};
 	
 	private boolean enable = true;
 
 	private KeyBoardInputProcesseor kbinput;
 	private final PlayerConfig playerConfig;
+	private boolean arenaOverlayChordDown;
 
 	private BMControllerInputProcessor[] bminput;
 
@@ -430,37 +435,40 @@ public class BMSPlayerInputProcessor {
 		case OPEN_SKIN_CONFIGURATION:
 			return isControlKeyPressed(ControlKeys.F12);
 		case TOGGLE_MOD_MENU:
-			return isControlKeyPressed(ControlKeys.F5) || isControlKeyPressed(ControlKeys.INSERT);
+			return (
+					Gdx.input.isKeyJustPressed(Keys.F5)
+							&& BMSIRArenaHotkey.isExactNormalizedPressed(
+									ARENA_RECOVERY_F5,
+									Gdx.input::isKeyPressed
+							)
+				) || isControlKeyPressed(ControlKeys.INSERT);
 		case TOGGLE_BMSIR_ARENA_OVERLAY:
-			return kbinput.isKeyPressedExact(
-					arenaOverlayFunctionKey(
-							playerConfig.getBmsirArenaOverlayHotkeyFunction()
-					).keycode,
-					playerConfig.getBmsirArenaOverlayHotkeyModifiers()
+			int[] keys = playerConfig.getBmsirArenaOverlayHotkeyKeys();
+			boolean chordDown = BMSIRArenaHotkey.isExactNormalizedPressed(
+					keys,
+					Gdx.input::isKeyPressed
 			);
+			boolean activated = chordDown && !arenaOverlayChordDown;
+			arenaOverlayChordDown = chordDown;
+			if (activated) {
+				discardArenaOverlayHotkeyKeys(keys);
+			}
+			return activated;
 		}
 		return false;
 	}
 
-	public void discardArenaOverlayFunctionKey(int functionNumber) {
-		kbinput.discardKeyPress(arenaOverlayFunctionKey(functionNumber).keycode);
-	}
-
-	static ControlKeys arenaOverlayFunctionKey(int functionNumber) {
-		return switch (Math.max(1, Math.min(12, functionNumber))) {
-			case 1 -> ControlKeys.F1;
-			case 2 -> ControlKeys.F2;
-			case 3 -> ControlKeys.F3;
-			case 4 -> ControlKeys.F4;
-			case 5 -> ControlKeys.F5;
-			case 6 -> ControlKeys.F6;
-			case 7 -> ControlKeys.F7;
-			case 8 -> ControlKeys.F8;
-			case 9 -> ControlKeys.F9;
-			case 10 -> ControlKeys.F10;
-			case 11 -> ControlKeys.F11;
-			default -> ControlKeys.F12;
-		};
+	public void discardArenaOverlayHotkeyKeys(int[] keys) {
+		int[] configured = BMSIRArenaHotkey.normalizeKeys(keys);
+		if (configured == null) {
+			return;
+		}
+		for (int raw = Keys.UNKNOWN + 1; raw <= Keys.MAX_KEYCODE; raw++) {
+			int logical = BMSIRArenaHotkey.normalizeKey(raw);
+			if (Arrays.stream(configured).anyMatch(key -> key == logical)) {
+				kbinput.discardKeyPress(raw);
+			}
+		}
 	}
 	
 	public boolean isSelectPressed() {

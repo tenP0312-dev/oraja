@@ -4,7 +4,6 @@ import bms.player.beatoraja.modmenu.FontAwesomeIcons;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.PlayerConfig;
-import bms.player.beatoraja.input.KeyBoardInputProcesseor;
 import bms.player.beatoraja.song.SongData;
 
 import com.badlogic.gdx.Gdx;
@@ -27,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -67,21 +67,8 @@ public final class BMSIRArenaOverlay {
     private static boolean confirmWithdrawal;
     private static boolean confirmRoomDisband;
     private static boolean hotkeyCaptureActive;
+    private static final Set<Integer> HOTKEY_CAPTURE_KEYS = new LinkedHashSet<>();
     private static int lastVisibleMode;
-    private static final int[] FUNCTION_KEY_CODES = {
-            Keys.F1,
-            Keys.F2,
-            Keys.F3,
-            Keys.F4,
-            Keys.F5,
-            Keys.F6,
-            Keys.F7,
-            Keys.F8,
-            Keys.F9,
-            Keys.F10,
-            Keys.F11,
-            Keys.F12
-    };
     private static final ImString CHAT_INPUT = new ImString(201);
     private static final ImString LOBBY_CHAT_INPUT = new ImString(201);
     private static final ImString PRIVATE_ROOM_CODE = new ImString(7);
@@ -2536,61 +2523,79 @@ public final class BMSIRArenaOverlay {
     private static void renderOverlayHotkeySetting(PlayerConfig config) {
         ImGui.text(
                 "オーバーレイ表示キー: "
-                        + hotkeyLabel(
-                                config.getBmsirArenaOverlayHotkeyFunction(),
-                                config.getBmsirArenaOverlayHotkeyModifiers()
+                        + BMSIRArenaHotkey.label(
+                                config.getBmsirArenaOverlayHotkeyKeys()
                         )
         );
         if (hotkeyCaptureActive) {
             ImGui.textColored(
                     ImColor.rgb(255, 211, 106),
-                    "Ctrl／Shift／AltのいずれかとF1〜F12を押してください"
+                    "登録したいキーをすべて押して、全部離してください"
             );
-            ImGui.textDisabled("Escでキャンセル（誤操作防止のため修飾キーなしは登録不可）");
+            if (!HOTKEY_CAPTURE_KEYS.isEmpty()) {
+                ImGui.text(
+                        "入力中: "
+                                + BMSIRArenaHotkey.label(capturedHotkeyKeys())
+                );
+            }
+            ImGui.textDisabled(
+                    "1キー単体も可／Escでキャンセル／Backspace・Delete単体で解除"
+            );
             captureOverlayHotkey(config);
             return;
         }
         if (ImGui.button("表示キーを変更")) {
+            HOTKEY_CAPTURE_KEYS.clear();
             hotkeyCaptureActive = true;
         }
         ImGui.sameLine();
         if (ImGui.button("初期値へ戻す")) {
-            config.setBmsirArenaOverlayHotkeyFunction(5);
-            config.setBmsirArenaOverlayHotkeyModifiers(
-                    KeyBoardInputProcesseor.MASK_CTRL
-                            | KeyBoardInputProcesseor.MASK_SHIFT
+            config.setBmsirArenaOverlayHotkeyKeys(
+                    BMSIRArenaHotkey.defaultKeys()
             );
+            saveHotkeyOrWarn();
+        }
+        ImGui.sameLine();
+        if (ImGui.button("解除")) {
+            config.setBmsirArenaOverlayHotkeyKeys(new int[0]);
             saveHotkeyOrWarn();
         }
     }
 
     private static void captureOverlayHotkey(PlayerConfig config) {
-        if (Gdx.input.isKeyJustPressed(Keys.ESCAPE)) {
+        if (Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+            HOTKEY_CAPTURE_KEYS.clear();
             hotkeyCaptureActive = false;
             return;
         }
-        for (int index = 0; index < FUNCTION_KEY_CODES.length; index++) {
-            if (!Gdx.input.isKeyJustPressed(FUNCTION_KEY_CODES[index])) {
-                continue;
+        boolean anyKeyHeld = false;
+        for (int keycode = Keys.UNKNOWN + 1; keycode <= Keys.MAX_KEYCODE; keycode++) {
+            if (Gdx.input.isKeyPressed(keycode)) {
+                anyKeyHeld = true;
+                HOTKEY_CAPTURE_KEYS.add(BMSIRArenaHotkey.normalizeKey(keycode));
             }
-            int modifiers = currentlyHeldHotkeyModifiers();
-            if (modifiers == 0) {
-                ImGuiNotify.warning("修飾キーを1つ以上押しながら登録してください");
-                return;
-            }
-            int functionNumber = index + 1;
-            config.setBmsirArenaOverlayHotkeyFunction(functionNumber);
-            config.setBmsirArenaOverlayHotkeyModifiers(modifiers);
-            BMSIRArenaClient.discardArenaOverlayFunctionKey(functionNumber);
-            hotkeyCaptureActive = false;
+        }
+        if (anyKeyHeld || HOTKEY_CAPTURE_KEYS.isEmpty()) {
+            return;
+        }
+        int[] captured = capturedHotkeyKeys();
+        HOTKEY_CAPTURE_KEYS.clear();
+        hotkeyCaptureActive = false;
+        if (BMSIRArenaHotkey.isClearChord(captured)) {
+            config.setBmsirArenaOverlayHotkeyKeys(new int[0]);
             if (saveHotkeyOrWarn()) {
-                ImGuiNotify.info(
-                        "Arena表示キーを "
-                                + hotkeyLabel(functionNumber, modifiers)
-                                + " に変更しました"
-                );
+                ImGuiNotify.info("Arena表示キーを解除しました");
             }
             return;
+        }
+        config.setBmsirArenaOverlayHotkeyKeys(captured);
+        BMSIRArenaClient.discardArenaOverlayHotkeyKeys(captured);
+        if (saveHotkeyOrWarn()) {
+            ImGuiNotify.info(
+                    "Arena表示キーを "
+                            + BMSIRArenaHotkey.label(captured)
+                            + " に変更しました"
+            );
         }
     }
 
@@ -2602,35 +2607,12 @@ public final class BMSIRArenaOverlay {
         return false;
     }
 
-    private static int currentlyHeldHotkeyModifiers() {
-        boolean shift = Gdx.input.isKeyPressed(Keys.SHIFT_LEFT)
-                || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT);
-        boolean ctrl = Gdx.input.isKeyPressed(Keys.CONTROL_LEFT)
-                || Gdx.input.isKeyPressed(Keys.CONTROL_RIGHT);
-        boolean alt = Gdx.input.isKeyPressed(Keys.ALT_LEFT)
-                || Gdx.input.isKeyPressed(Keys.ALT_RIGHT);
-        return (shift ? KeyBoardInputProcesseor.MASK_SHIFT : 0)
-                | (ctrl ? KeyBoardInputProcesseor.MASK_CTRL : 0)
-                | (alt ? KeyBoardInputProcesseor.MASK_ALT : 0);
+    private static int[] capturedHotkeyKeys() {
+        return HOTKEY_CAPTURE_KEYS.stream().mapToInt(Integer::intValue).toArray();
     }
 
     public static boolean isHotkeyCaptureActive() {
         return hotkeyCaptureActive;
-    }
-
-    static String hotkeyLabel(int functionNumber, int modifiers) {
-        List<String> parts = new ArrayList<>();
-        if ((modifiers & KeyBoardInputProcesseor.MASK_CTRL) != 0) {
-            parts.add("Ctrl");
-        }
-        if ((modifiers & KeyBoardInputProcesseor.MASK_SHIFT) != 0) {
-            parts.add("Shift");
-        }
-        if ((modifiers & KeyBoardInputProcesseor.MASK_ALT) != 0) {
-            parts.add("Alt");
-        }
-        parts.add("F" + Math.max(1, Math.min(12, functionNumber)));
-        return String.join("+", parts);
     }
 
     private static void tableText(String text) {

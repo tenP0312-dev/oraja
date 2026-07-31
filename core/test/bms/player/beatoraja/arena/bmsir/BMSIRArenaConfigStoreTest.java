@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor;
+import com.badlogic.gdx.Input.Keys;
 import bms.player.beatoraja.system.RobustFile;
 
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
         );
+        player.setBmsirArenaOverlayHotkeyKeys(
+                new int[]{Keys.Z, Keys.X}
+        );
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -43,6 +47,7 @@ class BMSIRArenaConfigStoreTest {
         String serialized = Files.readString(sidecar);
         assertTrue(serialized.contains("\"enabled\": true"));
         assertTrue(serialized.contains("\"overlayHotkeyFunction\": 9"));
+        assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));
         assertFalse(serialized.contains("irconfig"));
@@ -57,6 +62,9 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
+        );
+        arenaBody.setBmsirArenaOverlayHotkeyKeys(
+                new int[]{Keys.CONTROL_RIGHT, Keys.K}
         );
         PlayerConfig.write(temporaryDirectory.toString(), arenaBody);
 
@@ -79,6 +87,12 @@ class BMSIRArenaConfigStoreTest {
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,
                 restored.getBmsirArenaOverlayHotkeyModifiers()
+        );
+        assertEquals(
+                java.util.List.of(Keys.CONTROL_LEFT, Keys.K),
+                java.util.Arrays.stream(restored.getBmsirArenaOverlayHotkeyKeys())
+                        .boxed()
+                        .toList()
         );
     }
 
@@ -129,6 +143,35 @@ class BMSIRArenaConfigStoreTest {
         ));
         assertTrue(restored.isBmsirArenaEnabled());
         assertFalse(restored.isBmsirArenaStayInRoom());
+    }
+
+    @Test
+    void legacySidecarMigratesFunctionAndModifiersIntoAChord() throws Exception {
+        Path playerDirectory = temporaryDirectory.resolve("player1");
+        Files.createDirectories(playerDirectory);
+        RobustFile.write(
+                playerDirectory.resolve("bmsir_arena.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "overlayHotkeyFunction": 12,
+                  "overlayHotkeyModifiers": 6
+                }
+                """.getBytes(StandardCharsets.UTF_8)
+        );
+
+        PlayerConfig restored = player("player1");
+        assertTrue(BMSIRArenaConfigStore.loadOrMigrate(
+                temporaryDirectory.toString(),
+                "player1",
+                restored
+        ));
+        assertEquals(
+                java.util.List.of(Keys.CONTROL_LEFT, Keys.ALT_LEFT, Keys.F12),
+                java.util.Arrays.stream(restored.getBmsirArenaOverlayHotkeyKeys())
+                        .boxed()
+                        .toList()
+        );
     }
 
     private PlayerConfig player(String id) throws Exception {

@@ -122,7 +122,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 1;
+        private int schemaVersion = 2;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
         private boolean unrestrictedRating = false;
@@ -133,6 +133,7 @@ public final class BMSIRArenaConfigStore {
         private int overlayMode = 0;
         private int overlayHotkeyFunction = 5;
         private int overlayHotkeyModifiers = 3;
+        private int[] overlayHotkeyKeys;
         private boolean showCursor = false;
         private boolean stayInRoom = true;
         private boolean roomParticipating = true;
@@ -165,6 +166,7 @@ public final class BMSIRArenaConfigStore {
             settings.overlayMode = player.getBmsirArenaOverlayMode();
             settings.overlayHotkeyFunction = player.getBmsirArenaOverlayHotkeyFunction();
             settings.overlayHotkeyModifiers = player.getBmsirArenaOverlayHotkeyModifiers();
+            settings.overlayHotkeyKeys = player.getBmsirArenaOverlayHotkeyKeys();
             settings.showCursor = player.isBmsirArenaShowCursor();
             settings.stayInRoom = player.isBmsirArenaStayInRoom();
             settings.roomParticipating = player.isBmsirArenaRoomParticipating();
@@ -199,6 +201,14 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaOverlayMode(overlayMode);
             player.setBmsirArenaOverlayHotkeyFunction(overlayHotkeyFunction);
             player.setBmsirArenaOverlayHotkeyModifiers(overlayHotkeyModifiers);
+            player.setBmsirArenaOverlayHotkeyKeys(
+                    overlayHotkeyKeys == null
+                            ? BMSIRArenaHotkey.fromLegacy(
+                                    overlayHotkeyFunction,
+                                    overlayHotkeyModifiers
+                            )
+                            : overlayHotkeyKeys
+            );
             player.setBmsirArenaShowCursor(showCursor);
             player.setBmsirArenaStayInRoom(stayInRoom);
             player.setBmsirArenaRoomParticipating(roomParticipating);

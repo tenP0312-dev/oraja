@@ -1,7 +1,7 @@
 package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
-import bms.player.beatoraja.input.KeyBoardInputProcesseor;
+import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
@@ -123,20 +123,16 @@ class BMSIRArenaOverlayTest {
     void configurableOverlayHotkeyHasAReadableLabel() {
         assertEquals(
                 "Ctrl+Shift+F5",
-                BMSIRArenaOverlay.hotkeyLabel(
-                        5,
-                        KeyBoardInputProcesseor.MASK_CTRL
-                                | KeyBoardInputProcesseor.MASK_SHIFT
+                BMSIRArenaHotkey.label(
+                        new int[]{Keys.CONTROL_LEFT, Keys.SHIFT_RIGHT, Keys.F5}
                 )
         );
         assertEquals(
-                "Ctrl+Alt+F12",
-                BMSIRArenaOverlay.hotkeyLabel(
-                        12,
-                        KeyBoardInputProcesseor.MASK_CTRL
-                                | KeyBoardInputProcesseor.MASK_ALT
-                )
+                "Z+X",
+                BMSIRArenaHotkey.label(new int[]{Keys.Z, Keys.X})
         );
+        assertEquals("Space", BMSIRArenaHotkey.label(new int[]{Keys.SPACE}));
+        assertEquals("未設定", BMSIRArenaHotkey.label(new int[0]));
     }
 
     @Test

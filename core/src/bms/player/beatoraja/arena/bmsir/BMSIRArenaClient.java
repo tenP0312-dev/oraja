@@ -491,11 +491,9 @@ public final class BMSIRArenaClient {
                 );
     }
 
-    static void discardArenaOverlayFunctionKey(int functionNumber) {
+    static void discardArenaOverlayHotkeyKeys(int[] keys) {
         if (main != null) {
-            main.getInputProcessor().discardArenaOverlayFunctionKey(
-                    functionNumber
-            );
+            main.getInputProcessor().discardArenaOverlayHotkeyKeys(keys);
         }
     }
 

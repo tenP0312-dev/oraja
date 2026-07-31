@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.1-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.2-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -60,11 +60,14 @@ position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
 play-time mouse cursor, and enables optional mutual unrestricted matching,
 higher-basis chart selection, and a mirrored synchronized-RANDOM layout.
-The overlay shortcut is registered there from F1--F12 plus one or more of
-Ctrl, Shift, and Alt; it defaults to Ctrl+Shift+F5. The unmodified F5 menu and
-its `Show BMS-IR Arena Overlay` action remain a fixed recovery path.
+The overlay shortcut accepts any keyboard key, either alone or as an exact
+multi-key chord, and defaults to Ctrl+Shift+F5. Hold the desired keys and
+release all of them to register the chord. Escape cancels capture, while
+Backspace or Delete alone clears it. Left/right Ctrl, Shift, and Alt are
+treated as the same logical modifier. The unmodified F5 menu and its
+`Show BMS-IR Arena Overlay` action remain a fixed recovery path.
 Arena settings are stored per player in the allow-listed
-`bmsir_arena.json` sidecar. The first 0.4.1-dev start migrates existing Arena
+`bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing Arena
 values from `config_player.json`; later saves by a non-Arena body cannot erase
 them. The sidecar uses the same backup-safe write mechanism as player config
 and never contains IR user IDs, passwords, or unrelated player settings.
@@ -271,7 +274,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.1-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.2-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
