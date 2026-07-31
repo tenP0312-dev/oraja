@@ -49,6 +49,7 @@ public class LaneRenderer {
 	private final PlayerConfig config;
 	private PlayConfig playconfig;
 	private StartHerePreviewData startHerePreview;
+	private final Rectangle startHerePreviewDestination = new Rectangle();
 
 	private int currentduration;
 
@@ -150,11 +151,7 @@ public class LaneRenderer {
 			basehispeed = playconfig.getHispeed();
 		}
 		this.hispeedmargin = playconfig.getHispeedMargin();
-		this.startHerePreview = StartHerePreviewData.build(
-				model,
-				playconfig.getStartHerePreviewMeasures(),
-				playconfig.getStartHerePreviewMaxNotes()
-		);
+		this.startHerePreview = StartHerePreviewData.build(model);
 	}
 
 	public float getHispeed() {
@@ -183,11 +180,7 @@ public class LaneRenderer {
 	}
 
 	public void rebuildStartHerePreview() {
-		this.startHerePreview = StartHerePreviewData.build(
-				model,
-				playconfig.getStartHerePreviewMeasures(),
-				playconfig.getStartHerePreviewMaxNotes()
-		);
+		this.startHerePreview = StartHerePreviewData.build(model);
 	}
 
 	public boolean isEnableLift() {
@@ -268,20 +261,21 @@ public class LaneRenderer {
 			offsetW += offset.w;
 			offsetH += offset.h;
 		}
-
 		if (
 				main.getState() == BMSPlayer.STATE_READY
 						&& playconfig.isStartHerePreviewEnabled()
-						&& drawStartHerePreview(
-								sprite,
-								lanes,
-								offsetX,
-								offsetY,
-								offsetW,
-								offsetH
-						)
 		) {
-			return;
+			updatePlayCoverOffsets(lanes);
+			if (drawStartHerePreview(
+					sprite,
+					lanes,
+					offsetX,
+					offsetY,
+					offsetW,
+					offsetH
+			)) {
+				return;
+			}
 		}
 		
 		time = (main.timer.isTimerOn(TIMER_PLAY) ? time - main.timer.getTimer(TIMER_PLAY) : 
@@ -704,33 +698,128 @@ public class LaneRenderer {
 			return false;
 		}
 
-		sprite.setBlend(0);
-		sprite.setType(SkinObjectRenderer.TYPE_NORMAL);
-		for (int measure = 1; measure < startHerePreview.measures(); measure++) {
-			float rate = measure / (float) startHerePreview.measures();
-			for (Rectangle group : skin.getLaneGroupRegion()) {
-				float lineY = group.y + group.height * rate;
-				sprite.setColor(1f, 1f, 1f, 0.2f);
-				sprite.draw(main.getImage(IMAGE_WHITE), group.x, lineY, group.width, 1f);
+		for (StartHerePreviewData.PreviewNote previewNote : startHerePreview.notes()) {
+			SkinLane lane = lanes[previewNote.lane()];
+			if (
+					lane.noteImage == null
+							|| !setStartHerePreviewDestination(
+									startHerePreviewDestination,
+									lane.region,
+									lane.scale,
+									offsetX,
+									offsetY,
+									offsetW,
+									offsetH,
+									playconfig.isEnablelift(),
+									playconfig.getLift(),
+									playconfig.isEnablelanecover(),
+									playconfig.getLanecover()
+							)
+			) {
+				return false;
 			}
 		}
 
+		sprite.setBlend(0);
+		sprite.setType(SkinObjectRenderer.TYPE_NORMAL);
 		for (StartHerePreviewData.PreviewNote previewNote : startHerePreview.notes()) {
 			SkinLane lane = lanes[previewNote.lane()];
-			if (lane.noteImage == null) {
-				return false;
-			}
-			float rate = (float) (previewNote.section() / startHerePreview.measures());
-			float x = lane.region.x + offsetX;
-			float y = lane.region.y + lane.region.height * rate + offsetY - offsetH / 2f;
-			float width = lane.region.width + offsetW;
-			float height = lane.scale + offsetH;
-			float alpha = previewNote.firstChord() ? 1f : 0.55f;
-			sprite.setColor(1f, 1f, 1f, alpha);
-			sprite.draw(lane.noteImage, x, y, width, height);
+			setStartHerePreviewDestination(
+					startHerePreviewDestination,
+					lane.region,
+					lane.scale,
+					offsetX,
+					offsetY,
+					offsetW,
+					offsetH,
+					playconfig.isEnablelift(),
+					playconfig.getLift(),
+					playconfig.isEnablelanecover(),
+					playconfig.getLanecover()
+			);
+			sprite.setColor(Color.WHITE);
+			sprite.draw(
+					lane.noteImage,
+					startHerePreviewDestination.x,
+					startHerePreviewDestination.y,
+					startHerePreviewDestination.width,
+					startHerePreviewDestination.height
+			);
 		}
 		sprite.setColor(Color.WHITE);
 		return true;
+	}
+
+	/**
+	 * READY marker's unmodified top edge. The note itself still receives the
+	 * same note offsets as ordinary gameplay drawing.
+	 */
+	static float startHerePreviewTop(
+			Rectangle laneRegion,
+			boolean liftEnabled,
+			float lift,
+			boolean laneCoverEnabled,
+			float laneCover
+	) {
+		float clampedLift = Math.max(0f, Math.min(1f, lift));
+		float clampedCover = Math.max(0f, Math.min(1f, laneCover));
+		float upper = laneRegion.y + laneRegion.height;
+		float lower = liftEnabled
+				? laneRegion.y + laneRegion.height * clampedLift
+				: laneRegion.y;
+		return laneCoverEnabled
+				? upper + (lower - upper) * clampedCover
+				: upper;
+	}
+
+	static boolean setStartHerePreviewDestination(
+			Rectangle destination,
+			Rectangle laneRegion,
+			float noteScale,
+			float offsetX,
+			float offsetY,
+			float offsetW,
+			float offsetH,
+			boolean liftEnabled,
+			float lift,
+			boolean laneCoverEnabled,
+			float laneCover
+	) {
+		if (destination == null || laneRegion == null) {
+			return false;
+		}
+		float width = laneRegion.width + offsetW;
+		float height = noteScale + offsetH;
+		if (width <= 0f || height <= 0f) {
+			return false;
+		}
+		float baseY = startHerePreviewTop(
+				laneRegion,
+				liftEnabled,
+				lift,
+				laneCoverEnabled,
+				laneCover
+		) - noteScale;
+		destination.set(
+				laneRegion.x + offsetX,
+				baseY + offsetY - offsetH / 2f,
+				width,
+				height
+		);
+		return true;
+	}
+
+	private void updatePlayCoverOffsets(SkinLane[] lanes) {
+		if (lanes == null || lanes.length == 0 || lanes[0].region == null) {
+			return;
+		}
+		float upper = lanes[0].region.y + lanes[0].region.height;
+		float lower = playconfig.isEnablelift()
+				? lanes[0].region.y + lanes[0].region.height * playconfig.getLift()
+				: lanes[0].region.y;
+		float laneCover = playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0f;
+		main.main.getOffset(OFFSET_LIFT).y = lower - lanes[0].region.y;
+		main.main.getOffset(OFFSET_LANECOVER).y = (lower - upper) * laneCover;
 	}
 
 	public double getNowBPM() {

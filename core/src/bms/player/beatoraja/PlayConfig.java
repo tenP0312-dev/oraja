@@ -62,12 +62,14 @@ public class PlayConfig implements Cloneable {
 	private boolean startHerePreviewEnabled = true;
 
 	/**
-	 * 静的プレビューへ表示する先頭小節数。
+	 * 0.4.0-devの静的プレビュー設定とのJSON/Lua互換用。
+	 * 最初の発音タイミング表示では参照しない。
 	 */
 	private int startHerePreviewMeasures = 2;
 
 	/**
-	 * 静的プレビューへ取り込む片側あたりの最大ノート数。
+	 * 0.4.0-devの静的プレビュー設定とのJSON互換用。
+	 * 最初の発音タイミング表示では参照しない。
 	 */
 	private int startHerePreviewMaxNotes = 256;
 

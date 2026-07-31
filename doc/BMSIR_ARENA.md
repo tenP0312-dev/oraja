@@ -273,15 +273,23 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   `current.json` snapshot after a chart placement is resolved. Add that local
   HTML file as an OBS browser source. The last SP/DP placement remains visible
   through select, play, and result scenes.
-- READY shows a cached static preview of the first two measures by default.
-  PlayConfig keeps `startHerePreviewEnabled`,
-  `startHerePreviewMeasures` (1--8), and the bounded per-side note cap.
+- READY shows only the notes at the chart's first playable timing. Simultaneous
+  notes are shown together, and an LN start uses the normal-note image as the
+  marker. The resolved post-modifier lanes and the active play skin's normal
+  note image, lane width, thickness, animation frame, and note offsets are
+  used. The unmodified note top is anchored to the top of each lane, or
+  immediately below the lane cover when SUD+ is enabled. The chart is scanned
+  once when loaded, so a silent opening longer than two measures is supported.
+  PlayConfig keeps `startHerePreviewEnabled`. The former measure-count and
+  per-side note-cap fields remain readable for 0.4.0-dev configuration
+  compatibility but no longer alter this first-timing marker.
 - Lua play skins can call `main_state.play_hispeed_margin()` and
   `main_state.set_play_hispeed_margin(value)`;
   `main_state.start_here_preview_enabled()` /
-  `set_start_here_preview_enabled(boolean)` and
+  `set_start_here_preview_enabled(boolean)`. The legacy
   `main_state.start_here_preview_measures()` /
-  `set_start_here_preview_measures(value)`; and
+  `set_start_here_preview_measures(value)` pair remains callable for existing
+  skins but no longer changes the marker; and
   `main_state.play_key_fast(side)`, `play_key_slow(side)`,
   `play_scratch_fast(side)`, or `play_scratch_slow(side)`. Side is `1` or
   `2`; direction flags use the most recent 500 ms. An optional second

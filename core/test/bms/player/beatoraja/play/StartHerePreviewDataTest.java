@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StartHerePreviewDataTest {
     @Test
-    void cachesPlayableStartsFromTheRequestedMeasures() {
+    void cachesOnlyTheFirstPlayableTimingAcrossTheWholeChart() {
         BMSModel model = new BMSModel();
         model.setMode(Mode.BEAT_7K);
 
@@ -36,35 +36,73 @@ class StartHerePreviewDataTest {
         outside.setNote(1, new NormalNote(4));
         model.setAllTimeLine(new TimeLine[]{first, later, end, outside});
 
-        StartHerePreviewData preview =
-                StartHerePreviewData.build(model, 2, 32);
+        StartHerePreviewData preview = StartHerePreviewData.build(model);
 
         assertTrue(preview.isValid());
-        assertEquals(3, preview.notes().size());
-        assertTrue(preview.notes().get(0).firstChord());
-        assertTrue(preview.notes().get(1).firstChord());
-        assertFalse(preview.notes().get(2).firstChord());
+        assertEquals(2, preview.notes().size());
+        assertEquals(0, preview.notes().get(0).lane());
+        assertEquals(3, preview.notes().get(1).lane());
     }
 
     @Test
-    void emptyAndPerSideOverflowFallBackToNormalDrawing() {
+    void skipsMinesAndLongNoteEndsBeforeTheFirstPlayableTiming() {
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+
+        TimeLine ignored = new TimeLine(0.0, 0, Mode.BEAT_7K.key);
+        ignored.setNote(0, new MineNote(-1, 10f));
+
+        TimeLine hiddenStart = new TimeLine(-1.0, -1_000_000, Mode.BEAT_7K.key);
+        LongNote hiddenStartNote = new LongNote(2);
+        LongNote end = new LongNote(-2);
+        hiddenStart.setNote(1, hiddenStartNote);
+        ignored.setNote(1, end);
+        hiddenStartNote.setPair(end);
+
+        TimeLine first = new TimeLine(12.0, 12_000_000, Mode.BEAT_7K.key);
+        LongNote start = new LongNote(3);
+        LongNote laterEnd = new LongNote(-3);
+        first.setNote(2, start);
+        first.setNote(5, new NormalNote(4));
+        TimeLine later = new TimeLine(13.0, 13_000_000, Mode.BEAT_7K.key);
+        later.setNote(2, laterEnd);
+        start.setPair(laterEnd);
+        model.setAllTimeLine(new TimeLine[]{ignored, first, later});
+
+        StartHerePreviewData preview = StartHerePreviewData.build(model);
+
+        assertTrue(preview.isValid());
+        assertEquals(2, preview.notes().size());
+        assertEquals(2, preview.notes().get(0).lane());
+        assertEquals(5, preview.notes().get(1).lane());
+    }
+
+    @Test
+    void keepsBothDpSidesAtOneSharedFirstTiming() {
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_14K);
+
+        TimeLine left = new TimeLine(4.0, 4_000_000, Mode.BEAT_14K.key);
+        left.setNote(0, new NormalNote(1));
+        TimeLine right = new TimeLine(4.0, 4_000_000, Mode.BEAT_14K.key);
+        right.setNote(13, new NormalNote(2));
+        TimeLine later = new TimeLine(4.25, 4_250_000, Mode.BEAT_14K.key);
+        later.setNote(7, new NormalNote(3));
+        model.setAllTimeLine(new TimeLine[]{left, right, later});
+
+        StartHerePreviewData preview = StartHerePreviewData.build(model);
+
+        assertTrue(preview.isValid());
+        assertEquals(2, preview.notes().size());
+        assertEquals(0, preview.notes().get(0).lane());
+        assertEquals(13, preview.notes().get(1).lane());
+    }
+
+    @Test
+    void emptyChartFallsBackToNormalDrawing() {
         BMSModel empty = new BMSModel();
         empty.setMode(Mode.BEAT_14K);
         empty.setAllTimeLine(new TimeLine[0]);
-        assertFalse(StartHerePreviewData.build(empty, 2, 32).isValid());
-
-        BMSModel dense = new BMSModel();
-        dense.setMode(Mode.BEAT_14K);
-        TimeLine[] lines = new TimeLine[33];
-        for (int index = 0; index < lines.length; index++) {
-            lines[index] = new TimeLine(
-                    index / 64.0,
-                    index * 1_000L,
-                    Mode.BEAT_14K.key
-            );
-            lines[index].setNote(0, new NormalNote(index));
-        }
-        dense.setAllTimeLine(lines);
-        assertFalse(StartHerePreviewData.build(dense, 2, 32).isValid());
+        assertFalse(StartHerePreviewData.build(empty).isValid());
     }
 }
