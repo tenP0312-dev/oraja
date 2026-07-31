@@ -277,6 +277,12 @@ public final class PlayerConfig {
 	private boolean bmsirArenaForceHostOption = false;
 	private boolean bmsirArenaAlwaysReady = false;
 	private int bmsirArenaGraphHighlight = 0;
+	/** Show the large, phase-specific Arena presentation banner. */
+	private boolean bmsirArenaPresentationOverlayEnabled = true;
+	private boolean bmsirArenaCountdownSeEnabled = true;
+	private boolean bmsirArenaStartSeEnabled = true;
+	private boolean bmsirArenaPhaseWarningEnabled = true;
+	private int bmsirArenaNotificationSeVolume = 100;
 	/** Hide Arena chat locally without changing room/server state. */
 	private boolean bmsirArenaMuteChat = false;
 	/** Which players nominate charts in a private room: all, host, or rotate. */
@@ -737,6 +743,62 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaGraphHighlight(int bmsirArenaGraphHighlight) {
 		this.bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
+	}
+
+	public boolean isBmsirArenaPresentationOverlayEnabled() {
+		return bmsirArenaPresentationOverlayEnabled;
+	}
+
+	public void setBmsirArenaPresentationOverlayEnabled(
+			boolean bmsirArenaPresentationOverlayEnabled
+	) {
+		this.bmsirArenaPresentationOverlayEnabled =
+				bmsirArenaPresentationOverlayEnabled;
+	}
+
+	public boolean isBmsirArenaCountdownSeEnabled() {
+		return bmsirArenaCountdownSeEnabled;
+	}
+
+	public void setBmsirArenaCountdownSeEnabled(
+			boolean bmsirArenaCountdownSeEnabled
+	) {
+		this.bmsirArenaCountdownSeEnabled = bmsirArenaCountdownSeEnabled;
+	}
+
+	public boolean isBmsirArenaStartSeEnabled() {
+		return bmsirArenaStartSeEnabled;
+	}
+
+	public void setBmsirArenaStartSeEnabled(boolean bmsirArenaStartSeEnabled) {
+		this.bmsirArenaStartSeEnabled = bmsirArenaStartSeEnabled;
+	}
+
+	public boolean isBmsirArenaPhaseWarningEnabled() {
+		return bmsirArenaPhaseWarningEnabled;
+	}
+
+	public void setBmsirArenaPhaseWarningEnabled(
+			boolean bmsirArenaPhaseWarningEnabled
+	) {
+		this.bmsirArenaPhaseWarningEnabled = bmsirArenaPhaseWarningEnabled;
+	}
+
+	public int getBmsirArenaNotificationSeVolume() {
+		bmsirArenaNotificationSeVolume = Math.max(
+				0,
+				Math.min(100, bmsirArenaNotificationSeVolume)
+		);
+		return bmsirArenaNotificationSeVolume;
+	}
+
+	public void setBmsirArenaNotificationSeVolume(
+			int bmsirArenaNotificationSeVolume
+	) {
+		this.bmsirArenaNotificationSeVolume = Math.max(
+				0,
+				Math.min(100, bmsirArenaNotificationSeVolume)
+		);
 	}
 
 	public boolean isBmsirArenaMuteChat() {

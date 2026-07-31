@@ -26,12 +26,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.7-dev", Version.getArenaClientVersion());
+        assertEquals("0.4.0-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.7-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.0-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -51,6 +51,11 @@ class BMSIRArenaClientTest {
         assertFalse(config.isBmsirArenaMuteChat());
         assertFalse(config.isBmsirArenaAlwaysReady());
         assertEquals(0, config.getBmsirArenaGraphHighlight());
+        assertTrue(config.isBmsirArenaPresentationOverlayEnabled());
+        assertTrue(config.isBmsirArenaCountdownSeEnabled());
+        assertTrue(config.isBmsirArenaStartSeEnabled());
+        assertTrue(config.isBmsirArenaPhaseWarningEnabled());
+        assertEquals(100, config.getBmsirArenaNotificationSeVolume());
         assertEquals("all", config.getBmsirArenaNominationPolicy());
         assertEquals("single", config.getBmsirArenaSeriesFormat());
         assertEquals(2, config.getBmsirArenaFirstToWins());
@@ -71,6 +76,10 @@ class BMSIRArenaClientTest {
         assertEquals(5, config.getBmsirArenaFirstToWins());
         config.setBmsirArenaGraphHighlight(99);
         assertEquals(1, config.getBmsirArenaGraphHighlight());
+        config.setBmsirArenaNotificationSeVolume(999);
+        assertEquals(100, config.getBmsirArenaNotificationSeVolume());
+        config.setBmsirArenaNotificationSeVolume(-1);
+        assertEquals(0, config.getBmsirArenaNotificationSeVolume());
     }
 
     @Test

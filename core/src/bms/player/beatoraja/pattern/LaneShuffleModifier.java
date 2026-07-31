@@ -183,6 +183,44 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 		}
 	}
 
+	/**
+	 * 標準RANDOMのseed結果を維持したまま、先頭ソースレーンだけを指定先へ置く。
+	 */
+	public static final class OneBassLaneRandomShuffleModifier
+			extends LaneRandomShuffleModifier {
+		private final int targetLane;
+
+		public OneBassLaneRandomShuffleModifier(int player, int targetLane) {
+			super(player, false);
+			this.targetLane = targetLane;
+		}
+
+		@Override
+		protected int[] makeRandom(int[] keys, BMSModel model) {
+			int[] result = super.makeRandom(keys, model);
+			if (
+					keys.length == 0
+							|| IntStream.of(keys).noneMatch(lane -> lane == targetLane)
+			) {
+				return result;
+			}
+			int sourceLane = keys[0];
+			int sourceDestination = -1;
+			for (int destination : keys) {
+				if (result[destination] == sourceLane) {
+					sourceDestination = destination;
+					break;
+				}
+			}
+			if (sourceDestination >= 0 && sourceDestination != targetLane) {
+				int swap = result[targetLane];
+				result[targetLane] = result[sourceDestination];
+				result[sourceDestination] = swap;
+			}
+			return result;
+		}
+	}
+
 	public static class PlayerFlipModifier extends LaneShuffleModifier {
 
 		public PlayerFlipModifier() {
@@ -394,4 +432,3 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 		}
 	}
 }
-

@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.3.7-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.0-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -12,6 +12,12 @@ the lowest disabled player's peak remains the guard. It also includes named
 public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
+
+Version `0.4.0-dev` also adds ordinary-play LR2 one-bass RANDOM input,
+READY-time start-chart previews, Lua play-skin accessors for the live
+HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
+SP/DP random-placement browser view for OBS, progressive CPU score graphs,
+disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
 
 ## Enabling
 
@@ -68,7 +74,16 @@ The normal and compact overlays use one persistent phase banner. It emphasizes
 the action required now, shows server-clock remaining seconds for fill,
 nomination, option selection, chart loading, and synchronized start, and keeps
 the selected chart's KEY count plus SINGLE/DOUBLE PLAY visible in the same
-panel. The older separate four-second KEY popup is not used.
+panel. A separate prominent banner can show MATCHING, MATCH FOUND, song and
+option selection, loading/READY progress, and the authoritative synchronized
+3/2/1/START transition. Its sounds are de-duplicated per match and countdown
+second, do not replay elapsed seconds after reconnect or clock correction, and
+fall back to existing sound-set files when Arena-specific files are absent.
+The settings tab independently controls that banner, countdown/start sounds,
+10/5-second warnings, and notification volume. These presentation states only
+read the existing server deadlines and start release; they never release play
+or alter options, input, score, or replay state. The older separate four-second
+KEY popup is not used.
 All phase countdowns use the normal color above ten seconds, yellow from ten
 through six, and red from five through zero. The Manual tab renders only
 bounded structured text received from the Arena service and caches the latest
@@ -105,9 +120,11 @@ and durable match history.
   the sole active real Arena client. The CPU selects from the highest official
   normal/発狂 band the player owns at or below the player's current rated
   ceiling. Its final EX SCORE is selected once from inclusive AA through MAX
-  before play and is shown as a fixed target from the start. A human
+  before play, but only a deterministic monotonic current score is shown as
+  the human progresses; the selected final value is revealed at completion. A human
   win/loss/tie changes only that human by `+1`/`-1`/`0`; the CPU has no rating
-  or match count. A current CPU match finishes normally if another human
+  or match count, and the CPU series does not increment the human's match
+  count. A current CPU match finishes normally if another human
   appears, but no new CPU match starts while both humans remain active.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
@@ -191,6 +208,31 @@ and durable match history.
   zero-score forfeit and stops automatic entry. Entering the normal result
   screen is not an exit and leaves time for the final packet to be accepted.
 
+## Ordinary-play and skin additions
+
+- During ordinary PLAY with standard RANDOM, hold START and exactly one
+  playable key while the chart is decided to place the first source key on
+  that destination. DP reads each side independently. It is disabled for
+  replay, FLIP, nonstandard randoms, and both legacy/new Arena states; replay
+  files store the resolved destination so playback is stable.
+- `bmsir-helper/random_pattern_dp.html` is extracted next to the atomic
+  `current.json` snapshot after a chart placement is resolved. Add that local
+  HTML file as an OBS browser source. The last SP/DP placement remains visible
+  through select, play, and result scenes.
+- READY shows a cached static preview of the first two measures by default.
+  PlayConfig keeps `startHerePreviewEnabled`,
+  `startHerePreviewMeasures` (1--8), and the bounded per-side note cap.
+- Lua play skins can call `main_state.play_hispeed_margin()` and
+  `main_state.set_play_hispeed_margin(value)`;
+  `main_state.start_here_preview_enabled()` /
+  `set_start_here_preview_enabled(boolean)` and
+  `main_state.start_here_preview_measures()` /
+  `set_start_here_preview_measures(value)`; and
+  `main_state.play_key_fast(side)`, `play_key_slow(side)`,
+  `play_scratch_fast(side)`, or `play_scratch_slow(side)`. Side is `1` or
+  `2`; direction flags use the most recent 500 ms. An optional second
+  duration argument is clamped to 50--2000 ms.
+
 ## Build
 
 Use a JDK 17 distribution that includes JavaFX:
@@ -203,6 +245,17 @@ The server release gate checks both Arena protocol release and build identity.
 That gate controls supported distribution; server-side score/state validation
 remains necessary because an open-source client identity can be imitated.
 
+The source tree also contains `arena-launcher/`, a Tauri 2 launcher for Windows
+x64 and macOS arm64. It preserves unknown INI fields and layout, accepts only
+Java 17, blocks duplicate BMS-IR plugin jars, verifies canonical Ed25519 release
+manifests and every artifact hash before replacement, and rolls back a failed
+transaction. Its signed Markdown release notes are rendered without executing
+release HTML. A verified staged launcher can restart as its own short-lived
+update helper and relaunch after replacement. CI outputs are explicitly
+unsigned validation artifacts; official launcher publication remains blocked
+until Authenticode and Developer ID/notarization credentials plus the reviewed
+manifest public key are available.
+
 Build the distributable fat jar with an explicit target platform and
 architecture. For example, the macOS Apple Silicon canary is built with:
 
@@ -213,7 +266,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.3.7-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.0-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

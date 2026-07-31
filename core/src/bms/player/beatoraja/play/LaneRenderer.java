@@ -48,6 +48,7 @@ public class LaneRenderer {
 
 	private final PlayerConfig config;
 	private PlayConfig playconfig;
+	private StartHerePreviewData startHerePreview;
 
 	private int currentduration;
 
@@ -149,6 +150,11 @@ public class LaneRenderer {
 			basehispeed = playconfig.getHispeed();
 		}
 		this.hispeedmargin = playconfig.getHispeedMargin();
+		this.startHerePreview = StartHerePreviewData.build(
+				model,
+				playconfig.getStartHerePreviewMeasures(),
+				playconfig.getStartHerePreviewMaxNotes()
+		);
 	}
 
 	public float getHispeed() {
@@ -174,6 +180,14 @@ public class LaneRenderer {
 
 	public void setHispeedmargin(float hispeedmargin) {
 		this.hispeedmargin = hispeedmargin;
+	}
+
+	public void rebuildStartHerePreview() {
+		this.startHerePreview = StartHerePreviewData.build(
+				model,
+				playconfig.getStartHerePreviewMeasures(),
+				playconfig.getStartHerePreviewMaxNotes()
+		);
 	}
 
 	public boolean isEnableLift() {
@@ -253,6 +267,21 @@ public class LaneRenderer {
 			offsetY += offset.y;
 			offsetW += offset.w;
 			offsetH += offset.h;
+		}
+
+		if (
+				main.getState() == BMSPlayer.STATE_READY
+						&& playconfig.isStartHerePreviewEnabled()
+						&& drawStartHerePreview(
+								sprite,
+								lanes,
+								offsetX,
+								offsetY,
+								offsetW,
+								offsetH
+						)
+		) {
+			return;
 		}
 		
 		time = (main.timer.isTimerOn(TIMER_PLAY) ? time - main.timer.getTimer(TIMER_PLAY) : 
@@ -656,6 +685,52 @@ public class LaneRenderer {
 				}
 			}
 		}
+	}
+
+	private boolean drawStartHerePreview(
+			SkinObjectRenderer sprite,
+			SkinLane[] lanes,
+			float offsetX,
+			float offsetY,
+			float offsetW,
+			float offsetH
+	) {
+		if (
+				startHerePreview == null
+						|| !startHerePreview.isValid()
+						|| lanes == null
+						|| lanes.length != startHerePreview.laneCount()
+		) {
+			return false;
+		}
+
+		sprite.setBlend(0);
+		sprite.setType(SkinObjectRenderer.TYPE_NORMAL);
+		for (int measure = 1; measure < startHerePreview.measures(); measure++) {
+			float rate = measure / (float) startHerePreview.measures();
+			for (Rectangle group : skin.getLaneGroupRegion()) {
+				float lineY = group.y + group.height * rate;
+				sprite.setColor(1f, 1f, 1f, 0.2f);
+				sprite.draw(main.getImage(IMAGE_WHITE), group.x, lineY, group.width, 1f);
+			}
+		}
+
+		for (StartHerePreviewData.PreviewNote previewNote : startHerePreview.notes()) {
+			SkinLane lane = lanes[previewNote.lane()];
+			if (lane.noteImage == null) {
+				return false;
+			}
+			float rate = (float) (previewNote.section() / startHerePreview.measures());
+			float x = lane.region.x + offsetX;
+			float y = lane.region.y + lane.region.height * rate + offsetY - offsetH / 2f;
+			float width = lane.region.width + offsetW;
+			float height = lane.scale + offsetH;
+			float alpha = previewNote.firstChord() ? 1f : 0.55f;
+			sprite.setColor(1f, 1f, 1f, alpha);
+			sprite.draw(lane.noteImage, x, y, width, height);
+		}
+		sprite.setColor(Color.WHITE);
+		return true;
 	}
 
 	public double getNowBPM() {

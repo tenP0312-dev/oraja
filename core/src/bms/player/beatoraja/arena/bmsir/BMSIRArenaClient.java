@@ -8,6 +8,7 @@ import bms.player.beatoraja.MainState.MainStateType;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ReplayData;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.SystemSoundManager;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.TableDataAccessor;
 import bms.player.beatoraja.Version;
@@ -56,6 +57,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Central BMS-IR Arena connection.
@@ -82,6 +84,8 @@ public final class BMSIRArenaClient {
     private static final long NOMINATION_SELECTION_RETRY_MILLIS = 100L;
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
+    private static final AtomicBoolean CRASH_HANDLER_INSTALLED =
+            new AtomicBoolean();
 
     private static volatile MainController main;
     private static volatile ArenaSocket socket;
@@ -226,6 +230,7 @@ public final class BMSIRArenaClient {
     }
 
     public static synchronized void initialize(MainController controller) {
+        installCrashHandler();
         shutdown();
         main = controller;
         initialized = true;
@@ -273,6 +278,53 @@ public final class BMSIRArenaClient {
             );
             ImGuiNotify.error("BMS-IR Arena: 接続先が不正です");
         }
+    }
+
+    private static void installCrashHandler() {
+        if (!CRASH_HANDLER_INSTALLED.compareAndSet(false, true)) {
+            return;
+        }
+        Thread.UncaughtExceptionHandler previous =
+                Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            if (reserved || arenaPlayPending || arenaPlayActive) {
+                BMSIRArenaLog.event(
+                        "arena_uncaught_exception",
+                        "thread", thread == null ? "" : thread.getName(),
+                        "error", error == null
+                                ? ""
+                                : error.getClass().getName(),
+                        "message", error == null ? "" : error.getMessage(),
+                        "match_id", currentMatchId,
+                        "play_pending", arenaPlayPending,
+                        "play_active", arenaPlayActive
+                );
+            }
+            if (previous != null) {
+                previous.uncaughtException(thread, error);
+            } else if (error != null) {
+                error.printStackTrace(System.err);
+            }
+        });
+    }
+
+    public static void tracePlayPhase(String phase, BMSPlayer player) {
+        if (!reserved && !arenaPlayPending && !arenaPlayActive) {
+            return;
+        }
+        BMSIRArenaLog.event(
+                "arena_play_phase",
+                "phase", phase,
+                "match_id", currentMatchId,
+                "play_mode", player == null
+                        || player.resource == null
+                        || player.resource.getBMSModel() == null
+                        || player.resource.getBMSModel().getMode() == null
+                        ? null
+                        : player.resource.getBMSModel().getMode().id,
+                "play_pending", arenaPlayPending,
+                "play_active", arenaPlayActive
+        );
     }
 
     public static synchronized void shutdown() {
@@ -369,6 +421,10 @@ public final class BMSIRArenaClient {
 
     public static boolean isArenaPlayActive() {
         return arenaPlayActive;
+    }
+
+    public static boolean blocksLocalOneBass() {
+        return connected || reserved || arenaPlayActive;
     }
 
     public static boolean ignoresArenaPreloadInputDelay() {
@@ -866,6 +922,103 @@ public final class BMSIRArenaClient {
             return startSecondsRemaining();
         }
         return 0L;
+    }
+
+    static ArenaPresentationState presentationState() {
+        if (!initialized || main == null || !main.getPlayerConfig().isBmsirArenaEnabled()) {
+            return ArenaPresentationState.idle();
+        }
+        JsonNode match = currentMatchView();
+        String matchState = match.path("state").asText("");
+        ArenaPresentationState.Phase phase;
+        String title;
+        String detail = presentationOpponentSummary(match);
+        long seconds = 0L;
+        int readyCount = 0;
+        int requiredCount = 0;
+
+        if (isNominationOpen()) {
+            phase = ArenaPresentationState.Phase.SONG_SELECTION;
+            title = "SONG SELECTION";
+            seconds = nominationSecondsRemaining();
+            detail = currentPhaseAction();
+        } else if (isOptionSelectionOpen()) {
+            phase = ArenaPresentationState.Phase.OPTION_SELECT;
+            title = "OPTION SELECT";
+            seconds = optionSecondsRemaining();
+            readyCount = optionReadyCount();
+            requiredCount = optionPlayerCount();
+            detail = currentPhaseAction();
+        } else if ("loading".equals(matchState)) {
+            phase = ArenaPresentationState.Phase.LOADING;
+            title = "LOADING CHART…";
+            seconds = loadSecondsRemaining();
+            readyCount = match.path("ready_count").asInt(0);
+            requiredCount = match.path("player_count").asInt(0);
+            detail = requiredCount > 0
+                    ? "READY " + readyCount + " / " + requiredCount
+                    : currentPhaseAction();
+        } else if ("countdown".equals(matchState)) {
+            phase = ArenaPresentationState.Phase.COUNTDOWN;
+            seconds = startSecondsRemaining();
+            title = seconds >= 1L && seconds <= 3L
+                    ? Long.toString(seconds)
+                    : "READY";
+            detail = "全員の開始時刻を同期しています";
+        } else if ("playing".equals(matchState) || arenaPlayActive) {
+            phase = ArenaPresentationState.Phase.PLAYING;
+            title = "";
+        } else if (isShowingCompletedResult()) {
+            phase = ArenaPresentationState.Phase.RESULT;
+            title = "";
+        } else if (!currentMatchId.isBlank() && reserved) {
+            phase = ArenaPresentationState.Phase.MATCH_FOUND;
+            title = "MATCH FOUND";
+        } else if ("queued".equals(queueStatus) || isFillWaiting()) {
+            phase = ArenaPresentationState.Phase.MATCHING;
+            title = "MATCHING…";
+            seconds = isFillWaiting() ? fillSecondsRemaining() : 0L;
+            detail = isFillWaiting()
+                    ? fillPlayerCount() + " / " + fillMaxPlayers() + "人"
+                    : "対戦相手を待っています";
+        } else {
+            return ArenaPresentationState.idle();
+        }
+        return new ArenaPresentationState(
+                phase,
+                title,
+                detail,
+                seconds,
+                readyCount,
+                requiredCount,
+                currentMatchId,
+                arenaPlayActive && isArenaStartReleased()
+        );
+    }
+
+    private static String presentationOpponentSummary(JsonNode match) {
+        if (!match.path("players").isArray()) {
+            return "";
+        }
+        List<String> opponents = new ArrayList<>();
+        for (JsonNode player : match.path("players")) {
+            if (player.path("player_id").asInt() != currentPlayerId) {
+                String name = player.path("name").asText("").trim();
+                if (!name.isBlank()) {
+                    opponents.add(name);
+                }
+            }
+        }
+        return opponents.isEmpty() ? "" : "VS " + String.join(" / ", opponents);
+    }
+
+    static void playPresentationSound(
+            SystemSoundManager.SoundType sound,
+            float volume
+    ) {
+        if (main != null && sound != null) {
+            main.getSoundManager().play(sound, false, volume);
+        }
     }
 
     static SongData currentNominationSong() {

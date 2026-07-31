@@ -115,11 +115,29 @@ public final class BMSIRArenaOverlay {
 
     public static void render() {
         if (!BMSIRArenaClient.shouldShowOverlay()) {
+            ArenaPresentationController.update(
+                    ArenaPresentationState.idle(),
+                    null,
+                    null
+            );
             confirmWithdrawal = false;
             return;
         }
         PlayerConfig config = BMSIRArenaClient.playerConfig();
-        if (config == null || config.getBmsirArenaOverlayMode() == 2) {
+        if (config == null) {
+            return;
+        }
+        ArenaPresentationController.update(
+                BMSIRArenaClient.presentationState(),
+                config,
+                BMSIRArenaClient::playPresentationSound
+        );
+        if (config.isBmsirArenaPresentationOverlayEnabled()) {
+            renderProminentArenaOverlay(
+                    ArenaPresentationController.visibleState()
+            );
+        }
+        if (config.getBmsirArenaOverlayMode() == 2) {
             return;
         }
         if (config.getBmsirArenaOverlayMode() == 1) {
@@ -175,6 +193,70 @@ public final class BMSIRArenaOverlay {
             ImGui.endTabBar();
         }
         ImGui.endChild();
+        ImGui.end();
+    }
+
+    private static void renderProminentArenaOverlay(
+            ArenaPresentationState state
+    ) {
+        if (state == null || !state.isActive()) {
+            return;
+        }
+        ImGui.setNextWindowPos(
+                ImGuiRenderer.windowWidth / 2.0f,
+                Math.max(90.0f, ImGuiRenderer.windowHeight * 0.2f),
+                ImGuiCond.Always,
+                0.5f,
+                0.5f
+        );
+        ImGui.setNextWindowBgAlpha(0.93f);
+        int flags = ImGuiWindowFlags.AlwaysAutoResize
+                | ImGuiWindowFlags.NoDecoration
+                | ImGuiWindowFlags.NoInputs
+                | ImGuiWindowFlags.NoNav
+                | ImGuiWindowFlags.NoFocusOnAppearing;
+        if (!ImGui.begin(
+                "##bmsir-arena-presentation-" + currentLayoutKey(),
+                flags
+        )) {
+            ImGui.end();
+            return;
+        }
+        int color = switch (state.phase()) {
+            case COUNTDOWN -> "START!".equals(state.title())
+                    ? ImColor.rgb(85, 227, 161)
+                    : ImColor.rgb(255, 190, 98);
+            case SONG_SELECTION, OPTION_SELECT ->
+                    ImColor.rgb(85, 165, 255);
+            case LOADING -> ImColor.rgb(154, 175, 198);
+            default -> ImColor.rgb(237, 244, 252);
+        };
+        ImGui.setWindowFontScale(
+                state.phase() == ArenaPresentationState.Phase.COUNTDOWN
+                        ? 3.0f
+                        : 2.0f
+        );
+        ImGui.textColored(color, state.title());
+        ImGui.setWindowFontScale(1.0f);
+        if (!state.detail().isBlank()) {
+            ImGui.textWrapped(state.detail());
+        }
+        if (state.phase() != ArenaPresentationState.Phase.COUNTDOWN
+                && state.secondsRemaining() > 0L) {
+            ImGui.textColored(
+                    phaseCountdownColor(state.secondsRemaining()),
+                    phaseCountdownText(state.secondsRemaining())
+            );
+        }
+        if (state.requiredCount() > 0
+                && state.phase() != ArenaPresentationState.Phase.LOADING) {
+            ImGui.text(
+                    "READY "
+                            + state.readyCount()
+                            + " / "
+                            + state.requiredCount()
+            );
+        }
         ImGui.end();
     }
 
@@ -626,7 +708,7 @@ public final class BMSIRArenaOverlay {
             drawCenteredText(drawList, "#" + placement, centerX, labelY, columnWidth, color);
             drawCenteredText(
                     drawList,
-                    player.path("name").asText(Integer.toString(player.path("player_id").asInt())),
+                    graphPlayerName(player),
                     centerX,
                     labelY + 18.0f,
                     columnWidth - 4.0f,
@@ -1081,6 +1163,10 @@ public final class BMSIRArenaOverlay {
                 String name = player.path("name").asText(
                         Integer.toString(player.path("player_id").asInt())
                 );
+                if (!player.path("connected").asBoolean(true)
+                        && !player.path("finished").asBoolean(false)) {
+                    name += "（再接続待ち）";
+                }
                 if (player.path("player_id").asInt() == BMSIRArenaClient.currentPlayerId()) {
                     name = "> " + name;
                 }
@@ -1363,6 +1449,17 @@ public final class BMSIRArenaOverlay {
             case "max_combo" -> player.path("max_combo").asInt();
             default -> player.path("exscore").asInt();
         };
+    }
+
+    private static String graphPlayerName(JsonNode player) {
+        String name = player.path("name").asText(
+                Integer.toString(player.path("player_id").asInt())
+        );
+        if (!player.path("connected").asBoolean(true)
+                && !player.path("finished").asBoolean(false)) {
+            return name + "（再接続待ち）";
+        }
+        return name;
     }
 
     private static List<JsonNode> sortedPlayers(JsonNode match) {
@@ -2337,6 +2434,41 @@ public final class BMSIRArenaOverlay {
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
         if (ImGui.checkbox("プレイ中もマウスカーソルを表示", cursor)) {
             config.setBmsirArenaShowCursor(cursor.get());
+        }
+        ImBoolean presentation = new ImBoolean(
+                config.isBmsirArenaPresentationOverlayEnabled()
+        );
+        if (ImGui.checkbox("重要フェーズを画面中央に大きく表示", presentation)) {
+            config.setBmsirArenaPresentationOverlayEnabled(
+                    presentation.get()
+            );
+        }
+        ImBoolean countdownSe = new ImBoolean(
+                config.isBmsirArenaCountdownSeEnabled()
+        );
+        if (ImGui.checkbox("Arena 3・2・1カウントSE", countdownSe)) {
+            config.setBmsirArenaCountdownSeEnabled(countdownSe.get());
+        }
+        ImBoolean startSe = new ImBoolean(config.isBmsirArenaStartSeEnabled());
+        if (ImGui.checkbox("Arena開始SE", startSe)) {
+            config.setBmsirArenaStartSeEnabled(startSe.get());
+        }
+        ImBoolean phaseWarning = new ImBoolean(
+                config.isBmsirArenaPhaseWarningEnabled()
+        );
+        if (ImGui.checkbox("選曲・OP残り10秒／5秒の警告SE", phaseWarning)) {
+            config.setBmsirArenaPhaseWarningEnabled(phaseWarning.get());
+        }
+        int[] notificationVolume = {
+                config.getBmsirArenaNotificationSeVolume()
+        };
+        if (ImGui.sliderInt(
+                "Arena通知SE音量",
+                notificationVolume,
+                0,
+                100
+        )) {
+            config.setBmsirArenaNotificationSeVolume(notificationVolume[0]);
         }
         ImBoolean unrestricted = new ImBoolean(
                 config.isBmsirArenaUnrestrictedRating()

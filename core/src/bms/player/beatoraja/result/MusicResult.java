@@ -21,6 +21,7 @@ import bms.player.beatoraja.MainController.IRStatus;
 import bms.player.beatoraja.MainController.IRSendStatus;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.skin.SkinType;
@@ -41,6 +42,7 @@ public class MusicResult extends AbstractResult {
 	}
 
 	public void create() {
+		BMSIROrajaHelperBridge.publishScene("result");
 		for(int i = 0;i < REPLAY_SIZE;i++) {
 			saveReplay[i] = main.getPlayDataAccessor().existsReplayData(resource.getBMSModel(),
 					resource.getPlayerConfig().getLnmode(), i) ? ReplayStatus.EXIST : ReplayStatus.NOT_EXIST ;			

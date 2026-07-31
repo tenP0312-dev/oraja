@@ -18,6 +18,7 @@ import com.badlogic.gdx.utils.*;
 
 import bms.model.Mode;
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.Config.SongPreview;
 import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
@@ -162,6 +163,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void create() {
+		BMSIROrajaHelperBridge.publishScene("select");
 		main.getSoundManager().shuffle();
 
 		play = null;

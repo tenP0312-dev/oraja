@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
+import bms.player.beatoraja.pattern.LaneShuffleModifier.OneBassLaneRandomShuffleModifier;
+import bms.player.beatoraja.pattern.OneBassPattern;
 import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
@@ -115,6 +117,7 @@ public class BMSPlayer extends MainState {
 		super(main);
 		BMSIRArenaClient.enforceArenaOptions();
 		this.model = resource.getBMSModel();
+		BMSIRArenaClient.tracePlayPhase("constructor_begin", this);
 		BMSPlayerMode autoplay = resource.getPlayMode();
 		PlayerConfig config = resource.getPlayerConfig();
 
@@ -389,8 +392,45 @@ public class BMSPlayer extends MainState {
 				playinfo.randomoption2 = rd.randomoption2;
 				playinfo.randomoption2seed = rd.randomoption2seed;
 				playinfo.doubleoption = rd.doubleoption;
+				playinfo.oneBassTarget = rd.oneBassTarget;
+				playinfo.oneBassTarget2 = rd.oneBassTarget2;
 			}
 			BMSIRArenaClient.applySynchronizedRandomSeed(playinfo);
+
+			boolean oneBassAllowed =
+					rd == null
+							&& autoplay.mode == BMSPlayerMode.Mode.PLAY
+							&& playinfo.doubleoption != 1
+							&& !BMSIRArenaClient.blocksLocalOneBass()
+							&& !Client.connected.get();
+			if (rd == null && oneBassAllowed) {
+				if (
+						playinfo.randomoption
+								== bms.player.beatoraja.pattern.Random.RANDOM.ordinal()
+				) {
+					playinfo.oneBassTarget = OneBassPattern.captureTarget(
+							model.getMode(),
+							0,
+							main.getInputProcessor().startPressed(),
+							main.getInputProcessor()::getKeyState
+					);
+				}
+				if (
+						model.getMode().player == 2
+								&& playinfo.randomoption2
+								== bms.player.beatoraja.pattern.Random.RANDOM.ordinal()
+				) {
+					playinfo.oneBassTarget2 = OneBassPattern.captureTarget(
+							model.getMode(),
+							1,
+							main.getInputProcessor().startPressed(),
+							main.getInputProcessor()::getKeyState
+					);
+				}
+			} else if (rd == null) {
+				playinfo.oneBassTarget = -1;
+				playinfo.oneBassTarget2 = -1;
+			}
 
 			Array<PatternModifier> mods = new Array<PatternModifier>();
 			// DP譜面オプション
@@ -400,7 +440,17 @@ public class BMSPlayer extends MainState {
 				}
 				logger.info("譜面オプション(DP) :  {}", playinfo.doubleoption);
 
-				PatternModifier pm = PatternModifier.create(playinfo.randomoption2, 1, model.getMode(), config);
+				PatternModifier pm = playinfo.oneBassTarget2 >= 0
+						? new OneBassLaneRandomShuffleModifier(
+								1,
+								playinfo.oneBassTarget2
+						)
+						: PatternModifier.create(
+								playinfo.randomoption2,
+								1,
+								model.getMode(),
+								config
+						);
 				if(playinfo.randomoption2seed != -1) {
 					pm.setSeed(playinfo.randomoption2seed);
 				} else {
@@ -411,7 +461,17 @@ public class BMSPlayer extends MainState {
 			}
 
 			// SP譜面オプション
-			PatternModifier pm = PatternModifier.create(playinfo.randomoption, 0, model.getMode(), config);
+			PatternModifier pm = playinfo.oneBassTarget >= 0
+					? new OneBassLaneRandomShuffleModifier(
+							0,
+							playinfo.oneBassTarget
+					)
+					: PatternModifier.create(
+							playinfo.randomoption,
+							0,
+							model.getMode(),
+							config
+					);
 			if(playinfo.randomoptionseed != -1) {
 				pm.setSeed(playinfo.randomoptionseed);
 			} else {
@@ -474,13 +534,14 @@ public class BMSPlayer extends MainState {
 			}
 //			playinfo.pattern = pattern.toArray(new PatternModifyLog[pattern.size()]);
 			playinfo.laneShufflePattern = patternArray;
-			BMSIROrajaHelperBridge.publishArenaPlacement(model, playinfo);
+			BMSIROrajaHelperBridge.publishPlacement(model, playinfo);
 
 		}
 
 		// Pattern/replay modifiers can create CN/HCN after the initial decode.
 		// Normalize once more immediately before gameplay is initialized.
 		BMSIRLongNotePolicy.normalizeModel(model);
+		BMSIRArenaClient.tracePlayPhase("pattern_ready", this);
 
 		if(HSReplay != null && HSReplay.config != null) {
 			//保存されたHSオプションログからHSオプション再現
@@ -534,6 +595,7 @@ public class BMSPlayer extends MainState {
 	}
 
 	public void create() {
+		BMSIRArenaClient.tracePlayPhase("create_begin", this);
 		final BMSPlayerMode autoplay = resource.getPlayMode();
 		laneProperty = new LaneProperty(model.getMode());
 		keysound = new KeySoundProcessor(this);
@@ -543,6 +605,7 @@ public class BMSPlayer extends MainState {
 		PlayerConfig config = resource.getPlayerConfig();
 
 		loadSkin(getSkinType());
+		BMSIRArenaClient.tracePlayPhase("skin_loaded", this);
 
 		final SystemSoundManager.SoundType[] guideses = {GUIDESE_PG,GUIDESE_GR,GUIDESE_GD,GUIDESE_BD,GUIDESE_PR,GUIDESE_MS};
 		for(int i = 0;i < 6;i++) {
@@ -565,6 +628,7 @@ public class BMSPlayer extends MainState {
 			input.setEnable(false);
 		}
 		lanerender = new LaneRenderer(this, model);
+		BMSIRArenaClient.tracePlayPhase("lane_renderer_ready", this);
 		for (CourseData.CourseDataConstraint i : resource.getConstraint()) {
 			if (i == NO_SPEED) {
 				control.setEnableControl(false);
@@ -573,6 +637,7 @@ public class BMSPlayer extends MainState {
 		}
 
 		judge.init(model, resource);
+		BMSIRArenaClient.tracePlayPhase("judge_ready", this);
 
 		rhythm = new RhythmTimerProcessor(model,
 				(getSkin() instanceof PlaySkin) ? ((PlaySkin) getSkin()).getNoteExpansionRate()[0] != 100 || ((PlaySkin) getSkin()).getNoteExpansionRate()[1] != 100 : false);
@@ -1048,6 +1113,15 @@ public class BMSPlayer extends MainState {
 		pc.setLanecover(lanerender.getLanecover());
 		pc.setLift(lanerender.getLiftRegion());
 		pc.setHidden(lanerender.getHiddenCover());
+		pc.setStartHerePreviewEnabled(
+				lanerender.getPlayConfig().isStartHerePreviewEnabled()
+		);
+		pc.setStartHerePreviewMeasures(
+				lanerender.getPlayConfig().getStartHerePreviewMeasures()
+		);
+		pc.setStartHerePreviewMaxNotes(
+				lanerender.getPlayConfig().getStartHerePreviewMaxNotes()
+		);
 	}
 
 	public ScoreData createScoreData() {
@@ -1103,6 +1177,8 @@ public class BMSPlayer extends MainState {
 		replay.randomoption2 = playinfo.randomoption2;
 		replay.randomoption2seed = playinfo.randomoption2seed;
 		replay.doubleoption = playinfo.doubleoption;
+		replay.oneBassTarget = playinfo.oneBassTarget;
+		replay.oneBassTarget2 = playinfo.oneBassTarget2;
 		replay.config = replayConfig;
 
 		score.setPassnotes(judge.getPastNotes());

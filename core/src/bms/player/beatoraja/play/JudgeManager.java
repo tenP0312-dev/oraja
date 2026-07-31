@@ -3,6 +3,7 @@ package bms.player.beatoraja.play;
 import static bms.player.beatoraja.skin.SkinProperty.*;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import bms.player.beatoraja.arena.client.Client;
@@ -125,6 +126,15 @@ public class JudgeManager {
      */
     private long[] recentJudges = new long[100];
     private long[] microrecentJudges = new long[100];
+    private static final int RECENT_DIRECTION_NONE = 0;
+    private static final int RECENT_DIRECTION_FAST = -1;
+    private static final int RECENT_DIRECTION_SLOW = 1;
+    private static final int RECENT_DIRECTION_DURATION_MIN = 50;
+    private static final int RECENT_DIRECTION_DURATION_MAX = 2000;
+    private final int[] recentKeyDirection = new int[3];
+    private final long[] recentKeyDirectionNanos = new long[3];
+    private final int[] recentScratchDirection = new int[3];
+    private final long[] recentScratchDirectionNanos = new long[3];
     /**
      * 判定差時間のヘッド
      */
@@ -715,6 +725,12 @@ public class JudgeManager {
             recentJudgesIndex = (recentJudgesIndex + 1) % recentJudges.length;
             recentJudges[recentJudgesIndex] = mfast / 1000;
             microrecentJudges[recentJudgesIndex] = mfast;
+            updateRecentDirection(
+                    state.player,
+                    state.sckey >= 0,
+                    mfast,
+                    System.nanoTime()
+            );
         }
 
         if (combocond[judge] && judge < 5) {
@@ -777,6 +793,97 @@ public class JudgeManager {
 
     public long[] getRecentJudges() {
         return recentJudges;
+    }
+
+    void updateRecentDirection(
+            int player,
+            boolean scratch,
+            long duration,
+            long nowNanos
+    ) {
+        if (player < 0 || player >= recentKeyDirection.length) {
+            return;
+        }
+        int direction = duration < 0
+                ? RECENT_DIRECTION_FAST
+                : duration > 0 ? RECENT_DIRECTION_SLOW : RECENT_DIRECTION_NONE;
+        if (scratch) {
+            recentScratchDirection[player] = direction;
+            recentScratchDirectionNanos[player] = nowNanos;
+        } else {
+            recentKeyDirection[player] = direction;
+            recentKeyDirectionNanos[player] = nowNanos;
+        }
+    }
+
+    public boolean isRecentKeyFast(int side, int durationMillis) {
+        return isRecentDirection(
+                side,
+                durationMillis,
+                RECENT_DIRECTION_FAST,
+                recentKeyDirection,
+                recentKeyDirectionNanos,
+                System.nanoTime()
+        );
+    }
+
+    public boolean isRecentKeySlow(int side, int durationMillis) {
+        return isRecentDirection(
+                side,
+                durationMillis,
+                RECENT_DIRECTION_SLOW,
+                recentKeyDirection,
+                recentKeyDirectionNanos,
+                System.nanoTime()
+        );
+    }
+
+    public boolean isRecentScratchFast(int side, int durationMillis) {
+        return isRecentDirection(
+                side,
+                durationMillis,
+                RECENT_DIRECTION_FAST,
+                recentScratchDirection,
+                recentScratchDirectionNanos,
+                System.nanoTime()
+        );
+    }
+
+    public boolean isRecentScratchSlow(int side, int durationMillis) {
+        return isRecentDirection(
+                side,
+                durationMillis,
+                RECENT_DIRECTION_SLOW,
+                recentScratchDirection,
+                recentScratchDirectionNanos,
+                System.nanoTime()
+        );
+    }
+
+    static boolean isRecentDirection(
+            int side,
+            int durationMillis,
+            int expectedDirection,
+            int[] directions,
+            long[] timestamps,
+            long nowNanos
+    ) {
+        int player = side - 1;
+        if (
+                player < 0
+                        || player >= directions.length
+                        || directions[player] != expectedDirection
+                        || timestamps[player] <= 0
+        ) {
+            return false;
+        }
+        int clampedDuration = Math.max(
+                RECENT_DIRECTION_DURATION_MIN,
+                Math.min(RECENT_DIRECTION_DURATION_MAX, durationMillis)
+        );
+        long elapsed = nowNanos - timestamps[player];
+        return elapsed >= 0
+                && elapsed <= TimeUnit.MILLISECONDS.toNanos(clampedDuration);
     }
     
     public long[] getMicroRecentJudges() {
