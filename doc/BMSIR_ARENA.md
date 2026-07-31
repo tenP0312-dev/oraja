@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.6-dev` client replaces the separate Endless Dream and beatoraja Arena
+Status: BMS-IR Arena v1 public release. The unified `BMS-IR Arena oraja
+0.4.6` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,7 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.6-dev` adds backup-safe, per-player local synchronization of the
+Version `0.4.6` adds backup-safe, per-player local synchronization of the
 class/Dan courses received from BMS-IR Primary IR. Version `0.4.5-dev` adds a
 startup `BMS-IR固有設定` tab for one-bass and the
 first-timing preview, persists both switches in the backup-safe BMS-IR
@@ -78,7 +78,7 @@ treated as the same logical modifier. The unmodified F5 menu and its
 BMS-IR-specific settings are stored per player in the allow-listed
 `bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing
 Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
-first-timing preview switches, and 0.4.6-dev adds the Dan local-sync switch.
+first-timing preview switches, and 0.4.6 adds the Dan local-sync switch.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -194,7 +194,7 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   even when colors are hard to distinguish.
 - When only one real player is waiting, the fallback opponent is displayed as
   `CPU` if that unified client supports the server-managed flow and enabled
-  `BOT戦を許可`. The match is created immediately only while that player is
+  `CPU戦を許可`. The match is created immediately only while that player is
   the sole active real Arena client. The CPU selects from the highest official
   normal/発狂 band the player owns at or below the player's current rated
   ceiling. Its final EX SCORE is selected once from inclusive AA through MAX
@@ -368,8 +368,37 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.6-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.6-macos-aarch64.jar
 ```
+
+The public page offers two forms for each supported OS:
+
+- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.68.jar`;
+- Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
+  a Java 21 runtime, distribution-cleared base assets, and launch scripts.
+
+Build the Java-bundled ZIP only from a clean asset source whose redistribution
+terms have been checked. The packager copies only the fixed visual/audio asset
+directories and deliberately excludes player profiles, credentials, score and
+song databases, tables, courses, logs, layouts, downloads, and backups. It
+also verifies Java 21+, the target OS/architecture, the Java legal directory,
+and the exact release filenames:
+
+```bash
+python tools/package_arena_release.py \
+  --platform macos-aarch64 \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.6-macos-aarch64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
+  --base-assets /reviewed/clean-beatoraja-assets \
+  --java-home /reviewed/java-21-home \
+  --output-dir dist \
+  --confirm-base-assets-redistributable
+```
+
+Use `windows-x86-64` with a matching Windows x64 Java 21 runtime for the
+Windows archive. The ZIP contains `release-manifest.json` with the body and
+plugin SHA-256 values. Generated JARs and ZIPs remain release artifacts and
+must not be committed to the source repository.
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
 7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the

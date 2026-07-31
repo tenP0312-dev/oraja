@@ -1,4 +1,4 @@
-# BMS-IR Arena oraja 0.4.6-dev
+# BMS-IR Arena oraja 0.4.6
 
 ## BMS-IR Dan local sync
 

@@ -964,7 +964,7 @@ public final class BMSIRArenaOverlay {
                 || "withdraw_requested".equals(status);
         if (config != null && !entryActive) {
             ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-            if (ImGui.checkbox("BOT戦を許可", allowCpu)) {
+            if (ImGui.checkbox("CPU戦を許可", allowCpu)) {
                 config.setBmsirArenaAllowCpu(allowCpu.get());
             }
             ImGui.sameLine();
@@ -988,8 +988,8 @@ public final class BMSIRArenaOverlay {
         } else if (entryActive) {
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsCpu()
-                            ? "BOT戦: 許可"
-                            : "BOT戦: 無効（有人戦のみ）"
+                            ? "CPU戦: 許可"
+                            : "CPU戦: 無効（有人戦のみ）"
             );
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsHigherSelection()
@@ -2484,7 +2484,7 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.textDisabled("距離のある即時マッチは相手も許可した場合だけ成立します");
         ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-        if (ImGui.checkbox("レートArenaでBOT戦を許可", allowCpu)) {
+        if (ImGui.checkbox("レートArenaでCPU戦を許可", allowCpu)) {
             config.setBmsirArenaAllowCpu(allowCpu.get());
         }
         ImGui.textDisabled("OFFの場合はCPUと組まず、有人が来るまで待機します");
