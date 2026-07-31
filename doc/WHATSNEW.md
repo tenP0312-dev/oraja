@@ -1,3 +1,13 @@
+# BMS-IR Arena oraja 0.4.7
+
+## Continuous CPU waiting matches
+
+- CPU BO2 repeats after a five-second interval while one CPU-enabled player
+  remains in the rated queue. A waiting human opponent takes priority.
+- CPU charts are selected from all owned charts between the player's rated
+  ceiling and five bands below it, inclusive.
+- CPU final EX SCORE now ranges from A through MAX.
+
 # BMS-IR Arena oraja 0.4.6
 
 ## BMS-IR Dan local sync

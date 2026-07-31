@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -26,12 +27,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.6", Version.getArenaClientVersion());
+        assertEquals("0.4.7", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.6"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.7"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -652,19 +653,37 @@ class BMSIRArenaClientTest {
     }
 
     @Test
-    void cpuAlwaysChoosesFromTheHighestOwnedEligibleBand() {
-        SongData low = song("low");
-        SongData highOne = song("high-one");
-        SongData highTwo = song("high-two");
+    void cpuChoosesAcrossTheInclusiveSixBandRange() {
+        SongData below = song("below");
+        SongData floor = song("floor");
+        SongData middle = song("middle");
+        SongData ceiling = song("ceiling");
+        SongData above = song("above");
         Map<Integer, SongData[]> owned = new LinkedHashMap<>();
-        owned.put(5, new SongData[]{low});
-        owned.put(10, new SongData[]{highOne, highTwo});
+        owned.put(4, new SongData[]{below});
+        owned.put(5, new SongData[]{floor});
+        owned.put(7, new SongData[]{middle});
+        owned.put(10, new SongData[]{ceiling});
+        owned.put(11, new SongData[]{above});
 
-        SongData selected = BMSIRArenaClient.highestOwnedCpuChart(owned);
+        SongData[] candidates = BMSIRArenaClient.ownedCpuChartsInRange(
+                owned,
+                5,
+                10
+        );
+        SongData selected = BMSIRArenaClient.randomOwnedCpuChart(
+                owned,
+                5,
+                10
+        );
 
+        assertArrayEquals(
+                new SongData[]{floor, middle, ceiling},
+                candidates
+        );
         assertTrue(
-                selected == highOne || selected == highTwo,
-                "CPU must not fall back while the highest owned band has charts"
+                selected == floor || selected == middle || selected == ceiling,
+                "CPU must choose from every owned chart inside the six-band range"
         );
     }
 

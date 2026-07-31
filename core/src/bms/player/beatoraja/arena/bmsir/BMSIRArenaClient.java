@@ -1456,18 +1456,50 @@ public final class BMSIRArenaClient {
         return result;
     }
 
-    static SongData highestOwnedCpuChart(
-            Map<Integer, SongData[]> ownedByLevel
+    static SongData[] ownedCpuChartsInRange(
+            Map<Integer, SongData[]> ownedByLevel,
+            int minimumBand,
+            int targetBand
     ) {
         if (ownedByLevel == null || ownedByLevel.isEmpty()) {
-            return null;
+            return SongData.EMPTY;
         }
-        int highest = ownedByLevel.keySet().stream()
-                .mapToInt(Integer::intValue)
-                .max()
-                .orElse(-1);
-        SongData[] songs = ownedByLevel.get(highest);
-        if (songs == null || songs.length == 0) {
+        int ceiling = Math.max(
+                1,
+                Math.min(MAX_ARENA_RATING_BAND, targetBand)
+        );
+        int floor = Math.max(1, Math.min(ceiling, minimumBand));
+        Map<String, SongData> candidates = new LinkedHashMap<>();
+        for (Map.Entry<Integer, SongData[]> entry : ownedByLevel.entrySet()) {
+            int band = entry.getKey();
+            if (band < floor || band > ceiling || entry.getValue() == null) {
+                continue;
+            }
+            for (SongData song : entry.getValue()) {
+                if (song == null) {
+                    continue;
+                }
+                String md5 = song.getMd5();
+                String key = md5 == null ? "" : md5.toLowerCase(Locale.ROOT);
+                if (!key.isBlank()) {
+                    candidates.putIfAbsent(key, song);
+                }
+            }
+        }
+        return candidates.values().toArray(SongData[]::new);
+    }
+
+    static SongData randomOwnedCpuChart(
+            Map<Integer, SongData[]> ownedByLevel,
+            int minimumBand,
+            int targetBand
+    ) {
+        SongData[] songs = ownedCpuChartsInRange(
+                ownedByLevel,
+                minimumBand,
+                targetBand
+        );
+        if (songs.length == 0) {
             return null;
         }
         return songs[ThreadLocalRandom.current().nextInt(songs.length)];
@@ -1483,6 +1515,15 @@ public final class BMSIRArenaClient {
         nominationTargetBand = Math.max(
                 1,
                 message.path("target_band").asInt(1)
+        );
+        int minimumBand = Math.max(
+                1,
+                Math.min(
+                        nominationTargetBand,
+                        message.path("minimum_band").asInt(
+                                Math.max(1, nominationTargetBand - 5)
+                        )
+                )
         );
         nominationDeadlineMillis = Math.round(
                 message.path("deadline").asDouble() * 1000.0
@@ -1519,8 +1560,10 @@ public final class BMSIRArenaClient {
                 SongData[] localSongs = playableOwnedSongs(
                         controller.getSongDatabase().getSongDatas(md5s)
                 );
-                SongData selected = highestOwnedCpuChart(
-                        playableOwnedSongsByLevel(candidates, localSongs)
+                SongData selected = randomOwnedCpuChart(
+                        playableOwnedSongsByLevel(candidates, localSongs),
+                        minimumBand,
+                        nominationTargetBand
                 );
                 sendCpuChartCandidate(
                         selected == null ? "" : selected.getMd5()

@@ -940,7 +940,7 @@ public final class BMSIRArenaOverlay {
         );
         if ("cpu_bonus".equals(BMSIRArenaClient.currentRatingPolicy())) {
             ImGui.textDisabled(
-                    "CPU戦: AA～MAX固定 / 勝利 +1 / 敗北 -1 / 同点 ±0"
+                    "CPU戦: A～MAX固定 / 勝利 +1 / 敗北 -1 / 同点 ±0"
             );
         }
     }
@@ -969,7 +969,9 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.sameLine();
             ImGui.textDisabled(
-                    allowCpu.get() ? "1人待機時はCPU補完あり" : "有人戦のみ"
+                    allowCpu.get()
+                            ? "1人待機中はCPU戦を5秒間隔で継続"
+                            : "有人戦のみ"
             );
             ImBoolean allowHigherSelection = new ImBoolean(
                     config.isBmsirArenaAllowHigherSelection()

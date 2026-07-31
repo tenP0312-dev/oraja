@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public release. The unified `BMS-IR Arena oraja
-0.4.6` client replaces the separate Endless Dream and beatoraja Arena
+0.4.7` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,11 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.6` adds backup-safe, per-player local synchronization of the
+Version `0.4.7` keeps CPU BO2 running at five-second intervals while one
+player waits, chooses the CPU chart from every owned chart in the inclusive
+six-band range from the player's rated ceiling down through ceiling minus
+five, and chooses each CPU final EX SCORE from A through MAX. Version `0.4.6`
+adds backup-safe, per-player local synchronization of the
 class/Dan courses received from BMS-IR Primary IR. Version `0.4.5-dev` adds a
 startup `BMS-IR固有設定` tab for one-bass and the
 first-timing preview, persists both switches in the backup-safe BMS-IR
@@ -195,15 +199,18 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 - When only one real player is waiting, the fallback opponent is displayed as
   `CPU` if that unified client supports the server-managed flow and enabled
   `CPU戦を許可`. The match is created immediately only while that player is
-  the sole active real Arena client. The CPU selects from the highest official
-  normal/発狂 band the player owns at or below the player's current rated
-  ceiling. Its final EX SCORE is selected once from inclusive AA through MAX
+  the sole active real Arena client. The CPU selects randomly from all owned
+  official normal/発狂 charts between the player's current rated ceiling and
+  five bands below it, inclusive. Its final EX SCORE is selected once from
+  inclusive A through MAX
   before play, but only a deterministic monotonic current score is shown as
   the human progresses; the selected final value is revealed at completion. A human
   win/loss/tie changes only that human by `+1`/`-1`/`0`; the CPU has no rating
   or match count, and the CPU series does not increment the human's match
   count. A current CPU match finishes normally if another human
-  appears, but no new CPU match starts while both humans remain active.
+  appears. While the player remains alone, another CPU BO2 may start after a
+  five-second interval; if another human is waiting, that human match takes
+  priority and no new CPU match starts.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
 - Every participant returns unready between room games. The host may update
@@ -368,7 +375,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.6-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.7-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -387,7 +394,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.6-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.7-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \

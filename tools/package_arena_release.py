@@ -21,7 +21,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.6"
+VERSION = "0.4.7"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.68.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {
@@ -183,7 +183,7 @@ def write_readme(root: Path, platform: str) -> None:
         else "BMS-IR-Arena-config.command"
     )
     (root / "README-BMS-IR-Arena.txt").write_text(
-        "BMS-IR Arena oraja 0.4.6 / Java 21 bundled\n"
+        "BMS-IR Arena oraja 0.4.7 / Java 21 bundled\n"
         "================================================\n\n"
         f"1. {launcher} を起動します。\n"
         "2. BMS-IRのIR ID (190xxx) と登録時パスワードをIR設定へ入力します。\n"
