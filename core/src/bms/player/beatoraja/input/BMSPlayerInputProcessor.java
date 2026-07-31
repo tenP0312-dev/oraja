@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.PlayModeConfig.*;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.input.BMSPlayerInputDevice.Type;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
@@ -27,6 +28,7 @@ public class BMSPlayerInputProcessor {
 	private boolean enable = true;
 
 	private KeyBoardInputProcesseor kbinput;
+	private final PlayerConfig playerConfig;
 
 	private BMControllerInputProcessor[] bminput;
 
@@ -35,6 +37,7 @@ public class BMSPlayerInputProcessor {
 	private KeyLogger keylog = new KeyLogger();
 
 	public BMSPlayerInputProcessor(Config config, PlayerConfig player) {
+		this.playerConfig = player;
 		Resolution resolution = config.getResolution();
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
 		// Gdx.input.setInputProcessor(kbinput);
@@ -393,6 +396,9 @@ public class BMSPlayerInputProcessor {
 	}
 
 	public boolean isActivated(KeyCommand key) {
+		if (BMSIRArenaOverlay.isHotkeyCaptureActive()) {
+			return false;
+		}
 		final int MASK_CTRL = KeyBoardInputProcesseor.MASK_CTRL;
 		final int MASK_CTRL_SHIFT = KeyBoardInputProcesseor.MASK_CTRL|KeyBoardInputProcesseor.MASK_SHIFT;
 
@@ -426,12 +432,35 @@ public class BMSPlayerInputProcessor {
 		case TOGGLE_MOD_MENU:
 			return isControlKeyPressed(ControlKeys.F5) || isControlKeyPressed(ControlKeys.INSERT);
 		case TOGGLE_BMSIR_ARENA_OVERLAY:
-			return isControlKeyPressed(
-					ControlKeys.F5,
-					MASK_CTRL_SHIFT
+			return kbinput.isKeyPressedExact(
+					arenaOverlayFunctionKey(
+							playerConfig.getBmsirArenaOverlayHotkeyFunction()
+					).keycode,
+					playerConfig.getBmsirArenaOverlayHotkeyModifiers()
 			);
 		}
 		return false;
+	}
+
+	public void discardArenaOverlayFunctionKey(int functionNumber) {
+		kbinput.discardKeyPress(arenaOverlayFunctionKey(functionNumber).keycode);
+	}
+
+	static ControlKeys arenaOverlayFunctionKey(int functionNumber) {
+		return switch (Math.max(1, Math.min(12, functionNumber))) {
+			case 1 -> ControlKeys.F1;
+			case 2 -> ControlKeys.F2;
+			case 3 -> ControlKeys.F3;
+			case 4 -> ControlKeys.F4;
+			case 5 -> ControlKeys.F5;
+			case 6 -> ControlKeys.F6;
+			case 7 -> ControlKeys.F7;
+			case 8 -> ControlKeys.F8;
+			case 9 -> ControlKeys.F9;
+			case 10 -> ControlKeys.F10;
+			case 11 -> ControlKeys.F11;
+			default -> ControlKeys.F12;
+		};
 	}
 	
 	public boolean isSelectPressed() {

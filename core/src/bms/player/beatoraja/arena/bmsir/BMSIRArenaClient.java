@@ -483,6 +483,22 @@ public final class BMSIRArenaClient {
         return main == null ? null : main.getPlayerConfig();
     }
 
+    static boolean saveArenaConfig() {
+        return main != null
+                && BMSIRArenaConfigStore.write(
+                        main.getConfig().getPlayerpath(),
+                        main.getPlayerConfig()
+                );
+    }
+
+    static void discardArenaOverlayFunctionKey(int functionNumber) {
+        if (main != null) {
+            main.getInputProcessor().discardArenaOverlayFunctionKey(
+                    functionNumber
+            );
+        }
+    }
+
     static boolean isCurrentPlayDouble() {
         return isDoublePlayMode(currentPlayModeForLayout());
     }

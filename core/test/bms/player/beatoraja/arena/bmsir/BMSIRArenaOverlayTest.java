@@ -1,6 +1,7 @@
 package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
+import bms.player.beatoraja.input.KeyBoardInputProcesseor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
@@ -116,6 +117,26 @@ class BMSIRArenaOverlayTest {
         assertEquals(1, BMSIRArenaOverlay.restoredVisibleMode(1));
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(2));
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(-1));
+    }
+
+    @Test
+    void configurableOverlayHotkeyHasAReadableLabel() {
+        assertEquals(
+                "Ctrl+Shift+F5",
+                BMSIRArenaOverlay.hotkeyLabel(
+                        5,
+                        KeyBoardInputProcesseor.MASK_CTRL
+                                | KeyBoardInputProcesseor.MASK_SHIFT
+                )
+        );
+        assertEquals(
+                "Ctrl+Alt+F12",
+                BMSIRArenaOverlay.hotkeyLabel(
+                        12,
+                        KeyBoardInputProcesseor.MASK_CTRL
+                                | KeyBoardInputProcesseor.MASK_ALT
+                )
+        );
     }
 
     @Test

@@ -783,6 +783,12 @@ public class MainController {
             } else {
                 Gdx.input.setCursorCatched(false);
             }
+			// The configurable Arena shortcut must get first chance at function
+			// keys so combinations such as Ctrl+F6 are not consumed as F6.
+			if (input.isActivated(KeyCommand.TOGGLE_BMSIR_ARENA_OVERLAY)) {
+				BMSIRArenaOverlay.toggleVisibility();
+			}
+
 			// FPS表示切替
             if (input.isActivated(KeyCommand.SHOW_FPS)) {
                 showfps = !showfps;
@@ -872,10 +878,6 @@ public class MainController {
                     screenshot.start();
                 }
             }
-
-			if (input.isActivated(KeyCommand.TOGGLE_BMSIR_ARENA_OVERLAY)) {
-				BMSIRArenaOverlay.toggleVisibility();
-			}
 
 			if (input.isActivated(KeyCommand.TOGGLE_MOD_MENU)) {
 				imGui.toggleMenu();

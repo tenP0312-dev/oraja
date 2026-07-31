@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public beta. The unified `BMS-IR Arena oraja
-0.4.0-dev` client replaces the separate Endless Dream and beatoraja Arena
+0.4.1-dev` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,7 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.0-dev` also adds ordinary-play LR2 one-bass RANDOM input,
+Version `0.4.1-dev` also adds ordinary-play LR2 one-bass RANDOM input,
 READY-time start-chart previews, Lua play-skin accessors for the live
 HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
 SP/DP random-placement browser view for OBS, progressive CPU score graphs,
@@ -60,9 +60,14 @@ position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
 play-time mouse cursor, and enables optional mutual unrestricted matching,
 higher-basis chart selection, and a mirrored synchronized-RANDOM layout.
-Ctrl+Shift+F5 toggles visibility. If
-that shortcut opens the Endless Dream menu instead, use
-`Show BMS-IR Arena Overlay` in the F5 menu to restore the overlay.
+The overlay shortcut is registered there from F1--F12 plus one or more of
+Ctrl, Shift, and Alt; it defaults to Ctrl+Shift+F5. The unmodified F5 menu and
+its `Show BMS-IR Arena Overlay` action remain a fixed recovery path.
+Arena settings are stored per player in the allow-listed
+`bmsir_arena.json` sidecar. The first 0.4.1-dev start migrates existing Arena
+values from `config_player.json`; later saves by a non-Arena body cannot erase
+them. The sidecar uses the same backup-safe write mechanism as player config
+and never contains IR user IDs, passwords, or unrelated player settings.
 The graph uses the actual available plot height and keeps bars and the selected
 outline inside the MAX guide even at the minimum window height. Each new
 nomination round returns to the selector root before opening
@@ -266,7 +271,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.0-dev-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.1-dev-macos-aarch64.jar
 ```
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg

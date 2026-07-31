@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.text.ParseException;
 
 import bms.player.beatoraja.system.RobustFile;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.pattern.*;
@@ -265,6 +266,11 @@ public final class PlayerConfig {
 	 * 0: normal, 1: compact, 2: hidden.
 	 */
 	private int bmsirArenaOverlayMode = 0;
+
+	/** F1-F12 number used to toggle the Arena overlay. */
+	private int bmsirArenaOverlayHotkeyFunction = 5;
+	/** Shift=1, Ctrl=2, Alt=4. At least one modifier is required. */
+	private int bmsirArenaOverlayHotkeyModifiers = 3;
 
 	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
@@ -686,6 +692,38 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaOverlayMode(int bmsirArenaOverlayMode) {
 		this.bmsirArenaOverlayMode = Math.max(0, Math.min(2, bmsirArenaOverlayMode));
+	}
+
+	public int getBmsirArenaOverlayHotkeyFunction() {
+		bmsirArenaOverlayHotkeyFunction = Math.max(
+				1,
+				Math.min(12, bmsirArenaOverlayHotkeyFunction)
+		);
+		return bmsirArenaOverlayHotkeyFunction;
+	}
+
+	public void setBmsirArenaOverlayHotkeyFunction(
+			int bmsirArenaOverlayHotkeyFunction
+	) {
+		this.bmsirArenaOverlayHotkeyFunction = Math.max(
+				1,
+				Math.min(12, bmsirArenaOverlayHotkeyFunction)
+		);
+	}
+
+	public int getBmsirArenaOverlayHotkeyModifiers() {
+		bmsirArenaOverlayHotkeyModifiers &= 7;
+		if (bmsirArenaOverlayHotkeyModifiers == 0) {
+			bmsirArenaOverlayHotkeyModifiers = 3;
+		}
+		return bmsirArenaOverlayHotkeyModifiers;
+	}
+
+	public void setBmsirArenaOverlayHotkeyModifiers(
+			int bmsirArenaOverlayHotkeyModifiers
+	) {
+		int modifiers = bmsirArenaOverlayHotkeyModifiers & 7;
+		this.bmsirArenaOverlayHotkeyModifiers = modifiers == 0 ? 3 : modifiers;
 	}
 
 	public boolean isBmsirArenaShowCursor() {
@@ -1333,7 +1371,10 @@ public final class PlayerConfig {
 			player = loadPlayerConfigFromOldPath(path_old);
 		}
 
-		return validatePlayerConfig(playerid, player);
+		player = validatePlayerConfig(playerid, player);
+		BMSIRArenaConfigStore.loadOrMigrate(playerpath, playerid, player);
+		player.validate();
+		return player;
 	}
 
 	public static PlayerConfig validatePlayerConfig(String playerid, PlayerConfig player) {
@@ -1407,6 +1448,7 @@ public final class PlayerConfig {
         try {
             Path path = Paths.get(playerpath + "/" + player.getId() + "/" + configpath);
             RobustFile.write(path, configJson.getBytes(StandardCharsets.UTF_8));
+			BMSIRArenaConfigStore.write(playerpath, player);
         }
         catch (IOException e) {
             e.printStackTrace();

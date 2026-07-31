@@ -177,6 +177,22 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		return false;
 	}
 
+	public boolean isKeyPressedExact(int keycode, int modifiers) {
+		if (keystate[keycode]
+				&& keytime[keycode] != Long.MIN_VALUE
+				&& keymodifiers[keycode] == modifiers) {
+			keytime[keycode] = Long.MIN_VALUE;
+			return true;
+		}
+		return false;
+	}
+
+	public void discardKeyPress(int keycode) {
+		if (keycode >= 0 && keycode < keytime.length) {
+			keytime[keycode] = Long.MIN_VALUE;
+		}
+	}
+
 	public boolean mouseMoved(int x, int y) {
 		this.bmsPlayerInputProcessor.setMouseMoved(true);
 		this.bmsPlayerInputProcessor.mousex = x * resolution.width / Gdx.graphics.getWidth();
