@@ -26,13 +26,21 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.3-dev", Version.getArenaClientVersion());
+        assertEquals("0.4.4-dev", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.3-dev"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.4-dev"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
+    }
+
+    @Test
+    void idleArenaConnectionDoesNotBlockOrdinaryOneBass() {
+        assertFalse(BMSIRArenaClient.blocksLocalOneBass(false, false));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, false));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(false, true));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, true));
     }
 
     @Test

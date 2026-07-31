@@ -438,11 +438,21 @@ public class BMSPlayer extends MainState {
 						playinfo.oneBassTarget,
 						playinfo.randomoptionseed
 				);
+				logger.info(
+						"LR2ワンバス(1P) : Target Lane {}, Seed : {}",
+						playinfo.oneBassTarget,
+						playinfo.randomoptionseed
+				);
 			}
 			if (rd == null && playinfo.oneBassTarget2 >= 0) {
 				playinfo.randomoption2seed = OneBassPattern.selectReplayableSeed(
 						model.getMode(),
 						1,
+						playinfo.oneBassTarget2,
+						playinfo.randomoption2seed
+				);
+				logger.info(
+						"LR2ワンバス(2P) : Target Lane {}, Seed : {}",
 						playinfo.oneBassTarget2,
 						playinfo.randomoption2seed
 				);

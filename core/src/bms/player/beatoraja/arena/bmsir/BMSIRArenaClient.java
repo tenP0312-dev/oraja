@@ -424,7 +424,14 @@ public final class BMSIRArenaClient {
     }
 
     public static boolean blocksLocalOneBass() {
-        return connected || reserved || arenaPlayActive;
+        return blocksLocalOneBass(reserved, arenaPlayActive);
+    }
+
+    static boolean blocksLocalOneBass(
+            boolean reservedState,
+            boolean arenaPlayActiveState
+    ) {
+        return reservedState || arenaPlayActiveState;
     }
 
     public static boolean ignoresArenaPreloadInputDelay() {
