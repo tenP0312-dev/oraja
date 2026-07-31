@@ -99,6 +99,52 @@ valid version locally.
 The Web Arena page remains available for the same queue controls, spectating,
 and durable match history.
 
+## Arena notification sound files
+
+Arena notification sounds belong to the ordinary sound set, not to a PLAY
+skin, the `ir/` plugin directory, or the directory containing the body JAR.
+Place a supported audio file under the sound-set directory selected by the
+body:
+
+```text
+sound/<sound-set-name>/arena-match-found.wav
+sound/<sound-set-name>/arena-phase-warning.wav
+sound/<sound-set-name>/arena-ready.wav
+sound/<sound-set-name>/arena-countdown.wav
+sound/<sound-set-name>/arena-start.wav
+sound/<sound-set-name>/arena-cancelled.wav
+```
+
+The filename stem must match exactly. `.wav`, `.flac`, `.ogg`, and `.mp3` are
+accepted, so a normal bundled layout may use, for example,
+`sound/ModernChic/arena-phase-warning.ogg`. Restart the body after adding or
+replacing files so the sound-set map is rebuilt. If more than one sound set is
+installed, put the Arena files in every set that may be selected.
+
+The queue-entry button itself has no notification sound. A newly reserved
+match uses `arena-match-found`; song-selection and option-selection warnings
+use `arena-phase-warning` once at 10 seconds and once at 5 seconds; every
+accepted 3/2/1 step uses `arena-countdown`; all-player load completion uses
+`arena-ready`; start release uses `arena-start`; and match cancellation uses
+`arena-cancelled`. Reconnect snapshots and clock corrections do not replay
+elapsed sounds.
+
+When an Arena-specific file is absent, the sound set falls back as follows:
+
+| Arena file | Existing sound-set fallback |
+| --- | --- |
+| `arena-match-found.*` | `decide.*` |
+| `arena-phase-warning.*` | `o-change.*` |
+| `arena-ready.*` | `playready.*` |
+| `arena-countdown.*` | `o-change.*` |
+| `arena-start.*` | `playready.*` |
+| `arena-cancelled.*` | `playstop.*` |
+
+If neither the Arena-specific file nor its fallback exists, that event is
+silent. The overlay Settings tab controls the 10/5-second warning, 3/2/1
+countdown, start sound, and Arena notification volume. Effective volume is the
+ordinary system-sound volume multiplied by the Arena notification volume.
+
 ## Dedicated-client long-note policy
 
 - Every long note is interpreted as legacy LN throughout this BMS-IR build,
