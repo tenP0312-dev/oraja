@@ -538,7 +538,7 @@ public final class BMSIRArenaOverlay {
                         name
                                 + " "
                                 + player.path("series_points").asInt()
-                                + "pt / EX率 "
+                                + "pt / 参考EX率 "
                                 + rate
                                 + (placement > 0 ? " / 総合" + placement + "位" : "")
                 );
@@ -2541,7 +2541,7 @@ public final class BMSIRArenaOverlay {
                 );
             }
             ImGui.textDisabled(
-                    "1キー単体も可／Escでキャンセル／Backspace・Delete単体で解除"
+                    "1キー単体も可／Escでキャンセル／解除は下の「解除」ボタン"
             );
             captureOverlayHotkey(config);
             return;
@@ -2583,13 +2583,6 @@ public final class BMSIRArenaOverlay {
         int[] captured = capturedHotkeyKeys();
         HOTKEY_CAPTURE_KEYS.clear();
         hotkeyCaptureActive = false;
-        if (BMSIRArenaHotkey.isClearChord(captured)) {
-            config.setBmsirArenaOverlayHotkeyKeys(new int[0]);
-            if (saveHotkeyOrWarn()) {
-                ImGuiNotify.info("Arena表示キーを解除しました");
-            }
-            return;
-        }
         config.setBmsirArenaOverlayHotkeyKeys(captured);
         BMSIRArenaClient.discardArenaOverlayHotkeyKeys(captured);
         if (saveHotkeyOrWarn()) {

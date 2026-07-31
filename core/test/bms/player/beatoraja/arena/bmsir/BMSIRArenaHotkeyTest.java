@@ -45,15 +45,17 @@ class BMSIRArenaHotkeyTest {
     }
 
     @Test
-    void legacyDefaultAndClearKeysRemainCompatible() {
+    void legacyDefaultRemainsCompatibleAndDeleteKeysAreAssignable() {
         assertArrayEquals(
                 BMSIRArenaHotkey.defaultKeys(),
                 BMSIRArenaHotkey.fromLegacy(5, 3)
         );
-        assertTrue(BMSIRArenaHotkey.isClearChord(new int[]{Keys.BACKSPACE}));
-        assertTrue(BMSIRArenaHotkey.isClearChord(new int[]{Keys.FORWARD_DEL}));
-        assertFalse(BMSIRArenaHotkey.isClearChord(
-                new int[]{Keys.CONTROL_LEFT, Keys.BACKSPACE}
+        assertTrue(exact(new int[]{Keys.BACKSPACE}, Keys.BACKSPACE));
+        assertTrue(exact(new int[]{Keys.FORWARD_DEL}, Keys.FORWARD_DEL));
+        assertTrue(exact(
+                new int[]{Keys.CONTROL_LEFT, Keys.BACKSPACE},
+                Keys.CONTROL_RIGHT,
+                Keys.BACKSPACE
         ));
     }
 

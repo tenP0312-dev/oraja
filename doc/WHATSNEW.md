@@ -1,3 +1,14 @@
+# BMS-IR Arena oraja 0.4.8
+
+## Points-only BO2 and overlay hotkeys
+
+- Rated BO2 placement and rating now use only the two-round point total.
+  Equal points share placement and have no direct rating change; EX SCORE and
+  EX rate remain visible only as reference values.
+- Backspace and Delete can now be assigned as standalone Arena overlay
+  shortcuts or used in exact multi-key chords. Use the explicit `解除` button
+  to clear a shortcut.
+
 # BMS-IR Arena oraja 0.4.7
 
 ## Continuous CPU waiting matches

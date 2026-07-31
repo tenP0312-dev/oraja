@@ -126,16 +126,6 @@ public final class BMSIRArenaHotkey {
         return rawKeyPressed.test(logicalKey);
     }
 
-    public static boolean isClearChord(int[] keys) {
-        int[] normalized = normalizeKeys(keys);
-        return normalized != null
-                && normalized.length == 1
-                && (
-                        normalized[0] == Keys.BACKSPACE
-                                || normalized[0] == Keys.FORWARD_DEL
-                );
-    }
-
     public static String label(int[] keycodes) {
         int[] keys = normalizeKeys(keycodes);
         if (keys == null || keys.length == 0) {
