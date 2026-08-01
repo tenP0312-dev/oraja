@@ -1,9 +1,9 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public release. The current public client is the
-unified `BMS-IR Arena oraja 0.4.9`; this source tree prepares version `0.4.10`.
-It replaces the separate Endless Dream and beatoraja Arena bodies and lets one
-installation select LR2 or oraja judgement/gauge behavior.
+unified `BMS-IR Arena oraja 0.4.10`. It replaces the separate Endless Dream and
+beatoraja Arena bodies and lets one installation select LR2 or oraja
+judgement/gauge behavior.
 
 This release adds the default-OFF
 `高レート基準の選曲を許可` setting. Rated selection keeps every level reached
