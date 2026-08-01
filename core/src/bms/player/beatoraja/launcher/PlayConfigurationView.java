@@ -117,6 +117,10 @@ public class PlayConfigurationView implements Initializable {
 	private CheckBox bmsirDanLocalSyncEnabled;
 	@FXML
 	private CheckBox bmsirLongNoteFixed;
+	@FXML
+	private ComboBox<String> bmsirArenaTargetMode;
+	@FXML
+	private ComboBox<String> bmsirArenaGraphOrder;
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -329,10 +333,45 @@ public class PlayConfigurationView implements Initializable {
 		}
 	}
 
+	private static int bmsirArenaTargetModeIndex(String mode) {
+		return switch (mode) {
+			case PlayerConfig.BMSIR_ARENA_TARGET_LEADER -> 1;
+			case PlayerConfig.BMSIR_ARENA_TARGET_ABOVE -> 2;
+			case PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED -> 3;
+			default -> 0;
+		};
+	}
+
+	private static String bmsirArenaTargetModeValue(int index) {
+		return switch (index) {
+			case 1 -> PlayerConfig.BMSIR_ARENA_TARGET_LEADER;
+			case 2 -> PlayerConfig.BMSIR_ARENA_TARGET_ABOVE;
+			case 3 -> PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED;
+			default -> PlayerConfig.BMSIR_ARENA_TARGET_OFF;
+		};
+	}
+
+	private static int bmsirArenaGraphOrderIndex(String order) {
+		return PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(order) ? 1 : 0;
+	}
+
+	private static String bmsirArenaGraphOrderValue(int index) {
+		return index == 1
+				? PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+				: PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK;
+	}
+
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
+		bmsirArenaTargetMode.getItems().setAll(
+				"OFF",
+				"1位の対戦相手",
+				"自分の直上",
+				"指定プレイヤー"
+		);
+		bmsirArenaGraphOrder.getItems().setAll("順位順", "入室順固定");
 		lr2configuration.setHgap(25);
 		lr2configuration.setVgap(4);
 		lr2configurationassist.setHgap(25);
@@ -564,6 +603,12 @@ public class PlayConfigurationView implements Initializable {
 		bmsirRulesetProfile.getSelectionModel().select(
 				"oraja".equals(player.getBmsirRulesetProfile()) ? 1 : 0
 		);
+		bmsirArenaTargetMode.getSelectionModel().select(
+				bmsirArenaTargetModeIndex(player.getBmsirArenaTargetMode())
+		);
+		bmsirArenaGraphOrder.getSelectionModel().select(
+				bmsirArenaGraphOrderIndex(player.getBmsirArenaGraphOrder())
+		);
 
 		videoController.updatePlayer(player);
 		musicselectController.updatePlayer(player);
@@ -690,6 +735,18 @@ public class PlayConfigurationView implements Initializable {
 		);
 		player.setBmsirDanLocalSyncEnabled(
 				bmsirDanLocalSyncEnabled.isSelected()
+		);
+		player.setBmsirArenaTargetMode(
+				bmsirArenaTargetModeValue(
+						bmsirArenaTargetMode.getSelectionModel()
+								.getSelectedIndex()
+				)
+		);
+		player.setBmsirArenaGraphOrder(
+				bmsirArenaGraphOrderValue(
+						bmsirArenaGraphOrder.getSelectionModel()
+								.getSelectedIndex()
+				)
 		);
 
 		videoController.commitPlayer(player);

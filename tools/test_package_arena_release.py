@@ -12,7 +12,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.10-macos-aarch64.jar"
+        body = root / "BMS-IR-Arena-oraja-0.4.11-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)

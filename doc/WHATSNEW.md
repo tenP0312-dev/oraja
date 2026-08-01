@@ -1,3 +1,22 @@
+# BMS-IR Arena oraja 0.4.11
+
+## Arena target, graph, and four-player rated matches
+
+- Arena can now write the selected opponent's live EX SCORE directly into the
+  normal skin TARGET SCORE and target name. The setting is shared between the
+  startup BMS-IR settings and the Arena overlay.
+- Added fixed entry-order score graphs. In fixed mode, both graph columns and
+  player colors stay tied to the player instead of moving with the live rank.
+- Rated Arena now always resolves as a four-player BO2. Missing seats are
+  filled with EASY, NORMAL, and HARD server CPUs; private-room limits are
+  unchanged.
+- CPU final EX SCORE is fixed before the chart from EASY A--AA, NORMAL
+  A--AAA, and HARD A--the chart's BMS-IR all-time best, then only revealed
+  progressively during play.
+- Hidden seasonal CPU ratings now participate in the same four-player Elo
+  settlement as humans. BO2 rank is decided only by the two-song point total.
+- CPU rows are no longer shown as waiting users on the Arena status surfaces.
+
 # BMS-IR Arena oraja 0.4.10
 
 ## End-of-chart live error handling

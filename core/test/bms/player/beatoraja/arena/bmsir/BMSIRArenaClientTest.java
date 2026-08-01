@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.ScoreDataProperty;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.pattern.LR2RandomPattern;
@@ -27,12 +28,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.10", Version.getArenaClientVersion());
+        assertEquals("0.4.11", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.10"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.11"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -60,6 +61,14 @@ class BMSIRArenaClientTest {
         assertFalse(config.isBmsirArenaMuteChat());
         assertFalse(config.isBmsirArenaAlwaysReady());
         assertEquals(0, config.getBmsirArenaGraphHighlight());
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_OFF,
+                config.getBmsirArenaTargetMode()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK,
+                config.getBmsirArenaGraphOrder()
+        );
         assertTrue(config.isBmsirArenaPresentationOverlayEnabled());
         assertTrue(config.isBmsirArenaCountdownSeEnabled());
         assertTrue(config.isBmsirArenaStartSeEnabled());
@@ -85,10 +94,97 @@ class BMSIRArenaClientTest {
         assertEquals(5, config.getBmsirArenaFirstToWins());
         config.setBmsirArenaGraphHighlight(99);
         assertEquals(1, config.getBmsirArenaGraphHighlight());
+        config.setBmsirArenaTargetMode("ABOVE");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_ABOVE,
+                config.getBmsirArenaTargetMode()
+        );
+        config.setBmsirArenaTargetMode("unknown");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_OFF,
+                config.getBmsirArenaTargetMode()
+        );
+        config.setBmsirArenaGraphOrder("entry");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY,
+                config.getBmsirArenaGraphOrder()
+        );
+        config.setBmsirArenaGraphOrder("unknown");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK,
+                config.getBmsirArenaGraphOrder()
+        );
         config.setBmsirArenaNotificationSeVolume(999);
         assertEquals(100, config.getBmsirArenaNotificationSeVolume());
         config.setBmsirArenaNotificationSeVolume(-1);
         assertEquals(0, config.getBmsirArenaNotificationSeVolume());
+    }
+
+    @Test
+    void arenaTargetSelectionUsesLiveOpponentExscoreOrderAndFallbacks() throws Exception {
+        var match = JSON.readTree("""
+                {
+                  "players": [
+                    {"player_id": 1, "name": "Self", "exscore": 180},
+                    {"player_id": 2, "name": "Lead", "exscore": 200},
+                    {"player_id": 3, "name": "Low", "exscore": 170},
+                    {"player_id": 4, "name": "CPU", "exscore": 190, "test_bot": true}
+                  ]
+                }
+                """);
+
+        assertEquals(
+                2,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_LEADER,
+                        1,
+                        0
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                4,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_ABOVE,
+                        1,
+                        0
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                3,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED,
+                        1,
+                        3
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                2,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED,
+                        1,
+                        99
+                ).path("player_id").asInt()
+        );
+    }
+
+    @Test
+    void targetScoreProgressCanBeRecomputedAfterArenaLiveTarget() {
+        ScoreDataProperty property = new ScoreDataProperty();
+        property.setTargetScore(100, 180, 100);
+        property.updateLiveTargetScore(120);
+
+        assertEquals(120, property.getNowRivalScore());
+
+        property.setTargetScore(100, 180, 100);
+        property.refreshTargetScoreProgress(25);
+
+        assertEquals(25, property.getNowBestScore());
+        assertEquals(45, property.getNowRivalScore());
+        assertEquals(180, property.getRivalScore());
     }
 
     @Test

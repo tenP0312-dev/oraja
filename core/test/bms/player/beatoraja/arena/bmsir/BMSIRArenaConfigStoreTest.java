@@ -36,6 +36,8 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirArenaOverlayHotkeyKeys(
                 new int[]{Keys.Z, Keys.X}
         );
+        player.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_LEADER);
+        player.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -54,6 +56,8 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"danLocalSyncEnabled\": false"));
         assertTrue(serialized.contains("\"overlayHotkeyFunction\": 9"));
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
+        assertTrue(serialized.contains("\"targetMode\": \"leader\""));
+        assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));
         assertFalse(serialized.contains("irconfig"));
@@ -75,6 +79,8 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirArenaOverlayHotkeyKeys(
                 new int[]{Keys.CONTROL_RIGHT, Keys.K}
         );
+        arenaBody.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_ABOVE);
+        arenaBody.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
         PlayerConfig.write(temporaryDirectory.toString(), arenaBody);
 
         PlayerConfig normalBody = player("player1");
@@ -105,6 +111,14 @@ class BMSIRArenaConfigStoreTest {
                 java.util.Arrays.stream(restored.getBmsirArenaOverlayHotkeyKeys())
                         .boxed()
                         .toList()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_ABOVE,
+                restored.getBmsirArenaTargetMode()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY,
+                restored.getBmsirArenaGraphOrder()
         );
     }
 

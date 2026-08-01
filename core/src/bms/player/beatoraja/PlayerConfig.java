@@ -32,6 +32,12 @@ import com.badlogic.gdx.utils.SerializationException;
  */
 public final class PlayerConfig {
 	private static final Logger logger = LoggerFactory.getLogger(PlayerConfig.class);
+	public static final String BMSIR_ARENA_TARGET_OFF = "off";
+	public static final String BMSIR_ARENA_TARGET_LEADER = "leader";
+	public static final String BMSIR_ARENA_TARGET_ABOVE = "above";
+	public static final String BMSIR_ARENA_TARGET_SPECIFIED = "specified";
+	public static final String BMSIR_ARENA_GRAPH_ORDER_RANK = "rank";
+	public static final String BMSIR_ARENA_GRAPH_ORDER_ENTRY = "entry";
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -298,6 +304,8 @@ public final class PlayerConfig {
 	private boolean bmsirArenaForceHostOption = false;
 	private boolean bmsirArenaAlwaysReady = false;
 	private int bmsirArenaGraphHighlight = 0;
+	private String bmsirArenaTargetMode = BMSIR_ARENA_TARGET_OFF;
+	private String bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
 	/** Show the large, phase-specific Arena presentation banner. */
 	private boolean bmsirArenaPresentationOverlayEnabled = true;
 	private boolean bmsirArenaCountdownSeEnabled = true;
@@ -859,6 +867,43 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaGraphHighlight(int bmsirArenaGraphHighlight) {
 		this.bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
+	}
+
+	public String getBmsirArenaTargetMode() {
+		if (!BMSIR_ARENA_TARGET_LEADER.equals(bmsirArenaTargetMode)
+				&& !BMSIR_ARENA_TARGET_ABOVE.equals(bmsirArenaTargetMode)
+				&& !BMSIR_ARENA_TARGET_SPECIFIED.equals(bmsirArenaTargetMode)) {
+			bmsirArenaTargetMode = BMSIR_ARENA_TARGET_OFF;
+		}
+		return bmsirArenaTargetMode;
+	}
+
+	public void setBmsirArenaTargetMode(String bmsirArenaTargetMode) {
+		String normalized = bmsirArenaTargetMode == null
+				? BMSIR_ARENA_TARGET_OFF
+				: bmsirArenaTargetMode.toLowerCase();
+		this.bmsirArenaTargetMode =
+				BMSIR_ARENA_TARGET_LEADER.equals(normalized)
+						|| BMSIR_ARENA_TARGET_ABOVE.equals(normalized)
+						|| BMSIR_ARENA_TARGET_SPECIFIED.equals(normalized)
+						? normalized
+						: BMSIR_ARENA_TARGET_OFF;
+	}
+
+	public String getBmsirArenaGraphOrder() {
+		if (!BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(bmsirArenaGraphOrder)) {
+			bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
+		}
+		return bmsirArenaGraphOrder;
+	}
+
+	public void setBmsirArenaGraphOrder(String bmsirArenaGraphOrder) {
+		this.bmsirArenaGraphOrder =
+				BMSIR_ARENA_GRAPH_ORDER_ENTRY.equalsIgnoreCase(
+						bmsirArenaGraphOrder
+				)
+						? BMSIR_ARENA_GRAPH_ORDER_ENTRY
+						: BMSIR_ARENA_GRAPH_ORDER_RANK;
 	}
 
 	public boolean isBmsirArenaPresentationOverlayEnabled() {

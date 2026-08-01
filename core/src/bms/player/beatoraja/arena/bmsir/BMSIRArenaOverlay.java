@@ -90,6 +90,8 @@ public final class BMSIRArenaOverlay {
     private static final ImInt OPTION_SECONDS = new ImInt(10);
     private static final ImInt INTERMISSION_SECONDS = new ImInt(0);
     private static final ImInt GRAPH_HIGHLIGHT = new ImInt(0);
+    private static final ImInt TARGET_MODE = new ImInt(0);
+    private static final ImInt GRAPH_ORDER = new ImInt(0);
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
     private static final Set<String> CUSTOM_LEVELS = new HashSet<>();
     private static final Map<Integer, String> USER_TABLE_KEYS =
@@ -111,6 +113,12 @@ public final class BMSIRArenaOverlay {
     };
     private static final String[] SERIES_FORMATS = {
             "1曲", "全員の曲を回す", "N本先取"
+    };
+    private static final String[] ARENA_TARGET_MODES = {
+            "OFF", "1位の対戦相手", "自分の直上", "指定プレイヤー"
+    };
+    private static final String[] ARENA_GRAPH_ORDERS = {
+            "順位順", "入室順固定"
     };
 
     private BMSIRArenaOverlay() {
@@ -615,7 +623,13 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderScoreGraph(JsonNode match, float height) {
-        List<JsonNode> players = sortedPlayers(match).stream()
+        PlayerConfig graphConfig = BMSIRArenaClient.playerConfig();
+        String graphOrder = graphConfig == null
+                ? PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK
+                : graphConfig.getBmsirArenaGraphOrder();
+        boolean fixedEntryOrder =
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(graphOrder);
+        List<JsonNode> players = scoreGraphPlayers(match, graphOrder).stream()
                 .limit(MAX_GRAPH_PLAYERS)
                 .toList();
         if (players.isEmpty()) {
@@ -639,7 +653,6 @@ public final class BMSIRArenaOverlay {
         float plotBottom = plotTop + plotHeight;
         float plotWidth = Math.max(1.0f, plotRight - plotLeft);
         ImDrawList drawList = ImGui.getWindowDrawList();
-        PlayerConfig graphConfig = BMSIRArenaClient.playerConfig();
         boolean highlightSelf = graphConfig != null
                 && graphConfig.getBmsirArenaGraphHighlight() == 1;
         int ownPlayerId = BMSIRArenaClient.currentPlayerId();
@@ -678,9 +691,15 @@ public final class BMSIRArenaOverlay {
             float barTop = scoreBarTop(plotTop, plotBottom, rate);
             int playerId = player.path("player_id").asInt();
             boolean own = playerId == ownPlayerId;
-            int color = own
+            int colorIndex = scoreGraphColorIndex(
+                    match,
+                    player,
+                    index,
+                    graphOrder
+            );
+            int color = own && !fixedEntryOrder
                     ? ImColor.rgb(255, 80, 80)
-                    : GRAPH_COLORS[index % GRAPH_COLORS.length];
+                    : GRAPH_COLORS[colorIndex % GRAPH_COLORS.length];
             boolean selected = playerId == highlightedPlayerId;
 
             drawList.addRectFilled(barLeft, plotTop, barRight, plotBottom, GRAPH_TRACK);
@@ -712,7 +731,7 @@ public final class BMSIRArenaOverlay {
                     centerX,
                     labelY + 18.0f,
                     columnWidth - 4.0f,
-                    own ? ImColor.rgb(255, 115, 115)
+                    own && !fixedEntryOrder ? ImColor.rgb(255, 115, 115)
                             : selected ? GRAPH_SELECTED : GRAPH_TEXT
             );
             drawCenteredText(
@@ -959,14 +978,14 @@ public final class BMSIRArenaOverlay {
                 || "withdraw_requested".equals(status);
         if (config != null && !entryActive) {
             ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-            if (ImGui.checkbox("CPU戦を許可", allowCpu)) {
+            if (ImGui.checkbox("1人待機中のCPU戦を許可", allowCpu)) {
                 config.setBmsirArenaAllowCpu(allowCpu.get());
             }
             ImGui.sameLine();
             ImGui.textDisabled(
                     allowCpu.get()
-                            ? "1人待機中はCPU戦を5秒間隔で継続"
-                            : "有人戦のみ"
+                            ? "人間1人でもCPU3人で開始"
+                            : "互換性のある人間を待機"
             );
             ImBoolean allowHigherSelection = new ImBoolean(
                     config.isBmsirArenaAllowHigherSelection()
@@ -985,8 +1004,8 @@ public final class BMSIRArenaOverlay {
         } else if (entryActive) {
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsCpu()
-                            ? "CPU戦: 許可"
-                            : "CPU戦: 無効（有人戦のみ）"
+                            ? "1人CPU戦: 許可"
+                            : "1人CPU戦: 無効（互換相手待機）"
             );
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsHigherSelection()
@@ -1462,6 +1481,54 @@ public final class BMSIRArenaOverlay {
             return name + "（再接続待ち）";
         }
         return name;
+    }
+
+    static List<JsonNode> scoreGraphPlayers(JsonNode match, String graphOrder) {
+        if (PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(graphOrder)) {
+            List<JsonNode> players = new ArrayList<>();
+            match.path("players").forEach(players::add);
+            Map<Integer, Integer> order = scoreGraphEntryOrder(match);
+            players.sort(
+                    Comparator.comparingInt(
+                            (JsonNode value) -> order.getOrDefault(
+                                    value.path("player_id").asInt(),
+                                    Integer.MAX_VALUE
+                            )
+                    ).thenComparingInt(value -> value.path("player_id").asInt())
+            );
+            return players;
+        }
+        return sortedPlayers(match);
+    }
+
+    static int scoreGraphColorIndex(
+            JsonNode match,
+            JsonNode player,
+            int renderedIndex,
+            String graphOrder
+    ) {
+        if (!PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(graphOrder)) {
+            return Math.max(0, renderedIndex);
+        }
+        return Math.max(
+                0,
+                scoreGraphEntryOrder(match).getOrDefault(
+                        player.path("player_id").asInt(),
+                        renderedIndex
+                )
+        );
+    }
+
+    private static Map<Integer, Integer> scoreGraphEntryOrder(JsonNode match) {
+        Map<Integer, Integer> order = new LinkedHashMap<>();
+        int index = 0;
+        for (JsonNode player : match.path("players")) {
+            int playerId = player.path("player_id").asInt();
+            int entryOrder = player.path("entry_order").asInt(index);
+            order.putIfAbsent(playerId, Math.max(0, entryOrder));
+            index++;
+        }
+        return order;
     }
 
     private static List<JsonNode> sortedPlayers(JsonNode match) {
@@ -2428,7 +2495,25 @@ public final class BMSIRArenaOverlay {
         )) {
             config.setBmsirArenaGraphHighlight(GRAPH_HIGHLIGHT.get());
         }
-        ImGui.textDisabled("自分の棒は各プレイヤーの画面で常に赤です");
+        TARGET_MODE.set(arenaTargetModeIndex(config.getBmsirArenaTargetMode()));
+        if (ImGui.combo("本体ターゲット", TARGET_MODE, ARENA_TARGET_MODES)) {
+            config.setBmsirArenaTargetMode(arenaTargetMode(TARGET_MODE.get()));
+            if (
+                    !PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED.equals(
+                            config.getBmsirArenaTargetMode()
+                    )
+            ) {
+                BMSIRArenaClient.setArenaTargetSpecifiedPlayerId(0);
+            }
+            saveSettingsOrWarn();
+        }
+        renderArenaTargetPlayerSelector(config);
+        GRAPH_ORDER.set(arenaGraphOrderIndex(config.getBmsirArenaGraphOrder()));
+        if (ImGui.combo("グラフの並び", GRAPH_ORDER, ARENA_GRAPH_ORDERS)) {
+            config.setBmsirArenaGraphOrder(arenaGraphOrder(GRAPH_ORDER.get()));
+            saveSettingsOrWarn();
+        }
+        ImGui.textDisabled("順位順では自分の棒は赤、入室順固定では色も入室順で固定します");
 
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
         if (ImGui.checkbox("プレイ中もマウスカーソルを表示", cursor)) {
@@ -2477,10 +2562,10 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.textDisabled("距離のある即時マッチは相手も許可した場合だけ成立します");
         ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-        if (ImGui.checkbox("レートArenaでCPU戦を許可", allowCpu)) {
+        if (ImGui.checkbox("1人待機中のCPU戦を許可", allowCpu)) {
             config.setBmsirArenaAllowCpu(allowCpu.get());
         }
-        ImGui.textDisabled("OFFの場合はCPUと組まず、有人が来るまで待機します");
+        ImGui.textDisabled("OFFの場合、人間がもう1人来るまで待機します。2人以上ではCPU補充します");
         ImBoolean allowHigherSelection = new ImBoolean(
                 config.isBmsirArenaAllowHigherSelection()
         );
@@ -2511,6 +2596,75 @@ public final class BMSIRArenaOverlay {
                 "Arenaウィンドウの位置とサイズは5／7／9／10／14KEYごと、"
                         + "通常・コンパクト・プレイ中グラフ・ステータスごとに保存されます。"
         );
+    }
+
+    private static void renderArenaTargetPlayerSelector(PlayerConfig config) {
+        if (
+                !PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED.equals(
+                        config.getBmsirArenaTargetMode()
+                )
+        ) {
+            return;
+        }
+        JsonNode match = BMSIRArenaClient.currentMatchView();
+        if (!match.path("players").isArray()) {
+            ImGui.textDisabled("試合中に対象プレイヤーを選択できます");
+            return;
+        }
+        int ownPlayerId = BMSIRArenaClient.currentPlayerId();
+        int selectedPlayerId = BMSIRArenaClient.arenaTargetSpecifiedPlayerId();
+        boolean rendered = false;
+        for (JsonNode player : match.path("players")) {
+            int playerId = player.path("player_id").asInt();
+            if (playerId <= 0 || playerId == ownPlayerId) {
+                continue;
+            }
+            rendered = true;
+            String name = player.path("name").asText(Integer.toString(playerId));
+            if (ImGui.radioButton(
+                    name + "##arena-target-player-" + playerId,
+                    selectedPlayerId == playerId
+            )) {
+                BMSIRArenaClient.setArenaTargetSpecifiedPlayerId(playerId);
+            }
+        }
+        if (!rendered) {
+            ImGui.textDisabled("指定できる対戦相手がいません");
+        }
+    }
+
+    private static int arenaTargetModeIndex(String mode) {
+        return switch (mode) {
+            case PlayerConfig.BMSIR_ARENA_TARGET_LEADER -> 1;
+            case PlayerConfig.BMSIR_ARENA_TARGET_ABOVE -> 2;
+            case PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED -> 3;
+            default -> 0;
+        };
+    }
+
+    private static String arenaTargetMode(int index) {
+        return switch (index) {
+            case 1 -> PlayerConfig.BMSIR_ARENA_TARGET_LEADER;
+            case 2 -> PlayerConfig.BMSIR_ARENA_TARGET_ABOVE;
+            case 3 -> PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED;
+            default -> PlayerConfig.BMSIR_ARENA_TARGET_OFF;
+        };
+    }
+
+    private static int arenaGraphOrderIndex(String order) {
+        return PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(order) ? 1 : 0;
+    }
+
+    private static String arenaGraphOrder(int index) {
+        return index == 1
+                ? PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+                : PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK;
+    }
+
+    private static void saveSettingsOrWarn() {
+        if (!BMSIRArenaClient.saveArenaConfig()) {
+            ImGuiNotify.warning("Arena設定を保存できませんでした");
+        }
     }
 
     private static void renderOverlayHotkeySetting(PlayerConfig config) {

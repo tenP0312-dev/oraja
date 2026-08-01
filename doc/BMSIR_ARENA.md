@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public release. The current public client is the
-unified `BMS-IR Arena oraja 0.4.10`. It replaces the separate Endless Dream and
+Status: BMS-IR Arena v1 release branch. This source prepares the unified
+`BMS-IR Arena oraja 0.4.11`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,8 +14,12 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.10` shows the same Arena error only once per match and message,
-while retaining every occurrence in the diagnostic log. Version `0.4.9` fixes series participant intrusion and settles post-start
+Version `0.4.11` adds main-skin Arena target injection, fixed entry-order score
+graphs, fixed four-player rated BO2, EASY/NORMAL/HARD hidden-rating server
+CPUs, CPU-inclusive four-player Elo settlement, and CPU-free public waiting
+lists. Version `0.4.10` shows the same Arena error only once per match and
+message, while retaining every occurrence in the diagnostic log. Version
+`0.4.9` fixes series participant intrusion and settles post-start
 withdrawal as a rated walkover/forfeit, keeps clear/FAILED results until Arena
 accepts them, synchronizes SP/DP live scores at 4 Hz, fixes 14KEY-only rooms and
 text-input leakage, restores F5 recovery and the fill countdown, and loads the
@@ -80,7 +84,8 @@ at the bottom center and can be moved and resized; ImGui stores the adjusted
 position and size in `layout.ini`. SP and DP use separate saved layouts.
 The settings tab selects normal, compact, or hidden display, controls the
 play-time mouse cursor, and enables optional mutual unrestricted matching,
-higher-basis chart selection, and a mirrored synchronized-RANDOM layout.
+higher-basis chart selection, Arena target injection, score-graph order, and a
+mirrored synchronized-RANDOM layout.
 The overlay shortcut accepts any keyboard key, either alone or as an exact
 multi-key chord, and defaults to Ctrl+Shift+F5. Hold the desired keys and
 release all of them to register the chord. Escape cancels capture, while
@@ -91,7 +96,8 @@ treated as the same logical modifier. The unmodified F5 menu and its
 BMS-IR-specific settings are stored per player in the allow-listed
 `bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing
 Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
-first-timing preview switches, and 0.4.6 adds the Dan local-sync switch.
+first-timing preview switches, 0.4.6 adds the Dan local-sync switch, and 0.4.11
+adds Arena target and graph-order switches.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -205,21 +211,28 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 - Every overlay layout names the current mode, active LR2/oraja rule profile,
   and whether rating can change. Rated and room play remain textually distinct
   even when colors are hard to distinguish.
-- When only one real player is waiting, the fallback opponent is displayed as
-  `CPU` if that unified client supports the server-managed flow and enabled
-  `CPU戦を許可`. The match is created immediately only while that player is
-  the sole active real Arena client. The CPU selects randomly from all owned
-  official normal/発狂 charts between the player's current rated ceiling and
-  five bands below it, inclusive. Its final EX SCORE is selected once from
-  inclusive A through MAX
-  before play, but only a deterministic monotonic current score is shown as
-  the human progresses; the selected final value is revealed at completion. A human
-  win/loss/tie changes only that human by `+1`/`-1`/`0`; the CPU has no rating
-  or match count, and the CPU series does not increment the human's match
-  count. A current CPU match finishes normally if another human
-  appears. While the player remains alone, another CPU BO2 may start after a
-  five-second interval; if another human is waiting, that human match takes
-  priority and no new CPU match starts.
+- Rated Arena always reserves four participants. One, two, three, or four
+  humans are filled with three, two, one, or zero server CPUs; a fifth human
+  waits for the next BO2, and a started BO2 never accepts a general waiter.
+  The saved `1人待機中のCPU戦を許可` switch only controls whether one human may
+  start with CPU3. Once at least two humans are reserved, the server fills to
+  four with CPUs regardless of that switch.
+- Server CPUs are displayed as `CPU`, are excluded from public waiting lists,
+  and never count as waiting users. Their chart is selected randomly from all
+  owned official normal/発狂 charts between the human selection ceiling and
+  five bands below it, inclusive. Each CPU final EX SCORE is fixed once before
+  play from EASY A--AA, NORMAL A--AAA, or HARD A--the chart's BMS-IR all-time
+  best, but only bounded progressive current EX is shown during the chart.
+  Rated BO2 settlement includes humans and CPUs in one four-player Elo result
+  with K=32. CPU ratings are hidden, CPU rows are omitted from public result
+  deltas/rankings/match counts, and a one-human+CPU-only BO2 does not increment
+  the human match count.
+- During Arena play, the optional main-skin target setting writes the selected
+  opponent's latest received live EX SCORE directly into the normal target
+  score and target name. The modes are OFF, first opponent, directly above, and
+  match-local specified player; if the specified player leaves, it falls back
+  to the first opponent. Score graphs can stay in live rank order or use fixed
+  entry order, which pins both bar position and color by player ID.
 - `対戦後もこの部屋に残る` returns a non-forfeiting player to the same room
   code and rules. Turning it off leaves after the current result.
 - Every participant returns unready between room games. The host may update
@@ -233,9 +246,10 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 - Courses, practice, autoplay, and replay are not eligible matching states.
 - If a match is reserved during an ordinary song, finish the song and its IR
   result first.
-- Two READY players open a 30-second fill window. Four READY players reduce
-  the remaining wait to at most ten seconds, and eight READY players start
-  immediately.
+- Two READY rated players open the 30-second human-priority fill window. Four
+  READY rated players start immediately; when the fill window expires, the
+  service fills missing rated seats with CPUs. Private-room limits are
+  unchanged.
 - The normal rating windows remain ±100, then ±300, then unrestricted. The
   unrestricted-match option bypasses the wait early only when every
   out-of-range pair enabled it.
@@ -384,7 +398,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.10-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.11-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -403,7 +417,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.10-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.11-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \

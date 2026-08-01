@@ -695,6 +695,11 @@ public class BMSPlayer extends MainState {
                 target != null ? target.getExscore() : 0,
                 target != null ? target.decodeGhost() : null,
                 model.getTotalNotes());
+            BMSIRArenaClient.applyArenaInitialTargetScore(
+                    this,
+                    score,
+                    model.getTotalNotes()
+            );
         }
 	}
 
@@ -1355,6 +1360,11 @@ public class BMSPlayer extends MainState {
 				&& this.judge.getPastNotes() == this.judge.getCombo());
 
 		getScoreDataProperty().update(this.judge.getScoreData(), this.judge.getPastNotes());
+		BMSIRArenaClient.updateArenaLiveTargetScore(
+				this,
+				model.getTotalNotes(),
+				this.judge.getPastNotes()
+		);
 
 		timer.switchTimer(TIMER_SCORE_A, getScoreDataProperty().qualifyRank(18));
 		timer.switchTimer(TIMER_SCORE_AA, getScoreDataProperty().qualifyRank(21));

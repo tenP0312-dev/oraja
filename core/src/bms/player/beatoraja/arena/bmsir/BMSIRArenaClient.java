@@ -43,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -105,6 +106,9 @@ public final class BMSIRArenaClient {
     private static volatile ScheduledFuture<?> clockSyncTask;
     private static volatile ScheduledFuture<?> optionReadyTask;
     private static volatile ObjectNode pendingFinal;
+    private static volatile int arenaTargetSpecifiedPlayerId;
+    private static volatile String arenaTargetSpecifiedMatchId = "";
+    private static volatile ArenaTargetBackup arenaTargetBackup;
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
     private static volatile int lastKnownPlayMode;
@@ -347,6 +351,9 @@ public final class BMSIRArenaClient {
         currentPlayerId = 0;
         currentMatchId = "";
         pendingFinal = null;
+        arenaTargetSpecifiedPlayerId = 0;
+        arenaTargetSpecifiedMatchId = "";
+        arenaTargetBackup = null;
         currentPlayOption = 0;
         currentPlayMode = 0;
         lastKnownPlayMode = 0;
@@ -2061,6 +2068,273 @@ public final class BMSIRArenaClient {
                 Integer.parseInt(reversed)
         );
         return mirrored == null ? seed : mirrored;
+    }
+
+    public static void applyArenaInitialTargetScore(
+            BMSPlayer player,
+            ScoreData bestScore,
+            int totalNotes
+    ) {
+        ArenaTarget target = currentArenaTarget(totalNotes);
+        if (player == null || target == null) {
+            return;
+        }
+        rememberArenaTargetBackup(player, bestScore, totalNotes);
+        ScoreData targetScore = arenaTargetScoreData(target);
+        player.resource.setTargetScoreData(targetScore);
+        player.getScoreDataProperty().setTargetScore(
+                bestScore != null ? bestScore.getExscore() : 0,
+                bestScore != null ? bestScore.decodeGhost() : null,
+                target.exscore(),
+                null,
+                Math.max(1, totalNotes)
+        );
+        player.getScoreDataProperty().updateLiveTargetScore(target.exscore());
+    }
+
+    public static void updateArenaLiveTargetScore(BMSPlayer player, int totalNotes) {
+        updateArenaLiveTargetScore(player, totalNotes, totalNotes);
+    }
+
+    public static void updateArenaLiveTargetScore(
+            BMSPlayer player,
+            int totalNotes,
+            int currentNotes
+    ) {
+        ArenaTarget target = currentArenaTarget(totalNotes);
+        if (player == null) {
+            return;
+        }
+        if (target == null) {
+            restoreArenaTargetBackup(player, currentNotes);
+            return;
+        }
+        ScoreData targetScore = player.resource.getTargetScoreData();
+        if (arenaTargetBackup == null) {
+            rememberArenaTargetBackupFromProperty(player, totalNotes);
+            targetScore = arenaTargetScoreData(target);
+            player.resource.setTargetScoreData(targetScore);
+        }
+        if (targetScore == null) {
+            targetScore = new ScoreData();
+            player.resource.setTargetScoreData(targetScore);
+        }
+        writeArenaTargetScoreData(targetScore, target);
+        player.getScoreDataProperty().updateLiveTargetScore(target.exscore());
+    }
+
+    private static void rememberArenaTargetBackup(
+            BMSPlayer player,
+            ScoreData bestScore,
+            int totalNotes
+    ) {
+        if (
+                arenaTargetBackup != null
+                        && Objects.equals(
+                                arenaTargetBackup.matchId(),
+                                currentMatchId
+                        )
+        ) {
+            return;
+        }
+        ScoreData targetScore = player.resource.getTargetScoreData();
+        arenaTargetBackup = new ArenaTargetBackup(
+                currentMatchId,
+                targetScore,
+                bestScore != null ? bestScore.getExscore() : 0,
+                bestScore != null ? bestScore.decodeGhost() : null,
+                targetScore != null ? targetScore.getExscore() : 0,
+                targetScore != null ? targetScore.decodeGhost() : null,
+                Math.max(1, totalNotes)
+        );
+    }
+
+    private static void rememberArenaTargetBackupFromProperty(
+            BMSPlayer player,
+            int totalNotes
+    ) {
+        ScoreData targetScore = player.resource.getTargetScoreData();
+        arenaTargetBackup = new ArenaTargetBackup(
+                currentMatchId,
+                targetScore,
+                player.getScoreDataProperty().getBestScore(),
+                null,
+                targetScore != null ? targetScore.getExscore() : 0,
+                targetScore != null ? targetScore.decodeGhost() : null,
+                Math.max(1, totalNotes)
+        );
+    }
+
+    private static void restoreArenaTargetBackup(
+            BMSPlayer player,
+            int currentNotes
+    ) {
+        ArenaTargetBackup backup = arenaTargetBackup;
+        if (backup == null) {
+            return;
+        }
+        player.resource.setTargetScoreData(backup.targetScore());
+        player.getScoreDataProperty().setTargetScore(
+                backup.bestExscore(),
+                backup.bestGhost(),
+                backup.rivalExscore(),
+                backup.rivalGhost(),
+                backup.totalNotes()
+        );
+        player.getScoreDataProperty().refreshTargetScoreProgress(currentNotes);
+        arenaTargetBackup = null;
+    }
+
+    static JsonNode arenaTargetPlayer(
+            JsonNode match,
+            String targetMode,
+            int selfPlayerId,
+            int specifiedPlayerId
+    ) {
+        if (match == null || !match.path("players").isArray() || selfPlayerId <= 0) {
+            return null;
+        }
+        String mode = normalizeArenaTargetMode(targetMode);
+        if (PlayerConfig.BMSIR_ARENA_TARGET_OFF.equals(mode)) {
+            return null;
+        }
+        List<JsonNode> ranked = arenaTargetRankedPlayers(match);
+        if (ranked.isEmpty()) {
+            return null;
+        }
+        if (PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED.equals(mode)
+                && specifiedPlayerId > 0
+                && specifiedPlayerId != selfPlayerId) {
+            for (JsonNode player : ranked) {
+                if (player.path("player_id").asInt() == specifiedPlayerId) {
+                    return player;
+                }
+            }
+        }
+        if (PlayerConfig.BMSIR_ARENA_TARGET_ABOVE.equals(mode)) {
+            for (int index = 0; index < ranked.size(); index++) {
+                if (ranked.get(index).path("player_id").asInt() == selfPlayerId) {
+                    if (index > 0) {
+                        return ranked.get(index - 1);
+                    }
+                    return firstArenaOpponent(ranked, selfPlayerId);
+                }
+            }
+        }
+        return firstArenaOpponent(ranked, selfPlayerId);
+    }
+
+    static void setArenaTargetSpecifiedPlayerId(int playerId) {
+        arenaTargetSpecifiedPlayerId = Math.max(0, playerId);
+        arenaTargetSpecifiedMatchId = currentMatchId == null ? "" : currentMatchId;
+    }
+
+    static int arenaTargetSpecifiedPlayerId() {
+        if (
+                currentMatchId == null
+                        || currentMatchId.isBlank()
+                        || !currentMatchId.equals(arenaTargetSpecifiedMatchId)
+        ) {
+            return 0;
+        }
+        return arenaTargetSpecifiedPlayerId;
+    }
+
+    private static ArenaTarget currentArenaTarget(int totalNotes) {
+        if (
+                !arenaPlayActive
+                        || currentMatchId.isBlank()
+                        || totalNotes <= 0
+        ) {
+            return null;
+        }
+        PlayerConfig config = playerConfig();
+        if (config == null) {
+            return null;
+        }
+        JsonNode target = arenaTargetPlayer(
+                liveView,
+                config.getBmsirArenaTargetMode(),
+                currentPlayerId,
+                arenaTargetSpecifiedPlayerId()
+        );
+        if (target == null) {
+            return null;
+        }
+        int maxExscore = Math.max(1, totalNotes) * 2;
+        int exscore = Math.max(
+                0,
+                Math.min(maxExscore, target.path("exscore").asInt(0))
+        );
+        String name = target.path("name").asText(
+                Integer.toString(target.path("player_id").asInt())
+        );
+        return new ArenaTarget(name, exscore, Math.max(1, totalNotes));
+    }
+
+    private static ScoreData arenaTargetScoreData(ArenaTarget target) {
+        ScoreData score = new ScoreData();
+        writeArenaTargetScoreData(score, target);
+        return score;
+    }
+
+    private static void writeArenaTargetScoreData(
+            ScoreData score,
+            ArenaTarget target
+    ) {
+        score.setPlayer(target.name());
+        score.setNotes(target.totalNotes());
+        score.setEpg(target.exscore() / 2);
+        score.setLpg(0);
+        score.setEgr(target.exscore() % 2);
+        score.setLgr(0);
+    }
+
+    private static String normalizeArenaTargetMode(String targetMode) {
+        if (PlayerConfig.BMSIR_ARENA_TARGET_LEADER.equals(targetMode)
+                || PlayerConfig.BMSIR_ARENA_TARGET_ABOVE.equals(targetMode)
+                || PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED.equals(targetMode)) {
+            return targetMode;
+        }
+        return PlayerConfig.BMSIR_ARENA_TARGET_OFF;
+    }
+
+    private static List<JsonNode> arenaTargetRankedPlayers(JsonNode match) {
+        List<JsonNode> players = new ArrayList<>();
+        match.path("players").forEach(players::add);
+        players.sort(
+                Comparator.comparingInt(
+                        (JsonNode value) -> value.path("exscore").asInt(0)
+                ).reversed()
+                        .thenComparingInt(value -> value.path("player_id").asInt())
+        );
+        return players;
+    }
+
+    private static JsonNode firstArenaOpponent(
+            List<JsonNode> ranked,
+            int selfPlayerId
+    ) {
+        for (JsonNode player : ranked) {
+            if (player.path("player_id").asInt() != selfPlayerId) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    private record ArenaTarget(String name, int exscore, int totalNotes) {
+    }
+
+    private record ArenaTargetBackup(
+            String matchId,
+            ScoreData targetScore,
+            int bestExscore,
+            int[] bestGhost,
+            int rivalExscore,
+            int[] rivalGhost,
+            int totalNotes
+    ) {
     }
 
     static void requestQueueCancel() {

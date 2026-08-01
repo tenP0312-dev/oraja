@@ -1,6 +1,7 @@
 package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
+import bms.player.beatoraja.PlayerConfig;
 import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,6 +109,50 @@ class BMSIRArenaOverlayTest {
         assertEquals(
                 "LOWEST COMBO BREAK WINS",
                 BMSIRArenaOverlay.ruleBattleTitle("minbp")
+        );
+    }
+
+    @Test
+    void scoreGraphCanKeepEntryOrderAndColorStableByPlayerId() throws Exception {
+        JsonNode match = JSON.readTree("""
+                {
+                  "players": [
+                    {"player_id": 1, "entry_order": 0, "exscore": 100},
+                    {"player_id": 2, "entry_order": 1, "exscore": 300},
+                    {"player_id": 3, "entry_order": 2, "exscore": 200}
+                  ],
+                  "rules": {"score_rule": "exscore"}
+                }
+                """);
+
+        assertEquals(
+                java.util.List.of(2, 3, 1),
+                BMSIRArenaOverlay.scoreGraphPlayers(
+                                match,
+                                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK
+                        )
+                        .stream()
+                        .map(player -> player.path("player_id").asInt())
+                        .toList()
+        );
+        var entryPlayers = BMSIRArenaOverlay.scoreGraphPlayers(
+                match,
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+        );
+        assertEquals(
+                java.util.List.of(1, 2, 3),
+                entryPlayers.stream()
+                        .map(player -> player.path("player_id").asInt())
+                        .toList()
+        );
+        assertEquals(
+                1,
+                BMSIRArenaOverlay.scoreGraphColorIndex(
+                        match,
+                        entryPlayers.get(1),
+                        0,
+                        PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+                )
         );
     }
 
