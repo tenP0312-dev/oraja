@@ -419,6 +419,13 @@ public final class BMSIRArenaClient {
         return savedOptions != null && !arenaPlayActive && !normalResultReady;
     }
 
+    public static boolean isAwaitingArenaResult() {
+        return !arenaPlayActive
+                && pendingFinal != null
+                && reserved
+                && !currentMatchId.isBlank();
+    }
+
     public static boolean isArenaPlayActive() {
         return arenaPlayActive;
     }
@@ -992,16 +999,18 @@ public final class BMSIRArenaClient {
         } else if (isShowingCompletedResult()) {
             phase = ArenaPresentationState.Phase.RESULT;
             title = "";
+        } else if (isFillWaiting()) {
+            phase = ArenaPresentationState.Phase.MATCHING;
+            title = "MATCHING…";
+            seconds = fillSecondsRemaining();
+            detail = fillPlayerCount() + " / " + fillMaxPlayers() + "人";
         } else if (!currentMatchId.isBlank() && reserved) {
             phase = ArenaPresentationState.Phase.MATCH_FOUND;
             title = "MATCH FOUND";
-        } else if ("queued".equals(queueStatus) || isFillWaiting()) {
+        } else if ("queued".equals(queueStatus)) {
             phase = ArenaPresentationState.Phase.MATCHING;
             title = "MATCHING…";
-            seconds = isFillWaiting() ? fillSecondsRemaining() : 0L;
-            detail = isFillWaiting()
-                    ? fillPlayerCount() + " / " + fillMaxPlayers() + "人"
-                    : "対戦相手を待っています";
+            detail = "対戦相手を待っています";
         } else {
             return ArenaPresentationState.idle();
         }
@@ -1819,12 +1828,48 @@ public final class BMSIRArenaClient {
             ArrayNode allowedPlayModes,
             ObjectNode customSelection
     ) {
-        roomAllowedPlayModes = allowedPlayModes == null
-                ? JSON.createArrayNode().add(7)
-                : allowedPlayModes.deepCopy();
+        setRoomAllowedPlayModes(allowedPlayModes);
         roomCustomSelection = customSelection == null
                 ? JSON.createObjectNode().set("tables", JSON.createArrayNode())
                 : customSelection.deepCopy();
+    }
+
+    static ArrayNode roomAllowedPlayModesView() {
+        return roomAllowedPlayModes.deepCopy();
+    }
+
+    static boolean isRoomPlayModeAllowed(int playMode) {
+        for (JsonNode value : roomAllowedPlayModes) {
+            if (value.asInt() == playMode) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static void setRoomPlayModeAllowed(int playMode, boolean allowed) {
+        ArrayNode updated = JSON.createArrayNode();
+        for (int supported : new int[]{5, 7, 9, 10, 14}) {
+            if (supported == playMode ? allowed : isRoomPlayModeAllowed(supported)) {
+                updated.add(supported);
+            }
+        }
+        setRoomAllowedPlayModes(updated);
+    }
+
+    static void setRoomAllowedPlayModes(ArrayNode allowedPlayModes) {
+        ArrayNode normalized = JSON.createArrayNode();
+        if (allowedPlayModes != null) {
+            for (int supported : new int[]{5, 7, 9, 10, 14}) {
+                for (JsonNode value : allowedPlayModes) {
+                    if (value.asInt() == supported) {
+                        normalized.add(supported);
+                        break;
+                    }
+                }
+            }
+        }
+        roomAllowedPlayModes = normalized;
     }
 
     static void requestRoomParticipation(boolean participating) {
@@ -2137,17 +2182,18 @@ public final class BMSIRArenaClient {
             return;
         }
         long now = System.nanoTime();
-        if (now - lastLiveNanos < 1_000_000_000L) {
+        if (now - lastLiveNanos < 250_000_000L) {
             return;
         }
         lastLiveNanos = now;
         ObjectNode message = baseMatchMessage("live");
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
-        message.put("processed_notes", processedNotes(score));
+        int processed = processedNotes(score, currentChartTotalNotes);
+        message.put("processed_notes", processed);
         message.put("minbp", arenaMinBp(score));
         message.put("combo_break", arenaComboBreak(score));
-        message.put("max_combo", Math.max(0, score.getCombo()));
+        message.put("max_combo", Math.min(processed, Math.max(0, score.getCombo())));
         message.put("play_option", currentPlayOption);
         message.put("ln_mode", "LN");
         if (currentPlayMode > 0) {
@@ -2163,13 +2209,15 @@ public final class BMSIRArenaClient {
         ObjectNode message = baseMatchMessage("final");
         message.put("seq", sequence.incrementAndGet());
         message.put("exscore", score.getExscore());
-        message.put(
-                "processed_notes",
-                finalProcessedNotes(score, hardFail, currentChartTotalNotes)
+        int processed = finalProcessedNotes(
+                score,
+                hardFail,
+                currentChartTotalNotes
         );
+        message.put("processed_notes", processed);
         message.put("minbp", arenaMinBp(score));
         message.put("combo_break", arenaComboBreak(score));
-        message.put("max_combo", Math.max(0, score.getCombo()));
+        message.put("max_combo", Math.min(processed, Math.max(0, score.getCombo())));
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
         message.put("play_option", currentPlayOption);
@@ -2183,6 +2231,10 @@ public final class BMSIRArenaClient {
     }
 
     private static int processedNotes(ScoreData score) {
+        return processedNotes(score, 0);
+    }
+
+    static int processedNotes(ScoreData score, int expectedChartNotes) {
         if (score == null) {
             return 0;
         }
@@ -2191,7 +2243,9 @@ public final class BMSIRArenaClient {
             judged += Math.max(0, score.getJudgeCount(judge));
         }
         int processed = Math.max(Math.max(0, score.getPassnotes()), judged);
-        int total = score.getNotes();
+        int total = expectedChartNotes > 0
+                ? expectedChartNotes
+                : score.getNotes();
         return total > 0 ? Math.min(processed, total) : processed;
     }
 
@@ -2226,7 +2280,7 @@ public final class BMSIRArenaClient {
         if (!hardFail && expectedChartNotes > 0) {
             return expectedChartNotes;
         }
-        return processedNotes(score);
+        return processedNotes(score, expectedChartNotes);
     }
 
     private static ObjectNode baseMatchMessage(String type) {
@@ -2709,6 +2763,8 @@ public final class BMSIRArenaClient {
                     arenaUiMessage = switch (code) {
                         case "nomination_rejected" ->
                                 "選曲できません。部屋の選曲範囲と所持譜面を確認してください";
+                        case "nomination_already_submitted" ->
+                                "この曲の選曲は登録済みです";
                         case "room_entry_failed" ->
                                 "部屋へ参加できません: "
                                         + message.path("message").asText(code);
@@ -3341,9 +3397,21 @@ public final class BMSIRArenaClient {
             return first;
         }
         String second = randomOptionLabel((playOption / 10) % 10);
-        return "1P: " + first
-                + " / 2P: " + second
-                + (((playOption / 100) % 10) == 1 ? " / FLIP" : "");
+        return "1P : " + abbreviatedRandomOptionLabel(first)
+                + "\n2P : " + abbreviatedRandomOptionLabel(second)
+                + (((playOption / 100) % 10) == 1 ? "\nFLIP" : "");
+    }
+
+    private static String abbreviatedRandomOptionLabel(String value) {
+        return switch (value) {
+            case "NORMAL" -> "-";
+            case "MIRROR" -> "MIR";
+            case "RANDOM" -> "RAN";
+            case "R-RANDOM" -> "R-RAN";
+            case "S-RANDOM" -> "S-RAN";
+            case "SPIRAL" -> "SPI";
+            default -> value;
+        };
     }
 
     static String playModeLabel(int playMode) {

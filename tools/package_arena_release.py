@@ -21,7 +21,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.8"
+VERSION = "0.4.9"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.68.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {
@@ -161,7 +161,8 @@ def write_launchers(root: Path, platform: str) -> None:
         (root / "BMS-IR-Arena-config.bat").write_text(
             "@echo off\r\n"
             "pushd %~dp0\r\n"
-            '"runtime\\bin\\java.exe" -Xms1g -Xmx4g -jar beatoraja.jar\r\n'
+            '"runtime\\bin\\java.exe" "-DcustomIRDirectory=%CD%\\ir" '
+            '-Xms1g -Xmx4g -jar beatoraja.jar\r\n'
             "popd\r\n",
             encoding="utf-8",
         )
@@ -170,7 +171,8 @@ def write_launchers(root: Path, platform: str) -> None:
     launcher.write_text(
         "#!/bin/sh\n"
         'cd "$(dirname "$0")" || exit 1\n'
-        'exec "./runtime/bin/java" -Xms1g -Xmx4g -jar beatoraja.jar\n',
+        'exec "./runtime/bin/java" "-DcustomIRDirectory=$PWD/ir" '
+        '-Xms1g -Xmx4g -jar beatoraja.jar\n',
         encoding="utf-8",
     )
     launcher.chmod(0o755)
@@ -183,7 +185,7 @@ def write_readme(root: Path, platform: str) -> None:
         else "BMS-IR-Arena-config.command"
     )
     (root / "README-BMS-IR-Arena.txt").write_text(
-        "BMS-IR Arena oraja 0.4.8 / Java 21 bundled\n"
+        "BMS-IR Arena oraja 0.4.9 / Java 21 bundled\n"
         "================================================\n\n"
         f"1. {launcher} を起動します。\n"
         "2. BMS-IRのIR ID (190xxx) と登録時パスワードをIR設定へ入力します。\n"

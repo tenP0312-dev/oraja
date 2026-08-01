@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 public release. The unified `BMS-IR Arena oraja
-0.4.8` client replaces the separate Endless Dream and beatoraja Arena
+0.4.9` client replaces the separate Endless Dream and beatoraja Arena
 bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
@@ -13,7 +13,11 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.8` makes rated BO2 placement and rating depend only on the two-round
+Version `0.4.9` fixes series participant intrusion and settles post-start
+withdrawal as a rated walkover/forfeit, keeps clear/FAILED results until Arena
+accepts them, synchronizes SP/DP live scores at 4 Hz, fixes 14KEY-only rooms and
+text-input leakage, restores F5 recovery and the fill countdown, and loads the
+packaged IR plugin in Java-bundled releases. Version `0.4.8` makes rated BO2 placement and rating depend only on the two-round
 point total, labels EX rate as reference-only, and allows Backspace or Delete
 as Arena overlay shortcuts. Version `0.4.7` keeps CPU BO2 running at five-second intervals while one
 player waits, chooses the CPU chart from every owned chart in the inclusive
@@ -378,7 +382,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.8-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.9-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -397,7 +401,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.8-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.9-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \

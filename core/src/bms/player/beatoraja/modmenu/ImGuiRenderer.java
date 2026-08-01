@@ -69,6 +69,7 @@ public class ImGuiRenderer {
         ImPlot.createContext();
         ImGuiIO io = ImGui.getIO();
         io.setIniFilename("layout.ini");
+        io.addConfigFlags(ImGuiConfigFlags.NoMouseCursorChange);
         io.getFonts().addFontDefault();
 
         final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder(); // Glyphs ranges provide
@@ -207,6 +208,10 @@ public class ImGuiRenderer {
 
 
     public static void end() {
+        BMSIRArenaOverlay.updateKeyboardInputCapture(
+                ImGui.getIO().getWantCaptureKeyboard()
+                        || ImGui.getIO().getWantTextInput()
+        );
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 

@@ -12,7 +12,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.8-macos-aarch64.jar"
+        body = root / "BMS-IR-Arena-oraja-0.4.9-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)
@@ -58,12 +58,16 @@ class ArenaReleasePackageTest(unittest.TestCase):
             )
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
+                launcher = archive.read(
+                    "BMS-IR-Arena-config.command"
+                ).decode("utf-8")
             self.assertIn("beatoraja.jar", names)
             self.assertIn(f"ir/{PLUGIN_FILENAME}", names)
             self.assertIn("runtime/bin/java", names)
             self.assertIn("runtime/legal/java.base/LICENSE", names)
             self.assertIn("BMS-IR-Arena-config.command", names)
             self.assertIn("release-manifest.json", names)
+            self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
 
     def test_requires_explicit_asset_redistribution_confirmation(self):

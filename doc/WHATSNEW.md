@@ -1,3 +1,20 @@
+# BMS-IR Arena oraja 0.4.9
+
+## Live series reliability hotfix
+
+- Rated BO2 keeps its original participants in both rounds. A later waiter can
+  no longer enter round 2, and leaving after series creation is settled as a
+  rated walkover/forfeit instead of invalidating the whole series.
+- Live SP/DP score updates now run at 4 Hz and are capped to the server chart
+  total. Clear and FAILED results stay on the result screen until Arena accepts
+  the final packet.
+- Fixed 14KEY-only private rooms, room/password/chat keyboard leakage, plain-F5
+  recovery, the hidden 30-second fill countdown, persistent mouse cursor, and
+  the immovable MATCH FOUND/status window. DP options use compact three-line
+  labels.
+- Java-bundled launchers now load the packaged `ir` plugin directory explicitly;
+  the body also auto-discovers a local `ir` directory.
+
 # BMS-IR Arena oraja 0.4.8
 
 ## Points-only BO2 and overlay hotkeys

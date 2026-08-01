@@ -263,7 +263,9 @@ public class MusicResult extends AbstractResult {
 				}
 			}
 		} else {
-			if (time > getSkin().getScene() && !BMSIRArenaClient.isAwaitingNormalResult()) {
+			if (time > getSkin().getScene()
+					&& !BMSIRArenaClient.isAwaitingNormalResult()
+					&& !BMSIRArenaClient.isAwaitingArenaResult()) {
 				timer.switchTimer(TIMER_FADEOUT, true);
 				if (getSound(RESULT_CLOSE) != null) {
 					stop(RESULT_CLEAR);
@@ -304,6 +306,7 @@ public class MusicResult extends AbstractResult {
 							&& !timer.isTimerOn(TIMER_RESULT_UPDATESCORE)) {
 						timer.switchTimer(TIMER_RESULT_UPDATESCORE, true);
 					} else if (!BMSIRArenaClient.isAwaitingNormalResult()
+							&& !BMSIRArenaClient.isAwaitingArenaResult()
 							&& (state == STATE_OFFLINE || state == STATE_IR_FINISHED
 							|| time - timer.getTimer(TIMER_IR_CONNECT_BEGIN) >= 1000)) {
 						timer.switchTimer(TIMER_FADEOUT, true);

@@ -27,12 +27,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.8", Version.getArenaClientVersion());
+        assertEquals("0.4.9", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.8"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.9"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -204,7 +204,7 @@ class BMSIRArenaClientTest {
         assertEquals(1, config.getRandom2());
         assertEquals(1, config.getDoubleoption());
         assertEquals(
-                "1P: RANDOM / 2P: MIRROR / FLIP",
+                "1P : RAN\n2P : MIR\nFLIP",
                 BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
         );
 
@@ -313,6 +313,27 @@ class BMSIRArenaClientTest {
         assertEquals(
                 95,
                 BMSIRArenaClient.finalProcessedNotes(score, true, 100)
+        );
+
+        score.setPassnotes(120);
+        assertEquals(
+                100,
+                BMSIRArenaClient.finalProcessedNotes(score, true, 100)
+        );
+    }
+
+    @Test
+    void privateRoomPlayModesKeepFourteenKeyAsTheOnlySelection() {
+        BMSIRArenaClient.setRoomAllowedPlayModes(
+                JSON.createArrayNode().add(7)
+        );
+        BMSIRArenaClient.setRoomPlayModeAllowed(14, true);
+        BMSIRArenaClient.setRoomPlayModeAllowed(7, false);
+
+        assertEquals(1, BMSIRArenaClient.roomAllowedPlayModesView().size());
+        assertEquals(14, BMSIRArenaClient.roomAllowedPlayModesView().get(0).asInt());
+        BMSIRArenaClient.setRoomAllowedPlayModes(
+                JSON.createArrayNode().add(7)
         );
     }
 

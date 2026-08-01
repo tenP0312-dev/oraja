@@ -27,8 +27,7 @@ import com.badlogic.gdx.utils.Array;
  */
 public class BMSPlayerInputProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(BMSPlayerInputProcessor.class);
-	private static final int[] ARENA_RECOVERY_F5 = {Keys.F5};
-	
+
 	private boolean enable = true;
 
 	private KeyBoardInputProcesseor kbinput;
@@ -435,13 +434,13 @@ public class BMSPlayerInputProcessor {
 		case OPEN_SKIN_CONFIGURATION:
 			return isControlKeyPressed(ControlKeys.F12);
 		case TOGGLE_MOD_MENU:
-			return (
-					Gdx.input.isKeyJustPressed(Keys.F5)
-							&& BMSIRArenaHotkey.isExactNormalizedPressed(
-									ARENA_RECOVERY_F5,
-									Gdx.input::isKeyPressed
-							)
-				) || isControlKeyPressed(ControlKeys.INSERT);
+			return isControlKeyPressed(
+					ControlKeys.F5,
+					0,
+					KeyBoardInputProcesseor.MASK_SHIFT,
+					KeyBoardInputProcesseor.MASK_CTRL,
+					KeyBoardInputProcesseor.MASK_ALT
+			) || isControlKeyPressed(ControlKeys.INSERT);
 		case TOGGLE_BMSIR_ARENA_OVERLAY:
 			int[] keys = playerConfig.getBmsirArenaOverlayHotkeyKeys();
 			boolean chordDown = BMSIRArenaHotkey.isExactNormalizedPressed(

@@ -67,6 +67,7 @@ public final class BMSIRArenaOverlay {
     private static boolean confirmWithdrawal;
     private static boolean confirmRoomDisband;
     private static boolean hotkeyCaptureActive;
+    private static volatile boolean keyboardInputCaptured;
     private static final Set<Integer> HOTKEY_CAPTURE_KEYS = new LinkedHashSet<>();
     private static int lastVisibleMode;
     private static final ImString CHAT_INPUT = new ImString(201);
@@ -89,9 +90,6 @@ public final class BMSIRArenaOverlay {
     private static final ImInt OPTION_SECONDS = new ImInt(10);
     private static final ImInt INTERMISSION_SECONDS = new ImInt(0);
     private static final ImInt GRAPH_HIGHLIGHT = new ImInt(0);
-    private static final boolean[] ALLOWED_PLAY_MODES = {
-            false, true, false, false, false
-    };
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
     private static final Set<String> CUSTOM_LEVELS = new HashSet<>();
     private static final Map<Integer, String> USER_TABLE_KEYS =
@@ -210,18 +208,15 @@ public final class BMSIRArenaOverlay {
         ImGui.setNextWindowPos(
                 ImGuiRenderer.windowWidth / 2.0f,
                 Math.max(90.0f, ImGuiRenderer.windowHeight * 0.2f),
-                ImGuiCond.Always,
+                ImGuiCond.FirstUseEver,
                 0.5f,
                 0.5f
         );
         ImGui.setNextWindowBgAlpha(0.93f);
         int flags = ImGuiWindowFlags.AlwaysAutoResize
-                | ImGuiWindowFlags.NoDecoration
-                | ImGuiWindowFlags.NoInputs
-                | ImGuiWindowFlags.NoNav
-                | ImGuiWindowFlags.NoFocusOnAppearing;
+                | ImGuiWindowFlags.NoNav;
         if (!ImGui.begin(
-                "##bmsir-arena-presentation-" + currentLayoutKey(),
+                "BMS-IR Arena##bmsir-arena-presentation-" + currentLayoutKey(),
                 flags
         )) {
             ImGui.end();
@@ -1811,12 +1806,18 @@ public final class BMSIRArenaOverlay {
             if (index > 0) {
                 ImGui.sameLine();
             }
-            ImBoolean enabled = new ImBoolean(ALLOWED_PLAY_MODES[index]);
+            int playMode = ROOM_PLAY_MODES[index];
+            ImBoolean enabled = new ImBoolean(
+                    BMSIRArenaClient.isRoomPlayModeAllowed(playMode)
+            );
             if (ImGui.checkbox(
-                    ROOM_PLAY_MODES[index] + "KEY##room-mode-" + index,
+                    playMode + "KEY##room-mode-" + index,
                     enabled
             )) {
-                ALLOWED_PLAY_MODES[index] = enabled.get();
+                BMSIRArenaClient.setRoomPlayModeAllowed(
+                        playMode,
+                        enabled.get()
+                );
             }
         }
     }
@@ -1885,27 +1886,23 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void loadRoomCustomConfiguration(JsonNode rules) {
-        for (int index = 0; index < ALLOWED_PLAY_MODES.length; index++) {
-            ALLOWED_PLAY_MODES[index] = false;
-        }
+        ArrayNode allowedPlayModes = JsonNodeFactory.instance.arrayNode();
         JsonNode modes = rules.path("allowed_play_modes");
         if (modes.isArray()) {
             for (JsonNode mode : modes) {
                 int value = mode.asInt();
-                for (int index = 0; index < ROOM_PLAY_MODES.length; index++) {
-                    if (ROOM_PLAY_MODES[index] == value) {
-                        ALLOWED_PLAY_MODES[index] = true;
+                for (int supported : ROOM_PLAY_MODES) {
+                    if (supported == value) {
+                        allowedPlayModes.add(value);
+                        break;
                     }
                 }
             }
         }
-        boolean anyMode = false;
-        for (boolean enabled : ALLOWED_PLAY_MODES) {
-            anyMode |= enabled;
+        if (allowedPlayModes.isEmpty()) {
+            allowedPlayModes.add(7);
         }
-        if (!anyMode) {
-            ALLOWED_PLAY_MODES[1] = true;
-        }
+        BMSIRArenaClient.setRoomAllowedPlayModes(allowedPlayModes);
 
         CUSTOM_LEVELS.clear();
         for (JsonNode table : rules.path("custom_selection").path("tables")) {
@@ -1953,15 +1950,9 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void applyRoomCustomConfiguration() {
-        ArrayNode modes = JsonNodeFactory.instance.arrayNode();
-        for (int index = 0; index < ROOM_PLAY_MODES.length; index++) {
-            if (ALLOWED_PLAY_MODES[index]) {
-                modes.add(ROOM_PLAY_MODES[index]);
-            }
-        }
+        ArrayNode modes = BMSIRArenaClient.roomAllowedPlayModesView();
         if (modes.isEmpty()) {
             modes.add(7);
-            ALLOWED_PLAY_MODES[1] = true;
         }
         ObjectNode selection = JsonNodeFactory.instance.objectNode();
         ArrayNode tables = selection.putArray("tables");
@@ -2608,6 +2599,14 @@ public final class BMSIRArenaOverlay {
 
     public static boolean isHotkeyCaptureActive() {
         return hotkeyCaptureActive;
+    }
+
+    public static boolean isKeyboardInputCaptured() {
+        return keyboardInputCaptured || hotkeyCaptureActive;
+    }
+
+    public static void updateKeyboardInputCapture(boolean captured) {
+        keyboardInputCaptured = captured;
     }
 
     private static void tableText(String text) {
