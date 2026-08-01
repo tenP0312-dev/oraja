@@ -1,8 +1,9 @@
 # BMS-IR Arena client
 
-Status: BMS-IR Arena v1 public release. The unified `BMS-IR Arena oraja
-0.4.9` client replaces the separate Endless Dream and beatoraja Arena
-bodies and lets one installation select LR2 or oraja judgement/gauge behavior.
+Status: BMS-IR Arena v1 public release. The current public client is the
+unified `BMS-IR Arena oraja 0.4.9`; this source tree prepares version `0.4.10`.
+It replaces the separate Endless Dream and beatoraja Arena bodies and lets one
+installation select LR2 or oraja judgement/gauge behavior.
 
 This release adds the default-OFF
 `高レート基準の選曲を許可` setting. Rated selection keeps every level reached
@@ -13,7 +14,8 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.9` fixes series participant intrusion and settles post-start
+Version `0.4.10` shows the same Arena error only once per match and message,
+while retaining every occurrence in the diagnostic log. Version `0.4.9` fixes series participant intrusion and settles post-start
 withdrawal as a rated walkover/forfeit, keeps clear/FAILED results until Arena
 accepts them, synchronizes SP/DP live scores at 4 Hz, fixes 14KEY-only rooms and
 text-input leakage, restores F5 recovery and the fill countdown, and loads the
@@ -382,7 +384,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.9-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.10-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -401,7 +403,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.9-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.10-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \

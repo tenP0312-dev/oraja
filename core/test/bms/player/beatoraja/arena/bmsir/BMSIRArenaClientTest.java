@@ -27,12 +27,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.9", Version.getArenaClientVersion());
+        assertEquals("0.4.10", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.9"));
+        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.10"));
         assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
     }
 
@@ -505,6 +505,45 @@ class BMSIRArenaClientTest {
                 JSON.readTree("{\"match_id\":\"match-a\"}")
         ));
         assertFalse(BMSIRArenaClient.matchMessageMatches("match-a", null));
+    }
+
+    @Test
+    void duplicateArenaErrorsNotifyOncePerMatchAndMessage() {
+        BMSIRArenaClient.resetArenaErrorNotifications();
+        try {
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertFalse(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "Arena max combo exceeds processed notes"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-b",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "",
+                    "authentication_failed",
+                    "Arena authentication failed."
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "",
+                    "authentication_failed",
+                    "Arena authentication failed."
+            ));
+        } finally {
+            BMSIRArenaClient.resetArenaErrorNotifications();
+        }
     }
 
     @Test

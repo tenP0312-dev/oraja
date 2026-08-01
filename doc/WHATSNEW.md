@@ -1,3 +1,12 @@
+# BMS-IR Arena oraja 0.4.10
+
+## End-of-chart live error handling
+
+- Repeated copies of the same Arena error are shown only once per match while
+  every received error remains in the diagnostic log.
+- This complements the server's bounded live-only chart-total correction;
+  final result validation remains strict.
+
 # BMS-IR Arena oraja 0.4.9
 
 ## Live series reliability hotfix

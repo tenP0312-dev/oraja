@@ -120,6 +120,8 @@ public final class BMSIRArenaClient {
     private static volatile int arenaMatchesPlayed;
     private static volatile String queueStatus = "idle";
     private static volatile String arenaUiMessage = "";
+    private static final Set<String> notifiedArenaErrors = new HashSet<>();
+    private static String notifiedArenaErrorMatchId = "";
     private static volatile JsonNode rankingView = JSON.createObjectNode();
     private static volatile JsonNode liveView = JSON.createObjectNode();
     private static volatile JsonNode resultView = JSON.createObjectNode();
@@ -362,6 +364,7 @@ public final class BMSIRArenaClient {
         arenaMatchesPlayed = 0;
         queueStatus = "idle";
         arenaUiMessage = "";
+        resetArenaErrorNotifications();
         rankingView = JSON.createObjectNode();
         rulesView = JSON.createObjectNode();
         queueView = JSON.createObjectNode();
@@ -2786,7 +2789,15 @@ public final class BMSIRArenaClient {
                         case "nomination_closed" -> "選曲受付は終了しました";
                         default -> message.path("message").asText(code);
                     };
-                    ImGuiNotify.error("BMS-IR Arena: " + arenaUiMessage);
+                    if (shouldShowArenaError(currentMatchId, code, arenaUiMessage)) {
+                        ImGuiNotify.error("BMS-IR Arena: " + arenaUiMessage);
+                    } else {
+                        BMSIRArenaLog.event(
+                                "duplicate_error_notification_suppressed",
+                                "match_id", currentMatchId,
+                                "code", code
+                        );
+                    }
                 }
                 default -> {
                 }
@@ -2811,6 +2822,31 @@ public final class BMSIRArenaClient {
                 && !activeMatchId.isBlank()
                 && message != null
                 && activeMatchId.equals(message.path("match_id").asText());
+    }
+
+    static synchronized boolean shouldShowArenaError(
+            String matchId,
+            String code,
+            String message
+    ) {
+        String normalizedMatchId = Objects.toString(matchId, "");
+        if (normalizedMatchId.isBlank()) {
+            return true;
+        }
+        if (!normalizedMatchId.equals(notifiedArenaErrorMatchId)) {
+            notifiedArenaErrors.clear();
+            notifiedArenaErrorMatchId = normalizedMatchId;
+        }
+        return notifiedArenaErrors.add(
+                Objects.toString(code, "")
+                        + "\u0000"
+                        + Objects.toString(message, "")
+        );
+    }
+
+    static synchronized void resetArenaErrorNotifications() {
+        notifiedArenaErrors.clear();
+        notifiedArenaErrorMatchId = "";
     }
 
     static void receiveArenaStatus(JsonNode message) {
