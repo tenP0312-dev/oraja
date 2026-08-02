@@ -754,6 +754,19 @@ public class EventFactory {
 				}
 			}
 		}),
+		bmsir_judge_timing_restore(
+				SkinProperty.BUTTON_BMSIR_JUDGE_TIMING_RESTORE,
+				state -> {
+					if (state instanceof MusicSelector) {
+						PlayerConfig config = state.resource.getPlayerConfig();
+						config.setBmsirJudgeTimingRestoreEnabled(
+								!config.isBmsirJudgeTimingRestoreEnabled()
+						);
+						state.main.saveConfig();
+						state.play(OPTION_CHANGE);
+					}
+				}
+		),
 		;
 
 		/**

@@ -286,6 +286,7 @@ public final class PlayerConfig {
 	 * 0: normal, 1: compact, 2: hidden.
 	 */
 	private int bmsirArenaOverlayMode = 0;
+	private int bmsirArenaLastVisibleOverlayMode = 0;
 
 	/** F1-F12 number used to toggle the Arena overlay. */
 	private int bmsirArenaOverlayHotkeyFunction = 5;
@@ -312,8 +313,11 @@ public final class PlayerConfig {
 	private String bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
 	private String bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
 	private int bmsirCoverChangeStep = 10;
+	private boolean bmsirCoverHispeedAutoAdjustEnabled = false;
 	private String[] bmsirNumpadActions = BMSIRNumpadAction.defaultIds();
 	private int bmsirNumpadJudgeTimingStep = 1;
+	private boolean bmsirJudgeTimingRestoreEnabled = false;
+	private boolean bmsirInfoNotificationsEnabled = true;
 	/** Show the large, phase-specific Arena presentation banner. */
 	private boolean bmsirArenaPresentationOverlayEnabled = true;
 	private boolean bmsirArenaCountdownSeEnabled = true;
@@ -770,6 +774,21 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaOverlayMode(int bmsirArenaOverlayMode) {
 		this.bmsirArenaOverlayMode = Math.max(0, Math.min(2, bmsirArenaOverlayMode));
+		if (this.bmsirArenaOverlayMode < 2) {
+			bmsirArenaLastVisibleOverlayMode = this.bmsirArenaOverlayMode;
+		}
+	}
+
+	public int getBmsirArenaLastVisibleOverlayMode() {
+		bmsirArenaLastVisibleOverlayMode = Math.max(
+				0,
+				Math.min(1, bmsirArenaLastVisibleOverlayMode)
+		);
+		return bmsirArenaLastVisibleOverlayMode;
+	}
+
+	public void setBmsirArenaLastVisibleOverlayMode(int mode) {
+		bmsirArenaLastVisibleOverlayMode = Math.max(0, Math.min(1, mode));
 	}
 
 	public int getBmsirArenaOverlayHotkeyFunction() {
@@ -933,12 +952,20 @@ public final class PlayerConfig {
 	}
 
 	public int getBmsirCoverChangeStep() {
-		bmsirCoverChangeStep = Math.max(1, Math.min(100, bmsirCoverChangeStep));
+		bmsirCoverChangeStep = Math.max(1, Math.min(1000, bmsirCoverChangeStep));
 		return bmsirCoverChangeStep;
 	}
 
 	public void setBmsirCoverChangeStep(int step) {
-		bmsirCoverChangeStep = Math.max(1, Math.min(100, step));
+		bmsirCoverChangeStep = Math.max(1, Math.min(1000, step));
+	}
+
+	public boolean isBmsirCoverHispeedAutoAdjustEnabled() {
+		return bmsirCoverHispeedAutoAdjustEnabled;
+	}
+
+	public void setBmsirCoverHispeedAutoAdjustEnabled(boolean enabled) {
+		bmsirCoverHispeedAutoAdjustEnabled = enabled;
 	}
 
 	public String[] getBmsirNumpadActions() {
@@ -960,6 +987,22 @@ public final class PlayerConfig {
 
 	public void setBmsirNumpadJudgeTimingStep(int step) {
 		bmsirNumpadJudgeTimingStep = Math.max(1, Math.min(20, step));
+	}
+
+	public boolean isBmsirJudgeTimingRestoreEnabled() {
+		return bmsirJudgeTimingRestoreEnabled;
+	}
+
+	public void setBmsirJudgeTimingRestoreEnabled(boolean enabled) {
+		bmsirJudgeTimingRestoreEnabled = enabled;
+	}
+
+	public boolean isBmsirInfoNotificationsEnabled() {
+		return bmsirInfoNotificationsEnabled;
+	}
+
+	public void setBmsirInfoNotificationsEnabled(boolean enabled) {
+		bmsirInfoNotificationsEnabled = enabled;
 	}
 
 	public boolean isBmsirArenaPresentationOverlayEnabled() {
@@ -1343,8 +1386,13 @@ public final class PlayerConfig {
 	public void validate() {
 		setBmsirCoverControlMode(bmsirCoverControlMode);
 		setBmsirCoverChangeStep(bmsirCoverChangeStep);
+		setBmsirCoverHispeedAutoAdjustEnabled(
+				bmsirCoverHispeedAutoAdjustEnabled
+		);
 		setBmsirNumpadActions(bmsirNumpadActions);
 		setBmsirNumpadJudgeTimingStep(bmsirNumpadJudgeTimingStep);
+		setBmsirJudgeTimingRestoreEnabled(bmsirJudgeTimingRestoreEnabled);
+		setBmsirInfoNotificationsEnabled(bmsirInfoNotificationsEnabled);
 		if (bmsirArenaOverlayHotkeyKeys != null) {
 			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.normalizeKeys(
 					bmsirArenaOverlayHotkeyKeys

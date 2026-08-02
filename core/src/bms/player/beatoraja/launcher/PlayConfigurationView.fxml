@@ -497,6 +497,7 @@
 	                        <Label text="%BMSIR_COVER_CHANGE_STEP" />
 	                        <Spinner fx:id="bmsirCoverChangeStep" editable="true" prefWidth="90.0" />
 	                    </HBox>
+	                    <CheckBox fx:id="bmsirCoverHispeedAutoAdjustEnabled" mnemonicParsing="false" text="%BMSIR_COVER_HISPEED_AUTO_ADJUST_ENABLED" />
 	                    <Separator />
 	                    <Label text="%BMSIR_NUMPAD_SHORTCUTS" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_NUMPAD_SHORTCUTS_DESCRIPTION" wrapText="true" />
@@ -527,6 +528,8 @@
 	                        <Spinner fx:id="bmsirNumpadJudgeTimingStep" editable="true" prefWidth="90.0" />
 	                        <Label text="ms" />
 	                    </HBox>
+	                    <CheckBox fx:id="bmsirJudgeTimingRestoreEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_TIMING_RESTORE_ENABLED" />
+	                    <CheckBox fx:id="bmsirInfoNotificationsEnabled" mnemonicParsing="false" text="%BMSIR_INFO_NOTIFICATIONS_ENABLED" />
 	                    <Separator />
 	                    <CheckBox fx:id="bmsirLongNoteFixed" disable="true" mnemonicParsing="false" selected="true" text="%BMSIR_LONG_NOTE_FIXED" />
                     <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LONG_NOTE_FIXED_DESCRIPTION" wrapText="true" />

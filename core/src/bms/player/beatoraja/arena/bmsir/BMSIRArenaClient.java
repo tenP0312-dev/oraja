@@ -507,7 +507,7 @@ public final class BMSIRArenaClient {
         return main == null ? null : main.getPlayerConfig();
     }
 
-    static boolean saveArenaConfig() {
+    public static boolean saveArenaConfig() {
         return main != null
                 && BMSIRArenaConfigStore.write(
                         main.getConfig().getPlayerpath(),

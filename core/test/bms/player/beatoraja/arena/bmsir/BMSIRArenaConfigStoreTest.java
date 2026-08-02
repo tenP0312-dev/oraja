@@ -38,8 +38,11 @@ class BMSIRArenaConfigStoreTest {
         );
         player.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_LEADER);
         player.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
+        player.setBmsirArenaLastVisibleOverlayMode(1);
+        player.setBmsirArenaOverlayMode(2);
         player.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED);
         player.setBmsirCoverChangeStep(12);
+        player.setBmsirCoverHispeedAutoAdjustEnabled(true);
         player.setBmsirNumpadActions(new String[]{
                 BMSIRNumpadAction.NONE.id(),
                 BMSIRNumpadAction.BMS_SEARCH.id(),
@@ -53,6 +56,8 @@ class BMSIRArenaConfigStoreTest {
                 BMSIRNumpadAction.JUDGE_PLUS.id()
         });
         player.setBmsirNumpadJudgeTimingStep(7);
+        player.setBmsirJudgeTimingRestoreEnabled(true);
+        player.setBmsirInfoNotificationsEnabled(false);
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -73,10 +78,14 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 6"));
+        assertTrue(serialized.contains("\"schemaVersion\": 7"));
+        assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
+        assertTrue(serialized.contains("\"coverHispeedAutoAdjustEnabled\": true"));
         assertTrue(serialized.contains("\"numpadJudgeTimingStep\": 7"));
+        assertTrue(serialized.contains("\"judgeTimingRestoreEnabled\": true"));
+        assertTrue(serialized.contains("\"infoNotificationsEnabled\": false"));
         assertTrue(serialized.contains("\"bms_search\""));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));
@@ -101,12 +110,17 @@ class BMSIRArenaConfigStoreTest {
         );
         arenaBody.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_ABOVE);
         arenaBody.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
+        arenaBody.setBmsirArenaLastVisibleOverlayMode(1);
+        arenaBody.setBmsirArenaOverlayMode(2);
         arenaBody.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_LR2);
         arenaBody.setBmsirCoverChangeStep(15);
+        arenaBody.setBmsirCoverHispeedAutoAdjustEnabled(true);
         String[] numpadActions = BMSIRNumpadAction.defaultIds();
         numpadActions[1] = BMSIRNumpadAction.FPS.id();
         arenaBody.setBmsirNumpadActions(numpadActions);
         arenaBody.setBmsirNumpadJudgeTimingStep(4);
+        arenaBody.setBmsirJudgeTimingRestoreEnabled(true);
+        arenaBody.setBmsirInfoNotificationsEnabled(false);
         PlayerConfig.write(temporaryDirectory.toString(), arenaBody);
 
         PlayerConfig normalBody = player("player1");
@@ -146,16 +160,20 @@ class BMSIRArenaConfigStoreTest {
                 PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY,
                 restored.getBmsirArenaGraphOrder()
         );
+        assertEquals(1, restored.getBmsirArenaLastVisibleOverlayMode());
         assertEquals(
                 PlayerConfig.BMSIR_COVER_CONTROL_LR2,
                 restored.getBmsirCoverControlMode()
         );
         assertEquals(15, restored.getBmsirCoverChangeStep());
+        assertTrue(restored.isBmsirCoverHispeedAutoAdjustEnabled());
         assertEquals(
                 BMSIRNumpadAction.FPS.id(),
                 restored.getBmsirNumpadActions()[1]
         );
         assertEquals(4, restored.getBmsirNumpadJudgeTimingStep());
+        assertTrue(restored.isBmsirJudgeTimingRestoreEnabled());
+        assertFalse(restored.isBmsirInfoNotificationsEnabled());
     }
 
     @Test
@@ -242,6 +260,7 @@ class BMSIRArenaConfigStoreTest {
                 restored.getBmsirCoverControlMode()
         );
         assertEquals(10, restored.getBmsirCoverChangeStep());
+        assertFalse(restored.isBmsirCoverHispeedAutoAdjustEnabled());
         assertEquals(
                 java.util.List.of(
                         "judge_auto",
@@ -258,6 +277,8 @@ class BMSIRArenaConfigStoreTest {
                 java.util.Arrays.asList(restored.getBmsirNumpadActions())
         );
         assertEquals(1, restored.getBmsirNumpadJudgeTimingStep());
+        assertFalse(restored.isBmsirJudgeTimingRestoreEnabled());
+        assertTrue(restored.isBmsirInfoNotificationsEnabled());
     }
 
     private PlayerConfig player(String id) throws Exception {

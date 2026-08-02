@@ -1,9 +1,6 @@
 package bms.player.beatoraja.select.bar;
 
-import java.util.Arrays;
-import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.ir.IRChartData;
-import bms.player.beatoraja.ir.IRResponse;
 import bms.player.beatoraja.ir.IRScoreData;
 import bms.player.beatoraja.ir.LeaderboardEntry;
 import bms.player.beatoraja.ir.LR2IRAccessor;
@@ -24,13 +21,11 @@ import static bms.player.beatoraja.select.bar.FunctionBar.STYLE_TABLE;
 public class LeaderBoardBar extends DirectoryBar {
 	private final SongData songData;
 	private final String title;
-	private final boolean fromLR2IR;
 
-	public LeaderBoardBar(MusicSelector selector, SongData songData, boolean fromLR2IR) {
+	public LeaderBoardBar(MusicSelector selector, SongData songData) {
 		super(selector);
 		this.songData = songData;
 		this.title = songData.getFullTitle();
-		this.fromLR2IR = fromLR2IR;
 	}
 
 	@Override
@@ -42,27 +37,15 @@ public class LeaderBoardBar extends DirectoryBar {
 	public Bar[] getChildren() {
 		// NOTE: For further devs, the leaderboard's children is sorted by 'exscore', if you want to implement a
 		// different sort strategy, you need to change two 'fromIRScoreData' implementation
-		if (!fromLR2IR) {
-			MainController.IRStatus pir = selector.main.getIRStatus()[0];
-			IRResponse<IRScoreData[]> response = pir.connection.getPlayData(pir.player, new IRChartData(songData));
-			if (!response.isSucceeded()) {
-				ImGuiNotify.error(String.format("Failed to load ir leaderboard: %s",response.getMessage()));
-				return new Bar[0];
-			}
-			IRScoreData[] irScoreData = response.getData();
-            LeaderboardEntry[] leaderboard = Arrays.stream(irScoreData)
-                                                 .map(LeaderboardEntry::newEntryPrimaryIR)
-                                                 .toArray(LeaderboardEntry[] ::new);
-            return fromIRScoreData(leaderboard);
-		} else {
-			Pair<IRScoreData, LeaderboardEntry[]> scores = LR2IRAccessor.getScoreData(new IRChartData(songData));
-			IRScoreData localScore = scores.getKey();
-			LeaderboardEntry[] scoreData = scores.getValue();
-			if (localScore != null) {
-				return fromIRScoreData(localScore, scoreData);
-			}
-			return fromIRScoreData(scoreData);
+		Pair<IRScoreData, LeaderboardEntry[]> scores = LR2IRAccessor.getScoreData(
+				new IRChartData(songData)
+		);
+		IRScoreData localScore = scores.getKey();
+		LeaderboardEntry[] scoreData = scores.getValue();
+		if (localScore != null) {
+			return fromIRScoreData(localScore, scoreData);
 		}
+		return fromIRScoreData(scoreData);
 	}
 
 	/**
@@ -135,7 +118,7 @@ public class LeaderBoardBar extends DirectoryBar {
             if (!entry.isLR2IR()) { return; }
 
             if (songData.getBMSModel().getMode() != Mode.BEAT_7K) {
-                ImGuiNotify.warning("LR2IR Ghost battle is currently only supported for 7K.");
+				ImGuiNotify.warning("BMS-IR ghost battle is currently only supported for 7K.");
             }
 
             LR2GhostData ghost = LR2IRAccessor.getGhostData(songData.getMd5(), entry.getLR2Id());
@@ -159,7 +142,7 @@ public class LeaderBoardBar extends DirectoryBar {
             }
             else if (expectedNotes < ghost.getJudgements().length) {
                 // haven't seen this happen yet
-                ImGuiNotify.error("Malformed LR2IR ghost data received.");
+				ImGuiNotify.error("Malformed BMS-IR ghost data received.");
                 return;
             }
 

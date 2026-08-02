@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`BMS-IR Arena oraja 0.4.12`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.13`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,6 +14,9 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
+Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
+restores a persistent F5 overlay switch, adds judge-timing restoration with a
+Lua API, makes INFO toasts optional, and removes duplicate startup IR logins.
 Version `0.4.12` adds an in-window startup progress log, three configurable
 START+6/7 modes, and individually configurable physical NUMPAD 0--9 shortcuts.
 Version `0.4.11` adds main-skin Arena target injection, fixed entry-order score
@@ -69,7 +72,7 @@ launcher setting after the chart. The normal IR plugin uses the rule saved in
 the completed score, so changing the launcher setting afterward does not move
 an LR2 result into the oraja ranking or vice versa.
 
-Rated Arena remains one chart. Managed rooms can select one chart,
+Rated Arena uses a two-chart points-only series. Managed rooms can select one chart,
 play one shuffled nomination from every participant, or run a shuffled
 first-to-2..5 series. Multi-chart formats show round wins and nomination
 progress. Single-chart rooms can use all-player, host-only, or
@@ -93,16 +96,41 @@ multi-key chord, and defaults to Ctrl+Shift+F5. Hold the desired keys and
 release all of them to register the chord. Escape cancels capture, while
 the explicit `解除` button clears the shortcut. Backspace and Delete can be
 assigned alone or inside an exact chord. Left/right Ctrl, Shift, and Alt are
-treated as the same logical modifier. The unmodified F5 menu and its
-`Show BMS-IR Arena Overlay` action remain a fixed recovery path.
+treated as the same logical modifier. The unmodified F5 menu always includes
+the persistent `Show BMS-IR Arena Overlay` checkbox. Re-enabling it restores
+the last normal or compact display mode.
 BMS-IR-specific settings are stored per player in the allow-listed
 `bmsir_arena.json` sidecar. The first 0.4.1-dev or later start migrates existing
 Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
-first-timing preview switches, 0.4.6 adds the Dan local-sync switch, and 0.4.11
-adds Arena target and graph-order switches.
+first-timing preview switches, 0.4.6 adds the Dan local-sync switch, 0.4.11
+adds Arena target and graph-order switches, and 0.4.13 upgrades the sidecar to
+schema 7 for cover HI-SPEED recalculation, judge restoration, INFO toasts, and
+the last visible overlay mode.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
+
+`判定自動調整値を曲終了後に戻す` is OFF by default. When enabled, a play
+that starts while automatic judge-timing adjustment is ON snapshots the
+current timing and restores it on result, failure, abort, state exit, or game
+shutdown. Changing automatic adjustment during the chart does not alter the
+snapshot decision. Lua skins can use
+`bmsir_judge_timing_restore_enabled()` and
+`set_bmsir_judge_timing_restore_enabled(boolean)`. Legacy skin properties can
+use option `2900` and button/event `390` (`bmsir_judge_timing_restore`). The
+setter and event are effective only on Music Select and persist immediately.
+
+`INFO通知を表示する` controls all transient ImGui INFO toasts as one group.
+It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
+controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
+is independent and OFF by default, so START+6/7 does not activate FHS-style
+scratch recalculation unless explicitly enabled.
+
+The song context menu contains one `BMS-IR Leaderboard` entry. It reads the
+LR2-compatible ranking and selectable ghost directly from BMS-IR over HTTPS;
+the Arena client no longer depends on the old `dream-pro.info` redirect for
+this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS payload,
+cap decompressed data, and keep a short per-chart cache.
 
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
@@ -400,12 +428,12 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.12-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
 
-- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.68.jar`;
+- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.69.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
   a Java 21 runtime, distribution-cleared base assets, and launch scripts.
 
@@ -419,8 +447,8 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.12-macos-aarch64.jar \
-  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
   --output-dir dist \
