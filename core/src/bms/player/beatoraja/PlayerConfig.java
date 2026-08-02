@@ -1517,7 +1517,8 @@ public final class PlayerConfig {
 			createDirectory(Paths.get(config.getPlayerpath()));
 		}
 
-		if(readAllPlayerID(config.getPlayerpath()).length == 0) {
+		String[] playerIds = readAllPlayerID(config.getPlayerpath());
+		if(playerIds.length == 0) {
 			create(config.getPlayerpath(), "player1");
 
 			// スコアデータコピー
@@ -1535,7 +1536,14 @@ public final class PlayerConfig {
 
 			config.setPlayername("player1");
 		} else {
-			readPlayerConfig(config.getPlayerpath(), config.getPlayername());
+			String selectedPlayer = config.getPlayername();
+			if(selectedPlayer == null || selectedPlayer.isBlank()
+					|| !Arrays.asList(playerIds).contains(selectedPlayer)) {
+				Arrays.sort(playerIds);
+				selectedPlayer = playerIds[0];
+				config.setPlayername(selectedPlayer);
+			}
+			readPlayerConfig(config.getPlayerpath(), selectedPlayer);
 		}
 	}
 

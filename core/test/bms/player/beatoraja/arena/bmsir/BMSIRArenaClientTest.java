@@ -310,8 +310,12 @@ class BMSIRArenaClientTest {
         assertEquals(1, config.getRandom2());
         assertEquals(1, config.getDoubleoption());
         assertEquals(
-                "1P : RAN\n2P : MIR\nFLIP",
+                "RAN / MIR / FLIP",
                 BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
+        );
+        assertEquals(
+                "RAN / -",
+                BMSIRArenaClient.playOptionLabel(2, Mode.BEAT_14K.id)
         );
 
         BMSIRArenaClient.applyLockedPlayOption(

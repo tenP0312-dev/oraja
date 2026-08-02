@@ -3766,9 +3766,9 @@ public final class BMSIRArenaClient {
             return first;
         }
         String second = randomOptionLabel((playOption / 10) % 10);
-        return "1P : " + abbreviatedRandomOptionLabel(first)
-                + "\n2P : " + abbreviatedRandomOptionLabel(second)
-                + (((playOption / 100) % 10) == 1 ? "\nFLIP" : "");
+        return abbreviatedRandomOptionLabel(first)
+                + " / " + abbreviatedRandomOptionLabel(second)
+                + (((playOption / 100) % 10) == 1 ? " / FLIP" : "");
     }
 
     private static String abbreviatedRandomOptionLabel(String value) {

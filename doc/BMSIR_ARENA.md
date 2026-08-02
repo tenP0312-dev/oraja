@@ -16,7 +16,10 @@ official発狂 ★1--★25 rated selection.
 
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
 restores a persistent F5 overlay switch, adds judge-timing restoration with a
-Lua API, makes INFO toasts optional, and removes duplicate startup IR logins.
+Lua API, makes INFO toasts optional, removes duplicate startup IR logins, and
+recovers the existing player selection when a fresh system config has not yet
+stored its player ID. DP Arena options use one compact `RAN / -` line and append
+`/ FLIP` on the same line when enabled.
 Version `0.4.12` adds an in-window startup progress log, three configurable
 START+6/7 modes, and individually configurable physical NUMPAD 0--9 shortcuts.
 Version `0.4.11` adds main-skin Arena target injection, fixed entry-order score
@@ -331,7 +334,8 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   counter stale still update spectators. A normal completion uses the
   server-selected chart total; hard fail keeps the actual processed count.
 - SP sends only the active 1P lane option even if stale 2P/FLIP settings exist.
-  DP sends both sides and FLIP together with the chart play mode.
+  DP sends both sides and FLIP together with the chart play mode and displays
+  them on one line, such as `RAN / -` or `RAN / MIR / FLIP`.
 - The chat tab talks only to participants in the current match. Messages are
   limited to 200 normalized characters and one accepted message per second;
   the latest 50 return after reconnect and disappear when the match ends.

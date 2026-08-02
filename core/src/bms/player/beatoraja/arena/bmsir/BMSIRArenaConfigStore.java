@@ -41,6 +41,14 @@ public final class BMSIRArenaConfigStore {
             String playerId,
             PlayerConfig player
     ) {
+        if (player == null
+                || playerPath == null
+                || playerPath.isBlank()
+                || playerId == null
+                || playerId.isBlank()) {
+            logger.warn("BMS-IR Arena settings were not loaded: player path or id is missing");
+            return false;
+        }
         Path path = sidecarPath(playerPath, playerId);
         if (!Files.exists(path)) {
             boolean written = write(playerPath, player);
@@ -67,8 +75,12 @@ public final class BMSIRArenaConfigStore {
     }
 
     public static boolean write(String playerPath, PlayerConfig player) {
-        if (player == null || player.getId() == null || player.getId().isBlank()) {
-            logger.error("BMS-IR Arena settings were not saved: player id is missing");
+        if (playerPath == null
+                || playerPath.isBlank()
+                || player == null
+                || player.getId() == null
+                || player.getId().isBlank()) {
+            logger.error("BMS-IR Arena settings were not saved: player path or id is missing");
             return false;
         }
         Path path = sidecarPath(playerPath, player.getId());
