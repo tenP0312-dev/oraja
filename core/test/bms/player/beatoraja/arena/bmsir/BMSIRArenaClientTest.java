@@ -28,13 +28,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.12", Version.getArenaClientVersion());
+        assertEquals("0.4.13", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.4.12"));
-        assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
+        assertEquals("Arena oraja 0.4.13", Version.getArenaDisplayName());
     }
 
     @Test
@@ -81,6 +80,17 @@ class BMSIRArenaClientTest {
         assertEquals(10, config.getBmsirArenaOptionSeconds());
         assertEquals(0, config.getBmsirArenaIntermissionSeconds());
         assertEquals("lr2", config.getBmsirRulesetProfile());
+        assertEquals(0, config.getBmsirArenaLastVisibleOverlayMode());
+        assertFalse(config.isBmsirCoverHispeedAutoAdjustEnabled());
+        assertFalse(config.isBmsirJudgeTimingRestoreEnabled());
+        assertTrue(config.isBmsirInfoNotificationsEnabled());
+
+        config.setBmsirCoverChangeStep(2000);
+        assertEquals(1000, config.getBmsirCoverChangeStep());
+        config.setBmsirCoverChangeStep(0);
+        assertEquals(1, config.getBmsirCoverChangeStep());
+        config.setBmsirArenaLastVisibleOverlayMode(2);
+        assertEquals(1, config.getBmsirArenaLastVisibleOverlayMode());
 
         config.setBmsirArenaOverlayMode(99);
         assertEquals(2, config.getBmsirArenaOverlayMode());

@@ -54,12 +54,12 @@ public class LR2GhostData {
             parser = CSVParser.parse(ghostCsv, format);
         }
         catch (Exception e) {
-            ImGuiNotify.error(String.format("Could not parse ghost data response from LR2IR."));
+            ImGuiNotify.error("Could not parse ghost data response from BMS-IR.");
             return null;
         }
         List<CSVRecord> list = parser.getRecords();
         if (list.isEmpty()) {
-            ImGuiNotify.error(String.format("LR2IR returned empty response."));
+            ImGuiNotify.error("BMS-IR returned an empty ghost response.");
             return null;
         }
         CSVRecord data = list.get(0);

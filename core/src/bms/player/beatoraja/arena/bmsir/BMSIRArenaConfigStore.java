@@ -122,7 +122,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 6;
+        private int schemaVersion = 7;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -134,6 +134,7 @@ public final class BMSIRArenaConfigStore {
         private boolean randomMirror = false;
         private String rulesetProfile = "lr2";
         private int overlayMode = 0;
+        private int lastVisibleOverlayMode = 0;
         private int overlayHotkeyFunction = 5;
         private int overlayHotkeyModifiers = 3;
         private int[] overlayHotkeyKeys;
@@ -148,8 +149,11 @@ public final class BMSIRArenaConfigStore {
         private String graphOrder = PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK;
         private String coverControlMode;
         private Integer coverChangeStep;
+        private boolean coverHispeedAutoAdjustEnabled = false;
         private String[] numpadActions;
         private Integer numpadJudgeTimingStep;
+        private boolean judgeTimingRestoreEnabled = false;
+        private boolean infoNotificationsEnabled = true;
         private boolean presentationOverlayEnabled = true;
         private boolean countdownSeEnabled = true;
         private boolean startSeEnabled = true;
@@ -177,6 +181,8 @@ public final class BMSIRArenaConfigStore {
             settings.randomMirror = player.isBmsirArenaRandomMirror();
             settings.rulesetProfile = player.getBmsirRulesetProfile();
             settings.overlayMode = player.getBmsirArenaOverlayMode();
+            settings.lastVisibleOverlayMode =
+                    player.getBmsirArenaLastVisibleOverlayMode();
             settings.overlayHotkeyFunction = player.getBmsirArenaOverlayHotkeyFunction();
             settings.overlayHotkeyModifiers = player.getBmsirArenaOverlayHotkeyModifiers();
             settings.overlayHotkeyKeys = player.getBmsirArenaOverlayHotkeyKeys();
@@ -191,9 +197,15 @@ public final class BMSIRArenaConfigStore {
             settings.graphOrder = player.getBmsirArenaGraphOrder();
             settings.coverControlMode = player.getBmsirCoverControlMode();
             settings.coverChangeStep = player.getBmsirCoverChangeStep();
+            settings.coverHispeedAutoAdjustEnabled =
+                    player.isBmsirCoverHispeedAutoAdjustEnabled();
             settings.numpadActions = player.getBmsirNumpadActions();
             settings.numpadJudgeTimingStep =
                     player.getBmsirNumpadJudgeTimingStep();
+            settings.judgeTimingRestoreEnabled =
+                    player.isBmsirJudgeTimingRestoreEnabled();
+            settings.infoNotificationsEnabled =
+                    player.isBmsirInfoNotificationsEnabled();
             settings.presentationOverlayEnabled =
                     player.isBmsirArenaPresentationOverlayEnabled();
             settings.countdownSeEnabled = player.isBmsirArenaCountdownSeEnabled();
@@ -229,6 +241,7 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaAllowHigherSelection(allowHigherSelection);
             player.setBmsirArenaRandomMirror(randomMirror);
             player.setBmsirRulesetProfile(rulesetProfile);
+            player.setBmsirArenaLastVisibleOverlayMode(lastVisibleOverlayMode);
             player.setBmsirArenaOverlayMode(overlayMode);
             player.setBmsirArenaOverlayHotkeyFunction(overlayHotkeyFunction);
             player.setBmsirArenaOverlayHotkeyModifiers(overlayHotkeyModifiers);
@@ -255,12 +268,19 @@ public final class BMSIRArenaConfigStore {
             if (coverChangeStep != null) {
                 player.setBmsirCoverChangeStep(coverChangeStep);
             }
+            player.setBmsirCoverHispeedAutoAdjustEnabled(
+                    coverHispeedAutoAdjustEnabled
+            );
             if (numpadActions != null) {
                 player.setBmsirNumpadActions(numpadActions);
             }
             if (numpadJudgeTimingStep != null) {
                 player.setBmsirNumpadJudgeTimingStep(numpadJudgeTimingStep);
             }
+            player.setBmsirJudgeTimingRestoreEnabled(
+                    judgeTimingRestoreEnabled
+            );
+            player.setBmsirInfoNotificationsEnabled(infoNotificationsEnabled);
             player.setBmsirArenaPresentationOverlayEnabled(
                     presentationOverlayEnabled
             );

@@ -2,6 +2,7 @@ package bms.player.beatoraja.skin.lua;
 
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.play.BMSPlayer;
+import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinPropertyMapper;
 import bms.player.beatoraja.skin.property.*;
@@ -222,6 +223,28 @@ public class MainStateAccessor {
 						.getPlayConfig()
 						.setStartHerePreviewMeasures(measures);
 				player.getLanerender().rebuildStartHerePreview();
+				return LuaBoolean.TRUE;
+			}
+		});
+		table.set("bmsir_judge_timing_restore_enabled", new ZeroArgFunction() {
+			@Override
+			public LuaValue call() {
+				return LuaBoolean.valueOf(
+						state.resource.getPlayerConfig()
+								.isBmsirJudgeTimingRestoreEnabled()
+				);
+			}
+		});
+		table.set("set_bmsir_judge_timing_restore_enabled", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue value) {
+				if (!(state instanceof MusicSelector) || !value.isboolean()) {
+					return LuaBoolean.FALSE;
+				}
+				state.resource.getPlayerConfig().setBmsirJudgeTimingRestoreEnabled(
+						value.toboolean()
+				);
+				state.main.saveConfig();
 				return LuaBoolean.TRUE;
 			}
 		});

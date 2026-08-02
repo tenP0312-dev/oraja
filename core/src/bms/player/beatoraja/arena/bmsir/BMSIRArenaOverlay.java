@@ -69,7 +69,6 @@ public final class BMSIRArenaOverlay {
     private static boolean hotkeyCaptureActive;
     private static volatile boolean keyboardInputCaptured;
     private static final Set<Integer> HOTKEY_CAPTURE_KEYS = new LinkedHashSet<>();
-    private static int lastVisibleMode;
     private static final ImString CHAT_INPUT = new ImString(201);
     private static final ImString LOBBY_CHAT_INPUT = new ImString(201);
     private static final ImString PRIVATE_ROOM_CODE = new ImString(7);
@@ -299,15 +298,18 @@ public final class BMSIRArenaOverlay {
     }
 
     public static void toggleVisibility() {
+        setVisible(isHidden());
+    }
+
+    public static void setVisible(boolean visible) {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config == null) {
             return;
         }
         int current = config.getBmsirArenaOverlayMode();
-        if (current == 2) {
+        if (visible) {
             restoreVisibility();
-        } else {
-            lastVisibleMode = current;
+        } else if (current != 2) {
             config.setBmsirArenaOverlayMode(2);
         }
     }
@@ -320,7 +322,9 @@ public final class BMSIRArenaOverlay {
     public static void restoreVisibility() {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config != null) {
-            config.setBmsirArenaOverlayMode(restoredVisibleMode(lastVisibleMode));
+            config.setBmsirArenaOverlayMode(restoredVisibleMode(
+                    config.getBmsirArenaLastVisibleOverlayMode()
+            ));
         }
     }
 
@@ -2475,7 +2479,7 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.sameLine();
         if (ImGui.radioButton("非表示", config.getBmsirArenaOverlayMode() == 2)) {
-            config.setBmsirArenaOverlayMode(2);
+            setVisible(false);
         }
         renderOverlayHotkeySetting(config);
         ImGui.textDisabled("戻らない場合は固定のF5メニューから再表示できます");

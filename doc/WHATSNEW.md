@@ -1,3 +1,22 @@
+# Arena oraja 0.4.13
+
+## Leaderboard, overlay, and play-setting refinements
+
+- Unified the two song leaderboard entries as `BMS-IR Leaderboard`. Rankings
+  and selectable ghost data now come directly from the BMS-IR HTTPS endpoint,
+  with gzip, bounded responses, longer reads, and a short ranking cache.
+- Restored a persistent Arena overlay checkbox to the F5 mod menu. Turning it
+  back on restores the last normal or compact display mode.
+- Expanded the START+6/7 cover step range to 1--1000 and added an independent,
+  default-OFF switch for recalculating HI-SPEED when a cover changes.
+- Added a default-OFF option that restores the pre-play judge timing after a
+  chart when automatic timing adjustment was enabled at play start. Lua skins
+  can read/write it or trigger the registered toggle event.
+- Added one switch for all transient INFO toasts. Warning and error notices
+  remain visible.
+- Removed duplicate startup login for the same IR/account and shortened the
+  displayed client identity to `Arena oraja 0.4.13`.
+
 # BMS-IR Arena oraja 0.4.12
 
 ## Startup progress and configurable play controls

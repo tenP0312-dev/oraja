@@ -944,6 +944,7 @@ public class SkinProperty {
 	public static final int OFFSET_JUDGEDETAIL_3P = 33;
 
 	public static final int OPTION_CONSTANT = 400;
+	public static final int OPTION_BMSIR_JUDGE_TIMING_RESTORE = 2900;
 
 	// オフセットのユーザー定義は40番以降を使用して下さい
 
@@ -1026,6 +1027,7 @@ public class SkinProperty {
 	public static final int BUTTON_SKINSELECT_24KEY = 386;
 	public static final int BUTTON_SKINSELECT_24KEY_DOUBLE = 387;
 	public static final int BUTTON_SKINSELECT_24KEY_BATTLE = 388;
+	public static final int BUTTON_BMSIR_JUDGE_TIMING_RESTORE = 390;
 
 	// ユーザー定義イベント用
 	public static final int EVENT_CUSTOM_BEGIN = 1000;

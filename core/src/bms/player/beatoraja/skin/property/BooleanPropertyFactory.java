@@ -666,6 +666,14 @@ public class BooleanPropertyFactory {
 					return false;
 				})
 		)),
+		bmsir_judge_timing_restore(
+				OPTION_BMSIR_JUDGE_TIMING_RESTORE,
+				new DrawProperty(
+						DrawProperty.TYPE_NO_STATIC,
+						state -> state.resource.getPlayerConfig()
+								.isBmsirJudgeTimingRestoreEnabled()
+				)
+		),
 
 		;
 		/**

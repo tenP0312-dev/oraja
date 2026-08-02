@@ -196,7 +196,9 @@ public final class ControlInputProcessor {
 			laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
 		}
 
-		if (hispeedAutoAdjust && laneRenderer.getNowBPM() > 0) {
+		if (config.isBmsirCoverHispeedAutoAdjustEnabled()
+				&& hispeedAutoAdjust
+				&& laneRenderer.getNowBPM() > 0) {
 			laneRenderer.resetHispeed(laneRenderer.getNowBPM());
 		}
 	}

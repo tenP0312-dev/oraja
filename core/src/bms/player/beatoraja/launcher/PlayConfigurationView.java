@@ -127,6 +127,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private Spinner<Integer> bmsirCoverChangeStep;
 	@FXML
+	private CheckBox bmsirCoverHispeedAutoAdjustEnabled;
+	@FXML
 	private ComboBox<String> bmsirNumpad0;
 	@FXML
 	private ComboBox<String> bmsirNumpad1;
@@ -148,6 +150,10 @@ public class PlayConfigurationView implements Initializable {
 	private ComboBox<String> bmsirNumpad9;
 	@FXML
 	private Spinner<Integer> bmsirNumpadJudgeTimingStep;
+	@FXML
+	private CheckBox bmsirJudgeTimingRestoreEnabled;
+	@FXML
+	private CheckBox bmsirInfoNotificationsEnabled;
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
 
@@ -423,7 +429,7 @@ public class PlayConfigurationView implements Initializable {
 				"拡張（6/7: SUD+/HIDDEN/LIFT）"
 		);
 		bmsirCoverChangeStep.setValueFactory(
-				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 10)
+				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
 		bmsirNumpadCombos = List.of(
 				bmsirNumpad0,
@@ -687,6 +693,9 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverChangeStep.getValueFactory().setValue(
 				player.getBmsirCoverChangeStep()
 		);
+		bmsirCoverHispeedAutoAdjustEnabled.setSelected(
+				player.isBmsirCoverHispeedAutoAdjustEnabled()
+		);
 		String[] numpadActions = player.getBmsirNumpadActions();
 		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
 			bmsirNumpadCombos.get(index).getSelectionModel().select(
@@ -695,6 +704,12 @@ public class PlayConfigurationView implements Initializable {
 		}
 		bmsirNumpadJudgeTimingStep.getValueFactory().setValue(
 				player.getBmsirNumpadJudgeTimingStep()
+		);
+		bmsirJudgeTimingRestoreEnabled.setSelected(
+				player.isBmsirJudgeTimingRestoreEnabled()
+		);
+		bmsirInfoNotificationsEnabled.setSelected(
+				player.isBmsirInfoNotificationsEnabled()
 		);
 
 		videoController.updatePlayer(player);
@@ -841,6 +856,9 @@ public class PlayConfigurationView implements Initializable {
 				)
 		);
 		player.setBmsirCoverChangeStep(getValue(bmsirCoverChangeStep));
+		player.setBmsirCoverHispeedAutoAdjustEnabled(
+				bmsirCoverHispeedAutoAdjustEnabled.isSelected()
+		);
 		String[] numpadActions = new String[BMSIRNumpadAction.KEY_COUNT];
 		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
 			int selected = bmsirNumpadCombos.get(index)
@@ -853,6 +871,12 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirNumpadActions(numpadActions);
 		player.setBmsirNumpadJudgeTimingStep(
 				getValue(bmsirNumpadJudgeTimingStep)
+		);
+		player.setBmsirJudgeTimingRestoreEnabled(
+				bmsirJudgeTimingRestoreEnabled.isSelected()
+		);
+		player.setBmsirInfoNotificationsEnabled(
+				bmsirInfoNotificationsEnabled.isSelected()
 		);
 
 		videoController.commitPlayer(player);

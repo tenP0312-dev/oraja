@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
+import bms.player.beatoraja.arena.bmsir.BMSIRJudgeTimingRestore;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.modmenu.*;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
@@ -95,6 +96,8 @@ public class MainController {
 
 	private Config config;
 	private PlayerConfig player;
+	private final BMSIRJudgeTimingRestore judgeTimingRestore =
+			new BMSIRJudgeTimingRestore();
 	private BMSPlayerMode auto;
 	private boolean songUpdated;
 
@@ -170,13 +173,14 @@ public class MainController {
         }
 		this.player = player;
 		BMSPlayerRule.setConfiguredRuleProfile(player.getBmsirRulesetProfile());
+		ImGuiNotify.setInfoEnabled(player.isBmsirInfoNotificationsEnabled());
 
 		this.bmsfile = f;
 	}
 
 	private void initializeIRConfig() {
 		startupIrStatuses = new Array<>();
-		for (IRConfig irconfig : player.getIrconfig()) {
+		for (IRConfig irconfig : uniqueIrConfigs(player.getIrconfig())) {
 			loginIr(irconfig);
 		}
 		finishIrInitialization();
@@ -199,10 +203,13 @@ public class MainController {
 
 		IRResponse<IRPlayerData> response;
 		try {
+			String accountName = "BMS-IR".equals(irconfig.getIrname())
+					? player.getName()
+					: "";
 			response = connection.login(new IRAccount(
 					irconfig.getUserid(),
 					irconfig.getPassword(),
-					""
+					accountName
 			));
 		} catch (IllegalArgumentException error) {
 			logger.info("trying pre-0.8.5 IR login method");
@@ -265,7 +272,7 @@ public class MainController {
 		}));
 
 		startupIrStatuses = new Array<>();
-		IRConfig[] irConfigs = player.getIrconfig();
+		IRConfig[] irConfigs = uniqueIrConfigs(player.getIrconfig());
 		for (int index = 0; index < irConfigs.length; index++) {
 			IRConfig irConfig = irConfigs[index];
 			String name = irConfig.getIrname() == null
@@ -397,6 +404,26 @@ public class MainController {
 		return tasks;
 	}
 
+	static IRConfig[] uniqueIrConfigs(IRConfig[] configs) {
+		if (configs == null || configs.length == 0) {
+			return new IRConfig[0];
+		}
+		List<IRConfig> unique = new ArrayList<>();
+		for (IRConfig candidate : configs) {
+			if (candidate == null) {
+				continue;
+			}
+			boolean duplicate = unique.stream().anyMatch(existing ->
+					Objects.equals(existing.getIrname(), candidate.getIrname())
+							&& Objects.equals(existing.getUserid(), candidate.getUserid())
+			);
+			if (!duplicate) {
+				unique.add(candidate);
+			}
+		}
+		return unique.toArray(IRConfig[]::new);
+	}
+
 	public boolean hasObsListener() {
 		return obsListener != null;
 	}
@@ -486,6 +513,9 @@ public class MainController {
 	}
 
 	public void changeState(MainStateType state) {
+		if (current instanceof BMSPlayer) {
+			judgeTimingRestore.restore(player);
+		}
 		MainState newState = null;
 		switch (state) {
 		case MUSICSELECT:
@@ -496,9 +526,15 @@ public class MainController {
 			}
 			break;
 		case DECIDE:
-			newState = config.isSkipDecideScreen() ? createBMSPlayerState() : decide;
+			if (config.isSkipDecideScreen()) {
+				judgeTimingRestore.begin(player);
+				newState = createBMSPlayerState();
+			} else {
+				newState = decide;
+			}
 			break;
 		case PLAY:
+			judgeTimingRestore.begin(player);
 			newState = createBMSPlayerState();
 			break;
 		case RESULT:
@@ -545,6 +581,7 @@ public class MainController {
 		config.setPlayername(pc.getId());
 		player = pc;
 		BMSPlayerRule.setConfiguredRuleProfile(pc.getBmsirRulesetProfile());
+		ImGuiNotify.setInfoEnabled(pc.isBmsirInfoNotificationsEnabled());
 
 		playdata = new PlayDataAccessor(config);
 
@@ -1177,6 +1214,7 @@ public class MainController {
 
 	public void dispose() {
 		BMSIRArenaClient.shutdown();
+		judgeTimingRestore.restore(player);
 		saveConfig();
 
 		if (selector != null) {
