@@ -103,6 +103,7 @@ public final class BMSIRArenaClient {
     private static volatile long serverStartMillis;
     private static volatile long loadDeadlineMillis;
     private static volatile long serverClockOffsetMillis;
+    private static volatile long interRoundResultExitAtMillis;
     private static volatile ScheduledFuture<?> clockSyncTask;
     private static volatile ScheduledFuture<?> optionReadyTask;
     private static volatile ObjectNode pendingFinal;
@@ -359,6 +360,7 @@ public final class BMSIRArenaClient {
         lastKnownPlayMode = 0;
         loadDeadlineMillis = 0L;
         serverStartMillis = 0L;
+        interRoundResultExitAtMillis = 0L;
         currentChartTotalNotes = 0;
         currentRandomSeed = -1L;
         serverClockOffsetMillis = 0L;
@@ -2386,6 +2388,9 @@ public final class BMSIRArenaClient {
             return;
         }
         String value = normalizeState(state);
+        if (!"result".equals(value)) {
+            interRoundResultExitAtMillis = 0L;
+        }
         if (
                 arenaPlayActive
                         && pendingFinal == null
@@ -2452,6 +2457,49 @@ public final class BMSIRArenaClient {
             sendState("result", readyForArena("result"));
         }
         restoreOptionsWhenSafe();
+    }
+
+    public static boolean consumeInterRoundResultExitDeadline() {
+        long deadline = interRoundResultExitAtMillis;
+        long serverNow = System.currentTimeMillis() + serverClockOffsetMillis;
+        if (!interRoundResultDeadlineReached(deadline, serverNow)) {
+            return false;
+        }
+        interRoundResultExitAtMillis = 0L;
+        normalResultReady = true;
+        restoreOptionsWhenSafe();
+        BMSIRArenaLog.event(
+                "bo2_interround_result_exit",
+                "match_id", resultView.path("match_id").asText(""),
+                "deadline", deadline,
+                "server_now", serverNow
+        );
+        return true;
+    }
+
+    static boolean interRoundResultDeadlineReached(
+            long deadlineMillis,
+            long serverNowMillis
+    ) {
+        return deadlineMillis > 0L && serverNowMillis >= deadlineMillis;
+    }
+
+    static long interRoundResultExitDeadlineMillis(JsonNode message) {
+        if (message == null) {
+            return 0L;
+        }
+        JsonNode series = message.path("series");
+        if (
+                !"bo2".equals(series.path("series_format").asText(""))
+                        || series.path("complete").asBoolean(true)
+        ) {
+            return 0L;
+        }
+        double deadlineSeconds = message.path("return_to_select_at").asDouble(0.0);
+        if (!Double.isFinite(deadlineSeconds) || deadlineSeconds <= 0.0) {
+            return 0L;
+        }
+        return Math.max(0L, Math.round(deadlineSeconds * 1000.0));
     }
 
     public static void onJudge(ScoreData score) {
@@ -2634,6 +2682,7 @@ public final class BMSIRArenaClient {
                         arenaPlayActive = false;
                         playReadySent = false;
                         serverStartMillis = 0L;
+                        interRoundResultExitAtMillis = 0L;
                         currentMatchId = "";
                         pendingFinal = null;
                         currentPlayOption = 0;
@@ -2808,6 +2857,8 @@ public final class BMSIRArenaClient {
                     receiveRules(message);
                     resultView = message;
                     liveView = message;
+                    interRoundResultExitAtMillis =
+                            interRoundResultExitDeadlineMillis(message);
                     boolean autoReentered = false;
                     for (JsonNode playerId : message.path("auto_reentry_player_ids")) {
                         if (playerId.asInt() == currentPlayerId) {
@@ -2833,6 +2884,9 @@ public final class BMSIRArenaClient {
                                     ? "対戦終了。この部屋で次の対戦を待っています"
                                     : "対戦終了。次の対戦を待機しています")
                             : "対戦終了。自動エントリーを終了しました";
+                    if (interRoundResultExitAtMillis > 0L) {
+                        arenaUiMessage = "ラウンド終了。15秒後に選曲画面へ戻ります";
+                    }
                     reserved = false;
                     arenaPlayPending = false;
                     arenaPlayActive = false;
@@ -2886,6 +2940,7 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     currentRandomSeed = -1L;
                     serverStartMillis = 0L;
+                    interRoundResultExitAtMillis = 0L;
                     normalResultReady = true;
                     roomReady = false;
                     clearNominationState();
@@ -2922,6 +2977,7 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     currentRandomSeed = -1L;
                     serverStartMillis = 0L;
+                    interRoundResultExitAtMillis = 0L;
                     clearNominationState();
                     roomReady = false;
                     clearChatMessages();
@@ -2950,6 +3006,7 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     currentRandomSeed = -1L;
                     serverStartMillis = 0L;
+                    interRoundResultExitAtMillis = 0L;
                     clearNominationState();
                     clearFillState();
                     clearChatMessages();
@@ -2969,6 +3026,7 @@ public final class BMSIRArenaClient {
                     forfeitRequested = false;
                     currentMatchId = "";
                     pendingFinal = null;
+                    interRoundResultExitAtMillis = 0L;
                     clearNominationState();
                     clearFillState();
                     clearChatMessages();
@@ -3009,6 +3067,7 @@ public final class BMSIRArenaClient {
                     currentChartTotalNotes = 0;
                     currentRandomSeed = -1L;
                     serverStartMillis = 0L;
+                    interRoundResultExitAtMillis = 0L;
                     clearNominationState();
                     roomReady = false;
                     clearChatMessages();
