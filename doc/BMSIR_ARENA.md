@@ -341,6 +341,11 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   result opens normally. A rated result shows the player's previous rating,
   new rating, and delta prominently. Fixed Arena options are restored only
   after the ordinary IR submission has captured the Arena score.
+- An incomplete BO2 round result automatically enters the ordinary result
+  fade at the server-provided 15-second deadline. This inter-round guard also
+  releases a stalled ordinary-IR wait so round 2 can begin after music select
+  is reported. The final BO2 result and ordinary non-Arena results remain
+  user-controlled.
 - A normal result or hard fail automatically returns the account to the Arena
   queue. Client shutdown or an unexpected Arena play exit requests a
   zero-score forfeit and stops automatic entry. Entering the normal result

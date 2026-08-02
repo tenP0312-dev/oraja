@@ -597,6 +597,49 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void onlyIncompleteBo2ResultsCarryAForcedExitDeadline() throws Exception {
+        var firstRound = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "bo2", "complete": false}
+                }
+                """);
+        var finalRound = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "bo2", "complete": true}
+                }
+                """);
+        var nonBo2 = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "first_to", "complete": false}
+                }
+                """);
+
+        assertEquals(
+                1_015_250L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(firstRound)
+        );
+        assertEquals(
+                0L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(finalRound)
+        );
+        assertEquals(
+                0L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(nonBo2)
+        );
+        assertFalse(BMSIRArenaClient.interRoundResultDeadlineReached(
+                1_015_250L,
+                1_015_249L
+        ));
+        assertTrue(BMSIRArenaClient.interRoundResultDeadlineReached(
+                1_015_250L,
+                1_015_250L
+        ));
+    }
+
+    @Test
     void matchScopedMessagesRejectMissingAndDifferentMatchIds() throws Exception {
         assertTrue(BMSIRArenaClient.matchMessageMatches(
                 "match-a",

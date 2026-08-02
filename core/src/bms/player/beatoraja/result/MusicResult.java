@@ -173,6 +173,15 @@ public class MusicResult extends AbstractResult {
 		stop(RESULT_CLOSE);
 	}
 
+	private void startResultFadeout() {
+		timer.switchTimer(TIMER_FADEOUT, true);
+		if (getSound(RESULT_CLOSE) != null) {
+			stop(RESULT_CLEAR);
+			stop(RESULT_FAIL);
+			play(RESULT_CLOSE);
+		}
+	}
+
 	public void render() {
 		long time = timer.getNowTime();
 		timer.switchTimer(TIMER_RESULTGRAPH_BEGIN, true);
@@ -183,6 +192,10 @@ public class MusicResult extends AbstractResult {
 		}
 		if (time > getSkin().getInput()) {
 			timer.switchTimer(TIMER_STARTINPUT, true);
+		}
+		if (!timer.isTimerOn(TIMER_FADEOUT)
+				&& BMSIRArenaClient.consumeInterRoundResultExitDeadline()) {
+			startResultFadeout();
 		}
 
 		if (timer.isTimerOn(TIMER_FADEOUT)) {
@@ -266,12 +279,7 @@ public class MusicResult extends AbstractResult {
 			if (time > getSkin().getScene()
 					&& !BMSIRArenaClient.isAwaitingNormalResult()
 					&& !BMSIRArenaClient.isAwaitingArenaResult()) {
-				timer.switchTimer(TIMER_FADEOUT, true);
-				if (getSound(RESULT_CLOSE) != null) {
-					stop(RESULT_CLEAR);
-					stop(RESULT_FAIL);
-					play(RESULT_CLOSE);
-				}
+				startResultFadeout();
 			}
 		}
 
@@ -309,12 +317,7 @@ public class MusicResult extends AbstractResult {
 							&& !BMSIRArenaClient.isAwaitingArenaResult()
 							&& (state == STATE_OFFLINE || state == STATE_IR_FINISHED
 							|| time - timer.getTimer(TIMER_IR_CONNECT_BEGIN) >= 1000)) {
-						timer.switchTimer(TIMER_FADEOUT, true);
-						if (getSound(RESULT_CLOSE) != null) {
-							stop(RESULT_CLEAR);
-							stop(RESULT_FAIL);
-							play(RESULT_CLOSE);
-						}
+						startResultFadeout();
 					}
 				}
 
