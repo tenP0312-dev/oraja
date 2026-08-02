@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`BMS-IR Arena oraja 0.4.11`. It replaces the separate Endless Dream and
+`BMS-IR Arena oraja 0.4.12`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,6 +14,8 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
+Version `0.4.12` adds an in-window startup progress log, three configurable
+START+6/7 modes, and individually configurable physical NUMPAD 0--9 shortcuts.
 Version `0.4.11` adds main-skin Arena target injection, fixed entry-order score
 graphs, fixed four-player rated BO2, EASY/NORMAL/HARD hidden-rating server
 CPUs, CPU-inclusive four-player Elo settlement, and CPU-free public waiting
@@ -398,7 +400,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.11-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.12-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -417,7 +419,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.11-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.12-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.68.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \

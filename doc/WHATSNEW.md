@@ -1,3 +1,17 @@
+# BMS-IR Arena oraja 0.4.12
+
+## Startup progress and configurable play controls
+
+- Replaced the post-FFmpeg black startup wait with an in-window progress log
+  covering the song database, IR login, rivals, audio, input, difficulty
+  tables, skins, and Arena connection.
+- Added three START+6/7 modes: existing oraja high-speed controls, LR2-style
+  SUD+ adjustment, and extended SUD+/HIDDEN/LIFT adjustment. Cover step size is
+  configurable, and each press changes it once without hold-repeat.
+- Added configurable actions for every physical NUMPAD 0--9 key. Music Select
+  and global shortcuts can be assigned independently, and the judge-timing
+  adjustment step is configurable.
+
 # BMS-IR Arena oraja 0.4.11
 
 ## Arena target, graph, and four-player rated matches

@@ -21,7 +21,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.11"
+VERSION = "0.4.12"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.68.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {

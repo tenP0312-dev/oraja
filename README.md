@@ -22,7 +22,7 @@ Based on [LR2oraja](https://github.com/wcko87/lr2oraja), which is itself a fork 
 * Built in Mod Menu, accessible using **`F5` or `Insert`**
 
 The BMS-IR branch also contains the opt-in dedicated
-[BMS-IR Arena client](doc/BMSIR_ARENA.md). The next 0.4.11 release is
+[BMS-IR Arena client](doc/BMSIR_ARENA.md). The next 0.4.12 release is
 distributed from the BMS-IR Arena page. This dedicated BMS-IR build interprets every long note as legacy
 LN in both ordinary play and Arena play; chart CN/HCN declarations and the
 player LN-type setting cannot override that policy.
