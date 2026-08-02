@@ -1,5 +1,6 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.player.beatoraja.Config;
 import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor;
@@ -223,6 +224,31 @@ class BMSIRArenaConfigStoreTest {
         ));
         assertTrue(restored.isBmsirArenaEnabled());
         assertFalse(restored.isBmsirArenaStayInRoom());
+    }
+
+    @Test
+    void existingPlayerIsSelectedWhenSystemConfigHasNoPlayerId() throws Exception {
+        PlayerConfig.create(temporaryDirectory.toString(), "player1");
+        Config config = new Config();
+        config.setPlayerpath(temporaryDirectory.toString());
+        config.setPlayername(null);
+
+        PlayerConfig.init(config);
+
+        assertEquals("player1", config.getPlayername());
+        assertTrue(Files.isRegularFile(BMSIRArenaConfigStore.sidecarPath(
+                temporaryDirectory.toString(),
+                "player1"
+        )));
+    }
+
+    @Test
+    void missingPlayerIdDoesNotResolveAnInvalidSidecarPath() {
+        assertFalse(BMSIRArenaConfigStore.loadOrMigrate(
+                temporaryDirectory.toString(),
+                null,
+                new PlayerConfig()
+        ));
     }
 
     @Test
