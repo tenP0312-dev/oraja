@@ -417,12 +417,15 @@ That gate controls supported distribution; server-side score/state validation
 remains necessary because an open-source client identity can be imitated.
 
 The source tree also contains `arena-launcher/`, a Tauri 2 launcher for Windows
-x64 and macOS arm64. It preserves unknown INI fields and layout, accepts only
-Java 17, blocks duplicate BMS-IR plugin jars, verifies canonical Ed25519 release
-manifests and every artifact hash before replacement, and rolls back a failed
-transaction. Its signed Markdown release notes are rendered without executing
-release HTML. A verified staged launcher can restart as its own short-lived
-update helper and relaunch after replacement. CI outputs are explicitly
+x64 and macOS arm64. It preserves unknown INI fields and layout, accepts Java
+21 or newer, detects the bundled Windows `runtime/bin/java.exe`, blocks
+ambiguous duplicate BMS-IR plugin jars, and transactionally replaces one older
+versioned plugin with its verified successor. It verifies canonical Ed25519
+release manifests and every artifact hash before replacement, and restores the
+prior plugin and files after a failed transaction. Its signed Markdown release
+notes are rendered without executing release HTML. A verified staged launcher
+can restart as its own short-lived update helper and relaunch after replacement.
+CI outputs are explicitly
 unsigned validation artifacts; official launcher publication remains blocked
 until Authenticode and Developer ID/notarization credentials plus the reviewed
 manifest public key are available.
@@ -485,7 +488,7 @@ application logger. FFmpeg native loading completes synchronously before the
 first decoder thread starts. Playback commands wake an unbounded blocking
 queue without interrupting JavaCPP file extraction, including commands queued
 during decoder initialization. Release acceptance must test both skin movies
-and in-play BGA on the target Windows/Java 17 body.
+and in-play BGA on the target Windows/Java 21 bundle.
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
 commit, record the artifact hashes privately for rollout, and configure the
