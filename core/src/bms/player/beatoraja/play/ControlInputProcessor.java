@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import bms.player.beatoraja.PlayConfig;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
@@ -79,6 +80,13 @@ public final class ControlInputProcessor {
 			// change hi speed by START + Keys
 			for(int i = 0; i < keybinds.length; i++) {
 				final boolean keystate = input.getKeyState(i);
+				if (usesSixSevenCoverControl(lanerender, i)) {
+					if (keystate && !hschanged[i]) {
+						changeSixSevenCoverValue(isSevenKey(player.getMode(), i));
+					}
+					hschanged[i] = keystate;
+					continue;
+				}
 				switch(keybinds[i]) {
 					case -1 -> {
 						if(keystate && !hschanged[i]) {
@@ -119,6 +127,78 @@ public final class ControlInputProcessor {
 				hschanged[i] = keystate;
 			}
 		};
+	}
+
+	private boolean usesSixSevenCoverControl(LaneRenderer laneRenderer, int key) {
+		if (!isSixSevenKey(player.getMode(), key)) {
+			return false;
+		}
+		return usesSixSevenCoverControl(
+				player.resource.getPlayerConfig().getBmsirCoverControlMode(),
+				laneRenderer.isEnableLanecover(),
+				laneRenderer.isEnableHidden(),
+				laneRenderer.isEnableLift()
+		);
+	}
+
+	static boolean usesSixSevenCoverControl(
+			String mode,
+			boolean laneCover,
+			boolean hidden,
+			boolean lift
+	) {
+		if (PlayerConfig.BMSIR_COVER_CONTROL_LR2.equals(mode)) {
+			return laneCover;
+		}
+		return PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED.equals(mode)
+				&& (laneCover || hidden || lift);
+	}
+
+	static boolean isSixSevenKey(bms.model.Mode mode, int key) {
+		return switch (mode) {
+			case BEAT_7K -> key == 5 || key == 6;
+			case BEAT_14K -> key == 5 || key == 6 || key == 14 || key == 15;
+			default -> false;
+		};
+	}
+
+	static boolean isSevenKey(bms.model.Mode mode, int key) {
+		return switch (mode) {
+			case BEAT_7K -> key == 6;
+			case BEAT_14K -> key == 6 || key == 15;
+			default -> false;
+		};
+	}
+
+	private void changeSixSevenCoverValue(boolean increase) {
+		LaneRenderer laneRenderer = player.getLanerender();
+		PlayerConfig config = player.resource.getPlayerConfig();
+		float delta = config.getBmsirCoverChangeStep() / 1000f;
+		if (!increase) {
+			delta = -delta;
+		}
+
+		if (PlayerConfig.BMSIR_COVER_CONTROL_LR2.equals(
+				config.getBmsirCoverControlMode()
+		)) {
+			laneRenderer.setLanecover(laneRenderer.getLanecover() + delta);
+		} else if (laneRenderer.isEnableLanecover()) {
+			laneRenderer.setLanecover(laneRenderer.getLanecover() + delta);
+		} else if (laneRenderer.isEnableHidden() && laneRenderer.isEnableLift()) {
+			if (isChangeLift) {
+				laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
+			} else {
+				laneRenderer.setHiddenCover(laneRenderer.getHiddenCover() - delta);
+			}
+		} else if (laneRenderer.isEnableHidden()) {
+			laneRenderer.setHiddenCover(laneRenderer.getHiddenCover() - delta);
+		} else if (laneRenderer.isEnableLift()) {
+			laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
+		}
+
+		if (hispeedAutoAdjust && laneRenderer.getNowBPM() > 0) {
+			laneRenderer.resetHispeed(laneRenderer.getNowBPM());
+		}
 	}
 
 	public void setEnableControl(boolean b) {

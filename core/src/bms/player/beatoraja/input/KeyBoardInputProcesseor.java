@@ -324,6 +324,17 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		INSERT(27, Keys.INSERT, false),
 		DEL(28, Keys.FORWARD_DEL, false),
 		ESCAPE(29, Keys.ESCAPE, false),
+
+		NUMPAD0(30, Keys.NUMPAD_0, false),
+		NUMPAD1(31, Keys.NUMPAD_1, false),
+		NUMPAD2(32, Keys.NUMPAD_2, false),
+		NUMPAD3(33, Keys.NUMPAD_3, false),
+		NUMPAD4(34, Keys.NUMPAD_4, false),
+		NUMPAD5(35, Keys.NUMPAD_5, false),
+		NUMPAD6(36, Keys.NUMPAD_6, false),
+		NUMPAD7(37, Keys.NUMPAD_7, false),
+		NUMPAD8(38, Keys.NUMPAD_8, false),
+		NUMPAD9(39, Keys.NUMPAD_9, false),
 		;
 		
 		public final int id;

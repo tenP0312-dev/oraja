@@ -122,7 +122,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 5;
+        private int schemaVersion = 6;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -146,6 +146,10 @@ public final class BMSIRArenaConfigStore {
         private int graphHighlight = 0;
         private String targetMode = PlayerConfig.BMSIR_ARENA_TARGET_OFF;
         private String graphOrder = PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK;
+        private String coverControlMode;
+        private Integer coverChangeStep;
+        private String[] numpadActions;
+        private Integer numpadJudgeTimingStep;
         private boolean presentationOverlayEnabled = true;
         private boolean countdownSeEnabled = true;
         private boolean startSeEnabled = true;
@@ -185,6 +189,11 @@ public final class BMSIRArenaConfigStore {
             settings.graphHighlight = player.getBmsirArenaGraphHighlight();
             settings.targetMode = player.getBmsirArenaTargetMode();
             settings.graphOrder = player.getBmsirArenaGraphOrder();
+            settings.coverControlMode = player.getBmsirCoverControlMode();
+            settings.coverChangeStep = player.getBmsirCoverChangeStep();
+            settings.numpadActions = player.getBmsirNumpadActions();
+            settings.numpadJudgeTimingStep =
+                    player.getBmsirNumpadJudgeTimingStep();
             settings.presentationOverlayEnabled =
                     player.isBmsirArenaPresentationOverlayEnabled();
             settings.countdownSeEnabled = player.isBmsirArenaCountdownSeEnabled();
@@ -240,6 +249,18 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaGraphHighlight(graphHighlight);
             player.setBmsirArenaTargetMode(targetMode);
             player.setBmsirArenaGraphOrder(graphOrder);
+            if (coverControlMode != null) {
+                player.setBmsirCoverControlMode(coverControlMode);
+            }
+            if (coverChangeStep != null) {
+                player.setBmsirCoverChangeStep(coverChangeStep);
+            }
+            if (numpadActions != null) {
+                player.setBmsirNumpadActions(numpadActions);
+            }
+            if (numpadJudgeTimingStep != null) {
+                player.setBmsirNumpadJudgeTimingStep(numpadJudgeTimingStep);
+            }
             player.setBmsirArenaPresentationOverlayEnabled(
                     presentationOverlayEnabled
             );

@@ -26,6 +26,7 @@ import bms.model.Mode;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
+import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.song.*;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -121,6 +122,34 @@ public class PlayConfigurationView implements Initializable {
 	private ComboBox<String> bmsirArenaTargetMode;
 	@FXML
 	private ComboBox<String> bmsirArenaGraphOrder;
+	@FXML
+	private ComboBox<String> bmsirCoverControlMode;
+	@FXML
+	private Spinner<Integer> bmsirCoverChangeStep;
+	@FXML
+	private ComboBox<String> bmsirNumpad0;
+	@FXML
+	private ComboBox<String> bmsirNumpad1;
+	@FXML
+	private ComboBox<String> bmsirNumpad2;
+	@FXML
+	private ComboBox<String> bmsirNumpad3;
+	@FXML
+	private ComboBox<String> bmsirNumpad4;
+	@FXML
+	private ComboBox<String> bmsirNumpad5;
+	@FXML
+	private ComboBox<String> bmsirNumpad6;
+	@FXML
+	private ComboBox<String> bmsirNumpad7;
+	@FXML
+	private ComboBox<String> bmsirNumpad8;
+	@FXML
+	private ComboBox<String> bmsirNumpad9;
+	@FXML
+	private Spinner<Integer> bmsirNumpadJudgeTimingStep;
+
+	private List<ComboBox<String>> bmsirNumpadCombos;
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -361,6 +390,22 @@ public class PlayConfigurationView implements Initializable {
 				: PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK;
 	}
 
+	private static int bmsirCoverControlModeIndex(String mode) {
+		return switch (mode) {
+			case PlayerConfig.BMSIR_COVER_CONTROL_LR2 -> 1;
+			case PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED -> 2;
+			default -> 0;
+		};
+	}
+
+	private static String bmsirCoverControlModeValue(int index) {
+		return switch (index) {
+			case 1 -> PlayerConfig.BMSIR_COVER_CONTROL_LR2;
+			case 2 -> PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED;
+			default -> PlayerConfig.BMSIR_COVER_CONTROL_ORAJA;
+		};
+	}
+
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		arenaIdentity.setText(Version.getArenaDisplayName());
@@ -372,6 +417,33 @@ public class PlayConfigurationView implements Initializable {
 				"指定プレイヤー"
 		);
 		bmsirArenaGraphOrder.getItems().setAll("順位順", "入室順固定");
+		bmsirCoverControlMode.getItems().setAll(
+				"oraja標準（START+1～7: ハイスピード）",
+				"LR2式（SUD+表示中のみ6/7: SUD+）",
+				"拡張（6/7: SUD+/HIDDEN/LIFT）"
+		);
+		bmsirCoverChangeStep.setValueFactory(
+				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 10)
+		);
+		bmsirNumpadCombos = List.of(
+				bmsirNumpad0,
+				bmsirNumpad1,
+				bmsirNumpad2,
+				bmsirNumpad3,
+				bmsirNumpad4,
+				bmsirNumpad5,
+				bmsirNumpad6,
+				bmsirNumpad7,
+				bmsirNumpad8,
+				bmsirNumpad9
+		);
+		List<String> numpadLabels = Arrays.stream(BMSIRNumpadAction.values())
+				.map(BMSIRNumpadAction::label)
+				.toList();
+		bmsirNumpadCombos.forEach(combo -> combo.getItems().setAll(numpadLabels));
+		bmsirNumpadJudgeTimingStep.setValueFactory(
+				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 20, 1)
+		);
 		lr2configuration.setHgap(25);
 		lr2configuration.setVgap(4);
 		lr2configurationassist.setHgap(25);
@@ -609,6 +681,21 @@ public class PlayConfigurationView implements Initializable {
 		bmsirArenaGraphOrder.getSelectionModel().select(
 				bmsirArenaGraphOrderIndex(player.getBmsirArenaGraphOrder())
 		);
+		bmsirCoverControlMode.getSelectionModel().select(
+				bmsirCoverControlModeIndex(player.getBmsirCoverControlMode())
+		);
+		bmsirCoverChangeStep.getValueFactory().setValue(
+				player.getBmsirCoverChangeStep()
+		);
+		String[] numpadActions = player.getBmsirNumpadActions();
+		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
+			bmsirNumpadCombos.get(index).getSelectionModel().select(
+					BMSIRNumpadAction.fromId(numpadActions[index]).ordinal()
+			);
+		}
+		bmsirNumpadJudgeTimingStep.getValueFactory().setValue(
+				player.getBmsirNumpadJudgeTimingStep()
+		);
 
 		videoController.updatePlayer(player);
 		musicselectController.updatePlayer(player);
@@ -747,6 +834,25 @@ public class PlayConfigurationView implements Initializable {
 						bmsirArenaGraphOrder.getSelectionModel()
 								.getSelectedIndex()
 				)
+		);
+		player.setBmsirCoverControlMode(
+				bmsirCoverControlModeValue(
+						bmsirCoverControlMode.getSelectionModel().getSelectedIndex()
+				)
+		);
+		player.setBmsirCoverChangeStep(getValue(bmsirCoverChangeStep));
+		String[] numpadActions = new String[BMSIRNumpadAction.KEY_COUNT];
+		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
+			int selected = bmsirNumpadCombos.get(index)
+					.getSelectionModel()
+					.getSelectedIndex();
+			numpadActions[index] = selected >= 0
+					? BMSIRNumpadAction.values()[selected].id()
+					: BMSIRNumpadAction.NONE.id();
+		}
+		player.setBmsirNumpadActions(numpadActions);
+		player.setBmsirNumpadJudgeTimingStep(
+				getValue(bmsirNumpadJudgeTimingStep)
 		);
 
 		videoController.commitPlayer(player);

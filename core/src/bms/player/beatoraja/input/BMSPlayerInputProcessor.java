@@ -333,6 +333,27 @@ public class BMSPlayerInputProcessor {
 	public boolean isControlKeyPressed(ControlKeys key, int heldModifiers, int... notHeldModifiers) {
 		return kbinput.isKeyPressed(key.keycode, heldModifiers, notHeldModifiers);
 	}
+
+	public boolean isNumpadPressed(int number) {
+		ControlKeys key = numpadControlKey(number);
+		return key != null && isControlKeyPressed(key);
+	}
+
+	static ControlKeys numpadControlKey(int number) {
+		ControlKeys[] keys = {
+				ControlKeys.NUMPAD0,
+				ControlKeys.NUMPAD1,
+				ControlKeys.NUMPAD2,
+				ControlKeys.NUMPAD3,
+				ControlKeys.NUMPAD4,
+				ControlKeys.NUMPAD5,
+				ControlKeys.NUMPAD6,
+				ControlKeys.NUMPAD7,
+				ControlKeys.NUMPAD8,
+				ControlKeys.NUMPAD9
+		};
+		return number >= 0 && number < keys.length ? keys[number] : null;
+	}
 	
 	protected void keyChanged(BMSPlayerInputDevice device, long presstime, int i, boolean pressed) {
 		if (!enable) {

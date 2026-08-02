@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
+import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.modmenu.*;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
 import bms.tool.mdprocessor.HttpDownloadSource;
@@ -85,6 +86,8 @@ public class MainController {
 	private PlayerResource resource;
 
 	private BitmapFont systemfont;
+	private boolean imGuiInitialized;
+	private boolean skinLoaderInitialized;
 
 	private MainState current;
 	
@@ -98,6 +101,7 @@ public class MainController {
 	private SongInformationAccessor infodb;
 
 	private IRStatus[] ir;
+	private Array<IRStatus> startupIrStatuses;
 
 	private RivalDataAccessor rivals = new RivalDataAccessor();
 
@@ -168,95 +172,229 @@ public class MainController {
 		BMSPlayerRule.setConfiguredRuleProfile(player.getBmsirRulesetProfile());
 
 		this.bmsfile = f;
-
-		if (config.isEnableIpfs()) {
-			Path ipfspath = Paths.get("ipfs").toAbsolutePath();
-			if (!ipfspath.toFile().exists())
-				ipfspath.toFile().mkdirs();
-			List<String> roots = new ArrayList<>(Arrays.asList(getConfig().getBmsroot()));
-			if (ipfspath.toFile().exists() && !roots.contains(ipfspath.toString())) {
-				roots.add(ipfspath.toString());
-				getConfig().setBmsroot(roots.toArray(new String[roots.size()]));
-			}
-		}
-		if (config.isEnableHttp()) {
-			Path httpdlPath = Paths.get(config.getDownloadDirectory()).toAbsolutePath();
-			if (!httpdlPath.toFile().exists())
-				httpdlPath.toFile().mkdirs();
-			List<String> roots = new ArrayList<>(Arrays.asList(getConfig().getBmsroot()));
-			if (httpdlPath.toFile().exists() && !roots.contains(httpdlPath.toString())) {
-				roots.add(httpdlPath.toString());
-				getConfig().setBmsroot(roots.toArray(new String[roots.size()]));
-			}
-		}
-		try {
-			Class.forName("org.sqlite.JDBC");
-			if(config.isUseSongInfo()) {
-				infodb = new SongInformationAccessor(config.getSonginfopath());
-			}
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
-		playdata = new PlayDataAccessor(config);
-
-		initializeIRConfig();
-
-		switch(config.getAudioConfig().getDriver()) {
-			case PortAudio:
-				try {
-					audio = new PortAudioDriver(config);
-				} catch(Throwable e) {
-					e.printStackTrace();
-					config.getAudioConfig().setDriver(DriverType.OpenAL);
-				}
-				break;
-		}
-
-		timer = new TimerManager();
-		sound = new SystemSoundManager(this);
-
-		if(config.isUseDiscordRPC()) {
-			stateListener.add(new DiscordListener());
-		}
-
-		if(config.isUseObsWs()) {
-			obsListener = new ObsListener(config);
-			obsClient = obsListener.getObsClient();
-			stateListener.add(obsListener);
-		}
 	}
 
 	private void initializeIRConfig() {
-		Array<IRStatus> irarray = new Array<IRStatus>();
-		for(IRConfig irconfig : player.getIrconfig()) {
-			final IRConnection ir = IRConnectionManager.getIRConnection(irconfig.getIrname());
-			if(ir != null) {
-				if(irconfig.getUserid().length() == 0 || irconfig.getPassword().length() == 0) {
-				} else {
-					try {
-						IRResponse<IRPlayerData> response = ir.login(new IRAccount(irconfig.getUserid(), irconfig.getPassword(), ""));
-						if(response.isSucceeded()) {
-							irarray.add(new IRStatus(irconfig, ir, response.getData()));
-						} else {
-							logger.warn("IRへのログイン失敗 : {}", response.getMessage());
-						}
-					} catch (IllegalArgumentException e) {
-						logger.info("trying pre-0.8.5 IR login method");
-						IRResponse<IRPlayerData> response = ir.login(irconfig.getUserid(), irconfig.getPassword());
-						if(response.isSucceeded()) {
-							irarray.add(new IRStatus(irconfig, ir, response.getData()));
-						} else {
-							logger.warn("IRへのログイン失敗 : {}", response.getMessage());
-						}
-					}
-				}
-			}
-
+		startupIrStatuses = new Array<>();
+		for (IRConfig irconfig : player.getIrconfig()) {
+			loginIr(irconfig);
 		}
-		ir = irarray.toArray(IRStatus.class);
-		
+		finishIrInitialization();
 		rivals.update(this);
+	}
+
+	private StartupTask.Result loginIr(IRConfig irconfig) {
+		IRConnection connection = IRConnectionManager.getIRConnection(
+				irconfig.getIrname()
+		);
+		if (connection == null) {
+			return StartupTask.Result.skip("接続プラグインなし");
+		}
+		if (irconfig.getUserid() == null
+				|| irconfig.getUserid().isBlank()
+				|| irconfig.getPassword() == null
+				|| irconfig.getPassword().isBlank()) {
+			return StartupTask.Result.skip("認証情報なし");
+		}
+
+		IRResponse<IRPlayerData> response;
+		try {
+			response = connection.login(new IRAccount(
+					irconfig.getUserid(),
+					irconfig.getPassword(),
+					""
+			));
+		} catch (IllegalArgumentException error) {
+			logger.info("trying pre-0.8.5 IR login method");
+			response = connection.login(
+					irconfig.getUserid(),
+					irconfig.getPassword()
+			);
+		}
+		if (!response.isSucceeded()) {
+			logger.warn("IRへのログイン失敗 : {}", response.getMessage());
+			return StartupTask.Result.skip(response.getMessage());
+		}
+		startupIrStatuses.add(new IRStatus(
+				irconfig,
+				connection,
+				response.getData()
+		));
+		return StartupTask.Result.ok(response.getData().name);
+	}
+
+	private StartupTask.Result finishIrInitialization() {
+		ir = startupIrStatuses.toArray(IRStatus.class);
+		startupIrStatuses = null;
+		return StartupTask.Result.ok(ir.length + "件");
+	}
+
+	List<StartupTask> createStartupTasks() {
+		List<StartupTask> tasks = new ArrayList<>();
+		tasks.add(StartupTask.required("BMSデータベース・禁止譜面確認", () -> {
+			SongDatabaseAccessor database = MainLoader.getScoreDatabaseAccessor();
+			if (database == null) {
+				throw new IllegalStateException("楽曲データベースを開けません");
+			}
+			for (SongData song : database.getSongDatas(SongUtils.illegalsongs)) {
+				MainLoader.putIllegalSong(song.getSha256());
+			}
+			int illegalCount = MainLoader.getIllegalSongCount();
+			if (illegalCount > 0) {
+				throw new IllegalStateException(
+						"禁止譜面を" + illegalCount + "件検出しました"
+				);
+			}
+			return StartupTask.Result.ok("禁止譜面 0件");
+		}));
+		tasks.add(StartupTask.required("BMS保存先", () -> {
+			initializeDownloadRoots();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.optional("楽曲情報データベース", () -> {
+			Class.forName("org.sqlite.JDBC");
+			if (!config.isUseSongInfo()) {
+				return StartupTask.Result.skip("無効");
+			}
+			infodb = new SongInformationAccessor(config.getSonginfopath());
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("プレイデータベース", () -> {
+			playdata = new PlayDataAccessor(config);
+			return StartupTask.Result.ok();
+		}));
+
+		startupIrStatuses = new Array<>();
+		IRConfig[] irConfigs = player.getIrconfig();
+		for (int index = 0; index < irConfigs.length; index++) {
+			IRConfig irConfig = irConfigs[index];
+			String name = irConfig.getIrname() == null
+					? "IR"
+					: irConfig.getIrname();
+			String label = "IRログイン " + name
+					+ " (" + (index + 1) + "/" + irConfigs.length + ")";
+			tasks.add(StartupTask.optional(label, () -> loginIr(irConfig)));
+		}
+		tasks.add(StartupTask.required(
+				"IRセッション",
+				this::finishIrInitialization
+		));
+		tasks.add(StartupTask.optional("ライバル情報", () -> {
+			if (ir.length == 0) {
+				return StartupTask.Result.skip("IR未接続");
+			}
+			rivals.update(this);
+			return StartupTask.Result.ok(rivals.getRivalCount() + "人");
+		}));
+
+		tasks.add(StartupTask.optional("PortAudio初期化", () -> {
+			if (config.getAudioConfig().getDriver() != DriverType.PortAudio) {
+				return StartupTask.Result.skip("OpenALを使用");
+			}
+			try {
+				audio = new PortAudioDriver(config);
+				return StartupTask.Result.ok();
+			} catch (Throwable error) {
+				config.getAudioConfig().setDriver(DriverType.OpenAL);
+				return StartupTask.Result.skip("OpenALへ切替");
+			}
+		}));
+		tasks.add(StartupTask.required("タイマー", () -> {
+			timer = new TimerManager();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("システムサウンド検索", () -> {
+			sound = new SystemSoundManager(this);
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.optional("Discord・OBS連携", () -> {
+			boolean enabled = initializeExternalListeners();
+			return enabled
+					? StartupTask.Result.ok()
+					: StartupTask.Result.skip("無効");
+		}));
+
+		tasks.add(StartupTask.required("描画システム", () -> {
+			sprite = SpriteBatchHelper.createSpriteBatch();
+			SkinLoader.initPixmapResourcePool(config.getSkinPixmapGen());
+			skinLoaderInitialized = true;
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("Modメニュー", () -> {
+			try (var perf = PerformanceMetrics.get().Event("ImGui init")) {
+				ImGuiRenderer.init();
+			}
+			imGuiInitialized = true;
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.optional("システムフォント", () -> {
+			try (var perf = PerformanceMetrics.get().Event("System font load")) {
+				FreeTypeFontGenerator generator = new FreeTypeFontGenerator(
+						Gdx.files.internal(config.getSystemfontpath())
+				);
+				FreeTypeFontParameter parameter = new FreeTypeFontParameter();
+				parameter.size = 24;
+				systemfont = generator.generateFont(parameter);
+				generator.dispose();
+			}
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("入力デバイス", () -> {
+			try (var perf = PerformanceMetrics.get().Event("Input Processor constructor")) {
+				input = new BMSPlayerInputProcessor(config, player);
+			}
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("オーディオ", () -> {
+			if (config.getAudioConfig().getDriver() == DriverType.OpenAL) {
+				audio = new GdxSoundDriver(config);
+			}
+			loudnessAnalyzer = new BMSLoudnessAnalyzer(config);
+			return StartupTask.Result.ok(config.getAudioConfig().getDriver().name());
+		}));
+		tasks.add(StartupTask.required("プレイヤーリソース", () -> {
+			resource = new PlayerResource(audio, config, player, loudnessAnalyzer);
+			selector = new MusicSelector(this, songUpdated);
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("ローカル難易度表", () -> {
+			selector.initializeLocalTables();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("BMS-IR難易度表・段位", () -> {
+			selector.initializeIrTables();
+			return ir.length > 0
+					? StartupTask.Result.ok()
+					: StartupTask.Result.skip("IR未接続");
+		}));
+		tasks.add(StartupTask.required("コース", () -> {
+			selector.initializeCourses();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("お気に入り・選曲コマンド", () -> {
+			selector.initializeFavoritesAndCommands();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("ゲーム画面", () -> {
+			initializeRemainingStates();
+			initializeStateReferences(false);
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.optional("Arena接続", () -> {
+			BMSIRArenaClient.initialize(this);
+			return player.isBmsirArenaEnabled()
+					? StartupTask.Result.ok()
+					: StartupTask.Result.skip("無効");
+		}));
+		tasks.add(StartupTask.required("選曲スキン・初期画面", () -> {
+			activateInitialState();
+			return StartupTask.Result.ok();
+		}));
+		tasks.add(StartupTask.required("起動後サービス", () -> {
+			finishStartupServices();
+			return StartupTask.Result.ok();
+		}));
+		return tasks;
 	}
 
 	public boolean hasObsListener() {
@@ -436,6 +574,146 @@ public class MainController {
 		return current;
 	}
 
+	private void processBmsirNumpadShortcuts() {
+		String[] configured = player.getBmsirNumpadActions();
+		for (int number = 0; number < configured.length; number++) {
+			if (input.isNumpadPressed(number)) {
+				executeBmsirNumpadAction(BMSIRNumpadAction.fromId(configured[number]));
+			}
+		}
+	}
+
+	private void executeBmsirNumpadAction(BMSIRNumpadAction action) {
+		switch (action) {
+		case JUDGE_AUTO:
+			if (current instanceof BMSPlayer) {
+				player.setNotesDisplayTimingAutoAdjust(
+						!player.isNotesDisplayTimingAutoAdjust()
+				);
+				ImGuiNotify.info(
+						"JUDGE TIMING AUTO: "
+								+ (player.isNotesDisplayTimingAutoAdjust() ? "ON" : "OFF"),
+						2000
+				);
+			}
+			break;
+		case JUDGE_PLUS:
+			changeJudgeTiming(player.getBmsirNumpadJudgeTimingStep());
+			break;
+		case JUDGE_MINUS:
+			changeJudgeTiming(-player.getBmsirNumpadJudgeTimingStep());
+			break;
+		case KEY_CONFIG:
+			if (current instanceof MusicSelector) {
+				changeState(MainStateType.CONFIG);
+			}
+			break;
+		case SKIN_CONFIG:
+			if (current instanceof MusicSelector) {
+				changeState(MainStateType.SKINCONFIG);
+			}
+			break;
+		case BMS_SEARCH:
+		case MODE_FILTER:
+		case SORT:
+		case REPLAY:
+		case RIVAL:
+		case SAME_FOLDER:
+		case OPEN_DOCUMENT:
+		case OPEN_IR:
+		case FAVORITE_SONG:
+		case FAVORITE_CHART:
+		case UPDATE_FOLDER:
+		case OPEN_FOLDER:
+		case PRACTICE:
+		case AUTOPLAY:
+			if (current instanceof MusicSelector) {
+				selector.executeNumpadAction(action);
+			}
+			break;
+		case ARENA_OVERLAY:
+			BMSIRArenaOverlay.toggleVisibility();
+			break;
+		case MOD_MENU:
+			imGui.toggleMenu();
+			break;
+		case FPS:
+			showfps = !showfps;
+			break;
+		case FULLSCREEN:
+			toggleScreenMode();
+			break;
+		case SCREENSHOT:
+			saveScreenshot();
+			break;
+		default:
+			break;
+		}
+	}
+
+	private void changeJudgeTiming(int delta) {
+		if (!(current instanceof BMSPlayer)) {
+			return;
+		}
+		player.setJudgetiming(Math.max(
+				PlayerConfig.JUDGETIMING_MIN,
+				Math.min(PlayerConfig.JUDGETIMING_MAX, player.getJudgetiming() + delta)
+		));
+		ImGuiNotify.info("JUDGE TIMING: " + player.getJudgetiming() + " ms", 2000);
+	}
+
+	private void toggleScreenMode() {
+		boolean fullscreen = Gdx.graphics.isFullscreen();
+		if (fullscreen) {
+			Lwjgl3Graphics graphics = (Lwjgl3Graphics) Gdx.graphics;
+			Gdx.graphics.setUndecorated(false);
+			Gdx.graphics.setWindowedMode(config.getWindowWidth(), config.getWindowHeight());
+
+			Graphics.DisplayMode maxResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
+					.max(Comparator.comparingInt((Graphics.DisplayMode mode) -> mode.width)
+							.thenComparingInt(mode -> mode.height)
+							.thenComparingInt(mode -> mode.refreshRate))
+					.orElse(Gdx.graphics.getDisplayMode());
+			int windowX = (maxResOrCurrent.width / 2) - (config.getWindowWidth() / 2);
+			int windowY = (maxResOrCurrent.height / 2) - (config.getWindowHeight() / 2);
+			if (windowY == 0) {
+				windowY += 32;
+			}
+			graphics.getWindow().setPosition(windowX, windowY);
+		} else {
+			Graphics.DisplayMode windowResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
+					.filter(mode -> mode.width == config.getWindowWidth()
+							&& mode.height == config.getWindowHeight())
+					.max(Comparator.comparingInt(mode -> mode.refreshRate))
+					.orElse(Gdx.graphics.getDisplayMode());
+			Gdx.graphics.setFullscreenMode(windowResOrCurrent);
+		}
+		config.setDisplaymode(fullscreen
+				? Config.DisplayMode.WINDOW
+				: Config.DisplayMode.FULLSCREEN);
+	}
+
+	private void saveScreenshot() {
+		if (screenshot != null && screenshot.isAlive()) {
+			return;
+		}
+		final byte[] pixels = ScreenUtils.getFrameBufferPixels(
+				0,
+				0,
+				Gdx.graphics.getBackBufferWidth(),
+				Gdx.graphics.getBackBufferHeight(),
+				true
+		);
+		screenshot = new Thread(() -> {
+			for (int index = 3; index < pixels.length; index += 4) {
+				pixels[index] = (byte) 0xff;
+			}
+			new ScreenShotFileExporter().send(current, pixels);
+		});
+		screenshot.start();
+		saveLastRecording("ON_SCREENSHOT");
+	}
+
 	public static MainStateType getStateType(MainState state) {
 		if (state instanceof KeyConfiguration) {
 			return MainStateType.CONFIG;
@@ -461,54 +739,83 @@ public class MainController {
 	}
 
 	public void create() {
-		final long t = System.currentTimeMillis();
-		sprite = SpriteBatchHelper.createSpriteBatch();
-		SkinLoader.initPixmapResourcePool(config.getSkinPixmapGen());
-
-        try (var perf = PerformanceMetrics.get().Event("ImGui init")) {
-            ImGuiRenderer.init();
-        }
-
-        try (var perf = PerformanceMetrics.get().Event("System font load")) {
-			FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(config.getSystemfontpath()));
-			FreeTypeFontParameter parameter = new FreeTypeFontParameter();
-			parameter.size = 24;
-			systemfont = generator.generateFont(parameter);
-			generator.dispose();
-		} catch (GdxRuntimeException e) {
-			logger.error("System Font読み込み失敗");
+		final long started = System.currentTimeMillis();
+		for (StartupTask task : createStartupTasks()) {
+			try {
+				task.operation.run();
+			} catch (Throwable error) {
+				if (task.fatal) {
+					throw new GdxRuntimeException(
+							"Startup task failed: " + task.label,
+							error
+					);
+				}
+				logger.warn("Optional startup task failed: {}", task.label, error);
+			}
 		}
+		logger.info("初期化時間(ms) : {}", System.currentTimeMillis() - started);
+	}
 
-        try (var perf = PerformanceMetrics.get().Event("Input Processor constructor")) {
-			input = new BMSPlayerInputProcessor(config, player);
+	private void initializeDownloadRoots() {
+		if (config.isEnableIpfs()) {
+			addDownloadRoot(Paths.get("ipfs").toAbsolutePath());
 		}
+		if (config.isEnableHttp()) {
+			addDownloadRoot(Paths.get(config.getDownloadDirectory()).toAbsolutePath());
+		}
+	}
 
-		switch(config.getAudioConfig().getDriver()) {
-		case OpenAL:
-			audio = new GdxSoundDriver(config);
-			break;
-//		case AudioDevice:
-//			audio = new GdxAudioDeviceDriver(config);
-//			break;
+	private void addDownloadRoot(Path path) {
+		if (!path.toFile().exists()) {
+			path.toFile().mkdirs();
 		}
-		loudnessAnalyzer = new BMSLoudnessAnalyzer(config);
-    	initializeStates();
-		updateStateReferences();
-		MiscSettingMenu.setMain(this);
+		List<String> roots = new ArrayList<>(Arrays.asList(config.getBmsroot()));
+		if (path.toFile().exists() && !roots.contains(path.toString())) {
+			roots.add(path.toString());
+			config.setBmsroot(roots.toArray(String[]::new));
+		}
+	}
+
+	private boolean initializeExternalListeners() {
+		boolean enabled = false;
+		if (config.isUseDiscordRPC()) {
+			stateListener.add(new DiscordListener());
+			enabled = true;
+		}
+		if (config.isUseObsWs()) {
+			obsListener = new ObsListener(config);
+			obsClient = obsListener.getObsClient();
+			stateListener.add(obsListener);
+			enabled = true;
+		}
+		return enabled;
+	}
+
+	private void activateInitialState() {
 		if (bmsfile != null) {
-			if(resource.setBMSFile(bmsfile, auto)) {
+			if (resource.setBMSFile(bmsfile, auto)) {
 				changeState(MainStateType.PLAY);
 			} else {
-				// ダミーステートに移行してすぐexitする
 				changeState(MainStateType.CONFIG);
 				exit();
 			}
 		} else {
 			changeState(MainStateType.MUSICSELECT);
 		}
+	}
 
-		logger.info("初期化時間(ms) : {}", System.currentTimeMillis() - t);
+	private void finishStartupServices() {
+		startInputPolling();
+		triggerLnWarning();
+		setTargetList();
+		initializePlainTextures();
+		Gdx.gl.glClearColor(0, 0, 0, 1);
+		initializeDownloadServices();
+		startIrResendProcess();
+		lastConfigSave = System.nanoTime();
+	}
 
+	private void startInputPolling() {
 		Thread polling = new Thread(() -> {
 			long time = 0;
 			for (;;) {
@@ -519,83 +826,90 @@ public class MainController {
 				} else {
 					try {
 						Thread.sleep(0, 500000);
-					} catch (InterruptedException e) {
+					} catch (InterruptedException error) {
+						Thread.currentThread().interrupt();
+						return;
 					}
 				}
 			}
-		});
+		}, "BMS input polling");
 		polling.start();
+	}
 
-        triggerLnWarning();
-
-		setTargetList();
-
-		Pixmap plainPixmap = new Pixmap(2,1, Pixmap.Format.RGBA8888);
-		plainPixmap.drawPixel(0,0, Color.toIntBits(255,0,0,0));
-		plainPixmap.drawPixel(1,0, Color.toIntBits(255,255,255,255));
+	private void initializePlainTextures() {
+		Pixmap plainPixmap = new Pixmap(2, 1, Pixmap.Format.RGBA8888);
+		plainPixmap.drawPixel(0, 0, Color.toIntBits(255, 0, 0, 0));
+		plainPixmap.drawPixel(1, 0, Color.toIntBits(255, 255, 255, 255));
 		Texture plainTexture = new Texture(plainPixmap);
-		black = new TextureRegion(plainTexture,0,0,1,1);
-		white = new TextureRegion(plainTexture,1,0,1,1);
+		black = new TextureRegion(plainTexture, 0, 0, 1, 1);
+		white = new TextureRegion(plainTexture, 1, 0, 1, 1);
 		plainPixmap.dispose();
+	}
 
-		Gdx.gl.glClearColor(0, 0, 0, 1);
-
+	private void initializeDownloadServices() {
 		if (config.isEnableIpfs()) {
-			download = new MusicDownloadProcessor(config.getIpfsUrl(), (md5) -> {
-				SongData[] s = getSongDatabase().getSongDatas(md5);
-				String[] result = new String[s.length];
-				for(int i = 0;i < result.length;i++) {
-					result[i] = s[i].getPath();
+			download = new MusicDownloadProcessor(config.getIpfsUrl(), md5 -> {
+				SongData[] songs = getSongDatabase().getSongDatas(md5);
+				String[] result = new String[songs.length];
+				for (int index = 0; index < result.length; index++) {
+					result[index] = songs[index].getPath();
 				}
 				return result;
 			});
 			download.start(null);
 		}
-
 		if (config.isEnableHttp()) {
-			HttpDownloadSource httpDownloadSource = HttpDownloadProcessor.DOWNLOAD_SOURCES.get(config.getDownloadSource()).build(config);
-			httpDownloadProcessor = new HttpDownloadProcessor(this, httpDownloadSource, config.getDownloadDirectory());
+			HttpDownloadSource source = HttpDownloadProcessor.DOWNLOAD_SOURCES
+					.get(config.getDownloadSource())
+					.build(config);
+			httpDownloadProcessor = new HttpDownloadProcessor(
+					this,
+					source,
+					config.getDownloadDirectory()
+			);
 			DownloadTaskState.initialize(httpDownloadProcessor);
 			DownloadTaskMenu.setProcessor(httpDownloadProcessor);
 		}
+	}
 
-		if(ir.length > 0) {
-			ImGuiNotify.info(String.format("%d IR Connection Succeed", ir.length));
-
-			Thread irResendProcess = new Thread(() -> {
-				for (;;) {
-					final long now = System.currentTimeMillis();
-						try {
-							List<IRSendStatus> removeIrSendStatus = new ArrayList<IRSendStatus>();
-
-							for(IRSendStatus score : irSendStatus) {
-								long timeUntilNextTry = (long)(Math.pow(4, score.retry) * 1000);
-								if (score.retry != 0 && now - score.lastTry >= timeUntilNextTry) {
-									score.send();
-								}
-								if(score.isSent) {
-									removeIrSendStatus.add(score);
-								}
-								if(score.retry > getConfig().getIrSendCount()) {
-									removeIrSendStatus.add(score);
-									ImGuiNotify.error(String.format("Failed to send a score for %s %s", score.song.getTitle(), score.song.getSubtitle()));
-								}
-							}
-							irSendStatus.removeAll(removeIrSendStatus);
-
-							try {
-								Thread.sleep(3000, 0);
-							} catch (InterruptedException e) {
-							}
-						} catch (Exception e) {
-							logger.error(e.getMessage());
-						}
-				}
-			});
-			irResendProcess.start();
+	private void startIrResendProcess() {
+		if (ir.length == 0) {
+			return;
 		}
-
-        lastConfigSave = System.nanoTime();
+		ImGuiNotify.info(String.format("%d IR Connection Succeed", ir.length));
+		Thread irResendProcess = new Thread(() -> {
+			for (;;) {
+				final long now = System.currentTimeMillis();
+				try {
+					List<IRSendStatus> completed = new ArrayList<>();
+					for (IRSendStatus score : irSendStatus) {
+						long retryDelay = (long) (Math.pow(4, score.retry) * 1000);
+						if (score.retry != 0 && now - score.lastTry >= retryDelay) {
+							score.send();
+						}
+						if (score.isSent) {
+							completed.add(score);
+						}
+						if (score.retry > config.getIrSendCount()) {
+							completed.add(score);
+							ImGuiNotify.error(String.format(
+									"Failed to send a score for %s %s",
+									score.song.getTitle(),
+									score.song.getSubtitle()
+							));
+						}
+					}
+					irSendStatus.removeAll(completed);
+					Thread.sleep(3000);
+				} catch (InterruptedException error) {
+					Thread.currentThread().interrupt();
+					return;
+				} catch (Exception error) {
+					logger.error(error.getMessage());
+				}
+			}
+		}, "IR resend process");
+		irResendProcess.start();
 	}
 
 	private void initializeStates() {
@@ -604,7 +918,11 @@ public class MainController {
 		try (var perf = PerformanceMetrics.get().Event("MusicSelector constructor")) {
 			selector = new MusicSelector(this, songUpdated);
 		}
+		selector.initializeAllBars();
+		initializeRemainingStates();
+	}
 
+	private void initializeRemainingStates() {
 		if(player.getRequestEnable()) {
 			streamController = new StreamController(selector);
 			streamController.run();
@@ -618,10 +936,17 @@ public class MainController {
 	}
 
 	private void updateStateReferences() {
+		initializeStateReferences(true);
+	}
+
+	private void initializeStateReferences(boolean initializeArena) {
 		SkinMenu.init(this, player);
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
-		BMSIRArenaClient.initialize(this);
+		MiscSettingMenu.setMain(this);
+		if (initializeArena) {
+			BMSIRArenaClient.initialize(this);
+		}
 	}
 
 	private void triggerLnWarning() {
@@ -753,6 +1078,7 @@ public class MainController {
 		final long time = System.currentTimeMillis();
 		if(time > prevtime) {
 		    prevtime = time;
+			processBmsirNumpadShortcuts();
             current.input();
             // event - move pressed
             if (input.isMousePressed()) {
@@ -795,41 +1121,7 @@ public class MainController {
             }
             // fullscreen - windowed
             if (!input.getKeyState(Input.Keys.ALT_LEFT) && !input.getKeyState(Input.Keys.ALT_RIGHT) && input.isActivated(KeyCommand.SWITCH_SCREEN_MODE)) {
-                boolean fullscreen = Gdx.graphics.isFullscreen();
-
-                if (fullscreen) {
-					// Restore window decorations
-					Lwjgl3Graphics graphics = (Lwjgl3Graphics) Gdx.graphics;
-					Gdx.graphics.setUndecorated(false);
-                    Gdx.graphics.setWindowedMode(config.getWindowWidth(), config.getWindowHeight());
-
-					// Try and find the highest resolution display mode available, otherwise use the current mode
-					Graphics.DisplayMode maxResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
-							.max(Comparator.comparingInt((Graphics.DisplayMode mode) -> mode.width)
-									.thenComparingInt(mode -> mode.height)
-									.thenComparingInt(mode -> mode.refreshRate))
-							.orElse(Gdx.graphics.getDisplayMode());
-
-					// Center window on screen
-					int windowX = (maxResOrCurrent.width / 2) - (config.getWindowWidth() / 2);
-					int windowY = (maxResOrCurrent.height / 2) - (config.getWindowHeight() / 2);
-					// Handle max res contents pushing the decorations off screen
-					if (windowY == 0) {
-						windowY += 32;
-					}
-
-					graphics.getWindow().setPosition(windowX, windowY);
-
-                } else {
-					// Try and find the best resolution mode that fits the window size, skins will behave strangely if
-					// fullscreened with the wrong display mode
-					Graphics.DisplayMode windowResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
-							.filter(mode -> mode.width == config.getWindowWidth() && mode.height == config.getWindowHeight())
-							.max(Comparator.comparingInt(mode -> mode.refreshRate))
-							.orElse(Gdx.graphics.getDisplayMode());
-                    Gdx.graphics.setFullscreenMode(windowResOrCurrent);
-                }
-                config.setDisplaymode(fullscreen ? Config.DisplayMode.WINDOW : Config.DisplayMode.FULLSCREEN);
+				toggleScreenMode();
             }
 
             // if (input.getFunctionstate()[4] && input.getFunctiontime()[4] != 0) {
@@ -851,18 +1143,7 @@ public class MainController {
 
             // screen shot
             if (input.isActivated(KeyCommand.SAVE_SCREENSHOT)) {
-                if (screenshot == null || !screenshot.isAlive()) {
-            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, Gdx.graphics.getBackBufferWidth(),Gdx.graphics.getBackBufferHeight(), true);
-                    screenshot = new Thread(() -> {
-                		// 全ピクセルのアルファ値を255にする(=透明色を無くす)
-                		for(int i = 3;i < pixels.length;i+=4) {
-                			pixels[i] = (byte) 0xff;
-                		}
-                    	new ScreenShotFileExporter().send(current, pixels);
-                    });
-                    screenshot.start();
-                    this.saveLastRecording("ON_SCREENSHOT");
-                }
+				saveScreenshot();
             }
 
             if (input.isActivated(KeyCommand.POST_TWITTER)) {
@@ -919,10 +1200,16 @@ public class MainController {
 		if (skinconfig != null) {
 			skinconfig.dispose();
 		}
-		imGui.dispose();
-		resource.dispose();
+		if (imGuiInitialized) {
+			ImGuiRenderer.dispose();
+		}
+		if (resource != null) {
+			resource.dispose();
+		}
 //		input.dispose();
-		SkinLoader.getResource().dispose();
+		if (skinLoaderInitialized) {
+			SkinLoader.getResource().dispose();
+		}
 		ShaderManager.dispose();
 		if (download != null) {
 			download.dispose();

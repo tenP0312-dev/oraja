@@ -11,6 +11,7 @@ import java.text.ParseException;
 import bms.player.beatoraja.system.RobustFile;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
+import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.pattern.*;
@@ -38,6 +39,9 @@ public final class PlayerConfig {
 	public static final String BMSIR_ARENA_TARGET_SPECIFIED = "specified";
 	public static final String BMSIR_ARENA_GRAPH_ORDER_RANK = "rank";
 	public static final String BMSIR_ARENA_GRAPH_ORDER_ENTRY = "entry";
+	public static final String BMSIR_COVER_CONTROL_ORAJA = "oraja";
+	public static final String BMSIR_COVER_CONTROL_LR2 = "lr2";
+	public static final String BMSIR_COVER_CONTROL_EXTENDED = "extended";
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -306,6 +310,10 @@ public final class PlayerConfig {
 	private int bmsirArenaGraphHighlight = 0;
 	private String bmsirArenaTargetMode = BMSIR_ARENA_TARGET_OFF;
 	private String bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
+	private String bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
+	private int bmsirCoverChangeStep = 10;
+	private String[] bmsirNumpadActions = BMSIRNumpadAction.defaultIds();
+	private int bmsirNumpadJudgeTimingStep = 1;
 	/** Show the large, phase-specific Arena presentation banner. */
 	private boolean bmsirArenaPresentationOverlayEnabled = true;
 	private boolean bmsirArenaCountdownSeEnabled = true;
@@ -906,6 +914,54 @@ public final class PlayerConfig {
 						: BMSIR_ARENA_GRAPH_ORDER_RANK;
 	}
 
+	public String getBmsirCoverControlMode() {
+		if (!BMSIR_COVER_CONTROL_LR2.equals(bmsirCoverControlMode)
+				&& !BMSIR_COVER_CONTROL_EXTENDED.equals(bmsirCoverControlMode)) {
+			bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
+		}
+		return bmsirCoverControlMode;
+	}
+
+	public void setBmsirCoverControlMode(String mode) {
+		String normalized = mode == null
+				? BMSIR_COVER_CONTROL_ORAJA
+				: mode.toLowerCase(Locale.ROOT);
+		bmsirCoverControlMode = BMSIR_COVER_CONTROL_LR2.equals(normalized)
+				|| BMSIR_COVER_CONTROL_EXTENDED.equals(normalized)
+				? normalized
+				: BMSIR_COVER_CONTROL_ORAJA;
+	}
+
+	public int getBmsirCoverChangeStep() {
+		bmsirCoverChangeStep = Math.max(1, Math.min(100, bmsirCoverChangeStep));
+		return bmsirCoverChangeStep;
+	}
+
+	public void setBmsirCoverChangeStep(int step) {
+		bmsirCoverChangeStep = Math.max(1, Math.min(100, step));
+	}
+
+	public String[] getBmsirNumpadActions() {
+		bmsirNumpadActions = BMSIRNumpadAction.normalizeIds(bmsirNumpadActions);
+		return bmsirNumpadActions.clone();
+	}
+
+	public void setBmsirNumpadActions(String[] actions) {
+		bmsirNumpadActions = BMSIRNumpadAction.normalizeIds(actions);
+	}
+
+	public int getBmsirNumpadJudgeTimingStep() {
+		bmsirNumpadJudgeTimingStep = Math.max(
+				1,
+				Math.min(20, bmsirNumpadJudgeTimingStep)
+		);
+		return bmsirNumpadJudgeTimingStep;
+	}
+
+	public void setBmsirNumpadJudgeTimingStep(int step) {
+		bmsirNumpadJudgeTimingStep = Math.max(1, Math.min(20, step));
+	}
+
 	public boolean isBmsirArenaPresentationOverlayEnabled() {
 		return bmsirArenaPresentationOverlayEnabled;
 	}
@@ -1285,6 +1341,10 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		setBmsirCoverControlMode(bmsirCoverControlMode);
+		setBmsirCoverChangeStep(bmsirCoverChangeStep);
+		setBmsirNumpadActions(bmsirNumpadActions);
+		setBmsirNumpadJudgeTimingStep(bmsirNumpadJudgeTimingStep);
 		if (bmsirArenaOverlayHotkeyKeys != null) {
 			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.normalizeKeys(
 					bmsirArenaOverlayHotkeyKeys

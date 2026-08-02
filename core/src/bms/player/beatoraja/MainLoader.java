@@ -13,8 +13,6 @@ import de.damios.guacamole.gdx.log.LoggerService;
 import javafx.application.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.swing.JOptionPane;
 
@@ -41,9 +39,7 @@ import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.launcher.PlayConfigurationView;
 import bms.player.beatoraja.play.bga.FFmpegNativeLoader;
 import bms.player.beatoraja.song.SQLiteSongDatabaseAccessor;
-import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
-import bms.player.beatoraja.song.SongUtils;
 import org.slf4j.jul.JULServiceProvider;
 
 /**
@@ -137,15 +133,6 @@ public class MainLoader extends Application {
             }
         }
 
-        for (SongData song : getScoreDatabaseAccessor().getSongDatas(SongUtils.illegalsongs)) {
-            MainLoader.putIllegalSong(song.getSha256());
-        }
-
-		if(illegalSongs.size() > 0) {
-			JOptionPane.showMessageDialog(null, "This Application detects " + illegalSongs.size() + " illegal BMS songs. \n Remove them, update song database and restart.", "Error", JOptionPane.ERROR_MESSAGE);
-			System.exit(1);
-		}
-
 		try {
 			FFmpegNativeLoader.preload();
 			MainController main = new MainController(bmsPath, config, player, playerMode, songUpdated);
@@ -237,42 +224,16 @@ public class MainLoader extends Application {
 			gdxConfig.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(), config.getAudioConfig().getDeviceBufferSize(), 1);
 
 			Config.DisplayMode displaymode = config.getDisplaymode();
-			//new Lwjgl3Application(main, gdxConfig);
 			Graphics.DisplayMode finalGdxDisplayMode = gdxDisplayMode;
-			new Lwjgl3Application(new ApplicationListener() {
-				public void resume() {
-					main.resume();
-				}
-
-				public void resize(int width, int height) {
-					main.resize(width, height);
-				}
-
-				public void render() {
-                    try (var perf = PerformanceMetrics.get().Watch("render")) {
-						main.beforeRender();
-                        main.render();
-						main.afterRender();
-                    }
-                }
-
-				public void pause() {
-					main.pause();
-				}
-
-				public void dispose() {
-					main.dispose();
-				}
-
-				public void create() {
-					logger.info("Starting {}", Version.getArenaDisplayName());
-					logger.info("[Build info] Commit: {}", Version.getGitCommitHash());
-					main.create();
-					if (displaymode == Config.DisplayMode.FULLSCREEN) {
-						Gdx.graphics.setFullscreenMode(finalGdxDisplayMode);
-					}
-				}
-			}, gdxConfig);
+			new Lwjgl3Application(
+					new StartupApplication(
+							main,
+							config,
+							displaymode,
+							finalGdxDisplayMode
+					),
+					gdxConfig
+			);
 			//System.exit(0);
 		} catch (Throwable e) {
 			logger.error("{} : {}", e.getClass().getName(), e.getMessage());

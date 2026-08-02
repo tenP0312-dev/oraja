@@ -38,6 +38,21 @@ class BMSIRArenaConfigStoreTest {
         );
         player.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_LEADER);
         player.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
+        player.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED);
+        player.setBmsirCoverChangeStep(12);
+        player.setBmsirNumpadActions(new String[]{
+                BMSIRNumpadAction.NONE.id(),
+                BMSIRNumpadAction.BMS_SEARCH.id(),
+                BMSIRNumpadAction.MODE_FILTER.id(),
+                BMSIRNumpadAction.JUDGE_MINUS.id(),
+                BMSIRNumpadAction.SORT.id(),
+                BMSIRNumpadAction.REPLAY.id(),
+                BMSIRNumpadAction.KEY_CONFIG.id(),
+                BMSIRNumpadAction.SKIN_CONFIG.id(),
+                BMSIRNumpadAction.SCREENSHOT.id(),
+                BMSIRNumpadAction.JUDGE_PLUS.id()
+        });
+        player.setBmsirNumpadJudgeTimingStep(7);
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -58,6 +73,11 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
+        assertTrue(serialized.contains("\"schemaVersion\": 6"));
+        assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
+        assertTrue(serialized.contains("\"coverChangeStep\": 12"));
+        assertTrue(serialized.contains("\"numpadJudgeTimingStep\": 7"));
+        assertTrue(serialized.contains("\"bms_search\""));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));
         assertFalse(serialized.contains("irconfig"));
@@ -81,6 +101,12 @@ class BMSIRArenaConfigStoreTest {
         );
         arenaBody.setBmsirArenaTargetMode(PlayerConfig.BMSIR_ARENA_TARGET_ABOVE);
         arenaBody.setBmsirArenaGraphOrder(PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY);
+        arenaBody.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_LR2);
+        arenaBody.setBmsirCoverChangeStep(15);
+        String[] numpadActions = BMSIRNumpadAction.defaultIds();
+        numpadActions[1] = BMSIRNumpadAction.FPS.id();
+        arenaBody.setBmsirNumpadActions(numpadActions);
+        arenaBody.setBmsirNumpadJudgeTimingStep(4);
         PlayerConfig.write(temporaryDirectory.toString(), arenaBody);
 
         PlayerConfig normalBody = player("player1");
@@ -120,6 +146,16 @@ class BMSIRArenaConfigStoreTest {
                 PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY,
                 restored.getBmsirArenaGraphOrder()
         );
+        assertEquals(
+                PlayerConfig.BMSIR_COVER_CONTROL_LR2,
+                restored.getBmsirCoverControlMode()
+        );
+        assertEquals(15, restored.getBmsirCoverChangeStep());
+        assertEquals(
+                BMSIRNumpadAction.FPS.id(),
+                restored.getBmsirNumpadActions()[1]
+        );
+        assertEquals(4, restored.getBmsirNumpadJudgeTimingStep());
     }
 
     @Test
@@ -201,6 +237,27 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(restored.isBmsirOneBassEnabled());
         assertTrue(restored.isBmsirStartHerePreviewEnabled());
         assertTrue(restored.isBmsirDanLocalSyncEnabled());
+        assertEquals(
+                PlayerConfig.BMSIR_COVER_CONTROL_ORAJA,
+                restored.getBmsirCoverControlMode()
+        );
+        assertEquals(10, restored.getBmsirCoverChangeStep());
+        assertEquals(
+                java.util.List.of(
+                        "judge_auto",
+                        "none",
+                        "none",
+                        "judge_minus",
+                        "none",
+                        "none",
+                        "none",
+                        "skin_config",
+                        "none",
+                        "judge_plus"
+                ),
+                java.util.Arrays.asList(restored.getBmsirNumpadActions())
+        );
+        assertEquals(1, restored.getBmsirNumpadJudgeTimingStep());
     }
 
     private PlayerConfig player(String id) throws Exception {
