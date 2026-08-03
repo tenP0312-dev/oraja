@@ -3,7 +3,11 @@ import tempfile
 import unittest
 import zipfile
 
-from package_arena_release import PLUGIN_FILENAME, build_release
+from package_arena_release import (
+    CONFIGURED_LAUNCHER_MARKER,
+    PLUGIN_FILENAME,
+    build_release,
+)
 
 
 class ArenaReleasePackageTest(unittest.TestCase):
@@ -102,7 +106,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 encoding="utf-8",
             )
             launcher = root / "launcher.exe"
-            launcher.write_bytes(b"MZportable")
+            launcher.write_bytes(b"MZportable" + CONFIGURED_LAUNCHER_MARKER)
             output = build_release(
                 platform="windows-x86-64",
                 body_jar=fixture["body"],
@@ -122,6 +126,35 @@ class ArenaReleasePackageTest(unittest.TestCase):
             self.assertIn("BMS-IR Arena Test.exe", names)
             self.assertIn("BMS-IR-Arena-config.bat", names)
             self.assertIn('"channel": "test"', manifest)
+
+    def test_rejects_launcher_without_online_update_configuration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = self.fixture(root)
+            body = root / "BMS-IR-Arena-oraja-0.4.14-windows-x86-64.jar"
+            fixture["body"].rename(body)
+            fixture["body"] = body
+            (fixture["runtime"] / "bin" / "java").unlink()
+            (fixture["runtime"] / "bin" / "java.exe").write_text("java", encoding="utf-8")
+            (fixture["runtime"] / "release").write_text(
+                'JAVA_VERSION="21.0.1"\nOS_NAME="Windows"\nOS_ARCH="amd64"\n',
+                encoding="utf-8",
+            )
+            launcher = root / "launcher.exe"
+            launcher.write_bytes(b"MZvalidation-only")
+            with self.assertRaisesRegex(ValueError, "update endpoint"):
+                build_release(
+                    platform="windows-x86-64",
+                    body_jar=fixture["body"],
+                    plugin_jar=fixture["plugin"],
+                    base_assets=fixture["assets"],
+                    java_home=fixture["runtime"],
+                    project_license=fixture["license"],
+                    output_dir=root / "dist",
+                    confirmed=True,
+                    launcher_exe=launcher,
+                    test_build=True,
+                )
 
 
 if __name__ == "__main__":

@@ -64,6 +64,7 @@ FORBIDDEN_NAMES = {
     "table",
 }
 ZIP_EPOCH = (2026, 1, 1, 0, 0, 0)
+CONFIGURED_LAUNCHER_MARKER = b"BMSIR_ARENA_UPDATE_CONFIGURED_V1"
 
 
 def sha256_file(path: Path) -> str:
@@ -138,9 +139,13 @@ def validate_inputs(
     if platform == "windows-x86-64":
         if launcher_exe is None or not launcher_exe.is_file():
             raise ValueError("Windows packages require a reviewed portable launcher EXE")
-        with launcher_exe.open("rb") as source:
-            if source.read(2) != b"MZ":
-                raise ValueError("Portable launcher input is not a Windows executable")
+        launcher_bytes = launcher_exe.read_bytes()
+        if not launcher_bytes.startswith(b"MZ"):
+            raise ValueError("Portable launcher input is not a Windows executable")
+        if CONFIGURED_LAUNCHER_MARKER not in launcher_bytes:
+            raise ValueError(
+                "Portable launcher was built without the update endpoint or release verification key"
+            )
     elif launcher_exe is not None:
         raise ValueError("Portable launcher EXE is only valid for Windows packages")
     return release

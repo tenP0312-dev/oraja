@@ -48,24 +48,22 @@ jobs:
             throw "Launcher must use IMAGE_SUBSYSTEM_WINDOWS_GUI; got $subsystem"
           }
 
-      - name: Name Windows portable executables
+      - name: Name Windows validation executable
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item arena-launcher/src-tauri/target/release/bmsir-arena-launcher.exe "BMS-IR Arena.exe"
-          Copy-Item arena-launcher/src-tauri/target/release/bmsir-arena-launcher.exe "BMS-IR Arena Test.exe"
+          Copy-Item arena-launcher/src-tauri/target/release/bmsir-arena-launcher.exe "bmsir-arena-launcher-validation-only.exe"
 
       - name: Upload short-lived Windows portable output
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-ci-only-arena-launcher-windows-x64
-          path: |
-            BMS-IR Arena.exe
-            BMS-IR Arena Test.exe
+          path: bmsir-arena-launcher-validation-only.exe
           retention-days: 3
           if-no-files-found: error
 
 # These outputs are deliberately not releases. Official Windows and macOS
-# artifact requires the repository's reviewed Authenticode workflow plus a
-# compiled release verification key. No installer/MSI is produced.
+# artifact requires a compiled update endpoint and release verification key,
+# followed by the repository's reviewed Authenticode workflow. No installer or
+# MSI is produced.
