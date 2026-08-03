@@ -2,6 +2,7 @@ package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
@@ -29,6 +30,10 @@ public final class ManiacOptionsMenu {
     private ManiacOptionsMenu() {
     }
 
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
+
     public static void show(ImBoolean visible) {
         PlayerConfig player = BMSIRArenaClient.playerConfig();
         if (player == null) {
@@ -40,8 +45,12 @@ public final class ManiacOptionsMenu {
 
         ImGui.setNextWindowPos(windowWidth * 0.5f, windowHeight * 0.06f, ImGuiCond.FirstUseEver, 0.5f, 0.0f);
         ImGui.setNextWindowSizeConstraints(360.0f, 300.0f, Math.max(420.0f, windowWidth * 0.48f), windowHeight * 0.88f);
-        if (ImGui.begin("MANIAC OPTIONS", visible, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
-            ImGui.textDisabled("F2: short press updates folders / hold opens this window");
+        if (ImGui.begin(t("マニアックオプション", "MANIAC OPTIONS") + "###maniac-options",
+                visible, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+            ImGui.textDisabled(t(
+                    "F2短押し: フォルダ更新 / 長押し: この画面を開く",
+                    "F2: short press updates folders / hold opens this window"
+            ));
             ImGui.separator();
 
             combo("HIDDEN / SUDDEN 1P", settings.getHiddenSudden1P(), HIDDEN_SUDDEN, settings::setHiddenSudden1P);
@@ -97,9 +106,10 @@ public final class ManiacOptionsMenu {
                 }
                 save();
             }
-            ImGui.textDisabled(
+            ImGui.textDisabled(t(
+                    "EXTRA / ADD NOTES / ADD LONGNOTES / DBは同時に使用できません",
                     "EXTRA / ADD NOTES / ADD LONGNOTES / DB are mutually exclusive"
-            );
+            ));
             int link = switch (settings.getRandomLink()) {
                 case BMSIRManiacSettings.RANDOM_LINK_SYNC -> 1;
                 case BMSIRManiacSettings.RANDOM_LINK_SYMMETRY -> 2;
@@ -110,17 +120,25 @@ public final class ManiacOptionsMenu {
                 case 2 -> BMSIRManiacSettings.RANDOM_LINK_SYMMETRY;
                 default -> BMSIRManiacSettings.RANDOM_LINK_OFF;
             }));
-            ImGui.textWrapped("1P / 2P random options are changed in the normal DP OPTION panel.");
+            ImGui.textWrapped(t(
+                    "1P／2PのRANDOMは通常のDP OPTIONで変更できます。",
+                    "1P / 2P random options are changed in the normal DP OPTION panel."
+            ));
             ImBoolean warning = new ImBoolean(settings.isWarnDoubleBattleOnDp());
-            if (ImGui.checkbox("Warn when DB is suspended on a DP chart", warning)) {
+            if (ImGui.checkbox(t(
+                    "DP譜面でDBが適用されないとき警告する",
+                    "Warn when DB is suspended on a DP chart"
+            ), warning)) {
                 settings.setWarnDoubleBattleOnDp(warning.get());
-                save();
+                save(false);
             }
 
             ImGui.separator();
-            ImGui.text("Ranking: " + settings.rankingKey());
+            ImGui.text(t("ランキング: ", "Ranking: ") + settings.rankingKey());
             String detail = settings.detailedOptionText();
-            ImGui.textWrapped(detail.isEmpty() ? "All options are OFF" : detail);
+            ImGui.textWrapped(detail.isEmpty()
+                    ? t("すべてのオプションがOFFです", "All options are OFF")
+                    : detail);
         }
         ImGui.end();
     }
@@ -133,13 +151,23 @@ public final class ManiacOptionsMenu {
         ImInt selected = new ImInt(Math.max(0, Math.min(value, choices.length - 1)));
         if (ImGui.combo(label, selected, choices)) {
             setter.accept(selected.get());
-            save();
+            save(true);
         }
     }
 
     private static void save() {
+        save(true);
+    }
+
+    private static void save(boolean refreshScores) {
         if (!BMSIRArenaClient.saveArenaConfig()) {
-            ImGuiNotify.warning("MANIAC OPTIONS could not be saved");
+            ImGuiNotify.warning(t(
+                    "マニアックオプションを保存できませんでした",
+                    "MANIAC OPTIONS could not be saved"
+            ));
+        }
+        if (refreshScores) {
+            BMSIRArenaClient.refreshManiacScoreDisplay();
         }
     }
 }

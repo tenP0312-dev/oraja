@@ -46,13 +46,12 @@ public final class BMSIRManiacPlayContext {
             boolean blocked
     ) {
         if (persisted == null || model == null || blocked) return null;
-        BMSIRManiacSettings applied = new BMSIRManiacSettings(persisted);
+        BMSIRManiacSettings applied = effectiveSettings(persisted, model.getMode());
+        if (applied == null) return null;
         boolean nativeDouble = model.getMode().player == 2;
-        boolean dbRequested = applied.isDoubleBattle();
+        boolean dbRequested = persisted.isDoubleBattle();
         boolean dbApplied = dbRequested && !nativeDouble && supportsDoubleBattle(model.getMode());
         boolean dbSuspended = dbRequested && !dbApplied;
-        if (dbSuspended) applied.setDoubleBattle(false);
-        if (!applied.isActive()) return null;
 
         BMSIRManiacPlayContext context = new BMSIRManiacPlayContext(
                 applied,
@@ -62,6 +61,19 @@ public final class BMSIRManiacPlayContext {
         );
         context.apply(model);
         return context;
+    }
+
+    public static BMSIRManiacSettings effectiveSettings(
+            BMSIRManiacSettings persisted,
+            Mode mode
+    ) {
+        if (persisted == null || mode == null) return null;
+        BMSIRManiacSettings applied = new BMSIRManiacSettings(persisted);
+        if (applied.isDoubleBattle()
+                && (mode.player == 2 || !supportsDoubleBattle(mode))) {
+            applied.setDoubleBattle(false);
+        }
+        return applied.isActive() ? applied : null;
     }
 
     private void apply(BMSModel model) {

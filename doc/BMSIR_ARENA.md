@@ -17,7 +17,7 @@ official発狂 ★1--★25 rated selection.
 Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, Double Battle, isolated
 MANIAC local and online records, a mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
-Japanese/English Arena UI, and the portable signed-update launcher.
+Japanese/English built-in UI, and the portable signed-update launcher.
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
 restores a persistent F5 overlay switch, adds judge-timing restoration with a
 Lua API, makes INFO toasts optional, removes duplicate startup IR logins, and
@@ -137,6 +137,21 @@ temporarily disable these modes. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
 and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
 ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
+
+Music Select reads its score and lamp from the exact effective MANIAC settings.
+Changing EXTRA MODE, an ADD option, a visual option, or Double Battle therefore
+switches the whole visible list and folder summaries to that setting's isolated
+record; it never falls back to the ordinary SP/DP lamp. F2 changes invalidate
+the visible score cache immediately, and a completed BMS-IR MANIAC sync does
+the same on the render thread. When Double Battle is enabled on a native DP
+chart, only Double Battle is suspended: the normal DP lamp is shown if no other
+MANIAC option remains, otherwise the remaining exact MANIAC settings select the
+lamp.
+
+`本体UI言語` selects Japanese or English for Arena windows and phase messages,
+F2 MANIAC OPTIONS, built-in Ctrl+Shift+F5 windows, and their notifications.
+The BMS-IR-specific pre-launch controls are translated by the launcher's normal
+resource-bundle locale and save the same language setting used after startup.
 
 `判定自動調整値を曲終了後に戻す` is OFF by default. When enabled, a play
 that starts while automatic judge-timing adjustment is ON snapshots the

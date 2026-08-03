@@ -2685,7 +2685,7 @@ public final class BMSIRArenaOverlay {
     private static void renderSettings(PlayerConfig config) {
         LANGUAGE.set("en".equals(config.getBmsirArenaLanguage()) ? 1 : 0);
         if (ImGui.combo(
-                t("Arena UI言語", "Arena UI language"),
+                t("本体UI言語", "Client UI language"),
                 LANGUAGE,
                 new String[]{"日本語", "English"}
         )) {

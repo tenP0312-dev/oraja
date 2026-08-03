@@ -2,6 +2,7 @@ package bms.player.beatoraja;
 
 import java.sql.*;
 import java.util.*;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +157,65 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 		getScoreDatas(collector, songs, mode, str, true);
 		str.setLength(0);
 		getScoreDatas(collector, songs, 0, str, false);
+	}
+
+	/**
+	 * Reads scores whose database key is derived from the selected chart instead
+	 * of the chart's original SHA-256. MANIAC and Double Battle records use this
+	 * path so Music Select can keep their lamps isolated from ordinary scores.
+	 */
+	public void getScoreDatasByHash(
+			ScoreDataCollector collector,
+			SongData[] songs,
+			int mode,
+			Function<SongData, String> hashProvider,
+			boolean fallbackToModeZero
+	) {
+		Map<String, ScoreData> scores = new HashMap<>();
+		try {
+			for (int chunkStart = 0; chunkStart < songs.length; chunkStart += LOAD_CHUNK_SIZE) {
+				int chunkEnd = Math.min(songs.length, chunkStart + LOAD_CHUNK_SIZE);
+				List<Object> parameters = new ArrayList<>(chunkEnd - chunkStart + 2);
+				StringJoiner placeholders = new StringJoiner(",");
+				for (int index = chunkStart; index < chunkEnd; index++) {
+					String hash = hashProvider.apply(songs[index]);
+					if (hash == null || hash.isBlank()) continue;
+					placeholders.add("?");
+					parameters.add(hash);
+				}
+				if (parameters.isEmpty()) continue;
+
+				String modeClause;
+				if (fallbackToModeZero && mode != 0) {
+					modeClause = "mode IN (?, ?)";
+					parameters.add(mode);
+					parameters.add(0);
+				} else {
+					modeClause = "mode = ?";
+					parameters.add(mode);
+				}
+				List<ScoreData> loaded = Validatable.removeInvalidElements(qr.query(
+						"SELECT * FROM score WHERE sha256 IN (" + placeholders + ") AND " + modeClause,
+						scoreHandler,
+						parameters.toArray()
+				));
+				for (ScoreData score : loaded) {
+					scores.put(score.getSha256() + ':' + score.getMode(), score);
+				}
+			}
+		} catch (Exception error) {
+			logger.error("スコア取得時の例外:{}", error.getMessage());
+		}
+
+		for (SongData song : songs) {
+			String hash = hashProvider.apply(song);
+			int requestedMode = song.hasUndefinedLongNote() ? mode : 0;
+			ScoreData score = hash == null ? null : scores.get(hash + ':' + requestedMode);
+			if (score == null && fallbackToModeZero && requestedMode != 0 && hash != null) {
+				score = scores.get(hash + ":0");
+			}
+			collector.collect(song, score);
+		}
 	}
 	
 	private void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode, StringBuilder str, boolean hasln) {

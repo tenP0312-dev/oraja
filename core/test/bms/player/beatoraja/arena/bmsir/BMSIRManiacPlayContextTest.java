@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,6 +42,41 @@ class BMSIRManiacPlayContextTest {
         ));
         assertNull(BMSIRManiacPlayContext.prepare(settings, model, false));
         assertEquals(Mode.BEAT_14K, model.getMode());
+    }
+
+    @Test
+    void scoreIdentityUsesDoubleBattleOnlyWhenItApplies() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+
+        BMSIRManiacSettings single = BMSIRManiacPlayContext.effectiveSettings(
+                settings,
+                Mode.BEAT_7K
+        );
+        BMSIRManiacSettings doublePlay = BMSIRManiacPlayContext.effectiveSettings(
+                settings,
+                Mode.BEAT_14K
+        );
+
+        assertNotNull(single);
+        assertTrue(single.isDoubleBattle());
+        assertNull(doublePlay);
+    }
+
+    @Test
+    void otherManiacSettingsRemainActiveWhenDoubleBattleIsSuspended() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+        settings.setTornado(30);
+
+        BMSIRManiacSettings applied = BMSIRManiacPlayContext.effectiveSettings(
+                settings,
+                Mode.BEAT_14K
+        );
+
+        assertNotNull(applied);
+        assertFalse(applied.isDoubleBattle());
+        assertEquals(30, applied.getTornado());
     }
 
     @Test

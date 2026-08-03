@@ -7,6 +7,7 @@ import java.nio.file.*;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
@@ -129,12 +130,44 @@ public final class MusicSelector extends MainState {
 		scorecache = new ScoreDataCache() {
 			@Override
 			protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
+				BMSIRManiacSettings settings = BMSIRManiacApiClient.effectiveSettings(main, song);
+				if (settings != null) {
+					return pda.readManiacScoreData(
+							settings.storageChartId(song.getSha256()),
+							lnmode
+					);
+				}
 				return pda.readScoreData(song.getSha256(), song.hasUndefinedLongNote(), lnmode);
 			}
 
 			@Override
 			protected void readScoreDatasFromSource(ScoreDataCollector collector, SongData[] songs, int lnmode) {
-				pda.readScoreDatas(collector, songs, lnmode);
+				Array<SongData> ordinary = new Array<>();
+				Array<SongData> maniac = new Array<>();
+				for (SongData song : songs) {
+					if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+						maniac.add(song);
+					} else {
+						ordinary.add(song);
+					}
+				}
+				if (ordinary.notEmpty()) {
+					pda.readScoreDatas(collector, ordinary.toArray(SongData.class), lnmode);
+				}
+				if (maniac.notEmpty()) {
+					pda.readManiacScoreDatas(
+							collector,
+							maniac.toArray(SongData.class),
+							lnmode,
+							song -> {
+								BMSIRManiacSettings settings =
+										BMSIRManiacApiClient.effectiveSettings(main, song);
+								return settings == null
+										? null
+										: settings.storageChartId(song.getSha256());
+							}
+					);
+				}
 			}
 		};
 		
@@ -187,6 +220,11 @@ public final class MusicSelector extends MainState {
 
 	public ScoreDataCache getRivalScoreDataCache() {
 		return rivalcache;
+	}
+
+	public void refreshScoreDisplay() {
+		scorecache.clear();
+		manager.updateBar();
 	}
 
 	public void create() {
@@ -373,7 +411,13 @@ public final class MusicSelector extends MainState {
 	
 	public void select(Bar current) {
 		if (BMSIRArenaClient.isSelectionBlocked() && !BMSIRArenaClient.isNominationOpen()) {
-			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
+			ImGuiNotify.info(
+					BMSIRArenaI18n.text(
+							"Arenaの対戦準備中です。次の通常選曲はできません",
+							"Arena is preparing the match. Normal song selection is unavailable"
+					),
+					3000
+			);
 			return;
 		}
 		if (current instanceof DirectoryBar dirbar) {
@@ -495,7 +539,10 @@ public final class MusicSelector extends MainState {
 			playedsong = song;
 			main.changeState(MainStateType.DECIDE);
 		} else {
-			ImGuiNotify.error("Failed to loading BMS : Song not found, or Song has error", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"BMSを読み込めませんでした: 楽曲が見つからないか、譜面にエラーがあります",
+					"Failed to load BMS: Song not found or chart has an error"
+			), 1200);
 		}
 	}
 	
@@ -510,7 +557,10 @@ public final class MusicSelector extends MainState {
 		}
 
 		if (!_readCourse(mode, gradeBar)) {
-			ImGuiNotify.error("Failed to loading Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"コースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load course: Some songs were not found"
+			), 1200);
 			logger.info("段位の楽曲が揃っていません");
 		}
 	}
@@ -525,7 +575,10 @@ public final class MusicSelector extends MainState {
 		randomCourseBar.getCourseData().lotterySongDatas(main);
 		final GradeBar gradeBar = new GradeBar(randomCourseBar.getCourseData().createCourseData());
 		if (!gradeBar.existsAllSongs()) {
-			ImGuiNotify.error("Failed to loading Random Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"ランダムコースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load random course: Some songs were not found"
+			), 1200);
 			logger.info("ランダムコースの楽曲が揃っていません");
 			return;
 		}
@@ -535,7 +588,10 @@ public final class MusicSelector extends MainState {
 			manager.updateBar();
 			manager.setSelected(gradeBar);
 		} else {
-			ImGuiNotify.error("Failed to loading Random Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"ランダムコースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load random course: Some songs were not found"
+			), 1200);
 			logger.info("ランダムコースの楽曲が揃っていません");
 		}
 	}
@@ -816,7 +872,13 @@ public final class MusicSelector extends MainState {
 			return;
 		}
 		if (BMSIRArenaClient.isSelectionBlocked()) {
-			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
+			ImGuiNotify.info(
+					BMSIRArenaI18n.text(
+							"Arenaの対戦準備中です。次の通常選曲はできません",
+							"Arena is preparing the match. Normal song selection is unavailable"
+					),
+					3000
+			);
 			return;
 		}
 		Bar selected = manager.getSelected();
@@ -829,7 +891,10 @@ public final class MusicSelector extends MainState {
 			if (maniac.isWarnDoubleBattleOnDp()
 					&& BMSIRManiacPlayContext.isDoubleBattleSuspended(maniac, chartMode)) {
 				ImGuiNotify.warning(
-						"DBを使用してDPを遊んでいます。DBは適用されません",
+						BMSIRArenaI18n.text(
+								"DBを使用してDPを遊んでいます。DBは適用されません",
+								"DOUBLE BATTLE is enabled on a DP chart and will not be applied"
+						),
 						4000
 				);
 			}

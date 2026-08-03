@@ -8,9 +8,15 @@ import imgui.type.ImBoolean;
 import java.util.Arrays;
 import java.util.List;
 
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
+
 import static bms.player.beatoraja.modmenu.ImGuiRenderer.*;
 
 public class FreqTrainerMenu {
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     public static ImBoolean FREQ_TRAINER_ENABLED = new ImBoolean(false);
 
@@ -23,13 +29,14 @@ public class FreqTrainerMenu {
         float relativeY = windowHeight * 0.06f;
         ImGui.setNextWindowPos(relativeX, relativeY, ImGuiCond.FirstUseEver);
 
-        if(ImGui.begin("Rate Modifier", showFreqTrainer, ImGuiWindowFlags.AlwaysAutoResize)) {
-            ImGui.text("Modifies the chart playback rate to be faster or");
-            ImGui.text("slower by a given percent.");
+        if(ImGui.begin(t("再生速度変更", "Rate Modifier") + "###rate-modifier",
+                showFreqTrainer, ImGuiWindowFlags.AlwaysAutoResize)) {
+            ImGui.text(t("譜面の再生速度を指定した割合で変更します。",
+                    "Changes chart playback speed by the selected percentage."));
 
             buttonVals.forEach(value -> {
                 if (value == 100) {
-                    if(ImGui.button("Reset")) {
+                    if(ImGui.button(t("リセット", "Reset"))) {
                         freq[0] = 100;
                     }
                 } else {
@@ -45,11 +52,14 @@ public class FreqTrainerMenu {
                     50,
                     200);
 
-            ImGui.text("Controls");
+            ImGui.text(t("操作", "Controls"));
             ImGui.indent();
-            ImGui.checkbox("Rate Enabled", FREQ_TRAINER_ENABLED);
+            ImGui.checkbox(t("速度変更を有効にする", "Rate Enabled"), FREQ_TRAINER_ENABLED);
             ImGui.sameLine();
-            helpMarker("When enabled positive rate scores will save locally, however scores will not submit to IR and result lamp will always be NO PLAY.");
+            helpMarker(t(
+                    "有効時、速度を上げたスコアはローカルへ保存されますがIRには送信されず、リザルトのランプは常にNO PLAYになります。",
+                    "When enabled positive rate scores save locally, but are not submitted to IR and the result lamp is always NO PLAY."
+            ));
 
             freq[0] = clamp(freq[0]);
         }

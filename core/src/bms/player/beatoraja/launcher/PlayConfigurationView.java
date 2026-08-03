@@ -419,21 +419,27 @@ public class PlayConfigurationView implements Initializable {
 
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
+		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
 		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
-		bmsirArenaTargetMode.getItems().setAll(
-				"OFF",
-				"1位の対戦相手",
-				"自分の直上",
-				"指定プレイヤー"
-		);
-		bmsirArenaGraphOrder.getItems().setAll("順位順", "入室順固定");
-		bmsirCoverControlMode.getItems().setAll(
-				"oraja標準（START+1～7: ハイスピード）",
-				"LR2式（SUD+表示中のみ6/7: SUD+）",
-				"拡張（6/7: SUD+/HIDDEN/LIFT）"
-		);
+		bmsirArenaTargetMode.getItems().setAll(english
+				? List.of("OFF", "1st-place opponent", "Opponent directly above", "Specified player")
+				: List.of("OFF", "1位の対戦相手", "自分の直上", "指定プレイヤー"));
+		bmsirArenaGraphOrder.getItems().setAll(english
+				? List.of("Rank order", "Fixed entry order")
+				: List.of("順位順", "入室順固定"));
+		bmsirCoverControlMode.getItems().setAll(english
+				? List.of(
+						"oraja default (START + keys 1-7: HI-SPEED)",
+						"LR2 style (keys 6/7: SUD+ while visible)",
+						"Extended (keys 6/7: SUD+/HIDDEN/LIFT)"
+				)
+				: List.of(
+						"oraja標準（START+1～7: ハイスピード）",
+						"LR2式（SUD+表示中のみ6/7: SUD+）",
+						"拡張（6/7: SUD+/HIDDEN/LIFT）"
+				));
 		bmsirCoverChangeStep.setValueFactory(
 				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
@@ -450,7 +456,7 @@ public class PlayConfigurationView implements Initializable {
 				bmsirNumpad9
 		);
 		List<String> numpadLabels = Arrays.stream(BMSIRNumpadAction.values())
-				.map(BMSIRNumpadAction::label)
+				.map(action -> action.label(english))
 				.toList();
 		bmsirNumpadCombos.forEach(combo -> combo.getItems().setAll(numpadLabels));
 		bmsirNumpadJudgeTimingStep.setValueFactory(

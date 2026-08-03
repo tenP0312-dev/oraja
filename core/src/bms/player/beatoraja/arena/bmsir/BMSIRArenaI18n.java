@@ -2,7 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import java.util.Locale;
 
-/** Shared language selection for Arena-only JavaFX and ImGui surfaces. */
+/** Shared language selection for Arena oraja's built-in JavaFX and ImGui UI. */
 public final class BMSIRArenaI18n {
     private static volatile String language = "ja";
 

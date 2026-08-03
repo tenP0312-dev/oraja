@@ -2,6 +2,7 @@ package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.arena.client.ArenaBar;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.lobby.Lobby;
 import bms.player.beatoraja.arena.server.ArenaServer;
@@ -17,6 +18,10 @@ public class ArenaMenu {
     public static boolean isFocused = false;
     public static boolean isShow = false;
     private static MusicSelector selector;
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     static {
         MainController.registerBeforeRenderTask((main) -> {
@@ -37,13 +42,13 @@ public class ArenaMenu {
         {
             isFocused = ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
             if (ImGui.beginTabBar("TabBar")) {
-                if (ImGui.beginTabItem("Client")) {
-                    if (ImGui.collapsingHeader("Connect", ImGuiTreeNodeFlags.DefaultOpen)) {
-                        ImGui.inputText("Username", Client.userName);
-                        ImGui.inputText("Server", Client.host);
+                if (ImGui.beginTabItem(t("クライアント", "Client") + "###client")) {
+                    if (ImGui.collapsingHeader(t("接続", "Connect"), ImGuiTreeNodeFlags.DefaultOpen)) {
+                        ImGui.inputText(t("ユーザー名", "Username"), Client.userName);
+                        ImGui.inputText(t("サーバー", "Server"), Client.host);
 
                         ImGui.beginDisabled(Client.host.isEmpty() || Client.userName.isEmpty());
-                        if (ImGui.button("Connect##Button")) {
+                        if (ImGui.button(t("接続", "Connect") + "##Button")) {
                             Client.connect(Client.host.get(), Client.userName.get());
                         }
                         ImGui.endDisabled();
@@ -51,7 +56,7 @@ public class ArenaMenu {
                         ImGui.sameLine();
 
                         ImGui.beginDisabled(!Client.connected.get());
-                        if (ImGui.button("Disconnect")) {
+                        if (ImGui.button(t("切断", "Disconnect"))) {
                             Client.disconnect();
                         }
                         ImGui.endDisabled();
@@ -63,30 +68,39 @@ public class ArenaMenu {
                     }
                 }
 
-                if (ImGui.beginTabItem("Server")) {
-                    ImGui.text("Server");
+                if (ImGui.beginTabItem(t("サーバー", "Server") + "###server")) {
+                    ImGui.text(t("サーバー", "Server"));
                     ImGui.separator();
 
                     ImGui.beginDisabled(ArenaServer.serverStarted.get());
-                    if (ImGui.button("Start")) {
+                    if (ImGui.button(t("開始", "Start"))) {
                         try {
                             ArenaServer.start();
                         } catch (Exception e) {
-                            ImGuiNotify.error(String.format("Failed to start server: %s", e.getMessage()));
+                            ImGuiNotify.error(String.format(t(
+                                    "サーバーを開始できませんでした: %s",
+                                    "Failed to start server: %s"
+                            ), e.getMessage()));
                         }
                     }
                     ImGui.endDisabled();
 
                     ImGui.beginDisabled(!ArenaServer.serverStarted.get());
-                    if (ImGui.button("Stop")) {
+                    if (ImGui.button(t("停止", "Stop"))) {
                         try {
                             ArenaServer.stop();
                         } catch (Exception e) {
-                            ImGuiNotify.error(String.format("Failed to start server: %s", e.getMessage()));
+                            ImGuiNotify.error(String.format(t(
+                                    "サーバーを停止できませんでした: %s",
+                                    "Failed to stop server: %s"
+                            ), e.getMessage()));
                         }
                     }
                     ImGui.endDisabled();
-                    if (ImGui.checkbox("Auto-rotate host after each song", ArenaServer.getServerAutoRotate())) {
+                    if (ImGui.checkbox(t(
+                            "曲ごとにホストを交代する",
+                            "Auto-rotate host after each song"
+                    ), ArenaServer.getServerAutoRotate())) {
                         ArenaServer.setServerAutoRotate(!ArenaServer.getServerAutoRotate());
                     }
                     ImGui.endTabItem();
@@ -122,7 +136,10 @@ public class ArenaMenu {
     public static void startCurrentLobbySong() {
         SongData songData = Client.state.getCurrentSongData();
         if (songData == null || selector == null) {
-            ImGuiNotify.error("BMS-IR Arena: 課題譜面を開始できません");
+            ImGuiNotify.error(t(
+                    "BMS-IR Arena: 課題譜面を開始できません",
+                    "BMS-IR Arena: Could not start the selected chart"
+            ));
             return;
         }
         ArenaBar bar = new ArenaBar(selector, songData);

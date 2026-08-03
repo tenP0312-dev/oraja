@@ -9,6 +9,7 @@ import bms.player.beatoraja.ir.IRScoreData;
 import bms.player.beatoraja.ir.LeaderboardEntry;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.song.SongData;
+import com.badlogic.gdx.Gdx;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -53,17 +54,14 @@ public final class BMSIRManiacApiClient {
                 || BMSIRArenaClient.isArenaPlayActive()) {
             return null;
         }
-        BMSIRManiacSettings settings = new BMSIRManiacSettings(
-                main.getPlayerConfig().getBmsirManiacSettings()
-        );
         Mode mode = Arrays.stream(Mode.values())
                 .filter(value -> value.id == song.getMode())
                 .findFirst()
                 .orElse(null);
-        if (BMSIRManiacPlayContext.isDoubleBattleSuspended(settings, mode)) {
-            settings.setDoubleBattle(false);
-        }
-        return settings.isActive() ? settings : null;
+        return BMSIRManiacPlayContext.effectiveSettings(
+                main.getPlayerConfig().getBmsirManiacSettings(),
+                mode
+        );
     }
 
     public static boolean hasAppliedSettings(MainController main, SongData song) {
@@ -242,6 +240,9 @@ public final class BMSIRManiacApiClient {
                     }
                 }
                 logger.info("MANIAC score sync completed: {} records", imported);
+                if (imported > 0 && Gdx.app != null) {
+                    Gdx.app.postRunnable(BMSIRArenaClient::refreshManiacScoreDisplay);
+                }
             } catch (Exception error) {
                 logger.warn("MANIAC score sync failed: {}", error.getMessage());
             } finally {

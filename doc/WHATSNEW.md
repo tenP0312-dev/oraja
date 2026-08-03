@@ -10,13 +10,15 @@
   linking, Random Trainer support, and an optional native-DP warning.
 - MANIAC and Double Battle records use a separate `bmsir_maniac.db`. Ranked
   transforms use isolated BMS-IR leaderboards, ghosts, and score sync; a safe
-  vanilla `score.db` export is available from pre-launch configuration.
+  vanilla `score.db` export is available from pre-launch configuration. Music
+  Select lamps now follow the exact active MANIAC/Double Battle settings and
+  refresh immediately when F2 settings or synchronized records change.
 - Split the Arena graph into its own window, added score differences, match
   state, rating changes, persistent private-room records, notification-sound
   testing, and optional detailed protocol logging.
-- Added Japanese and English text for Arena surfaces, the Ctrl+Shift+F5 menu,
-  and BMS-IR pre-launch settings. The READY note preview now uses a one-second
-  fade cycle.
+- Added Japanese and English text for Arena surfaces, F2 MANIAC OPTIONS, the
+  built-in Ctrl+Shift+F5 windows, notifications, and BMS-IR pre-launch
+  settings. The READY note preview now uses a one-second fade cycle.
 - Added the portable launcher and signed patch format. Windows test packages
   launch from `BMS-IR Arena Test.exe`; the existing BAT remains available.
 

@@ -8,6 +8,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.Stream;
+import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -192,6 +193,21 @@ public final class PlayDataAccessor {
 		return score != null || lnmode == 0
 				? score
 				: maniacScoredb.getScoreData(storageHash, 0);
+	}
+
+	public void readManiacScoreDatas(
+			ScoreDataCollector collector,
+			SongData[] songs,
+			int lnmode,
+			Function<SongData, String> storageHashProvider
+	) {
+		maniacScoredb.getScoreDatasByHash(
+				collector,
+				songs,
+				lnmode,
+				storageHashProvider,
+				true
+		);
 	}
 
 	public void syncManiacScoreData(

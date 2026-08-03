@@ -132,9 +132,9 @@ public class ImGuiRenderer {
         if (SHOW_MOD_MENU.get()) {
             ImGui.begin("Arena oraja", ImGuiWindowFlags.AlwaysAutoResize);
 
-            ImGui.checkbox(t("レート変更ウィンドウ", "Show Rate Modifier Window"), SHOW_FREQ_PLUS);
-            ImGui.checkbox(t("Random Trainer", "Show Random Trainer Window"), SHOW_RANDOM_TRAINER);
-            ImGui.checkbox(t("Judge Trainer", "Show Judge Trainer Window"), SHOW_JUDGE_TRAINER);
+            ImGui.checkbox(t("再生速度変更", "Show Rate Modifier Window"), SHOW_FREQ_PLUS);
+            ImGui.checkbox(t("RANDOM配置指定", "Show Random Trainer Window"), SHOW_RANDOM_TRAINER);
+            ImGui.checkbox(t("判定トレーナー", "Show Judge Trainer Window"), SHOW_JUDGE_TRAINER);
             if (ImGui.checkbox(t("スキン設定", "Show Skin Configuration Window"), SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
             ImGui.checkbox(t("スキンウィジェット管理", "Show Skin Widget Manager Window"), SHOW_SKIN_WIDGET_MANAGER);
             ImGui.checkbox(t("楽曲管理", "Show Song Manager Window"), SHOW_SONG_MANAGER);
@@ -144,8 +144,8 @@ public class ImGuiRenderer {
                 PerformanceMonitor.reloadEventTree();
             }
             ImGui.checkbox(t("その他設定", "Show Misc Setting Window"), SHOW_MISC_SETTING);
-            ImGui.checkbox(t("従来Arenaメニュー", "Show Arena Menu"), SHOW_ARENA_MENU);
-            ImGui.checkbox(t("従来Arenaグラフ", "Show Graph"), SHOW_GRAPH_MENU);
+            ImGui.checkbox(t("従来Arenaメニュー", "Show Legacy Arena Menu"), SHOW_ARENA_MENU);
+            ImGui.checkbox(t("従来Arenaグラフ", "Show Legacy Arena Graph"), SHOW_GRAPH_MENU);
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
                     !BMSIRArenaOverlay.isHidden()
