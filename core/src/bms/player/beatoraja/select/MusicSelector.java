@@ -7,6 +7,7 @@ import java.nio.file.*;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
@@ -272,12 +273,19 @@ public final class MusicSelector extends MainState {
 			currentRankingDuration = -1;
 			if (current instanceof SongBar && ((SongBar) current).existsSong() && play == null) {
 				SongData song = ((SongBar) current).getSongData();
-				RankingData irc = main.getRankingDataCache().get(song, config.getLnmode());
-				if(irc == null) {
-					irc = new RankingData();
-					main.getRankingDataCache().put(song, config.getLnmode(), irc);
+				RankingData irc;
+				if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+					irc = BMSIRManiacApiClient.loadRanking(main, song);
+				} else if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+					irc = null;
+				} else {
+					irc = main.getRankingDataCache().get(song, config.getLnmode());
+					if(irc == null) {
+						irc = new RankingData();
+						main.getRankingDataCache().put(song, config.getLnmode(), irc);
+					}
+					irc.load(this, song);
 				}
-				irc.load(this, song);
 	            currentir = irc;
 			}				
 			if (current instanceof GradeBar && ((GradeBar) current).existsAllSongs() && play == null) {
@@ -425,7 +433,10 @@ public final class MusicSelector extends MainState {
 				}
 			}
 
-			if(main.getIRStatus().length > 0 && currentir == null) {
+			if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+				currentir = BMSIRManiacApiClient.getOrCreateRanking(main, song);
+			} else if (main.getIRStatus().length > 0 && currentir == null
+					&& !BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
 				currentir = new RankingData();
 				main.getRankingDataCache().put(song, config.getLnmode(), currentir);
 			}
@@ -762,8 +773,20 @@ public final class MusicSelector extends MainState {
 		final Bar current = manager.getSelected();
 		if(main.getIRStatus().length > 0) {
 			if(current instanceof SongBar && ((SongBar) current).existsSong()) {
-				currentir = main.getRankingDataCache().get(((SongBar) current).getSongData(), config.getLnmode());
-				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+				SongData song = ((SongBar) current).getSongData();
+				if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+					currentir = BMSIRManiacApiClient.getCachedRanking(main, song);
+					currentRankingDuration = (currentir != null
+							? Math.max(rankingReloadDuration
+							- (System.currentTimeMillis() - currentir.getLastUpdateTime()), 0)
+							: 0) + rankingDuration;
+				} else if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+					currentir = null;
+					currentRankingDuration = -1;
+				} else {
+					currentir = main.getRankingDataCache().get(song, config.getLnmode());
+					currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+				}
 			} else if(current instanceof GradeBar && ((GradeBar) current).existsAllSongs()) {
 				currentir = main.getRankingDataCache().get(((GradeBar) current).getCourseData(), config.getLnmode());
 				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;

@@ -187,6 +187,13 @@ public final class PlayDataAccessor {
 		return scoredb.getScoreData(hash, ln ? lnmode : 0);
 	}
 
+	public ScoreData readManiacScoreData(String storageHash, int lnmode) {
+		ScoreData score = maniacScoredb.getScoreData(storageHash, lnmode);
+		return score != null || lnmode == 0
+				? score
+				: maniacScoredb.getScoreData(storageHash, 0);
+	}
+
 	/**
 	 * スコアデータをまとめて読み込み、collectorに渡す
 	 * @param collector スコアデータのcollector

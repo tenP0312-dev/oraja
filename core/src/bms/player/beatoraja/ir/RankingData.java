@@ -193,6 +193,17 @@ public class RankingData {
 	public int getState() {
 		return state;
 	}
+
+	/** Starts an externally managed ranking request. */
+	public void beginAccess() {
+		state = ACCESS;
+	}
+
+	/** Marks an externally managed ranking request as failed. */
+	public void failAccess() {
+		state = FAIL;
+		lastUpdateTime = System.currentTimeMillis();
+	}
 	
 	/**
 	 * RankingDataの最終更新時間を返す
