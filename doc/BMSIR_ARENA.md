@@ -127,6 +127,9 @@ seed so the generated base chart is identical for every player. Normal
 RANDOM, MIRROR, S-RANDOM, Random Trainer, and borrowed leaderboard placement
 are applied afterward in the same way as an ordinary chart and do not split
 the ranking. Replays retain the actual option seed and placement hash.
+Background folder refreshes keep the last committed `songdata.db` snapshot
+available to Music Select, so a refresh cannot temporarily replace the current
+folder with an empty list.
 
 Any MANIAC option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
