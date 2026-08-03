@@ -130,8 +130,19 @@ jobs:
           cargo tauri build --bundles app --no-sign --ci --config tauri.test.conf.json
           app="target/release/bundle/macos/BMS-IR Arena Test.app"
           binary="$app/Contents/MacOS/bmsir-arena-launcher"
-          grep -a -q 'BMSIR_ARENA_UPDATE_CONFIGURED_V1' "$binary"
-          test "$(plutil -extract CFBundleName raw -o - "$app/Contents/Info.plist")" = "BMS-IR Arena Test"
+          python3 - "$binary" <<'PY'
+          from pathlib import Path
+          import sys
+
+          data = Path(sys.argv[1]).read_bytes()
+          if b"BMSIR_ARENA_UPDATE_CONFIGURED_V1" not in data:
+              raise SystemExit("Configured macOS launcher is missing its update marker")
+          PY
+          bundle_name="$(plutil -extract CFBundleName raw -o - "$app/Contents/Info.plist")"
+          if test "$bundle_name" != "BMS-IR Arena Test"; then
+            echo "Unexpected macOS bundle name: $bundle_name" >&2
+            exit 1
+          fi
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict "$app"
           ditto -c -k --sequesterRsrc --keepParent "$app" "../../BMS-IR Arena Test.app.zip"
