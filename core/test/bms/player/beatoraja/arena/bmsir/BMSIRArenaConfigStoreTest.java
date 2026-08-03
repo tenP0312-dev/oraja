@@ -59,6 +59,8 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirNumpadJudgeTimingStep(7);
         player.setBmsirJudgeTimingRestoreEnabled(true);
         player.setBmsirInfoNotificationsEnabled(false);
+        player.getBmsirManiacSettings().setExtraMode(2);
+        player.setBmsirArenaDetailedLogEnabled(true);
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -79,7 +81,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 7"));
+        assertTrue(serialized.contains("\"schemaVersion\": 8"));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -87,6 +89,8 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"numpadJudgeTimingStep\": 7"));
         assertTrue(serialized.contains("\"judgeTimingRestoreEnabled\": true"));
         assertTrue(serialized.contains("\"infoNotificationsEnabled\": false"));
+        assertTrue(serialized.contains("\"extraMode\": 2"));
+        assertTrue(serialized.contains("\"detailedLogEnabled\": true"));
         assertTrue(serialized.contains("\"bms_search\""));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));

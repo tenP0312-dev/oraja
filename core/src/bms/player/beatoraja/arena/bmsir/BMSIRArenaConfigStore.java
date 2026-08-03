@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 7;
+        private int schemaVersion = 8;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -178,6 +178,8 @@ public final class BMSIRArenaConfigStore {
         private int nominationSeconds = 60;
         private int optionSeconds = 10;
         private int intermissionSeconds = 0;
+        private BMSIRManiacSettings maniacSettings = new BMSIRManiacSettings();
+        private boolean detailedLogEnabled = false;
 
         static Settings from(PlayerConfig player) {
             Settings settings = new Settings();
@@ -231,6 +233,10 @@ public final class BMSIRArenaConfigStore {
             settings.nominationSeconds = player.getBmsirArenaNominationSeconds();
             settings.optionSeconds = player.getBmsirArenaOptionSeconds();
             settings.intermissionSeconds = player.getBmsirArenaIntermissionSeconds();
+            settings.maniacSettings = new BMSIRManiacSettings(
+                    player.getBmsirManiacSettings()
+            );
+            settings.detailedLogEnabled = player.isBmsirArenaDetailedLogEnabled();
             return settings;
         }
 
@@ -307,6 +313,8 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaNominationSeconds(nominationSeconds);
             player.setBmsirArenaOptionSeconds(optionSeconds);
             player.setBmsirArenaIntermissionSeconds(intermissionSeconds);
+            player.setBmsirManiacSettings(maniacSettings);
+            player.setBmsirArenaDetailedLogEnabled(detailedLogEnabled);
         }
     }
 }

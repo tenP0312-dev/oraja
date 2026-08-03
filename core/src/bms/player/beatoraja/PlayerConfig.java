@@ -10,6 +10,7 @@ import java.text.ParseException;
 
 import bms.player.beatoraja.system.RobustFile;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
@@ -334,6 +335,8 @@ public final class PlayerConfig {
 	private int bmsirArenaNominationSeconds = 60;
 	private int bmsirArenaOptionSeconds = 10;
 	private int bmsirArenaIntermissionSeconds = 0;
+	private BMSIRManiacSettings bmsirManiacSettings = new BMSIRManiacSettings();
+	private boolean bmsirArenaDetailedLogEnabled = false;
 	
 	private String twitterConsumerKey;
 
@@ -1137,6 +1140,27 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaIntermissionSeconds(int bmsirArenaIntermissionSeconds) {
 		this.bmsirArenaIntermissionSeconds = Math.max(0, Math.min(60, bmsirArenaIntermissionSeconds));
+	}
+
+	public BMSIRManiacSettings getBmsirManiacSettings() {
+		if (bmsirManiacSettings == null) {
+			bmsirManiacSettings = new BMSIRManiacSettings();
+		}
+		return bmsirManiacSettings.validate();
+	}
+
+	public void setBmsirManiacSettings(BMSIRManiacSettings settings) {
+		bmsirManiacSettings = settings == null
+				? new BMSIRManiacSettings()
+				: new BMSIRManiacSettings(settings);
+	}
+
+	public boolean isBmsirArenaDetailedLogEnabled() {
+		return bmsirArenaDetailedLogEnabled;
+	}
+
+	public void setBmsirArenaDetailedLogEnabled(boolean enabled) {
+		bmsirArenaDetailedLogEnabled = enabled;
 	}
 
 	public String getTargetid() {
