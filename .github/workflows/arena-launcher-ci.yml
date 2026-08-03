@@ -33,6 +33,21 @@ jobs:
         working-directory: arena-launcher/src-tauri
         run: cargo build --release --locked
 
+      - name: Verify Windows GUI subsystem
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $path = "arena-launcher/src-tauri/target/release/bmsir-arena-launcher.exe"
+          $bytes = [System.IO.File]::ReadAllBytes($path)
+          if ($bytes.Length -lt 256 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
+            throw "Launcher is not a valid PE executable"
+          }
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
+          $subsystem = [BitConverter]::ToUInt16($bytes, $peOffset + 24 + 68)
+          if ($subsystem -ne 2) {
+            throw "Launcher must use IMAGE_SUBSYSTEM_WINDOWS_GUI; got $subsystem"
+          }
+
       - name: Name Windows portable executables
         if: runner.os == 'Windows'
         shell: pwsh
