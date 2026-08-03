@@ -448,12 +448,19 @@ ambiguous duplicate BMS-IR plugin jars, and transactionally replaces one older
 versioned plugin with its verified successor. It verifies canonical Ed25519
 release manifests and every artifact hash before replacement, and restores the
 prior plugin and files after a failed transaction. Its signed Markdown release
-notes are rendered without executing release HTML. A verified staged launcher
+notes and announcement list support Japanese and English and are rendered
+without executing release HTML. The announcement list remains visible when the
+installed body is current. A verified staged launcher
 can restart as its own short-lived update helper and relaunch after replacement.
 An EXE placed in an empty portable directory immediately checks its selected
 channel and offers the complete signed body, Java runtime, and Arena plugin as
 an initial installation. Missing files do not become `current` merely because
-the launcher's compiled body version matches the channel version.
+the launcher's compiled body version matches the channel version. The UI keeps
+launch actions disabled until its initial update check completes. A signed
+mandatory update, revoked body, or minimum-launcher requirement is also
+enforced in Rust and cached locally, so a later network failure cannot
+re-enable an old version. The Arena service compatibility gate remains the
+final enforcement point for clients that never received that signed policy.
 CI outputs are explicitly
 unsigned validation artifacts; official launcher publication remains blocked
 until Authenticode and Developer ID/notarization credentials plus the reviewed
