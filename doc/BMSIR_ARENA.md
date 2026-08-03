@@ -466,7 +466,10 @@ prior plugin and files after a failed transaction. Its signed Markdown release
 notes and announcement list support Japanese and English and are rendered
 without executing release HTML. The upper-right `🌐 日本語` / `🌐 English`
 control switches the launcher language, and the announcement list remains
-visible when the installed body is current. A verified staged launcher
+visible when the installed body is current. The header shows the installed
+body and launcher versions separately. Installation and update operations show
+overall transferred bytes, percent, verified file count, and the following
+verification, application, and launcher-restart phases. A verified staged launcher
 can restart as its own short-lived update helper and relaunch after replacement.
 An EXE placed in an empty portable directory immediately checks its selected
 channel and offers the complete signed body, Java runtime, and Arena plugin as
