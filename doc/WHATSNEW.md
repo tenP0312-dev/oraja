@@ -2,8 +2,10 @@
 
 ## MANIAC play, Double Battle, and Arena presentation
 
-- Added an LR2-compatible MANIAC OPTIONS screen on F2 hold, including EX
-  modes, note transforms, mines, strict-judge options, and visual effects.
+- Added an OpenLR2 Beta3 v100201-derived MANIAC OPTIONS screen on F2 hold,
+  including EX modes, note transforms, mines, strict-judge options, and visual
+  effects. Ranked generated charts use a fixed MT19937 generation seed while
+  normal RANDOM and Random Trainer remain per-play options.
 - Added Double Battle conversion with existing DP options, configurable random
   linking, Random Trainer support, and an optional native-DP warning.
 - MANIAC and Double Battle records use a separate `bmsir_maniac.db`. Ranked

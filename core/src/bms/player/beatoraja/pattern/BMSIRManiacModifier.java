@@ -14,9 +14,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -67,6 +68,10 @@ public final class BMSIRManiacModifier extends PatternModifier {
     }
 
     private static void applyExtraMode(BMSModel model, int requestedLevel) {
+        if (!supportsLr2ExtraMode(model.getMode())) {
+            applyExtendedExtraMode(model, requestedLevel);
+            return;
+        }
         TimeLine[] timelines = model.getAllTimeLines();
         int noteCount = model.getTotalNotes();
         int level = requestedLevel - 1;
@@ -74,46 +79,68 @@ public final class BMSIRManiacModifier extends PatternModifier {
         else if (level == 0 && noteCount >= 1_000) level = 1;
         else if (level == 1 && noteCount >= 1_000) level = 2;
 
-        int keysPerSide = switch (model.getMode()) {
-            case BEAT_5K, BEAT_10K -> 5;
-            case BEAT_7K, BEAT_14K -> 7;
-            case POPN_5K -> 5;
-            case POPN_9K -> 9;
-            case KEYBOARD_24K, KEYBOARD_24K_DOUBLE -> 24;
-        };
+        moveDpScratchesToBackground(model);
+        Map<Integer, Integer> preferredLanes = lr2PreferredLanesByWav(model);
+        fillUnusedLr2SoundLanes(model, preferredLanes);
+        long lastPlayable = lastPlayableTime(model);
         long minimumGap = minimumExtraGap(model.getBpm(), level);
-        Map<Integer, Integer> preferredLanes = preferredLanesByWav(model);
-        long[] lastPlacedAt = new long[model.getMode().key];
-        Arrays.fill(lastPlacedAt, Long.MIN_VALUE / 4);
-        int alternatingSide = 0;
+        double previousBpm = model.getBpm();
+        boolean alternateDpSide = false;
 
-        for (TimeLine timeline : timelines) {
-            long now = timeline.getMicroTime();
-            boolean[] occupied = occupiedAt(timeline, model.getMode().key);
-            for (Note background : timeline.getBackGroundNotes().clone()) {
+        for (int timelineIndex = 0; timelineIndex < timelines.length; timelineIndex++) {
+            TimeLine timeline = timelines[timelineIndex];
+            if (timeline.getMicroTime() > lastPlayable) break;
+            if (timeline.getBPM() > 0 && timeline.getBPM() != previousBpm) {
+                minimumGap = Math.max(125_000L, Math.round(30_000_000.0 / timeline.getBPM()));
+                previousBpm = timeline.getBPM();
+            }
+            Note[] backgrounds = timeline.getBackGroundNotes().clone();
+            if (backgrounds.length == 0) continue;
+            boolean[] occupied = lr2OccupiedNear(timelines, timelineIndex, minimumGap, model.getMode());
+            for (Note background : backgrounds) {
                 Integer preferred = preferredLanes.get(background.getWav());
-                if (preferred == null) continue;
-                int lane = normalizeExtraLane(
-                        preferred,
-                        model.getMode(),
-                        keysPerSide,
-                        alternatingSide
-                );
-                if (model.getMode().player == 2) alternatingSide ^= 1;
-                lane = nearestAvailableLane(
-                        lane,
+                if (preferred == null || preferred < 0 || preferred >= 20) continue;
+                int candidate = preferred;
+                if (model.getMode().player == 2) {
+                    candidate = alternateDpSide
+                            ? moveLr2LaneToFirstSide(candidate)
+                            : moveLr2LaneToSecondSide(candidate);
+                    alternateDpSide = !alternateDpSide;
+                }
+                int selected = selectLr2ExtraLane(
+                        candidate,
                         occupied,
-                        lastPlacedAt,
-                        now,
-                        minimumGap,
-                        model.getMode(),
-                        keysPerSide
+                        background.getWav(),
+                        model.getMode()
                 );
-                if (lane < 0) continue;
+                int modelLane = fromLr2Lane(selected, model.getMode());
+                if (modelLane < 0 || timeline.getNote(modelLane) != null) continue;
                 timeline.removeBackGroundNote(background);
-                timeline.setNote(lane, background);
-                occupied[lane] = true;
-                lastPlacedAt[lane] = now;
+                timeline.setNote(modelLane, background);
+                occupied[selected] = true;
+            }
+        }
+    }
+
+    private static boolean supportsLr2ExtraMode(Mode mode) {
+        return mode == Mode.BEAT_5K || mode == Mode.BEAT_7K
+                || mode == Mode.BEAT_10K || mode == Mode.BEAT_14K
+                || mode == Mode.POPN_5K || mode == Mode.POPN_9K;
+    }
+
+    private static void moveDpScratchesToBackground(BMSModel model) {
+        if (model.getMode().player != 2) return;
+        Map<Note, TimeLine> owners = noteOwners(model.getAllTimeLines());
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            for (int scratch : model.getMode().scratchKey) {
+                Note note = timeline.getNote(scratch);
+                if (note == null || note instanceof LongNote longNote && longNote.isEnd()) continue;
+                timeline.setNote(scratch, null);
+                if (note instanceof LongNote longNote && longNote.getPair() != null) {
+                    TimeLine pairOwner = owners.get(longNote.getPair());
+                    if (pairOwner != null) pairOwner.setNote(scratch, null);
+                }
+                timeline.addBackGroundNote(new NormalNote(note.getWav()));
             }
         }
     }
@@ -128,62 +155,204 @@ public final class BMSIRManiacModifier extends PatternModifier {
         return Math.max(125_000L, Math.round(numerator / bpm));
     }
 
-    private static Map<Integer, Integer> preferredLanesByWav(BMSModel model) {
+    private static Map<Integer, Integer> lr2PreferredLanesByWav(BMSModel model) {
         Map<Integer, int[]> counts = new HashMap<>();
-        int lanes = model.getMode().key;
         for (TimeLine timeline : model.getAllTimeLines()) {
-            for (int lane = 0; lane < lanes; lane++) {
+            for (int lane = 0; lane < model.getMode().key; lane++) {
                 Note note = timeline.getNote(lane);
-                if (!(note instanceof NormalNote) && !(note instanceof LongNote)) continue;
-                counts.computeIfAbsent(note.getWav(), ignored -> new int[lanes])[lane]++;
+                if (!isPlayableStart(note)) continue;
+                int lr2Lane = toLr2Lane(lane, model.getMode());
+                if (lr2Lane >= 0) counts.computeIfAbsent(note.getWav(), ignored -> new int[20])[lr2Lane]++;
             }
         }
         Map<Integer, Integer> result = new HashMap<>();
         for (Map.Entry<Integer, int[]> entry : counts.entrySet()) {
-            int bestLane = 0;
-            for (int lane = 1; lane < entry.getValue().length; lane++) {
-                if (entry.getValue()[lane] > entry.getValue()[bestLane]) bestLane = lane;
+            int bestLane = -1;
+            int bestCount = 0;
+            for (int lane = 0; lane < entry.getValue().length; lane++) {
+                if (entry.getValue()[lane] > bestCount) {
+                    bestLane = lane;
+                    bestCount = entry.getValue()[lane];
+                }
             }
-            result.put(entry.getKey(), bestLane);
+            if (bestLane >= 0) result.put(entry.getKey(), bestLane);
         }
         return result;
     }
 
-    private static int normalizeExtraLane(
-            int lane,
-            Mode mode,
-            int keysPerSide,
-            int alternatingSide
-    ) {
-        if (mode.player == 1) return Math.min(lane, mode.key - 1);
-        int sideWidth = mode.key / 2;
-        int local = lane % sideWidth;
-        if (local > keysPerSide) local = keysPerSide;
-        return alternatingSide == 0 ? local : sideWidth + local;
+    private static void fillUnusedLr2SoundLanes(BMSModel model, Map<Integer, Integer> lanes) {
+        String[] wavs = model.getWavList();
+        Map<String, Integer> usedByFile = new HashMap<>();
+        for (Map.Entry<Integer, Integer> entry : lanes.entrySet()) {
+            String file = wavFile(wavs, entry.getKey());
+            if (file != null) usedByFile.merge(file, 1, Integer::sum);
+        }
+        for (int wav = 1; wav < wavs.length; wav++) {
+            if (lanes.containsKey(wav)) continue;
+            String file = wavFile(wavs, wav);
+            if (file == null || usedByFile.getOrDefault(file, 0) <= 0) continue;
+            int previous = lanes.getOrDefault(wav - 1, -1);
+            lanes.put(wav, fallbackLr2Lane(previous, model.getMode()));
+        }
     }
 
-    private static int nearestAvailableLane(
-            int preferred,
-            boolean[] occupied,
-            long[] lastPlacedAt,
-            long now,
-            long minimumGap,
-            Mode mode,
-            int keysPerSide
-    ) {
-        int sideWidth = mode.player == 2 ? mode.key / 2 : mode.key;
-        int sideStart = mode.player == 2 && preferred >= sideWidth ? sideWidth : 0;
-        int localPreferred = preferred - sideStart;
-        for (int distance = 0; distance <= keysPerSide; distance++) {
-            int first = localPreferred + (distance % 2 == 0 ? distance : -distance);
-            int second = localPreferred - (distance % 2 == 0 ? distance : -distance);
-            for (int local : new int[]{first, second}) {
-                if (local < 0 || local >= sideWidth) continue;
-                int lane = sideStart + local;
-                if (!occupied[lane] && now - lastPlacedAt[lane] >= minimumGap) return lane;
+    private static String wavFile(String[] wavs, int wav) {
+        if (wav < 0 || wav >= wavs.length || wavs[wav] == null || wavs[wav].isBlank()) return null;
+        return wavs[wav].replace('\\', '/').toLowerCase(Locale.ROOT);
+    }
+
+    private static int fallbackLr2Lane(int lane, Mode mode) {
+        if (lane < 1) return mode == Mode.POPN_5K || mode == Mode.POPN_9K ? 7 : -1;
+        int local = lane % 10;
+        if (mode == Mode.BEAT_5K || mode == Mode.BEAT_10K) {
+            return switch (local) { case 1 -> 3; case 2 -> 4; case 3 -> 5; case 4 -> 1; case 5 -> 2; default -> -1; };
+        }
+        if (mode == Mode.BEAT_7K || mode == Mode.BEAT_14K) {
+            return switch (local) { case 1, 6 -> 3; case 2 -> 4; case 3 -> 5; case 4 -> 6; case 5 -> 7; case 7 -> 2; default -> -1; };
+        }
+        return switch (local) { case 1 -> 3; case 2 -> 5; case 3 -> 7; case 4 -> 9; case 5 -> 2; case 6 -> 4; case 7 -> 6; case 8 -> 8; case 9 -> 1; default -> -1; };
+    }
+
+    private static long lastPlayableTime(BMSModel model) {
+        long result = Long.MIN_VALUE;
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            for (int lane = 0; lane < model.getMode().key; lane++) {
+                if (isPlayableStart(timeline.getNote(lane))) result = Math.max(result, timeline.getMicroTime());
             }
         }
+        return result;
+    }
+
+    private static boolean[] lr2OccupiedNear(TimeLine[] timelines, int center, long gap, Mode mode) {
+        boolean[] occupied = new boolean[20];
+        long centerTime = timelines[center].getMicroTime();
+        int first = center;
+        while (first > 0 && centerTime - timelines[first - 1].getMicroTime() < gap) first--;
+        int last = center;
+        while (last + 1 < timelines.length && timelines[last + 1].getMicroTime() - centerTime < gap) last++;
+        for (int index = first; index <= last; index++) {
+            TimeLine timeline = timelines[index];
+            for (int lane = 0; lane < mode.key; lane++) {
+                if (!isPlayableStart(timeline.getNote(lane))) continue;
+                int lr2Lane = toLr2Lane(lane, mode);
+                if (lr2Lane >= 0) occupied[lr2Lane] = true;
+            }
+        }
+        return occupied;
+    }
+
+    private static int selectLr2ExtraLane(int preferred, boolean[] occupied, int wav, Mode mode) {
+        int keys = lr2KeysPerSide(mode);
+        if (validLr2Lane(preferred, keys, mode.player == 2) && !occupied[preferred]) return preferred;
+        if (preferred == 0 || preferred == 10) return -1;
+        int shift = (wav & 1) == 0 ? -1 : 1;
+        if (mode.player == 1) {
+            for (int distance = 1; distance <= keys; distance++) {
+                int next = preferred + distance * shift;
+                int previous = preferred - distance * shift;
+                if (next >= 1 && next <= keys && !occupied[next]) return next;
+                if (previous >= 1 && previous <= keys && !occupied[previous]) return previous;
+            }
+            return -1;
+        }
+        int lane = preferred;
+        for (int distance = 1; distance <= keys; distance++) {
+            int next = lane + distance * shift;
+            int previous = lane - distance * shift;
+            if (validDpKey(next, keys) && !occupied[next]) return next;
+            if (validDpKey(previous, keys) && !occupied[previous]) return previous;
+            lane = lane <= 10 ? lane + 10 : lane - 10;
+            next = lane + distance * shift;
+            previous = lane - distance * shift;
+            if (validDpKey(next, keys) && !occupied[next]) return next;
+            if (validDpKey(previous, keys) && !occupied[previous]) return previous;
+        }
         return -1;
+    }
+
+    private static int moveLr2LaneToSecondSide(int lane) {
+        return lane < 10 ? lane + 10 : lane;
+    }
+
+    private static int moveLr2LaneToFirstSide(int lane) {
+        return lane >= 10 ? lane - 10 : lane;
+    }
+
+    private static boolean validLr2Lane(int lane, int keys, boolean dp) {
+        if (lane < 0 || lane >= 20) return false;
+        if (!dp) return lane >= 0 && lane <= keys;
+        int local = lane % 10;
+        return local >= 0 && local <= keys;
+    }
+
+    private static boolean validDpKey(int lane, int keys) {
+        return lane >= 0 && lane < 20 && lane % 10 >= 1 && lane % 10 <= keys;
+    }
+
+    private static int lr2KeysPerSide(Mode mode) {
+        return switch (mode) {
+            case BEAT_5K, BEAT_10K, POPN_5K -> 5;
+            case BEAT_7K, BEAT_14K -> 7;
+            case POPN_9K -> 9;
+            default -> mode.key / Math.max(1, mode.player);
+        };
+    }
+
+    private static int toLr2Lane(int lane, Mode mode) {
+        if (lane < 0 || lane >= mode.key) return -1;
+        if (mode == Mode.POPN_5K || mode == Mode.POPN_9K) return lane + 1;
+        int sideWidth = mode.key / mode.player;
+        int side = mode.player == 2 && lane >= sideWidth ? 1 : 0;
+        int local = lane - side * sideWidth;
+        if (mode.isScratchKey(lane)) return side * 10;
+        return side * 10 + local + 1;
+    }
+
+    private static int fromLr2Lane(int lane, Mode mode) {
+        if (lane < 0) return -1;
+        if (mode == Mode.POPN_5K || mode == Mode.POPN_9K) {
+            int value = lane - 1;
+            return value >= 0 && value < mode.key ? value : -1;
+        }
+        int side = mode.player == 2 && lane >= 10 ? 1 : 0;
+        int local = lane % 10;
+        int sideWidth = mode.key / mode.player;
+        if (local == 0) {
+            int scratch = side * sideWidth + sideWidth - 1;
+            return mode.isScratchKey(scratch) ? scratch : -1;
+        }
+        int result = side * sideWidth + local - 1;
+        return result >= side * sideWidth && result < (side + 1) * sideWidth ? result : -1;
+    }
+
+    private static void applyExtendedExtraMode(BMSModel model, int requestedLevel) {
+        int level = requestedLevel - 1;
+        int noteCount = model.getTotalNotes();
+        if (level == 0 && noteCount >= 1_200) level = 2;
+        else if (level == 0 && noteCount >= 1_000) level = 1;
+        else if (level == 1 && noteCount >= 1_000) level = 2;
+        long minimumGap = minimumExtraGap(model.getBpm(), level);
+        Map<Integer, Integer> preferred = new HashMap<>();
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            for (int lane = 0; lane < model.getMode().key; lane++) {
+                Note note = timeline.getNote(lane);
+                if (isPlayableStart(note)) preferred.putIfAbsent(note.getWav(), lane);
+            }
+        }
+        long[] lastPlaced = new long[model.getMode().key];
+        Arrays.fill(lastPlaced, Long.MIN_VALUE / 4);
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            boolean[] occupied = occupiedAt(timeline, model.getMode().key);
+            for (Note background : timeline.getBackGroundNotes().clone()) {
+                int lane = preferred.getOrDefault(background.getWav(), -1);
+                if (lane < 0 || occupied[lane]
+                        || timeline.getMicroTime() - lastPlaced[lane] < minimumGap) continue;
+                timeline.removeBackGroundNote(background);
+                timeline.setNote(lane, background);
+                occupied[lane] = true;
+                lastPlaced[lane] = timeline.getMicroTime();
+            }
+        }
     }
 
     private static boolean[] occupiedAt(TimeLine timeline, int lanes) {
@@ -193,26 +362,21 @@ public final class BMSIRManiacModifier extends PatternModifier {
     }
 
     private static void applyAddNotes(BMSModel model, int percent, LR2Random random) {
-        int lanes = model.getMode().key;
+        int[][] sides = playerLanes(model.getMode(), false);
         for (TimeLine timeline : model.getAllTimeLines()) {
-            boolean[] occupied = occupiedAt(timeline, lanes);
-            int original = 0;
-            for (int lane = 0; lane < lanes; lane++) {
-                Note note = timeline.getNote(lane);
-                if (note instanceof NormalNote || (note instanceof LongNote ln && !ln.isEnd())) {
-                    original++;
+            for (int[] side : sides) {
+                boolean[] occupied = occupiedAt(timeline, model.getMode().key);
+                int original = 0;
+                for (int lane : side) if (isPlayableStart(timeline.getNote(lane))) original++;
+                for (int index = 0; index < original; index++) {
+                    if (random.inclusive(100) > percent) continue;
+                    List<Integer> empty = new ArrayList<>();
+                    for (int lane : side) if (!occupied[lane]) empty.add(lane);
+                    if (empty.isEmpty()) break;
+                    int lane = empty.get(random.inclusive(empty.size() - 1));
+                    timeline.setNote(lane, new NormalNote(-1));
+                    occupied[lane] = true;
                 }
-            }
-            for (int index = 0; index < original; index++) {
-                if (random.inclusive(100) > percent) continue;
-                List<Integer> empty = new ArrayList<>();
-                for (int lane = 0; lane < lanes; lane++) {
-                    if (!occupied[lane]) empty.add(lane);
-                }
-                if (empty.isEmpty()) break;
-                int lane = empty.get(random.inclusive(empty.size() - 1));
-                timeline.setNote(lane, new NormalNote(-1));
-                occupied[lane] = true;
             }
         }
     }
@@ -220,25 +384,18 @@ public final class BMSIRManiacModifier extends PatternModifier {
     private static void applyAddLongNotes(BMSModel model, int percent, LR2Random random) {
         TreeMap<Long, TimeLine> timelines = timelinesByTime(model);
         int lanes = model.getMode().key;
-        for (int lane = 0; lane < lanes; lane++) {
-            if (model.getMode().isScratchKey(lane)) continue;
-            List<TimeLine> starts = noteTimelines(model, lane);
+        Map<Note, TimeLine> owners = noteOwners(timelines.values().toArray(TimeLine[]::new));
+        long chartEnd = timelines.isEmpty() ? 0 : timelines.lastKey();
+        for (int lane : allPlayerLanes(model.getMode(), true)) {
+            List<NotePosition> starts = noteStarts(timelines, lane);
             for (int index = 0; index + 1 < starts.size(); index++) {
-                TimeLine startLine = starts.get(index);
-                TimeLine nextLine = starts.get(index + 1);
-                Note source = startLine.getNote(lane);
-                if (!(source instanceof NormalNote) || random.inclusive(99) >= percent) continue;
-                long endTime = (startLine.getMicroTime() + nextLine.getMicroTime()) / 2;
-                if (endTime <= startLine.getMicroTime()) continue;
-                TimeLine endLine = timelineAt(timelines, endTime, lanes);
-                if (endLine.getNote(lane) != null) continue;
-                LongNote start = new LongNote(source.getWav(), source.getMicroStarttime(), source.getMicroDuration());
-                LongNote end = new LongNote(-1);
-                start.setType(LongNote.TYPE_LONGNOTE);
-                end.setType(LongNote.TYPE_LONGNOTE);
-                startLine.setNote(lane, start);
-                endLine.setNote(lane, end);
-                start.setPair(end);
+                if (random.inclusive(100) >= percent) continue;
+                long endTime = (starts.get(index).timeline.getMicroTime()
+                        + starts.get(index + 1).timeline.getMicroTime()) / 2;
+                extendLongNote(timelines, owners, starts.get(index), lane, endTime, lanes);
+            }
+            if (percent == 100 && !starts.isEmpty()) {
+                extendLongNote(timelines, owners, starts.get(starts.size() - 1), lane, chartEnd, lanes);
             }
         }
         model.setAllTimeLine(timelines.values().toArray(TimeLine[]::new));
@@ -247,15 +404,15 @@ public final class BMSIRManiacModifier extends PatternModifier {
     private static void applyAddMines(BMSModel model, int percent, LR2Random random) {
         TreeMap<Long, TimeLine> timelines = timelinesByTime(model);
         int lanes = model.getMode().key;
-        for (int lane = 0; lane < lanes; lane++) {
-            if (model.getMode().isScratchKey(lane)) continue;
-            List<TimeLine> notes = noteTimelines(model, lane);
+        for (int lane : allPlayerLanes(model.getMode(), true)) {
+            List<NotePosition> notes = noteStarts(timelines, lane);
             for (int index = 0; index + 1 < notes.size(); index++) {
-                TimeLine left = notes.get(index);
-                TimeLine right = notes.get(index + 1);
-                long gap = right.getMicroTime() - left.getMicroTime();
-                if (gap <= MIN_INSERT_GAP_US || random.inclusive(99) >= percent) continue;
-                long mineTime = left.getMicroTime() + gap / 2;
+                NotePosition left = notes.get(index);
+                NotePosition right = notes.get(index + 1);
+                long leftEnd = noteEndTime(left);
+                long gap = right.timeline.getMicroTime() - leftEnd;
+                if (gap <= MIN_INSERT_GAP_US || random.inclusive(100) >= percent) continue;
+                long mineTime = leftEnd + gap / 2;
                 TimeLine mineLine = timelineAt(timelines, mineTime, lanes);
                 if (mineLine.getNote(lane) == null) {
                     mineLine.setNote(lane, new MineNote(-1, 4.0));
@@ -266,29 +423,110 @@ public final class BMSIRManiacModifier extends PatternModifier {
     }
 
     private static void applyLoudness(BMSModel model, int percent, LR2Random random) {
-        int lanes = model.getMode().key;
-        int sideWidth = model.getMode().player == 2 ? lanes / 2 : lanes;
+        int[][] sides = playerLanes(model.getMode(), false);
         for (TimeLine timeline : model.getAllTimeLines()) {
-            for (int player = 0; player < model.getMode().player; player++) {
-                int start = player * sideWidth;
-                int end = Math.min(lanes, start + sideWidth);
+            for (int[] side : sides) {
                 int sourceWav = -1;
-                for (int lane = start; lane < end; lane++) {
+                for (int lane : side) {
                     Note note = timeline.getNote(lane);
-                    if (note instanceof NormalNote
-                            || (note instanceof LongNote longNote && !longNote.isEnd())) {
+                    if (isPlayableStart(note)) {
                         sourceWav = note.getWav();
                         break;
                     }
                 }
                 if (sourceWav < 0 || random.inclusive(100) > percent) continue;
-                for (int lane = start; lane < end; lane++) {
+                for (int lane : side) {
                     if (timeline.getNote(lane) == null) {
                         timeline.setNote(lane, new NormalNote(sourceWav));
                     }
                 }
             }
         }
+    }
+
+    private static int[][] playerLanes(Mode mode, boolean excludeScratch) {
+        int sideWidth = mode.key / mode.player;
+        int[][] result = new int[mode.player][];
+        for (int player = 0; player < mode.player; player++) {
+            int start = player * sideWidth;
+            result[player] = java.util.stream.IntStream.range(start, start + sideWidth)
+                    .filter(lane -> !excludeScratch || !mode.isScratchKey(lane))
+                    .toArray();
+        }
+        return result;
+    }
+
+    private static int[] allPlayerLanes(Mode mode, boolean excludeScratch) {
+        return Arrays.stream(playerLanes(mode, excludeScratch)).flatMapToInt(Arrays::stream).toArray();
+    }
+
+    private static boolean isPlayableStart(Note note) {
+        return note instanceof NormalNote || note instanceof LongNote longNote && !longNote.isEnd();
+    }
+
+    private static Map<Note, TimeLine> noteOwners(TimeLine[] timelines) {
+        Map<Note, TimeLine> result = new IdentityHashMap<>();
+        for (TimeLine timeline : timelines) {
+            for (int lane = 0; lane < timeline.getLaneCount(); lane++) {
+                Note note = timeline.getNote(lane);
+                if (note != null) result.put(note, timeline);
+            }
+        }
+        return result;
+    }
+
+    private static List<NotePosition> noteStarts(TreeMap<Long, TimeLine> timelines, int lane) {
+        List<NotePosition> result = new ArrayList<>();
+        for (TimeLine timeline : timelines.values()) {
+            Note note = timeline.getNote(lane);
+            if (isPlayableStart(note)) result.add(new NotePosition(timeline, note));
+        }
+        return result;
+    }
+
+    private static long noteEndTime(NotePosition position) {
+        if (position.note instanceof LongNote longNote && longNote.getPair() != null) {
+            return Math.max(position.timeline.getMicroTime(), longNote.getPair().getMicroTime());
+        }
+        return position.timeline.getMicroTime();
+    }
+
+    private static void extendLongNote(
+            TreeMap<Long, TimeLine> timelines,
+            Map<Note, TimeLine> owners,
+            NotePosition position,
+            int lane,
+            long endTime,
+            int lanes
+    ) {
+        if (endTime <= noteEndTime(position)) return;
+        TimeLine endLine = timelineAt(timelines, endTime, lanes);
+        Note source = position.note;
+        LongNote existingEnd = source instanceof LongNote existing ? existing.getPair() : null;
+        Note target = endLine.getNote(lane);
+        if (target != null && target != existingEnd) return;
+        LongNote start;
+        LongNote end;
+        if (source instanceof LongNote existing) {
+            start = existing;
+            end = existingEnd;
+            if (end == null) return;
+            TimeLine oldEnd = owners.get(end);
+            if (oldEnd != null) oldEnd.setNote(lane, null);
+        } else {
+            start = new LongNote(source.getWav(), source.getMicroStarttime(), source.getMicroDuration());
+            end = new LongNote(-1);
+            start.setType(LongNote.TYPE_LONGNOTE);
+            end.setType(LongNote.TYPE_LONGNOTE);
+            position.timeline.setNote(lane, start);
+        }
+        endLine.setNote(lane, end);
+        start.setPair(end);
+        owners.put(start, position.timeline);
+        owners.put(end, endLine);
+    }
+
+    private record NotePosition(TimeLine timeline, Note note) {
     }
 
     private static void applySoftLanding(BMSModel model, int level, LR2Random random) {
@@ -317,16 +555,6 @@ public final class BMSIRManiacModifier extends PatternModifier {
     private static TreeMap<Long, TimeLine> timelinesByTime(BMSModel model) {
         TreeMap<Long, TimeLine> result = new TreeMap<>();
         for (TimeLine timeline : model.getAllTimeLines()) result.put(timeline.getMicroTime(), timeline);
-        return result;
-    }
-
-    private static List<TimeLine> noteTimelines(BMSModel model, int lane) {
-        List<TimeLine> result = new ArrayList<>();
-        for (TimeLine timeline : model.getAllTimeLines()) {
-            Note note = timeline.getNote(lane);
-            if (note instanceof NormalNote || note instanceof LongNote) result.add(timeline);
-        }
-        result.sort(Comparator.comparingLong(TimeLine::getMicroTime));
         return result;
     }
 

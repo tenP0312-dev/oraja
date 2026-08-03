@@ -118,6 +118,23 @@ Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
 
+Holding F2 for about one second on Music Select opens the one-column MANIAC
+OPTIONS screen; a short F2 press keeps the existing refresh command. EXTRA
+MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
+effects follow the algorithms and inclusive-random boundaries recovered from
+OpenLR2 Beta3 v100201. Ranked chart generation uses a BMS-IR-fixed MT19937
+seed so the generated base chart is identical for every player. Normal
+RANDOM, MIRROR, S-RANDOM, Random Trainer, and borrowed leaderboard placement
+are applied afterward in the same way as an ordinary chart and do not split
+the ranking. Replays retain the actual option seed and placement hash.
+
+Any MANIAC option or Double Battle play is written only to
+`bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
+temporarily disable these modes. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
+and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
+ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
+falling back to the normal leaderboard.
+
 `判定自動調整値を曲終了後に戻す` is OFF by default. When enabled, a play
 that starts while automatic judge-timing adjustment is ON snapshots the
 current timing and restores it on result, failure, abort, state exit, or game

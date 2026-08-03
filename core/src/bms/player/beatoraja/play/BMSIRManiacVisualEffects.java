@@ -121,8 +121,8 @@ final class BMSIRManiacVisualEffects {
     static void applyGambol(long[][] table, int level) {
         if (table == null || table.length < 3 || level <= 0) return;
         int[] windows = level == 1
-                ? new int[]{8_000, 24_000, 40_000}
-                : new int[]{8_000, 12_000, 12_000};
+                ? new int[]{12_000, 24_000, 60_000}
+                : new int[]{12_000, 12_000, 12_000};
         for (int index = 0; index < windows.length; index++) {
             if (table[index] == null || table[index].length < 2) continue;
             table[index][0] = -windows[index];
@@ -153,15 +153,19 @@ final class BMSIRManiacVisualEffects {
 
     private static float nabeatsuX(BMSIRManiacSettings settings, long now) {
         if (!nabeatsuActive(settings, now)) return 0f;
+        long period = Math.round(Math.sin(Math.floorMod(now, 12_345L)
+                / 12_345.0 * TWO_PI) * 200.0 + 1_000.0);
         return settings.getNabeatsu() * (float) Math.sin(
-                Math.floorMod(now, 1000L) / 1000.0 * TWO_PI
+                Math.floorMod(now, period) / (double) period * TWO_PI
         );
     }
 
     private static float nabeatsuY(BMSIRManiacSettings settings, long now) {
         if (!nabeatsuActive(settings, now)) return 0f;
+        long period = Math.round(Math.sin(Math.floorMod(now, 10_000L)
+                / 10_000.0 * TWO_PI) * 300.0 + 1_234.0);
         return settings.getNabeatsu() * 0.75f * (float) Math.sin(
-                Math.floorMod(now, 1234L) / 1234.0 * TWO_PI
+                Math.floorMod(now, period) / (double) period * TWO_PI
         );
     }
 

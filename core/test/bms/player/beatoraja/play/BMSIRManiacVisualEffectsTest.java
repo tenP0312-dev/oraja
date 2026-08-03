@@ -43,8 +43,21 @@ class BMSIRManiacVisualEffectsTest {
                 {-280_000, 220_000}, {-150_000, 500_000}
         };
         BMSIRManiacVisualEffects.applyGambol(table, 2);
-        assertEquals(-8_000, table[0][0]);
+        assertEquals(-12_000, table[0][0]);
         assertEquals(12_000, table[2][1]);
+        assertEquals(-280_000, table[3][0]);
+    }
+
+    @Test
+    void gambolLevelOneUsesOpenLr2VeryHardWindows() {
+        long[][] table = {
+                {-20_000, 20_000}, {-60_000, 60_000}, {-150_000, 150_000},
+                {-280_000, 220_000}, {-150_000, 500_000}
+        };
+        BMSIRManiacVisualEffects.applyGambol(table, 1);
+        assertEquals(12_000, table[0][1]);
+        assertEquals(24_000, table[1][1]);
+        assertEquals(60_000, table[2][1]);
         assertEquals(-280_000, table[3][0]);
     }
 

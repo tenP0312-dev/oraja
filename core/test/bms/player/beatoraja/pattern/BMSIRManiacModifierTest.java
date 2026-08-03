@@ -1,6 +1,7 @@
 package bms.player.beatoraja.pattern;
 
 import bms.model.BMSModel;
+import bms.model.LongNote;
 import bms.model.MineNote;
 import bms.model.Mode;
 import bms.model.NormalNote;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRManiacModifierTest {
@@ -33,6 +35,151 @@ class BMSIRManiacModifierTest {
         assertTrue(model.containsMineNote());
         assertTrue(java.util.Arrays.stream(model.getAllTimeLines())
                 .anyMatch(line -> line.getNote(0) instanceof MineNote));
+    }
+
+    @Test
+    void extraModeUsesLr2LaneNumbersAndAvoidsNotesInsideTheMinimumGap() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setExtraMode(1);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("lr2-extra-golden");
+        model.setWavList(new String[]{"", "kick.ogg", "finish.ogg"});
+        TimeLine first = line(0, 0);
+        first.setNote(0, new NormalNote(1));
+        TimeLine background = line(0.2, 400_000);
+        background.addBackGroundNote(new NormalNote(1));
+        TimeLine last = line(0.5, 1_000_000);
+        last.setNote(6, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{first, background, last});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        // OpenLR2 lane 1 is occupied within 500 ms, so odd WAV 1 shifts to lane 2.
+        assertEquals(0, background.getBackGroundNotes().length);
+        assertEquals(1, background.getNote(1).getWav());
+    }
+
+    @Test
+    void addNotesFillsEachDpSideIndependently() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(100);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_14K);
+        model.setBpm(120);
+        model.setSHA256("lr2-add-notes-dp");
+        TimeLine line = new TimeLine(0, 0, Mode.BEAT_14K.key);
+        line.setBPM(120);
+        line.setNote(0, new NormalNote(1));
+        line.setNote(8, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{line});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        int left = 0;
+        int right = 0;
+        for (int lane = 0; lane < 8; lane++) if (line.getNote(lane) != null) left++;
+        for (int lane = 8; lane < 16; lane++) if (line.getNote(lane) != null) right++;
+        assertEquals(2, left);
+        assertEquals(2, right);
+    }
+
+    @Test
+    void randomSequenceMatchesDxLibMt19937GetRand() {
+        BMSIRManiacModifier.LR2Random random = new BMSIRManiacModifier.LR2Random(5489);
+        assertEquals(82, random.inclusive(100));
+        assertEquals(13, random.inclusive(100));
+        assertEquals(91, random.inclusive(100));
+        assertEquals(84, random.inclusive(100));
+        assertEquals(12, random.inclusive(100));
+    }
+
+    @Test
+    void addLongNotesEndsAtTheMidpointBetweenStarts() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddLongNotes(100);
+        settings.setGenerationSeedOverride(5489L);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("lr2-add-longnotes");
+        TimeLine first = line(0, 0);
+        first.setNote(0, new NormalNote(1));
+        TimeLine second = line(0.5, 1_000_000);
+        second.setNote(0, new NormalNote(2));
+        TimeLine chartEnd = line(1.0, 2_000_000);
+        model.setAllTimeLine(new TimeLine[]{first, second, chartEnd});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        LongNote start = (LongNote) first.getNote(0);
+        TimeLine midpoint = java.util.Arrays.stream(model.getAllTimeLines())
+                .filter(item -> item.getMicroTime() == 500_000L)
+                .findFirst()
+                .orElseThrow();
+        assertSame(start.getPair(), midpoint.getNote(0));
+    }
+
+    @Test
+    void addLongNotesKeepsTheOriginalEndWhenTheNewEndIsOccupied() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddLongNotes(100);
+        settings.setGenerationSeedOverride(5489L);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("lr2-add-longnotes-collision");
+        TimeLine startLine = line(0, 0);
+        LongNote start = new LongNote(1);
+        start.setType(LongNote.TYPE_LONGNOTE);
+        startLine.setNote(0, start);
+        TimeLine oldEndLine = line(0.1, 200_000);
+        LongNote oldEnd = new LongNote(-1);
+        oldEnd.setType(LongNote.TYPE_LONGNOTE);
+        oldEndLine.setNote(0, oldEnd);
+        start.setPair(oldEnd);
+        TimeLine blockedMidpoint = line(0.25, 500_000);
+        blockedMidpoint.setNote(0, new MineNote(-1, 4.0));
+        TimeLine next = line(0.5, 1_000_000);
+        next.setNote(0, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{startLine, oldEndLine, blockedMidpoint, next});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        assertSame(oldEnd, oldEndLine.getNote(0));
+        assertSame(oldEnd, start.getPair());
+    }
+
+    @Test
+    void addMinesUsesTheGapAfterALongNoteEnd() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddMines(100);
+        settings.setGenerationSeedOverride(5489L);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("chart");
+        TimeLine startLine = line(0, 0);
+        LongNote start = new LongNote(1);
+        start.setType(LongNote.TYPE_LONGNOTE);
+        startLine.setNote(0, start);
+        TimeLine endLine = line(0.2, 400_000);
+        LongNote end = new LongNote(-1);
+        end.setType(LongNote.TYPE_LONGNOTE);
+        endLine.setNote(0, end);
+        start.setPair(end);
+        TimeLine next = line(0.5, 1_000_000);
+        next.setNote(0, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{startLine, endLine, next});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        TimeLine midpoint = java.util.Arrays.stream(model.getAllTimeLines())
+                .filter(item -> item.getMicroTime() == 700_000L)
+                .findFirst()
+                .orElseThrow();
+        assertTrue(midpoint.getNote(0) instanceof MineNote);
     }
 
     @Test
@@ -84,5 +231,11 @@ class BMSIRManiacModifierTest {
         }
         model.setAllTimeLine(lines);
         return model;
+    }
+
+    private static TimeLine line(double section, long time) {
+        TimeLine line = new TimeLine(section, time, Mode.BEAT_7K.key);
+        line.setBPM(120);
+        return line;
     }
 }
