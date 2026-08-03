@@ -53,6 +53,12 @@ public final class BMSIRManiacModifier extends PatternModifier {
         if (settings.getAddMines() > 0) {
             applyAddMines(model, settings.getAddMines(), random);
         }
+        if (settings.getLoudness() > 0) {
+            applyLoudness(model, settings.getLoudness(), random);
+        }
+        if (settings.getSoftLanding() > 0) {
+            applySoftLanding(model, settings.getSoftLanding(), random);
+        }
         placementHash = placementHash(model);
     }
 
@@ -257,6 +263,55 @@ public final class BMSIRManiacModifier extends PatternModifier {
             }
         }
         model.setAllTimeLine(timelines.values().toArray(TimeLine[]::new));
+    }
+
+    private static void applyLoudness(BMSModel model, int percent, LR2Random random) {
+        int lanes = model.getMode().key;
+        int sideWidth = model.getMode().player == 2 ? lanes / 2 : lanes;
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            for (int player = 0; player < model.getMode().player; player++) {
+                int start = player * sideWidth;
+                int end = Math.min(lanes, start + sideWidth);
+                int sourceWav = -1;
+                for (int lane = start; lane < end; lane++) {
+                    Note note = timeline.getNote(lane);
+                    if (note instanceof NormalNote
+                            || (note instanceof LongNote longNote && !longNote.isEnd())) {
+                        sourceWav = note.getWav();
+                        break;
+                    }
+                }
+                if (sourceWav < 0 || random.inclusive(100) > percent) continue;
+                for (int lane = start; lane < end; lane++) {
+                    if (timeline.getNote(lane) == null) {
+                        timeline.setNote(lane, new NormalNote(sourceWav));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void applySoftLanding(BMSModel model, int level, LR2Random random) {
+        double factor = 1.0;
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            boolean hasPlayableNote = false;
+            for (int lane = 0; lane < model.getMode().key; lane++) {
+                if (timeline.getNote(lane) != null) {
+                    hasPlayableNote = true;
+                    break;
+                }
+            }
+            if ((level == 1 && timeline.getSectionLine())
+                    || (level == 2 && hasPlayableNote)) {
+                factor = softLandingFactor(random);
+            }
+            timeline.setScroll(timeline.getScroll() * factor);
+        }
+    }
+
+    private static double softLandingFactor(LR2Random random) {
+        double value = (random.inclusive(100) + 100.0) / 100.0;
+        return random.inclusive(1) == 0 ? value : 1.0 / value;
     }
 
     private static TreeMap<Long, TimeLine> timelinesByTime(BMSModel model) {
