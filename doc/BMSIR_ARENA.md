@@ -464,8 +464,9 @@ versioned plugin with its verified successor. It verifies canonical Ed25519
 release manifests and every artifact hash before replacement, and restores the
 prior plugin and files after a failed transaction. Its signed Markdown release
 notes and announcement list support Japanese and English and are rendered
-without executing release HTML. The announcement list remains visible when the
-installed body is current. A verified staged launcher
+without executing release HTML. The upper-right `🌐 日本語` / `🌐 English`
+control switches the launcher language, and the announcement list remains
+visible when the installed body is current. A verified staged launcher
 can restart as its own short-lived update helper and relaunch after replacement.
 An EXE placed in an empty portable directory immediately checks its selected
 channel and offers the complete signed body, Java runtime, and Arena plugin as

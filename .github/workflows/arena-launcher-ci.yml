@@ -99,18 +99,21 @@ jobs:
         env:
           BMSIR_ARENA_UPDATE_BASE_URL: ${{ vars.ARENA_TEST_UPDATE_BASE_URL }}
           BMSIR_ARENA_RELEASE_PUBLIC_KEY: ${{ vars.ARENA_TEST_RELEASE_PUBLIC_KEY }}
-          BMSIR_ARENA_CLIENT_VERSION: "0.4.14.4"
+          BMSIR_ARENA_CLIENT_VERSION: "0.4.14.5"
         run: |
           if (-not $env:BMSIR_ARENA_UPDATE_BASE_URL -or -not $env:BMSIR_ARENA_RELEASE_PUBLIC_KEY) {
             throw "Internal test update URL or public key is not configured"
           }
           cargo clean -p bmsir-arena-launcher
-          cargo build --release --locked
+          cargo tauri build --no-bundle --ci --config tauri.test.conf.json
           $source = "target/release/bmsir-arena-launcher.exe"
           $bytes = [System.IO.File]::ReadAllBytes($source)
           $text = [System.Text.Encoding]::ASCII.GetString($bytes)
           if (-not $text.Contains("BMSIR_ARENA_UPDATE_CONFIGURED_V1")) {
             throw "Internal test launcher is missing its update configuration marker"
+          }
+          if (-not $text.Contains("org.bms-ir.arena.launcher.test")) {
+            throw "Internal test launcher is missing its isolated application identifier"
           }
           Copy-Item $source "../../BMS-IR Arena Test.exe"
 
@@ -120,7 +123,7 @@ jobs:
         env:
           BMSIR_ARENA_UPDATE_BASE_URL: ${{ vars.ARENA_TEST_UPDATE_BASE_URL }}
           BMSIR_ARENA_RELEASE_PUBLIC_KEY: ${{ vars.ARENA_TEST_RELEASE_PUBLIC_KEY }}
-          BMSIR_ARENA_CLIENT_VERSION: "0.4.14.4"
+          BMSIR_ARENA_CLIENT_VERSION: "0.4.14.5"
         run: |
           if test -z "$BMSIR_ARENA_UPDATE_BASE_URL" || test -z "$BMSIR_ARENA_RELEASE_PUBLIC_KEY"; then
             echo "Internal test update URL or public key is not configured" >&2
