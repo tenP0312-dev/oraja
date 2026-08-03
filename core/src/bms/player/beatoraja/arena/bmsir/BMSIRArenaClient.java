@@ -505,7 +505,7 @@ public final class BMSIRArenaClient {
                 && main.getPlayerConfig().isBmsirArenaEnabled();
     }
 
-    static PlayerConfig playerConfig() {
+    public static PlayerConfig playerConfig() {
         return main == null ? null : main.getPlayerConfig();
     }
 

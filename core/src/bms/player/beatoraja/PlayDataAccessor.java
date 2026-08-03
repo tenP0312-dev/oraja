@@ -22,6 +22,9 @@ import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.player.beatoraja.ScoreLogDatabaseAccessor.ScoreLog;
 import bms.player.beatoraja.ir.LR2IRAccessor;
 import bms.player.beatoraja.song.SongData;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacDatabase;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
@@ -52,6 +55,9 @@ public final class PlayDataAccessor {
 	 * スコアデータベースアクセサ
 	 */
 	private ScoreDatabaseAccessor scoredb;
+	private ScoreDatabaseAccessor maniacScoredb;
+	private BMSIRManiacDatabase maniacMetadata;
+	private final PlayerConfig playerConfig;
 	/**
 	 * スコアログアクセサ
 	 */
@@ -65,13 +71,23 @@ public final class PlayDataAccessor {
 	private static final String[] replay = { "", "C", "H" };
 
 	public PlayDataAccessor(Config config) {
+		this(config, null);
+	}
+
+	public PlayDataAccessor(Config config, PlayerConfig playerConfig) {
 		this.player = config.getPlayername();
 		this.playerpath = config.getPlayerpath();
+		this.playerConfig = playerConfig;
 
 		try {
 			Class.forName("org.sqlite.JDBC");
 			scoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player + File.separatorChar + "score.db");
 			scoredb.createTable();
+			maniacScoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_maniac.db");
+			maniacScoredb.createTable();
+			maniacMetadata = new BMSIRManiacDatabase(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_maniac.db");
 			scorelogdb = new ScoreLogDatabaseAccessor(playerpath + File.separatorChar + player + File.separatorChar + "scorelog.db");
 			scoredatalogdb = new ScoreDataLogDatabaseAccessor(playerpath + File.separatorChar + player + File.separatorChar + "scoredatalog.db");
 			// Share scoredb to LR2IR
@@ -151,9 +167,9 @@ public final class PlayDataAccessor {
 	 * @return スコアデータ
 	 */
 	public ScoreData readScoreData(BMSModel model, int lnmode) {
-		String hash = model.getSHA256();
+		String hash = scoreHash(model);
 		boolean ln = model.containsUndefinedLongNote();
-		return readScoreData(hash, ln, lnmode);
+		return scoreDatabase(model).getScoreData(hash, ln ? lnmode : 0);
 	}
 
 	/**
@@ -198,11 +214,13 @@ public final class PlayDataAccessor {
 	 *            プレイ回数のみ反映する場合はfalse
 	 */
 	public void writeScoreData(ScoreData newscore, BMSModel model, int lnmode, boolean updateScore) {
-		String hash = model.getSHA256();
+		String hash = scoreHash(model);
+		ScoreDatabaseAccessor targetDatabase = scoreDatabase(model);
 		if (newscore == null) {
 			return;
 		}
-		ScoreData score = scoredb.getScoreData(hash, model.containsUndefinedLongNote() ? lnmode : 0);
+		ScoreData score = targetDatabase.getScoreData(hash, model.containsUndefinedLongNote() ? lnmode : 0);
+		int previousEx = score == null ? -1 : score.getExscore();
 
 		if (score == null) {
 			score = new ScoreData();
@@ -266,14 +284,17 @@ public final class PlayDataAccessor {
 		score.setPlaycount(score.getPlaycount() + 1);
 		score.setDate(Calendar.getInstance(TimeZone.getDefault()).getTimeInMillis() / 1000L);
 		score.setScorehash(getScoreHash(score));
-		scoredb.setScoreData(score);
-		if (log.getSha256() != null && scorelogdb != null) {
+		targetDatabase.setScoreData(score);
+		if (targetDatabase == maniacScoredb && maniacMetadata != null) {
+			maniacMetadata.record(model, newscore, newscore.getExscore() > previousEx, "local");
+		}
+		if (targetDatabase == scoredb && log.getSha256() != null && scorelogdb != null) {
 			log.setMode(score.getMode());
 			log.setDate(score.getDate());
 			scorelogdb.setScoreLog(log);
 		}
 
-		if (scoredatalogdb != null) {
+		if (targetDatabase == scoredb && scoredatalogdb != null) {
 			StringBuilder newScoresb = new StringBuilder();
 			for(SongTrophy trophy : newTrophies) {
 				newScoresb.append(trophy.character);
@@ -297,8 +318,39 @@ public final class PlayDataAccessor {
 				}
 			}
 		}
-		updatePlayerData(newscore, time);
+		updatePlayerData(newscore, time, targetDatabase);
 		logger.info("スコアデータベース更新完了 ");
+	}
+
+	private ScoreDatabaseAccessor scoreDatabase(BMSModel model) {
+		return model != null
+				&& model.getValues().containsKey(BMSIRManiacPlayContext.MODEL_STORAGE_HASH)
+				? maniacScoredb : scoredb;
+	}
+
+	private static String scoreHash(BMSModel model) {
+		String special = model.getValues().get(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
+		return special == null || special.isBlank() ? model.getSHA256() : special;
+	}
+
+	private void updatePlayerData(ScoreData score, long time, ScoreDatabaseAccessor database) {
+		PlayerData pd = database.getPlayerData();
+		pd.setEpg(pd.getEpg() + score.getEpg());
+		pd.setLpg(pd.getLpg() + score.getLpg());
+		pd.setEgr(pd.getEgr() + score.getEgr());
+		pd.setLgr(pd.getLgr() + score.getLgr());
+		pd.setEgd(pd.getEgd() + score.getEgd());
+		pd.setLgd(pd.getLgd() + score.getLgd());
+		pd.setEbd(pd.getEbd() + score.getEbd());
+		pd.setLbd(pd.getLbd() + score.getLbd());
+		pd.setEpr(pd.getEpr() + score.getEpr());
+		pd.setLpr(pd.getLpr() + score.getLpr());
+		pd.setEms(pd.getEms() + score.getEms());
+		pd.setLms(pd.getLms() + score.getLms());
+		pd.setPlaycount(pd.getPlaycount() + 1);
+		if (score.getClear() > Failed.id) pd.setClear(pd.getClear() + 1);
+		pd.setPlaytime(pd.getPlaytime() + time);
+		database.setPlayerData(pd);
 	}
 	
 	public ScoreData readScoreData(String hash, boolean ln, int lnmode, int option,
@@ -683,7 +735,20 @@ public final class PlayDataAccessor {
 	}
 
 	private String getReplayDataFilePath(BMSModel model, int lnmode, int index) {
-		return getReplayDataFilePath(model.getSHA256(), model.containsUndefinedLongNote(), lnmode, index);
+		return getReplayDataFilePath(replayHash(model), model.containsUndefinedLongNote(), lnmode, index);
+	}
+
+	private String replayHash(BMSModel model) {
+		String marked = model.getValues().get(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
+		if (marked != null && !marked.isBlank()) return marked;
+		if (playerConfig == null) return model.getSHA256();
+		BMSIRManiacSettings selected = new BMSIRManiacSettings(
+				playerConfig.getBmsirManiacSettings()
+		);
+		if (model.getMode().player == 2) selected.setDoubleBattle(false);
+		return selected.isActive()
+				? selected.storageChartId(model.getSHA256())
+				: model.getSHA256();
 	}
 
 	private String getReplayDataFilePath(String hash, boolean ln, int lnmode, int index) {

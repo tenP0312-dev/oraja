@@ -8,6 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
+
+    @Test
+    void previewFadesOutAndBackInOverExactlyOneSecond() {
+        assertEquals(0.65f, LaneRenderer.startHerePreviewAlpha(0L), 0.0001f);
+        assertEquals(1.0f, LaneRenderer.startHerePreviewAlpha(500L), 0.0001f);
+        assertEquals(0.65f, LaneRenderer.startHerePreviewAlpha(1000L), 0.0001f);
+        assertEquals(0.825f, LaneRenderer.startHerePreviewAlpha(1250L), 0.0001f);
+    }
     @Test
     void showsFromPreloadThroughReadyAndStopsAtPlay() {
         assertTrue(LaneRenderer.showsStartHerePreview(

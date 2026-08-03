@@ -6,6 +6,7 @@ import bms.player.beatoraja.TableData.TableFolder;
 import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
 import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.play.GrooveGauge;
@@ -135,6 +136,7 @@ public final class PlayerResource {
 	private boolean freqOn;
 	private String freqString;
 	private boolean forceNoIRSend;
+	private BMSIRManiacPlayContext maniacPlayContext;
 	// Full list of difficult tables that contains current song
 	private List<String> reverseLookup = new ArrayList<>();
 
@@ -161,6 +163,7 @@ public final class PlayerResource {
 		coursegauge.clear();
 		combo = 0;
 		maxcombo = 0;
+		maniacPlayContext = null;
 		bmsPaths = null;
 		setTablename("");
 		setTablelevel("");
@@ -401,6 +404,14 @@ public final class PlayerResource {
 
 	public void setReplayData(ReplayData replay) {
 		this.replay = replay;
+	}
+
+	public BMSIRManiacPlayContext getManiacPlayContext() {
+		return maniacPlayContext;
+	}
+
+	public void setManiacPlayContext(BMSIRManiacPlayContext context) {
+		maniacPlayContext = context;
 	}
 
 	public ScoreData getCourseScoreData() {

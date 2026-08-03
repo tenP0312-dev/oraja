@@ -269,6 +269,7 @@ public class LaneRenderer {
 			if (drawStartHerePreview(
 					sprite,
 					lanes,
+					time,
 					offsetX,
 					offsetY,
 					offsetW,
@@ -684,6 +685,7 @@ public class LaneRenderer {
 	private boolean drawStartHerePreview(
 			SkinObjectRenderer sprite,
 			SkinLane[] lanes,
+			long time,
 			float offsetX,
 			float offsetY,
 			float offsetW,
@@ -737,7 +739,7 @@ public class LaneRenderer {
 					playconfig.isEnablelanecover(),
 					playconfig.getLanecover()
 			);
-			sprite.setColor(Color.WHITE);
+			sprite.setColor(1f, 1f, 1f, startHerePreviewAlpha(time));
 			sprite.draw(
 					lane.noteImage,
 					startHerePreviewDestination.x,
@@ -748,6 +750,14 @@ public class LaneRenderer {
 		}
 		sprite.setColor(Color.WHITE);
 		return true;
+	}
+
+	static float startHerePreviewAlpha(long time) {
+		long cycleMillis = Math.floorMod(time, 1000L);
+		float triangle = cycleMillis <= 500L
+				? cycleMillis / 500f
+				: (1000L - cycleMillis) / 500f;
+		return 0.65f + 0.35f * triangle;
 	}
 
 	static boolean showsStartHerePreview(int state, boolean enabled) {

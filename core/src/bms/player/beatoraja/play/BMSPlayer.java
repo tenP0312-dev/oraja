@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.OneBassLaneRandomShuffleModifier;
 import bms.player.beatoraja.pattern.OneBassPattern;
@@ -341,6 +342,25 @@ public class BMSPlayer extends MainState {
 				}
 			}
 
+			ReplayData maniacReplay = replay != null
+					? replay
+					: resource.getChartOption();
+			BMSIRManiacPlayContext maniacContext = BMSIRManiacPlayContext.prepare(
+					maniacReplay != null && maniacReplay.bmsirManiacSettings != null
+							? maniacReplay.bmsirManiacSettings
+							: config.getBmsirManiacSettings(),
+					model,
+					resource.getCourseBMSModels() != null
+							|| BMSIRArenaClient.blocksLocalOneBass()
+			);
+			resource.setManiacPlayContext(maniacContext);
+			if (maniacContext != null) {
+				// Dedicated submission is performed separately after the result.
+				// Never let a transformed play enter the ordinary chart endpoint.
+				forceNoIRSend = true;
+				playtime = model.getLastNoteTime() + TIME_MARGIN;
+			}
+
 			if (playinfo.doubleoption >= 2) {
 				if(model.getMode() == Mode.BEAT_5K || model.getMode() == Mode.BEAT_7K || model.getMode() == Mode.KEYBOARD_24K) {
 					switch (model.getMode()) {
@@ -561,7 +581,10 @@ public class BMSPlayer extends MainState {
 			}
 //			playinfo.pattern = pattern.toArray(new PatternModifyLog[pattern.size()]);
 			playinfo.laneShufflePattern = patternArray;
-			BMSIROrajaHelperBridge.publishPlacement(model, playinfo);
+				BMSIROrajaHelperBridge.publishPlacement(model, playinfo);
+				if (resource.getManiacPlayContext() != null) {
+					resource.getManiacPlayContext().updatePlacement(model);
+				}
 
 		}
 
@@ -1211,6 +1234,15 @@ public class BMSPlayer extends MainState {
 		replay.doubleoption = playinfo.doubleoption;
 		replay.oneBassTarget = playinfo.oneBassTarget;
 		replay.oneBassTarget2 = playinfo.oneBassTarget2;
+		BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
+		if (maniacContext != null) {
+			replay.bmsirManiacSettings = maniacContext.settings();
+			replay.bmsirManiacVirtualChartId = maniacContext.virtualHash();
+			replay.bmsirManiacGenerationSeed = maniacContext.generationSeed();
+			replay.bmsirManiacAlgorithmVersion =
+					bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings.ALGORITHM_VERSION;
+			replay.bmsirManiacPlacementHash = maniacContext.placementHash();
+		}
 		replay.config = replayConfig;
 
 		score.setPassnotes(judge.getPastNotes());

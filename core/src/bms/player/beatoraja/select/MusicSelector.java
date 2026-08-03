@@ -8,6 +8,8 @@ import java.nio.file.*;
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.IntStream;
@@ -793,6 +795,21 @@ public final class MusicSelector extends MainState {
 		if (BMSIRArenaClient.isSelectionBlocked()) {
 			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
 			return;
+		}
+		Bar selected = manager.getSelected();
+		if (selected instanceof SongBar songBar && songBar.existsSong()) {
+			BMSIRManiacSettings maniac = config.getBmsirManiacSettings();
+			Mode chartMode = Stream.of(Mode.values())
+					.filter(candidate -> candidate.id == songBar.getSongData().getMode())
+					.findFirst()
+					.orElse(null);
+			if (maniac.isWarnDoubleBattleOnDp()
+					&& BMSIRManiacPlayContext.isDoubleBattleSuspended(maniac, chartMode)) {
+				ImGuiNotify.warning(
+						"DBを使用してDPを遊んでいます。DBは適用されません",
+						4000
+				);
+			}
 		}
 		play = mode;
 	}

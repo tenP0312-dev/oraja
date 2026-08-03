@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.StreamUtils.OptimizedByteArrayOutputStream;
 
 import bms.player.beatoraja.input.KeyInputLog;
 import bms.player.beatoraja.pattern.PatternModifyLog;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 
 /**
  * リプレイデータ。キー入力ログ、譜面変更情報、ゲージ種類を含む
@@ -85,6 +86,11 @@ public final class ReplayData implements Validatable {
 	 */
 	public int oneBassTarget = -1;
 	public int oneBassTarget2 = -1;
+	public BMSIRManiacSettings bmsirManiacSettings;
+	public String bmsirManiacVirtualChartId;
+	public long bmsirManiacGenerationSeed;
+	public int bmsirManiacAlgorithmVersion;
+	public String bmsirManiacPlacementHash;
 	/**
 	 * プレイコンフィグ
 	 */
@@ -136,6 +142,13 @@ public final class ReplayData implements Validatable {
 
 		keylog = keylog != null ? Validatable.removeInvalidElements(keylog) : KeyInputLog.EMPTYARRAY;
 		pattern = pattern != null ? Validatable.removeInvalidElements(pattern) : null;
+		if (bmsirManiacSettings != null) {
+			bmsirManiacSettings.validate();
+			if (bmsirManiacAlgorithmVersion
+					!= bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings.ALGORITHM_VERSION) {
+				return false;
+			}
+		}
 		return keylog.length > 0;
 	}
 }

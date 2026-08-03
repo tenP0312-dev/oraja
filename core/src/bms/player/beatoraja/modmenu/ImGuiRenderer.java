@@ -53,6 +53,7 @@ public class ImGuiRenderer {
     private static ImBoolean SHOW_PERFORMANCE_MONITOR = new ImBoolean(false);
     private static ImBoolean SHOW_SKIN_MENU = new ImBoolean(false);
     private static ImBoolean SHOW_MISC_SETTING = new ImBoolean(false);
+    private static ImBoolean SHOW_MANIAC_OPTIONS = new ImBoolean(false);
 
 
     public static void init() {
@@ -209,6 +210,9 @@ public class ImGuiRenderer {
             ImGui.end();
         }
 
+        if (SHOW_MANIAC_OPTIONS.get()) {
+            ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
+        }
         BMSIRArenaOverlay.render();
         ImGuiNotify.renderNotifications();
     }
@@ -243,6 +247,10 @@ public class ImGuiRenderer {
 
     public static void toggleMenu() {
         SHOW_MOD_MENU.set(!SHOW_MOD_MENU.get());
+    }
+
+    public static void showManiacOptions() {
+        SHOW_MANIAC_OPTIONS.set(true);
     }
 
     public static void helpMarker(String desc) {

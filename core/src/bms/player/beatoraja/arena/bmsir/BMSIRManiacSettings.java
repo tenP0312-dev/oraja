@@ -168,6 +168,43 @@ public final class BMSIRManiacSettings {
         return "bmsir-maniac-v" + ALGORITHM_VERSION + '-' + sha256(source);
     }
 
+    /** Local score key. It distinguishes every structured option set. */
+    public String storageChartId(String baseSha256) {
+        if (!isActive()) return normalizedBaseHash(baseSha256);
+        return "bmsir-maniac-score-v" + ALGORITHM_VERSION + '-'
+                + sha256(normalizedBaseHash(baseSha256) + ':' + canonicalOptions());
+    }
+
+    public String canonicalOptions() {
+        validate();
+        return String.join(",",
+                "hs1=" + hiddenSudden1P,
+                "hs2=" + hiddenSudden2P,
+                "extra=" + extraMode,
+                "notes=" + addNotes,
+                "long=" + addLongNotes,
+                "mines=" + addMines,
+                "accel=" + acceleration,
+                "soft=" + softLanding,
+                "earthquake=" + earthquake,
+                "tornado=" + tornado,
+                "superloop=" + superLoop,
+                "gambol=" + gambol,
+                "char=" + character,
+                "heartbeat=" + heartbeat,
+                "loudness=" + loudness,
+                "nabeatsu=" + nabeatsu,
+                "sin=" + sinCurve,
+                "wave=" + wave,
+                "spiral=" + spiral,
+                "sidejump=" + sideJump,
+                "db=" + doubleBattle,
+                "link=" + randomLink,
+                "seed=" + (generationSeedOverride == null ? "fixed" : generationSeedOverride),
+                "algorithm=" + ALGORITHM_VERSION
+        );
+    }
+
     public long generationSeed(String baseSha256) {
         if (generationSeedOverride != null) {
             return generationSeedOverride;

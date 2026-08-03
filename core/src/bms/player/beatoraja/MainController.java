@@ -267,7 +267,7 @@ public class MainController {
 			return StartupTask.Result.ok();
 		}));
 		tasks.add(StartupTask.required("プレイデータベース", () -> {
-			playdata = new PlayDataAccessor(config);
+			playdata = new PlayDataAccessor(config, player);
 			return StartupTask.Result.ok();
 		}));
 
@@ -583,7 +583,7 @@ public class MainController {
 		BMSPlayerRule.setConfiguredRuleProfile(pc.getBmsirRulesetProfile());
 		ImGuiNotify.setInfoEnabled(pc.isBmsirInfoNotificationsEnabled());
 
-		playdata = new PlayDataAccessor(config);
+		playdata = new PlayDataAccessor(config, player);
 
 		initializeIRConfig();
 		// Dispose MusicSelector to unallocate loaded skin
