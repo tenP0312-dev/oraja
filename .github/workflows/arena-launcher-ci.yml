@@ -63,7 +63,39 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
+      - name: Build configured internal test launcher
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        working-directory: arena-launcher/src-tauri
+        env:
+          BMSIR_ARENA_UPDATE_BASE_URL: ${{ vars.ARENA_TEST_UPDATE_BASE_URL }}
+          BMSIR_ARENA_RELEASE_PUBLIC_KEY: ${{ vars.ARENA_TEST_RELEASE_PUBLIC_KEY }}
+          BMSIR_ARENA_CLIENT_VERSION: "0.4.14"
+        run: |
+          if (-not $env:BMSIR_ARENA_UPDATE_BASE_URL -or -not $env:BMSIR_ARENA_RELEASE_PUBLIC_KEY) {
+            throw "Internal test update URL or public key is not configured"
+          }
+          cargo clean -p bmsir-arena-launcher
+          cargo build --release --locked
+          $source = "target/release/bmsir-arena-launcher.exe"
+          $bytes = [System.IO.File]::ReadAllBytes($source)
+          $text = [System.Text.Encoding]::ASCII.GetString($bytes)
+          if (-not $text.Contains("BMSIR_ARENA_UPDATE_CONFIGURED_V1")) {
+            throw "Internal test launcher is missing its update configuration marker"
+          }
+          Copy-Item $source "../../BMS-IR Arena Test.exe"
+
+      - name: Upload configured internal test launcher
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: arena-launcher-windows-x64-internal-test
+          path: BMS-IR Arena Test.exe
+          retention-days: 1
+          if-no-files-found: error
+
 # These outputs are deliberately not releases. Official Windows and macOS
-# artifact requires a compiled update endpoint and release verification key,
-# followed by the repository's reviewed Authenticode workflow. No installer or
-# MSI is produced.
+# artifact requires a compiled update endpoint and release verification key.
+# A manual run may produce an unsigned, one-day internal-test EXE from the
+# repository variables. Stable publication still requires the reviewed
+# Authenticode workflow. No installer or MSI is produced.
