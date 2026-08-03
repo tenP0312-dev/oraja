@@ -18,7 +18,8 @@ repository.
 
 ## Workflow
 
-- Read `README.md`, `doc/BMSIR_ARENA.md`, and the code around the affected
+- Read `README.md`, `doc/BMSIR_ARENA.md`,
+  `docs/CODEX_PROGRESS_DISCORD.md`, and the code around the affected
   behavior before editing.
 - Read-only investigation does not require an Issue. Implementation uses a
   scoped `codex/` branch, an Issue, local validation, a pull request, and merge
@@ -26,6 +27,10 @@ repository.
 - Keep `main` protected. Do not push feature commits directly to `main`.
 - Preserve unrelated local changes and avoid destructive Git commands.
 - Use `apply_patch` for manual file edits.
+- For substantial work expected to take more than about five minutes, define
+  the task phases first. Send progress immediately at phase changes and errors,
+  plus every 10 minutes while one phase continues, using the shared
+  development route described in `docs/CODEX_PROGRESS_DISCORD.md`.
 
 ## Validation
 
@@ -50,6 +55,8 @@ repository.
   approval.
 - Do not publish private server addresses, credentials, signing material,
   plugin fingerprints, allowlist values, or Discord route values.
+- Development progress notes are approval-free, but cannot authorize or
+  replace binary publication, deployment, or a public announcement.
 
 ## Version Locations
 
