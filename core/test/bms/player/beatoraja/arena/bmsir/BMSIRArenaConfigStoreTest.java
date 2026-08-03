@@ -61,6 +61,7 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirInfoNotificationsEnabled(false);
         player.getBmsirManiacSettings().setExtraMode(2);
         player.setBmsirArenaDetailedLogEnabled(true);
+        player.setBmsirArenaLanguage("en");
         IRConfig ir = new IRConfig();
         ir.setUserid("arena-user-secret");
         ir.setPassword("arena-password-secret");
@@ -81,7 +82,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 8"));
+        assertTrue(serialized.contains("\"schemaVersion\": 9"));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -91,6 +92,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"infoNotificationsEnabled\": false"));
         assertTrue(serialized.contains("\"extraMode\": 2"));
         assertTrue(serialized.contains("\"detailedLogEnabled\": true"));
+        assertTrue(serialized.contains("\"language\": \"en\""));
         assertTrue(serialized.contains("\"bms_search\""));
         assertFalse(serialized.contains("arena-user-secret"));
         assertFalse(serialized.contains("arena-password-secret"));
@@ -126,6 +128,8 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirNumpadJudgeTimingStep(4);
         arenaBody.setBmsirJudgeTimingRestoreEnabled(true);
         arenaBody.setBmsirInfoNotificationsEnabled(false);
+        arenaBody.setBmsirArenaDetailedLogEnabled(true);
+        arenaBody.setBmsirArenaLanguage("en");
         PlayerConfig.write(temporaryDirectory.toString(), arenaBody);
 
         PlayerConfig normalBody = player("player1");
@@ -179,6 +183,8 @@ class BMSIRArenaConfigStoreTest {
         assertEquals(4, restored.getBmsirNumpadJudgeTimingStep());
         assertTrue(restored.isBmsirJudgeTimingRestoreEnabled());
         assertFalse(restored.isBmsirInfoNotificationsEnabled());
+        assertTrue(restored.isBmsirArenaDetailedLogEnabled());
+        assertEquals("en", restored.getBmsirArenaLanguage());
     }
 
     @Test

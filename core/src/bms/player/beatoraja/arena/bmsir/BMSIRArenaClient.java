@@ -241,6 +241,12 @@ public final class BMSIRArenaClient {
         shutdown();
         main = controller;
         initialized = true;
+        BMSIRArenaI18n.setLanguage(
+                controller.getPlayerConfig().getBmsirArenaLanguage()
+        );
+        BMSIRArenaLog.setDetailedEnabled(
+                controller.getPlayerConfig().isBmsirArenaDetailedLogEnabled()
+        );
         BMSIRManiacApiClient.syncOwnScoresAsync(controller);
         BMSIRArenaLog.event(
                 "initialize",
@@ -864,10 +870,13 @@ public final class BMSIRArenaClient {
 
     static String currentPhaseAction() {
         if ("private".equals(currentMatchMode()) && !isRoomParticipating()) {
-            return "観戦中";
+            return BMSIRArenaI18n.text("観戦中", "Spectating");
         }
         if (isRoomPaused()) {
-            return "休憩中（全員観戦）";
+            return BMSIRArenaI18n.text(
+                    "休憩中（全員観戦）",
+                    "Paused (everyone is spectating)"
+            );
         }
         if (
                 isNominationOpen()
@@ -875,7 +884,10 @@ public final class BMSIRArenaClient {
                                 nominationView.path("type").asText("")
                         )
         ) {
-            return "CPUが課題曲を選んでいます";
+            return BMSIRArenaI18n.text(
+                    "CPUが課題曲を選んでいます",
+                    "CPU is selecting a chart"
+            );
         }
         return phaseAction(
                 isOptionSelectionOpen(),
@@ -903,36 +915,75 @@ public final class BMSIRArenaClient {
     ) {
         if (optionOpen) {
             return optionReady
-                    ? "ほかの参加者のOP確定を待っています"
-                    : "OPを選んでください";
+                    ? BMSIRArenaI18n.text(
+                            "ほかの参加者のOP確定を待っています",
+                            "Waiting for other players to confirm options"
+                    )
+                    : BMSIRArenaI18n.text(
+                            "OPを選んでください",
+                            "Select your options"
+                    );
         }
         if (nominationOpen) {
             return canNominate
-                    ? "曲を選んでください"
-                    : "部屋主の選曲を待っています";
+                    ? BMSIRArenaI18n.text(
+                            "曲を選んでください",
+                            "Select a chart"
+                    )
+                    : BMSIRArenaI18n.text(
+                            "部屋主の選曲を待っています",
+                            "Waiting for the room host to select a chart"
+                    );
         }
         if (fillWaiting) {
-            return "追加の参加者を待っています";
+            return BMSIRArenaI18n.text(
+                    "追加の参加者を待っています",
+                    "Waiting for additional players"
+            );
         }
         if ("loading".equals(matchState)) {
             return loadReady
-                    ? "ほかの参加者の読込を待っています"
-                    : "譜面を読み込んでいます";
+                    ? BMSIRArenaI18n.text(
+                            "ほかの参加者の読込を待っています",
+                            "Waiting for other players to load"
+                    )
+                    : BMSIRArenaI18n.text(
+                            "譜面を読み込んでいます",
+                            "Loading chart"
+                    );
         }
         if ("countdown".equals(matchState)) {
-            return "対戦開始を待っています";
+            return BMSIRArenaI18n.text(
+                    "対戦開始を待っています",
+                    "Waiting for synchronized start"
+            );
         }
         if ("playing".equals(matchState)) {
-            return "プレイ中";
+            return BMSIRArenaI18n.text("プレイ中", "Playing");
         }
         if (completedResult) {
-            return "対戦結果を確認してください";
+            return BMSIRArenaI18n.text(
+                    "対戦結果を確認してください",
+                    "Review the match result"
+            );
         }
         return switch (currentQueueStatus) {
-            case "queued" -> "対戦相手を待っています";
-            case "reserved", "matched" -> "対戦準備中です";
-            case "withdraw_requested" -> "退出処理を待っています";
-            default -> "エントリーしてください";
+            case "queued" -> BMSIRArenaI18n.text(
+                    "対戦相手を待っています",
+                    "Waiting for opponents"
+            );
+            case "reserved", "matched" -> BMSIRArenaI18n.text(
+                    "対戦準備中です",
+                    "Preparing the match"
+            );
+            case "withdraw_requested" -> BMSIRArenaI18n.text(
+                    "退出処理を待っています",
+                    "Waiting to leave"
+            );
+            default -> BMSIRArenaI18n.text(
+                    "エントリーしてください",
+                    "Enter the Arena queue"
+            );
         };
     }
 
@@ -1005,7 +1056,10 @@ public final class BMSIRArenaClient {
             title = seconds >= 1L && seconds <= 3L
                     ? Long.toString(seconds)
                     : "READY";
-            detail = "全員の開始時刻を同期しています";
+            detail = BMSIRArenaI18n.text(
+                    "全員の開始時刻を同期しています",
+                    "Synchronizing the start time"
+            );
         } else if ("playing".equals(matchState) || arenaPlayActive) {
             phase = ArenaPresentationState.Phase.PLAYING;
             title = "";
@@ -1016,14 +1070,18 @@ public final class BMSIRArenaClient {
             phase = ArenaPresentationState.Phase.MATCHING;
             title = "MATCHING…";
             seconds = fillSecondsRemaining();
-            detail = fillPlayerCount() + " / " + fillMaxPlayers() + "人";
+            detail = fillPlayerCount() + " / " + fillMaxPlayers()
+                    + BMSIRArenaI18n.text("人", " players");
         } else if (!currentMatchId.isBlank() && reserved) {
             phase = ArenaPresentationState.Phase.MATCH_FOUND;
             title = "MATCH FOUND";
         } else if ("queued".equals(queueStatus)) {
             phase = ArenaPresentationState.Phase.MATCHING;
             title = "MATCHING…";
-            detail = "対戦相手を待っています";
+            detail = BMSIRArenaI18n.text(
+                    "対戦相手を待っています",
+                    "Waiting for opponents"
+            );
         } else {
             return ArenaPresentationState.idle();
         }
@@ -1635,6 +1693,11 @@ public final class BMSIRArenaClient {
 
     static boolean isGameplayState() {
         return "play".equals(normalizeCurrentState());
+    }
+
+    static boolean isResultState() {
+        return "result".equals(normalizeCurrentState())
+                && isShowingCompletedResult();
     }
 
     static void requestQueueEntry() {

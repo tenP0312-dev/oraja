@@ -2,6 +2,7 @@ package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.arena.lobby.GraphMenu;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.controller.Lwjgl3ControllerManager;
@@ -28,6 +29,10 @@ import java.nio.file.Paths;
 
 
 public class ImGuiRenderer {
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     private static long windowHandle;
 
@@ -127,31 +132,34 @@ public class ImGuiRenderer {
         if (SHOW_MOD_MENU.get()) {
             ImGui.begin("Arena oraja", ImGuiWindowFlags.AlwaysAutoResize);
 
-            ImGui.checkbox("Show Rate Modifier Window", SHOW_FREQ_PLUS);
-            ImGui.checkbox("Show Random Trainer Window", SHOW_RANDOM_TRAINER);
-            ImGui.checkbox("Show Judge Trainer Window", SHOW_JUDGE_TRAINER);
-            if (ImGui.checkbox("Show Skin Configuration Window", SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
-            ImGui.checkbox("Show Skin Widget Manager Window", SHOW_SKIN_WIDGET_MANAGER);
-            ImGui.checkbox("Show Song Manager Window", SHOW_SONG_MANAGER);
-            ImGui.checkbox("Show Download Tasks Window", SHOW_DOWNLOAD_MENU);
-            if (ImGui.checkbox("Show Performance Monitor Window", SHOW_PERFORMANCE_MONITOR) &&
+            ImGui.checkbox(t("レート変更ウィンドウ", "Show Rate Modifier Window"), SHOW_FREQ_PLUS);
+            ImGui.checkbox(t("Random Trainer", "Show Random Trainer Window"), SHOW_RANDOM_TRAINER);
+            ImGui.checkbox(t("Judge Trainer", "Show Judge Trainer Window"), SHOW_JUDGE_TRAINER);
+            if (ImGui.checkbox(t("スキン設定", "Show Skin Configuration Window"), SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
+            ImGui.checkbox(t("スキンウィジェット管理", "Show Skin Widget Manager Window"), SHOW_SKIN_WIDGET_MANAGER);
+            ImGui.checkbox(t("楽曲管理", "Show Song Manager Window"), SHOW_SONG_MANAGER);
+            ImGui.checkbox(t("ダウンロード状況", "Show Download Tasks Window"), SHOW_DOWNLOAD_MENU);
+            if (ImGui.checkbox(t("パフォーマンスモニター", "Show Performance Monitor Window"), SHOW_PERFORMANCE_MONITOR) &&
                 SHOW_PERFORMANCE_MONITOR.get()) {
                 PerformanceMonitor.reloadEventTree();
             }
-            ImGui.checkbox("Show Misc Setting Window", SHOW_MISC_SETTING);
-            ImGui.checkbox("Show Arena Menu", SHOW_ARENA_MENU);
-            ImGui.checkbox("Show Graph", SHOW_GRAPH_MENU);
+            ImGui.checkbox(t("その他設定", "Show Misc Setting Window"), SHOW_MISC_SETTING);
+            ImGui.checkbox(t("従来Arenaメニュー", "Show Arena Menu"), SHOW_ARENA_MENU);
+            ImGui.checkbox(t("従来Arenaグラフ", "Show Graph"), SHOW_GRAPH_MENU);
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
                     !BMSIRArenaOverlay.isHidden()
             );
             if (ImGui.checkbox(
-                    "Show BMS-IR Arena Overlay",
+                    t("BMS-IR Arenaオーバーレイ", "Show BMS-IR Arena Overlay"),
                     showBmsirArenaOverlay
             )) {
                 BMSIRArenaOverlay.setVisible(showBmsirArenaOverlay.get());
                 if (!BMSIRArenaClient.saveArenaConfig()) {
-                    ImGuiNotify.warning("Arena表示設定を保存できませんでした");
+                    ImGuiNotify.warning(t(
+                            "Arena表示設定を保存できませんでした",
+                            "Could not save the Arena display setting"
+                    ));
                 }
             }
 
@@ -196,7 +204,7 @@ public class ImGuiRenderer {
             }
 
 
-            if (ImGui.treeNode("Arena oraja Debug Information")) {
+            if (ImGui.treeNode(t("Arena oraja デバッグ情報", "Arena oraja Debug Information"))) {
                 float axis;
 
                 ImGui.text("Commit hash: " + Version.getGitCommitHash());

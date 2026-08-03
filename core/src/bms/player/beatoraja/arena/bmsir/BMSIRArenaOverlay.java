@@ -62,7 +62,7 @@ public final class BMSIRArenaOverlay {
     private static final float GAMEPLAY_GRAPH_MIN_HEIGHT = 210.0f;
     private static final float MATCH_GRAPH_HEIGHT = 350.0f;
     private static final float GRAPH_PLOT_TOP_PADDING = 8.0f;
-    private static final float GRAPH_LABEL_HEIGHT = 92.0f;
+    private static final float GRAPH_LABEL_HEIGHT = 110.0f;
 
     private static boolean confirmWithdrawal;
     private static boolean confirmRoomDisband;
@@ -91,36 +91,58 @@ public final class BMSIRArenaOverlay {
     private static final ImInt GRAPH_HIGHLIGHT = new ImInt(0);
     private static final ImInt TARGET_MODE = new ImInt(0);
     private static final ImInt GRAPH_ORDER = new ImInt(0);
+    private static final ImInt LANGUAGE = new ImInt(0);
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
     private static final Set<String> CUSTOM_LEVELS = new HashSet<>();
     private static final Map<Integer, String> USER_TABLE_KEYS =
             new LinkedHashMap<>();
-    private static final String[] SCORE_RULES = {
-            "EX SCORE", "BP Arena（CBのみ）", "MAX COMBO"
-    };
-    private static final String[] FORCED_GAUGES = {
-            "自由", "NORMAL", "HARD", "EXHARD", "HAZARD"
-    };
-    private static final String[] CHART_SCOPES = {
-            "通常＋発狂難易度表",
-            "自由選曲",
-            "カスタム"
-    };
     private static final String[] RULESET_PROFILES = {"LR2", "oraja"};
-    private static final String[] NOMINATION_POLICIES = {
-            "全員が選曲", "部屋主だけ選曲", "選曲担当を交代"
-    };
-    private static final String[] SERIES_FORMATS = {
-            "1曲", "全員の曲を回す", "N本先取"
-    };
-    private static final String[] ARENA_TARGET_MODES = {
-            "OFF", "1位の対戦相手", "自分の直上", "指定プレイヤー"
-    };
-    private static final String[] ARENA_GRAPH_ORDERS = {
-            "順位順", "入室順固定"
-    };
 
     private BMSIRArenaOverlay() {
+    }
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
+
+    private static String f(String japanese, String english, Object... values) {
+        return BMSIRArenaI18n.format(japanese, english, values);
+    }
+
+    private static String[] scoreRules() {
+        return new String[]{
+                "EX SCORE",
+                t("BP Arena（CBのみ）", "BP Arena (CB only)"),
+                "MAX COMBO"
+        };
+    }
+
+    private static String[] forcedGauges() {
+        return new String[]{t("自由", "Free"), "NORMAL", "HARD", "EXHARD", "HAZARD"};
+    }
+
+    private static String[] chartScopes() {
+        return new String[]{
+                t("通常＋発狂難易度表", "Standard + Insane tables"),
+                t("自由選曲", "Free selection"),
+                t("カスタム", "Custom")
+        };
+    }
+
+    private static String[] nominationPolicies() {
+        return new String[]{
+                t("全員が選曲", "Everyone nominates"),
+                t("部屋主だけ選曲", "Host only"),
+                t("選曲担当を交代", "Rotate selector")
+        };
+    }
+
+    private static String[] seriesFormats() {
+        return new String[]{
+                t("1曲", "Single"),
+                t("全員の曲を回す", "All picks"),
+                t("N本先取", "First to N")
+        };
     }
 
     public static void render() {
@@ -137,6 +159,10 @@ public final class BMSIRArenaOverlay {
         if (config == null) {
             return;
         }
+        BMSIRArenaLog.setDetailedEnabled(
+                config.isBmsirArenaDetailedLogEnabled()
+        );
+        BMSIRArenaI18n.setLanguage(config.getBmsirArenaLanguage());
         ArenaPresentationController.update(
                 BMSIRArenaClient.presentationState(),
                 config,
@@ -154,7 +180,8 @@ public final class BMSIRArenaOverlay {
             renderCompactOverlay();
             return;
         }
-        if (BMSIRArenaClient.isGameplayState()) {
+        if (BMSIRArenaClient.isGameplayState()
+                || BMSIRArenaClient.isResultState()) {
             renderGameplayOverlay();
             return;
         }
@@ -178,25 +205,25 @@ public final class BMSIRArenaOverlay {
         ImGui.separator();
         if (ImGui.beginChild("##bmsir-arena-scroll-content", 0, 0, false)
                 && ImGui.beginTabBar("##bmsir-arena-tabs")) {
-            if (ImGui.beginTabItem("対戦")) {
+            if (ImGui.beginTabItem(t("対戦", "Battle"))) {
                 renderQueueActions();
                 ImGui.separator();
                 renderMatch();
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem("公開ロビー／ルーム")) {
+            if (ImGui.beginTabItem(t("公開ロビー／ルーム", "Lobby / Rooms"))) {
                 renderRoomControls(config);
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem(FontAwesomeIcons.Trophy + " レートランキング")) {
+            if (ImGui.beginTabItem(FontAwesomeIcons.Trophy + t(" レートランキング", " Rating"))) {
                 renderRanking();
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem("マニュアル")) {
+            if (ImGui.beginTabItem(t("マニュアル", "Manual"))) {
                 renderManual();
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem("設定")) {
+            if (ImGui.beginTabItem(t("設定", "Settings"))) {
                 renderSettings(config);
                 ImGui.endTabItem();
             }
@@ -280,7 +307,7 @@ public final class BMSIRArenaOverlay {
         float width = Math.max(220.0f, ImGui.getContentRegionAvailX() * 0.55f);
         ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
         if (ImGui.button(
-                ready ? "準備OKを解除" : "準備OK",
+                ready ? t("準備OKを解除", "Cancel Ready") : t("準備OK", "Ready"),
                 width,
                 52.0f
         )) {
@@ -289,7 +316,7 @@ public final class BMSIRArenaOverlay {
         ImGui.endDisabled();
         ImGui.sameLine();
         ImBoolean always = new ImBoolean(config.isBmsirArenaAlwaysReady());
-        if (ImGui.checkbox("ずっとOKにする", always)) {
+        if (ImGui.checkbox(t("ずっとOKにする", "Always Ready"), always)) {
             config.setBmsirArenaAlwaysReady(always.get());
             if (always.get() && !ready) {
                 BMSIRArenaClient.requestRoomReady(true);
@@ -379,7 +406,7 @@ public final class BMSIRArenaOverlay {
         if (!roomCode.isBlank()) {
             ImGui.textDisabled("ROOM " + roomCode);
         }
-        if (!gameplay && ImGui.button("通常表示へ")) {
+        if (!gameplay && ImGui.button(t("通常表示へ", "Full View"))) {
             BMSIRArenaClient.playerConfig().setBmsirArenaOverlayMode(0);
         }
         ImGui.end();
@@ -392,6 +419,46 @@ public final class BMSIRArenaOverlay {
             renderGameplayStatusOverlay();
             return;
         }
+
+        renderGameplayInfoOverlay(match);
+        renderGameplayGraphOverlay(match);
+    }
+
+    private static void renderGameplayInfoOverlay(JsonNode match) {
+        float width = Math.min(
+                410.0f,
+                maximumGameplayWindowWidth(ImGuiRenderer.windowWidth)
+        );
+        ImGui.setNextWindowPos(
+                VIEWPORT_MARGIN,
+                VIEWPORT_MARGIN,
+                ImGuiCond.FirstUseEver
+        );
+        ImGui.setNextWindowSize(width, 230.0f, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowBgAlpha(0.88f);
+        int flags = ImGuiWindowFlags.NoNav
+                | ImGuiWindowFlags.NoFocusOnAppearing
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+        if (!ImGui.begin(
+                "BMS-IR Arena Status##gameplay-info-" + currentLayoutKey(),
+                flags
+        )) {
+            ImGui.end();
+            return;
+        }
+        String title = match.path("chart").path("title").asText();
+        if (!title.isBlank()) {
+            ImGui.textWrapped(title);
+        }
+        renderPhaseBanner(false);
+        renderModeBanner();
+        renderRatingResult(match);
+        renderChatPreview();
+        renderForceEndVote(match);
+        ImGui.end();
+    }
+
+    private static void renderGameplayGraphOverlay(JsonNode match) {
 
         float windowWidth = defaultGameplayWindowWidth(ImGuiRenderer.windowWidth);
         float windowHeight = defaultGameplayWindowHeight(ImGuiRenderer.windowHeight);
@@ -414,25 +481,58 @@ public final class BMSIRArenaOverlay {
                 | ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus;
         if (!ImGui.begin(
-                "BMS-IR Arena" + gameplayWindowId(
-                        false,
-                        BMSIRArenaClient.currentPlayModeForLayout()
-                ),
+                "Arena Score Graph##gameplay-graph-" + currentLayoutKey(),
                 flags
         )) {
             ImGui.end();
             return;
         }
-        String title = match.path("chart").path("title").asText();
-        if (!title.isBlank()) {
-            ImGui.textWrapped(title);
-        }
-        renderModeBanner();
-        renderChatPreview();
-        renderSeriesBanner(true);
-        renderForceEndVote(match);
         renderScoreGraph(match, Math.max(GAMEPLAY_GRAPH_MIN_HEIGHT, ImGui.getContentRegionAvailY()));
         ImGui.end();
+    }
+
+    private static void renderRatingResult(JsonNode match) {
+        if (!BMSIRArenaClient.isShowingCompletedResult()
+                || !match.path("rated").asBoolean(false)) {
+            return;
+        }
+        for (JsonNode player : match.path("players")) {
+            if (player.path("player_id").asInt()
+                    != BMSIRArenaClient.currentPlayerId()) {
+                continue;
+            }
+            JsonNode beforeNode = player.hasNonNull("before")
+                    ? player.path("before")
+                    : player.path("rating_before");
+            JsonNode afterNode = player.hasNonNull("after")
+                    ? player.path("after")
+                    : player.path("rating_after");
+            JsonNode deltaNode = player.hasNonNull("delta")
+                    ? player.path("delta")
+                    : player.path("rating_delta");
+            if (!afterNode.isNumber() || !deltaNode.isNumber()) {
+                return;
+            }
+            double before = beforeNode.asDouble(afterNode.asDouble());
+            double after = afterNode.asDouble();
+            double delta = deltaNode.asDouble();
+            int color = delta > 0.0001
+                    ? ImColor.rgb(121, 223, 139)
+                    : delta < -0.0001
+                            ? ImColor.rgb(255, 115, 115)
+                            : GRAPH_TEXT_MUTED;
+            ImGui.textColored(
+                    color,
+                    String.format(
+                            Locale.ROOT,
+                            "RATE %.2f -> %.2f (%+.2f)",
+                            before,
+                            after,
+                            delta
+                    )
+            );
+            return;
+        }
     }
 
     private static void renderGameplayStatusOverlay() {
@@ -470,7 +570,10 @@ public final class BMSIRArenaOverlay {
                     BMSIRArenaClient.fillPlayerCount(),
                     BMSIRArenaClient.fillMaxPlayers()
             ));
-            ImGui.textDisabled("この待機中の退出はレート・戦績に影響しません");
+            ImGui.textDisabled(t(
+                    "この待機中の退出はレート・戦績に影響しません",
+                    "Leaving during this wait does not affect rating or records"
+            ));
         }
         ImGui.end();
     }
@@ -510,11 +613,13 @@ public final class BMSIRArenaOverlay {
         StringBuilder summary = new StringBuilder(
                 seriesFormatLabel(format, BMSIRArenaClient.currentFirstToWins())
         );
-        summary.append(" / 第")
+        summary.append(t(" / 第", " / Round "))
                 .append(Math.max(1, BMSIRArenaClient.currentSeriesRound()))
-                .append("曲");
+                .append(t("曲", ""));
         if (remaining >= 0) {
-            summary.append(" / 残り").append(remaining).append("曲");
+            summary.append(t(" / 残り", " / "))
+                    .append(remaining)
+                    .append(t("曲", " remaining"));
         }
         ImGui.setWindowFontScale(compact ? 1.0f : 1.15f);
         ImGui.textColored(ImColor.rgb(255, 211, 106), summary.toString());
@@ -545,21 +650,25 @@ public final class BMSIRArenaOverlay {
                         name
                                 + " "
                                 + player.path("series_points").asInt()
-                                + "pt / 参考EX率 "
+                                + t("pt / 参考EX率 ", "pt / EX rate ")
                                 + rate
-                                + (placement > 0 ? " / 総合" + placement + "位" : "")
+                                + (placement > 0
+                                        ? t(" / 総合", " / #") + placement + t("位", "")
+                                        : "")
                 );
             } else {
                 standings.add(
                         name
                                 + " "
                                 + player.path("series_wins").asInt()
-                                + "勝"
+                                + t("勝", " wins")
                 );
             }
         }
         ImGui.textWrapped(
-                ("bo2".equals(format) ? "BO2総合: " : "戦績: ")
+                ("bo2".equals(format)
+                        ? t("BO2総合: ", "BO2 standings: ")
+                        : t("戦績: ", "Record: "))
                         + String.join(" / ", standings)
         );
     }
@@ -567,7 +676,7 @@ public final class BMSIRArenaOverlay {
     static String phaseCountdownText(long seconds) {
         return String.format(
                 Locale.ROOT,
-                "残り %02d秒",
+                t("残り %02d秒", "%02d sec remaining"),
                 Math.max(0L, seconds)
         );
     }
@@ -637,7 +746,7 @@ public final class BMSIRArenaOverlay {
                 .limit(MAX_GRAPH_PLAYERS)
                 .toList();
         if (players.isEmpty()) {
-            ImGui.textDisabled("参加者を待っています");
+            ImGui.textDisabled(t("参加者を待っています", "Waiting for players"));
             return;
         }
 
@@ -660,6 +769,14 @@ public final class BMSIRArenaOverlay {
         boolean highlightSelf = graphConfig != null
                 && graphConfig.getBmsirArenaGraphHighlight() == 1;
         int ownPlayerId = BMSIRArenaClient.currentPlayerId();
+        JsonNode ownPlayer = players.stream()
+                .filter(player -> player.path("player_id").asInt()
+                        == ownPlayerId)
+                .findFirst()
+                .orElse(null);
+        int ownBattleValue = ownPlayer == null
+                ? 0
+                : battleValue(scoreRule, ownPlayer, totalNotes);
         int highlightedPlayerId = highlightSelf && ownPlayerId > 0
                 ? ownPlayerId
                 : players.get(0).path("player_id").asInt();
@@ -738,11 +855,15 @@ public final class BMSIRArenaOverlay {
                     own && !fixedEntryOrder ? ImColor.rgb(255, 115, 115)
                             : selected ? GRAPH_SELECTED : GRAPH_TEXT
             );
-            drawCenteredText(
-                    drawList,
+            int difference = battleValue - ownBattleValue;
+            String rateAndDifference = (
                     "exscore".equals(scoreRule)
                             ? String.format(Locale.ROOT, "%.2f%%", rate * 100.0)
-                            : String.format(Locale.ROOT, "%.1f%%", rate * 100.0),
+                            : String.format(Locale.ROOT, "%.1f%%", rate * 100.0)
+            ) + String.format(Locale.ROOT, " / %+,d", difference);
+            drawCenteredText(
+                    drawList,
+                    rateAndDifference,
                     centerX,
                     labelY + 36.0f,
                     columnWidth - 4.0f,
@@ -763,6 +884,16 @@ public final class BMSIRArenaOverlay {
                         lamp,
                         centerX,
                         labelY + 72.0f,
+                        columnWidth - 4.0f,
+                        GRAPH_TEXT_MUTED
+                );
+            }
+            if (player.has("series_points")) {
+                drawCenteredText(
+                        drawList,
+                        player.path("series_points").asInt() + " Points",
+                        centerX,
+                        labelY + 90.0f,
                         columnWidth - 4.0f,
                         GRAPH_TEXT_MUTED
                 );
@@ -868,14 +999,14 @@ public final class BMSIRArenaOverlay {
         ImGui.beginDisabled(voted || !BMSIRArenaClient.isConnected());
         if (ImGui.button(
                 voted
-                        ? "曲終了に投票済み (" + votes + "/" + required + ")"
-                        : "この曲を終了する (" + votes + "/" + required + ")"
+                        ? t("曲終了に投票済み", "End vote sent") + " (" + votes + "/" + required + ")"
+                        : t("この曲を終了する", "End this chart") + " (" + votes + "/" + required + ")"
         )) {
             BMSIRArenaClient.requestForceEndVote();
         }
         ImGui.endDisabled();
         ImGui.sameLine();
-        ImGui.textDisabled("残っている全員の同意で終了");
+        ImGui.textDisabled(t("残っている全員の同意で終了", "Ends when every remaining player agrees"));
     }
 
     static String ruleMetricLabel(String scoreRule, JsonNode player) {
@@ -928,13 +1059,13 @@ public final class BMSIRArenaOverlay {
 
     private static void renderConnectionSummary() {
         String connection = BMSIRArenaClient.isConnected()
-                ? FontAwesomeIcons.Wifi + " 接続中"
-                : FontAwesomeIcons.Ban + " 再接続中";
+                ? FontAwesomeIcons.Wifi + t(" 接続中", " Connected")
+                : FontAwesomeIcons.Ban + t(" 再接続中", " Reconnecting");
         ImGui.text(connection);
         ImGui.sameLine();
         ImGui.text(String.format(
                 Locale.ROOT,
-                "R %d  /  %d戦",
+                t("R %d  /  %d戦", "R %d / %d matches"),
                 Math.round(BMSIRArenaClient.arenaRating()),
                 BMSIRArenaClient.arenaMatchesPlayed()
         ));
@@ -954,20 +1085,23 @@ public final class BMSIRArenaOverlay {
         ImGui.textColored(color, modeDisplayText(mode));
         ImGui.sameLine();
         ImGui.textDisabled(
-                "| " + rulesetProfileLabel(BMSIRArenaClient.currentRulesetProfile()) + "仕様"
+                "| " + rulesetProfileLabel(BMSIRArenaClient.currentRulesetProfile()) + t("仕様", " rules")
         );
         if ("cpu_bonus".equals(BMSIRArenaClient.currentRatingPolicy())) {
             ImGui.textDisabled(
-                    "CPU戦: A～MAX固定 / 勝利 +1 / 敗北 -1 / 同点 ±0"
+                    t(
+                            "CPU戦: A～MAX固定 / 勝利 +1 / 敗北 -1 / 同点 ±0",
+                            "CPU match: A-MAX fixed / win +1 / loss -1 / draw 0"
+                    )
             );
         }
     }
 
     static String modeDisplayText(String mode) {
         return switch (mode) {
-            case "casual" -> "カジュアル  |  レート変動なし";
-            case "private" -> "プライベート  |  レート変動なし";
-            default -> "レートArena  |  レート変動あり";
+            case "casual" -> t("カジュアル  |  レート変動なし", "Casual | Unrated");
+            case "private" -> t("プライベート  |  レート変動なし", "Private | Unrated");
+            default -> t("レートArena  |  レート変動あり", "Rated Arena | Rating enabled");
         };
     }
 
@@ -982,20 +1116,20 @@ public final class BMSIRArenaOverlay {
                 || "withdraw_requested".equals(status);
         if (config != null && !entryActive) {
             ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-            if (ImGui.checkbox("1人待機中のCPU戦を許可", allowCpu)) {
+            if (ImGui.checkbox(t("1人待機中のCPU戦を許可", "Allow CPU match while waiting alone"), allowCpu)) {
                 config.setBmsirArenaAllowCpu(allowCpu.get());
             }
             ImGui.sameLine();
             ImGui.textDisabled(
                     allowCpu.get()
-                            ? "人間1人でもCPU3人で開始"
-                            : "互換性のある人間を待機"
+                            ? t("人間1人でもCPU3人で開始", "Start with three CPUs when alone")
+                            : t("互換性のある人間を待機", "Wait for a compatible human")
             );
             ImBoolean allowHigherSelection = new ImBoolean(
                     config.isBmsirArenaAllowHigherSelection()
             );
             if (ImGui.checkbox(
-                    "高レート基準の選曲を許可",
+                    t("高レート基準の選曲を許可", "Allow higher-rating chart limits"),
                     allowHigherSelection
             )) {
                 config.setBmsirArenaAllowHigherSelection(
@@ -1003,41 +1137,44 @@ public final class BMSIRArenaOverlay {
                 );
             }
             ImGui.textDisabled(
-                    "ONなら自分の解放済み上限で部屋の選曲上限を下げません"
+                    t(
+                            "ONなら自分の解放済み上限で部屋の選曲上限を下げません",
+                            "ON prevents your unlocked limit from lowering the room limit"
+                    )
             );
         } else if (entryActive) {
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsCpu()
-                            ? "1人CPU戦: 許可"
-                            : "1人CPU戦: 無効（互換相手待機）"
+                            ? t("1人CPU戦: 許可", "Solo CPU match: enabled")
+                            : t("1人CPU戦: 無効（互換相手待機）", "Solo CPU match: disabled")
             );
             ImGui.textDisabled(
                     BMSIRArenaClient.currentQueueAllowsHigherSelection()
-                            ? "高レート基準の選曲: 許可"
-                            : "選曲上限: 自分の解放済み上限を反映"
+                            ? t("高レート基準の選曲: 許可", "Higher-rating chart limits: enabled")
+                            : t("選曲上限: 自分の解放済み上限を反映", "Chart limit uses your unlocked maximum")
             );
         }
         if (confirmWithdrawal) {
             ImGui.text(
                     filling
-                            ? "このマッチから抜けますか？"
-                            : "この対戦を棄権しますか？"
+                            ? t("このマッチから抜けますか？", "Leave this match?")
+                            : t("この対戦を棄権しますか？", "Forfeit this match?")
             );
             if (filling) {
-                ImGui.textDisabled("レート・戦績には影響しません");
+                ImGui.textDisabled(t("レート・戦績には影響しません", "Rating and history are unaffected"));
             }
             ImGui.beginDisabled(!connected);
             if (ImGui.button(
                     filling
-                            ? FontAwesomeIcons.TimesCircle + " マッチから抜ける"
-                            : FontAwesomeIcons.StopCircle + " 棄権する"
+                            ? FontAwesomeIcons.TimesCircle + t(" マッチから抜ける", " Leave match")
+                            : FontAwesomeIcons.StopCircle + t(" 棄権する", " Forfeit")
             )) {
                 BMSIRArenaClient.requestQueueCancel();
                 confirmWithdrawal = false;
             }
             ImGui.endDisabled();
             ImGui.sameLine();
-            if (ImGui.button(FontAwesomeIcons.Times + " 戻る")) {
+            if (ImGui.button(FontAwesomeIcons.Times + t(" 戻る", " Back"))) {
                 confirmWithdrawal = false;
             }
             return;
@@ -1045,7 +1182,7 @@ public final class BMSIRArenaOverlay {
 
         if ("queued".equals(status)) {
             ImGui.beginDisabled(!connected);
-            if (ImGui.button(FontAwesomeIcons.TimesCircle + " 待機を解除")) {
+            if (ImGui.button(FontAwesomeIcons.TimesCircle + t(" 待機を解除", " Leave queue"))) {
                 BMSIRArenaClient.requestQueueCancel();
             }
             ImGui.endDisabled();
@@ -1057,8 +1194,8 @@ public final class BMSIRArenaOverlay {
             ImGui.beginDisabled(!connected);
             if (ImGui.button(
                     filling
-                            ? FontAwesomeIcons.TimesCircle + " マッチから抜ける"
-                            : FontAwesomeIcons.StopCircle + " 対戦を棄権"
+                            ? FontAwesomeIcons.TimesCircle + t(" マッチから抜ける", " Leave match")
+                            : FontAwesomeIcons.StopCircle + t(" 対戦を棄権", " Forfeit")
             )) {
                 confirmWithdrawal = true;
             }
@@ -1071,7 +1208,9 @@ public final class BMSIRArenaOverlay {
             ImGui.beginDisabled();
             ImGui.button(
                     FontAwesomeIcons.UserClock
-                            + (filling ? " 退出処理中" : " 棄権処理中")
+                            + (filling
+                                    ? t(" 退出処理中", " Leaving")
+                                    : t(" 棄権処理中", " Forfeiting"))
             );
             ImGui.endDisabled();
             ImGui.sameLine();
@@ -1080,7 +1219,7 @@ public final class BMSIRArenaOverlay {
         }
 
         ImGui.beginDisabled(!connected);
-        if (ImGui.button(FontAwesomeIcons.SignInAlt + " エントリー")) {
+        if (ImGui.button(FontAwesomeIcons.SignInAlt + t(" エントリー", " Enter queue"))) {
             BMSIRArenaClient.requestQueueEntry();
         }
         ImGui.endDisabled();
@@ -1095,7 +1234,7 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.endDisabled();
         if (ImGui.isItemHovered()) {
-            ImGui.setTooltip("Arena状態を更新");
+            ImGui.setTooltip(t("Arena状態を更新", "Refresh Arena state"));
         }
     }
 
@@ -1109,17 +1248,17 @@ public final class BMSIRArenaOverlay {
         JsonNode match = BMSIRArenaClient.currentMatchView();
         if (!match.isObject() || match.size() == 0) {
             if (!filling) {
-                ImGui.textDisabled("現在の試合はありません");
+                ImGui.textDisabled(t("現在の試合はありません", "No active match"));
             }
             return;
         }
         if (filling) {
             ImGui.separator();
-            ImGui.textDisabled("前回の対戦結果");
+            ImGui.textDisabled(t("前回の対戦結果", "Previous result"));
         }
         JsonNode chart = match.path("chart");
         String level = chart.path("level").asText();
-        String title = chart.path("title").asText("選曲中");
+        String title = chart.path("title").asText(t("選曲中", "Selecting chart"));
         ImGui.textWrapped((level.isBlank() ? "" : level + "  ") + title);
         ImGui.textDisabled(
                 BMSIRArenaClient.isShowingCompletedResult()
@@ -1128,7 +1267,7 @@ public final class BMSIRArenaOverlay {
         );
         if (BMSIRArenaClient.isShowingCompletedResult()) {
             renderRatingChange(match);
-            if (ImGui.button(FontAwesomeIcons.Times + " 結果を閉じる")) {
+            if (ImGui.button(FontAwesomeIcons.Times + t(" 結果を閉じる", " Close result"))) {
                 BMSIRArenaClient.dismissResult();
                 return;
             }
@@ -1147,10 +1286,10 @@ public final class BMSIRArenaOverlay {
 
         List<JsonNode> players = sortedPlayers(match);
         if (players.isEmpty()) {
-            ImGui.textDisabled("参加者を待っています");
+            ImGui.textDisabled(t("参加者を待っています", "Waiting for players"));
             return;
         }
-        if (ImGui.collapsingHeader("リアルタイムグラフ")) {
+        if (ImGui.collapsingHeader(t("リアルタイムグラフ", "Live score graph"))) {
             renderScoreGraph(match, MATCH_GRAPH_HEIGHT);
         }
         ImGui.separator();
@@ -1190,7 +1329,7 @@ public final class BMSIRArenaOverlay {
                 );
                 if (!player.path("connected").asBoolean(true)
                         && !player.path("finished").asBoolean(false)) {
-                    name += "（再接続待ち）";
+                    name += t("（再接続待ち）", " (reconnecting)");
                 }
                 if (player.path("player_id").asInt() == BMSIRArenaClient.currentPlayerId()) {
                     name = "> " + name;
@@ -1218,15 +1357,21 @@ public final class BMSIRArenaOverlay {
         if (!BMSIRArenaClient.isOptionSelectionOpen()) {
             return false;
         }
-        ImGui.text("現在: " + BMSIRArenaClient.currentOptionLabel());
-        ImGui.textDisabled("H-RANDOMなどのアシスト系OPは使用できません");
+        ImGui.text(t("現在: ", "Current: ") + BMSIRArenaClient.currentOptionLabel());
+        ImGui.textDisabled(t(
+                "H-RANDOMなどのアシスト系OPは使用できません",
+                "Assist options such as H-RANDOM are unavailable"
+        ));
         if (
                 BMSIRArenaClient.isForceHostOption()
                         && !BMSIRArenaClient.isCurrentRoomHost()
         ) {
             ImGui.textColored(
                     ImColor.rgb(255, 211, 106),
-                    "部屋主の左右OP・FLIPが全員へ適用されます"
+                    t(
+                            "部屋主の左右OP・FLIPが全員へ適用されます",
+                            "The host's left/right options and FLIP apply to everyone"
+                    )
             );
         }
         ImGui.textDisabled(String.format(
@@ -1238,13 +1383,16 @@ public final class BMSIRArenaOverlay {
         ImGui.beginDisabled(BMSIRArenaClient.isOptionReadySent());
         if (ImGui.button(
                 BMSIRArenaClient.isOptionReadySent()
-                        ? "準備完了"
-                        : "このOPで準備完了"
+                        ? t("準備完了", "Ready")
+                        : t("このOPで準備完了", "Ready with these options")
         )) {
             BMSIRArenaClient.requestOptionReady();
         }
         ImGui.endDisabled();
-        ImGui.textDisabled("操作がなければ時間切れ時のOPで自動確定します");
+        ImGui.textDisabled(t(
+                "操作がなければ時間切れ時のOPで自動確定します",
+                "The current options are confirmed automatically at timeout"
+        ));
         return true;
     }
 
@@ -1252,14 +1400,17 @@ public final class BMSIRArenaOverlay {
         if (!BMSIRArenaClient.isFillWaiting()) {
             return false;
         }
-        ImGui.text(String.format(
-                Locale.ROOT,
+        ImGui.text(f(
                 "現在 %d / %d人",
+                "%d / %d players",
                 BMSIRArenaClient.fillPlayerCount(),
                 BMSIRArenaClient.fillMaxPlayers()
         ));
         ImGui.textWrapped(
-                "この待機中はマッチから抜けても、レート・戦績に影響しません。"
+                t(
+                        "この待機中はマッチから抜けても、レート・戦績に影響しません。",
+                        "Leaving during this wait does not affect rating or match history."
+                )
         );
         return true;
     }
@@ -1296,25 +1447,25 @@ public final class BMSIRArenaOverlay {
         ImGui.spacing();
         ImGui.text(
                 freeSelection
-                        ? "選曲可能: 所持している任意の単曲譜面"
+                        ? t("選曲可能: 所持している任意の単曲譜面", "Available: any owned single chart")
                         : customSelection
-                                ? "選曲可能: ルームのカスタム難易度表"
-                                : "選曲可能: ☆1～"
+                                ? t("選曲可能: ルームのカスタム難易度表", "Available: room custom tables")
+                                : t("選曲可能: ☆1～", "Available: ☆1 to ")
                                         + BMSIRArenaClient.arenaBandLabel(targetBand)
         );
         if (!freeSelection && !customSelection) {
             double referenceRating = nomination.path("reference_rating")
                     .asDouble(1000.0);
-            ImGui.textDisabled(String.format(
-                    Locale.ROOT,
+            ImGui.textDisabled(f(
                     "基準レート %.0f / 上限 %s",
+                    "Reference rating %.0f / limit %s",
                     referenceRating,
                     BMSIRArenaClient.arenaBandLabel(targetBand)
             ));
         }
         ImGui.separator();
         if (requiredCount > 0) {
-            ImGui.text("選曲進捗: " + submittedCount + " / " + requiredCount);
+            ImGui.text(t("選曲進捗: ", "Nominations: ") + submittedCount + " / " + requiredCount);
         }
 
         SongData current = BMSIRArenaClient.currentNominationSong();
@@ -1325,7 +1476,7 @@ public final class BMSIRArenaOverlay {
                 ImGui.textDisabled(artist);
             }
         } else {
-            ImGui.textDisabled("選択中の楽曲譜面なし");
+            ImGui.textDisabled(t("選択中の楽曲譜面なし", "No chart selected"));
         }
         ImGui.beginDisabled(
                 !canNominate
@@ -1333,7 +1484,7 @@ public final class BMSIRArenaOverlay {
                         || !BMSIRArenaClient.isConnected()
                         || current == null
         );
-        if (ImGui.button(FontAwesomeIcons.Music + " この曲を選曲")) {
+        if (ImGui.button(FontAwesomeIcons.Music + t(" この曲を選曲", " Nominate this chart"))) {
             BMSIRArenaClient.requestCurrentChartNomination();
         }
         ImGui.endDisabled();
@@ -1346,12 +1497,15 @@ public final class BMSIRArenaOverlay {
                         || !canDelegate
                         || !BMSIRArenaClient.isConnected()
         );
-        if (ImGui.button(FontAwesomeIcons.Dice + " 他の人に任せる")) {
+        if (ImGui.button(FontAwesomeIcons.Dice + t(" 他の人に任せる", " Delegate selection"))) {
             BMSIRArenaClient.requestRandomNomination();
         }
         ImGui.endDisabled();
         if (!canDelegate) {
-            ImGui.textDisabled("自由選曲の連戦では各自の重複しない選曲が必要です");
+            ImGui.textDisabled(t(
+                    "自由選曲の連戦では各自の重複しない選曲が必要です",
+                    "Free-selection series require distinct picks from each player"
+            ));
         }
 
         JsonNode own = nomination.path("your_nomination");
@@ -1359,13 +1513,13 @@ public final class BMSIRArenaOverlay {
         String ownSource = nomination.path("your_source").asText();
         if (own.isObject() && own.size() > 0) {
             ImGui.textWrapped(
-                    "登録済み: "
+                    t("登録済み: ", "Submitted: ")
                             + own.path("level").asText()
                             + "  "
                             + own.path("title").asText()
             );
         } else if ("server_random".equals(ownSource)) {
-            ImGui.textDisabled("登録済み: サーバーランダム");
+            ImGui.textDisabled(t("登録済み: サーバーランダム", "Submitted: server random"));
         }
         if (ownList.isArray() && ownList.size() > 1) {
             for (int index = 0; index < ownList.size(); index++) {
@@ -1401,7 +1555,7 @@ public final class BMSIRArenaOverlay {
                 int playerRequired = player.path("required_count").asInt(1);
                 tableText(
                         playerRequired <= 0
-                                ? "待機"
+                                ? t("待機", "Waiting")
                                 : playerSubmitted + " / " + playerRequired
                 );
             }
@@ -1416,8 +1570,8 @@ public final class BMSIRArenaOverlay {
         int rerollCount = nomination.path("reroll_count").asInt();
         ImGui.text(
                 rerollCount > 0
-                        ? FontAwesomeIcons.Random + " 再抽選結果"
-                        : FontAwesomeIcons.CheckCircle + " 抽選結果"
+                        ? FontAwesomeIcons.Random + t(" 再抽選結果", " Reroll result")
+                        : FontAwesomeIcons.CheckCircle + t(" 抽選結果", " Selection result")
         );
         String selectedLevel = selectedChart.path("level").asText();
         String selectedTitle = selectedChart.path("title").asText();
@@ -1463,7 +1617,7 @@ public final class BMSIRArenaOverlay {
 
     private static String clearLabel(JsonNode player) {
         if ("forfeit".equals(player.path("final_state").asText())) {
-            return "DNF（棄権）";
+            return t("DNF（棄権）", "DNF (forfeit)");
         }
         return player.path("clear_label").asText("-");
     }
@@ -1482,7 +1636,7 @@ public final class BMSIRArenaOverlay {
         );
         if (!player.path("connected").asBoolean(true)
                 && !player.path("finished").asBoolean(false)) {
-            return name + "（再接続待ち）";
+            return name + t("（再接続待ち）", " (reconnecting)");
         }
         return name;
     }
@@ -1605,26 +1759,26 @@ public final class BMSIRArenaOverlay {
             }
             ImGui.text(
                     (BMSIRArenaClient.isSpectatorPublic()
-                            ? "公開ルーム"
-                            : "コード限定ルーム")
+                            ? t("公開ルーム", "Public room")
+                            : t("コード限定ルーム", "Code-only room"))
                             + (BMSIRArenaClient.isCurrentRoomLocked()
-                                    ? " [鍵あり]"
-                                    : " [鍵なし]")
+                                    ? t(" [鍵あり]", " [locked]")
+                                    : t(" [鍵なし]", " [unlocked]"))
             );
             if (!BMSIRArenaClient.currentRoomName().isBlank()) {
                 ImGui.textWrapped(BMSIRArenaClient.currentRoomName());
             }
             if (!roomCode.isBlank()) {
-                ImGui.text("部屋コード: " + roomCode);
+                ImGui.text(t("部屋コード: ", "Room code: ") + roomCode);
                 ImGui.sameLine();
-                if (ImGui.smallButton("コピー##current-room-code")) {
+                if (ImGui.smallButton(t("コピー", "Copy") + "##current-room-code")) {
                     ImGui.setClipboardText(roomCode);
-                    ImGuiNotify.info("部屋コードをコピーしました", 2500);
+                    ImGuiNotify.info(t("部屋コードをコピーしました", "Room code copied"), 2500);
                 }
             }
-            ImGui.text("勝敗: " + scoreRuleLabel(BMSIRArenaClient.currentScoreRule()));
+            ImGui.text(t("勝敗: ", "Scoring: ") + scoreRuleLabel(BMSIRArenaClient.currentScoreRule()));
             ImGui.text(
-                    "試合形式: "
+                    t("試合形式: ", "Format: ")
                             + seriesFormatLabel(
                                     BMSIRArenaClient.currentSeriesFormat(),
                                     BMSIRArenaClient.currentFirstToWins()
@@ -1632,55 +1786,71 @@ public final class BMSIRArenaOverlay {
             );
             if (!"single".equals(BMSIRArenaClient.currentSeriesFormat())) {
                 ImGui.text(
-                        "第" + BMSIRArenaClient.currentSeriesRound() + "曲"
+                        f(
+                                "第%d曲",
+                                "Round %d",
+                                BMSIRArenaClient.currentSeriesRound()
+                        )
                 );
             }
-            ImGui.text("ゲージ: " + gaugeLabel(BMSIRArenaClient.currentForcedGauge()));
-            ImGui.text("判定・ゲージ仕様: " + rulesetProfileLabel(
+            ImGui.text(t("ゲージ: ", "Gauge: ") + gaugeLabel(BMSIRArenaClient.currentForcedGauge()));
+            ImGui.text(t("判定・ゲージ仕様: ", "Ruleset: ") + rulesetProfileLabel(
                     BMSIRArenaClient.currentRulesetProfile()
             ));
             ImGui.text(
-                    "選曲: "
+                    t("選曲: ", "Charts: ")
                             + (switch (BMSIRArenaClient.currentChartScope()) {
-                                case "free" -> "自由選曲";
-                                case "custom" -> "カスタム";
-                                default -> "通常＋発狂難易度表";
+                                case "free" -> t("自由選曲", "Free selection");
+                                case "custom" -> t("カスタム", "Custom");
+                                default -> t("通常＋発狂難易度表", "Standard + Insane tables");
                             })
             );
-            ImGui.textDisabled("ルーム対戦はレート・レート戦績に影響しません");
+            ImGui.textDisabled(t(
+                    "ルーム対戦はレート・レート戦績に影響しません",
+                    "Room matches do not affect rating or rated match history"
+            ));
             ImBoolean participating = new ImBoolean(
                     BMSIRArenaClient.isRoomParticipating()
             );
-            if (ImGui.checkbox("次のシリーズに参加する", participating)) {
+            if (ImGui.checkbox(t("次のシリーズに参加する", "Join the next series"), participating)) {
                 BMSIRArenaClient.requestRoomParticipation(participating.get());
             }
             if (BMSIRArenaClient.isRoomParticipationPending()) {
                 ImGui.textColored(
                         ImColor.rgb(255, 211, 106),
-                        "参加ONは進行中シリーズ終了後から有効です"
+                        t(
+                                "参加ONは進行中シリーズ終了後から有効です",
+                                "Participation starts after the current series"
+                        )
                 );
             }
             if (BMSIRArenaClient.isRoomPaused()) {
                 ImGui.textColored(
                         ImColor.rgb(121, 223, 139),
-                        "休憩中（全員観戦）"
+                        t("休憩中（全員観戦）", "Paused (everyone spectating)")
                 );
-                ImGui.textDisabled("2人以上が参加ONになり、全員が準備OKで開始します");
+                ImGui.textDisabled(t(
+                        "2人以上が参加ONになり、全員が準備OKで開始します",
+                        "The match starts when 2+ participants are ready"
+                ));
             }
-            ImGui.textDisabled("上部の準備OKを全員が押すと選曲へ進みます");
+            ImGui.textDisabled(t(
+                    "上部の準備OKを全員が押すと選曲へ進みます",
+                    "Chart selection starts when every participant is ready"
+            ));
             ImBoolean stay = new ImBoolean(config.isBmsirArenaStayInRoom());
-            if (ImGui.checkbox("対戦後もこの部屋に残る", stay)) {
+            if (ImGui.checkbox(t("対戦後もこの部屋に残る", "Stay in this room after matches"), stay)) {
                 config.setBmsirArenaStayInRoom(stay.get());
                 BMSIRArenaClient.requestRoomStay(stay.get());
             }
             if (BMSIRArenaClient.isCurrentRoomHost()
-                    && ImGui.collapsingHeader("部屋主の詳細設定")) {
+                    && ImGui.collapsingHeader(t("部屋主の詳細設定", "Host settings"))) {
                 ImGui.separator();
-                ImGui.text("変更すると全員の準備OKを解除します");
-                ImGui.inputText("部屋名", ROOM_NAME);
-                ImGui.combo("勝敗ルール", SCORE_RULE, SCORE_RULES);
-                ImGui.combo("強制ゲージ", FORCED_GAUGE, FORCED_GAUGES);
-                ImGui.combo("選曲範囲", CHART_SCOPE, CHART_SCOPES);
+                ImGui.text(t("変更すると全員の準備OKを解除します", "Changes clear every player's ready state"));
+                ImGui.inputText(t("部屋名", "Room name"), ROOM_NAME);
+                ImGui.combo(t("勝敗ルール", "Scoring"), SCORE_RULE, scoreRules());
+                ImGui.combo(t("強制ゲージ", "Forced gauge"), FORCED_GAUGE, forcedGauges());
+                ImGui.combo(t("選曲範囲", "Chart scope"), CHART_SCOPE, chartScopes());
                 renderAllowedPlayModes();
                 if (CHART_SCOPE.get() == 2) {
                     renderCustomRoomSelection();
@@ -1689,16 +1859,16 @@ public final class BMSIRArenaOverlay {
                 renderPrivateRoomSettings(config);
                 ImGui.inputText(
                         BMSIRArenaClient.isCurrentRoomLocked()
-                                ? "新しいパスワード（空欄で解除）"
-                                : "新しいパスワード",
+                                ? t("新しいパスワード（空欄で解除）", "New password (blank removes it)")
+                                : t("新しいパスワード", "New password"),
                         ROOM_PASSWORD
                 );
                 ImBoolean passwordChange = new ImBoolean(updateRoomPassword);
-                if (ImGui.checkbox("パスワードを更新", passwordChange)) {
+                if (ImGui.checkbox(t("パスワードを更新", "Update password"), passwordChange)) {
                     updateRoomPassword = passwordChange.get();
                 }
                 ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
-                if (ImGui.button("設定を次の曲へ反映")) {
+                if (ImGui.button(t("設定を次の曲へ反映", "Apply settings to next chart"))) {
                     applyRoomCustomConfiguration();
                     BMSIRArenaClient.requestRoomSettings(
                             selectedScoreRule(),
@@ -1716,30 +1886,30 @@ public final class BMSIRArenaOverlay {
                 if (confirmRoomDisband) {
                     ImGui.textColored(
                             ImColor.rgb(255, 115, 115),
-                            "全員を退出させます"
+                            t("全員を退出させます", "This will remove every member")
                     );
-                    if (ImGui.button("解体を確定")) {
+                    if (ImGui.button(t("解体を確定", "Confirm disband"))) {
                         BMSIRArenaClient.requestRoomDisband();
                         confirmRoomDisband = false;
                     }
                     ImGui.sameLine();
-                    if (ImGui.button("戻る##cancel-disband")) {
+                    if (ImGui.button(t("戻る", "Back") + "##cancel-disband")) {
                         confirmRoomDisband = false;
                     }
-                } else if (ImGui.button("部屋を解体")) {
+                } else if (ImGui.button(t("部屋を解体", "Disband room"))) {
                     confirmRoomDisband = true;
                 }
             }
             renderRoomParticipants();
             ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
-            if (ImGui.button("この部屋から退出")) {
+            if (ImGui.button(t("この部屋から退出", "Leave this room"))) {
                 BMSIRArenaClient.requestQueueCancel();
             }
             ImGui.endDisabled();
             ImGui.separator();
             renderMatch();
             ImGui.separator();
-            ImGui.text("ルームチャット");
+            ImGui.text(t("ルームチャット", "Room chat"));
             renderChat(true, 160);
             return;
         }
@@ -1747,44 +1917,52 @@ public final class BMSIRArenaOverlay {
         loadedRoomCode = "";
         renderPublicRoomList();
         ImGui.separator();
-        ImGui.text("ルームを作成／コードで参加");
-        ImGui.combo("勝敗ルール", SCORE_RULE, SCORE_RULES);
-        ImGui.combo("強制ゲージ", FORCED_GAUGE, FORCED_GAUGES);
-        ImGui.combo("選曲範囲", CHART_SCOPE, CHART_SCOPES);
+        ImGui.text(t("ルームを作成／コードで参加", "Create or join by code"));
+        ImGui.combo(t("勝敗ルール", "Scoring"), SCORE_RULE, scoreRules());
+        ImGui.combo(t("強制ゲージ", "Forced gauge"), FORCED_GAUGE, forcedGauges());
+        ImGui.combo(t("選曲範囲", "Chart scope"), CHART_SCOPE, chartScopes());
         renderAllowedPlayModes();
         if (CHART_SCOPE.get() == 2) {
             renderCustomRoomSelection();
         }
         renderRulesetProfileSetting(config, "##room-entry-ruleset");
         ImBoolean stay = new ImBoolean(config.isBmsirArenaStayInRoom());
-        if (ImGui.checkbox("対戦後もこの部屋に残る", stay)) {
+        if (ImGui.checkbox(t("対戦後もこの部屋に残る", "Stay in this room after matches"), stay)) {
             config.setBmsirArenaStayInRoom(stay.get());
         }
-        ImGui.textDisabled("このモードの対戦は常にunratedです");
+        ImGui.textDisabled(t("このモードの対戦は常にunratedです", "This mode is always unrated"));
 
-        ImGui.inputText("部屋コード", PRIVATE_ROOM_CODE);
+        ImGui.inputText(t("部屋コード", "Room code"), PRIVATE_ROOM_CODE);
         ImGui.sameLine();
-        if (ImGui.button("貼り付け##private-room-code")) {
+        if (ImGui.button(t("貼り付け", "Paste") + "##private-room-code")) {
             String clipboard = ImGui.getClipboardText();
             PRIVATE_ROOM_CODE.set(
                     BMSIRArenaClient.normalizeRoomCode(clipboard)
             );
         }
-        ImGui.textDisabled("空欄で新規作成、6文字を入力すると既存ルームへ参加");
+        ImGui.textDisabled(t(
+                "空欄で新規作成、6文字を入力すると既存ルームへ参加",
+                "Leave blank to create, or enter six characters to join"
+        ));
         ImGui.inputText(
-                PRIVATE_ROOM_CODE.get().isBlank() ? "部屋名" : "パスワード",
+                PRIVATE_ROOM_CODE.get().isBlank()
+                        ? t("部屋名", "Room name")
+                        : t("パスワード", "Password"),
                 PRIVATE_ROOM_CODE.get().isBlank() ? ROOM_NAME : ROOM_PASSWORD
         );
         if (PRIVATE_ROOM_CODE.get().isBlank()) {
-            ImGui.inputText("パスワード（任意）", ROOM_PASSWORD);
+            ImGui.inputText(t("パスワード（任意）", "Password (optional)"), ROOM_PASSWORD);
         }
         ImBoolean participating = new ImBoolean(
                 config.isBmsirArenaRoomParticipating()
         );
-        if (ImGui.checkbox("参加者として入室", participating)) {
+        if (ImGui.checkbox(t("参加者として入室", "Join as participant"), participating)) {
             config.setBmsirArenaRoomParticipating(participating.get());
         }
-        ImGui.textDisabled("OFFなら観戦・チャットだけ行い、参加枠を消費しません");
+        ImGui.textDisabled(t(
+                "OFFなら観戦・チャットだけ行い、参加枠を消費しません",
+                "OFF joins as a spectator without occupying a player slot"
+        ));
         if (PRIVATE_ROOM_CODE.get().isBlank()) {
             renderPrivateRoomSettings(config);
         }
@@ -1795,8 +1973,8 @@ public final class BMSIRArenaOverlay {
         ImGui.beginDisabled(!canEnter);
         if (ImGui.button(
                 PRIVATE_ROOM_CODE.get().isBlank()
-                        ? "ルームを作成"
-                        : "コードで参加"
+                        ? t("ルームを作成", "Create room")
+                        : t("コードで参加", "Join by code")
         )) {
             applyRoomCustomConfiguration();
             BMSIRArenaClient.requestRoomEntry(
@@ -1811,7 +1989,7 @@ public final class BMSIRArenaOverlay {
         }
         ImGui.endDisabled();
         ImGui.separator();
-        ImGui.text("公開ロビーチャット");
+        ImGui.text(t("公開ロビーチャット", "Public lobby chat"));
         renderLobbyChat(160);
     }
 
@@ -1820,17 +1998,23 @@ public final class BMSIRArenaOverlay {
         ImBoolean publicSpectators = new ImBoolean(
                 config.isBmsirArenaSpectatorPublic()
         );
-        if (ImGui.checkbox("公開ロビー一覧・Web観戦へ公開", publicSpectators)) {
+        if (ImGui.checkbox(t("公開ロビー一覧・Web観戦へ公開", "List publicly and allow Web spectators"), publicSpectators)) {
             config.setBmsirArenaSpectatorPublic(publicSpectators.get());
         }
-        ImGui.textDisabled("非公開でも部屋コードを知る人は参加・Web観戦できます");
+        ImGui.textDisabled(t(
+                "非公開でも部屋コードを知る人は参加・Web観戦できます",
+                "Anyone with the room code can still join or spectate"
+        ));
         ImBoolean forceHostOption = new ImBoolean(
                 config.isBmsirArenaForceHostOption()
         );
-        if (ImGui.checkbox("部屋主のOPを他プレイヤーへ強制", forceHostOption)) {
+        if (ImGui.checkbox(t("部屋主のOPを他プレイヤーへ強制", "Force host options on players"), forceHostOption)) {
             config.setBmsirArenaForceHostOption(forceHostOption.get());
         }
-        ImGui.textDisabled("強制ゲージと併用可。S-RANDOMの配置自体は各プレイヤー別です");
+        ImGui.textDisabled(t(
+                "強制ゲージと併用可。S-RANDOMの配置自体は各プレイヤー別です",
+                "Compatible with forced gauge; S-RANDOM layouts remain individual"
+        ));
         NOMINATION_POLICY.set(
                 "host".equals(config.getBmsirArenaNominationPolicy())
                         ? 1
@@ -1839,9 +2023,9 @@ public final class BMSIRArenaOverlay {
         );
         if (SERIES_FORMAT.get() == 0) {
             if (ImGui.combo(
-                    "選曲担当",
+                    t("選曲担当", "Nominator"),
                     NOMINATION_POLICY,
-                    NOMINATION_POLICIES
+                    nominationPolicies()
             )) {
                 config.setBmsirArenaNominationPolicy(switch (
                         NOMINATION_POLICY.get()
@@ -1855,15 +2039,15 @@ public final class BMSIRArenaOverlay {
             config.setBmsirArenaNominationPolicy("all");
         }
         NOMINATION_SECONDS.set(config.getBmsirArenaNominationSeconds());
-        if (ImGui.inputInt("選曲時間（10～180秒）", NOMINATION_SECONDS)) {
+        if (ImGui.inputInt(t("選曲時間（10～180秒）", "Nomination time (10-180 sec)"), NOMINATION_SECONDS)) {
             config.setBmsirArenaNominationSeconds(NOMINATION_SECONDS.get());
         }
         OPTION_SECONDS.set(config.getBmsirArenaOptionSeconds());
-        if (ImGui.inputInt("OP選択時間（5～60秒）", OPTION_SECONDS)) {
+        if (ImGui.inputInt(t("OP選択時間（5～60秒）", "Option time (5-60 sec)"), OPTION_SECONDS)) {
             config.setBmsirArenaOptionSeconds(OPTION_SECONDS.get());
         }
         INTERMISSION_SECONDS.set(config.getBmsirArenaIntermissionSeconds());
-        if (ImGui.inputInt("曲間待機（0～60秒）", INTERMISSION_SECONDS)) {
+        if (ImGui.inputInt(t("曲間待機（0～60秒）", "Intermission (0-60 sec)"), INTERMISSION_SECONDS)) {
             config.setBmsirArenaIntermissionSeconds(
                     INTERMISSION_SECONDS.get()
             );
@@ -1872,7 +2056,7 @@ public final class BMSIRArenaOverlay {
 
     private static void renderAllowedPlayModes() {
         ImGui.separator();
-        ImGui.text("許可KEY数");
+        ImGui.text(t("許可KEY数", "Allowed key modes"));
         for (int index = 0; index < ROOM_PLAY_MODES.length; index++) {
             if (index > 0) {
                 ImGui.sameLine();
@@ -1895,17 +2079,20 @@ public final class BMSIRArenaOverlay {
 
     private static void renderCustomRoomSelection() {
         ImGui.separator();
-        if (ImGui.button("対応難易度表を更新")) {
+        if (ImGui.button(t("対応難易度表を更新", "Refresh supported tables"))) {
             BMSIRArenaClient.requestCustomCatalog();
         }
         ImGui.sameLine();
-        ImGui.textDisabled("選んだ表・レベルを合成します");
+        ImGui.textDisabled(t("選んだ表・レベルを合成します", "Selected tables and levels are combined"));
 
         if (ImGui.beginTabBar("##arena-custom-selection-tabs")) {
-            if (ImGui.beginTabItem("対応難易度表")) {
+            if (ImGui.beginTabItem(t("対応難易度表", "Supported tables"))) {
                 JsonNode catalog = BMSIRArenaClient.customCatalogView();
                 if (!catalog.path("tables").isArray()) {
-                    ImGui.textDisabled("「対応難易度表を更新」を押してください");
+                    ImGui.textDisabled(t(
+                            "「対応難易度表を更新」を押してください",
+                            "Select Refresh supported tables"
+                    ));
                 } else {
                     for (JsonNode table : catalog.path("tables")) {
                         String tableKey = table.path("table_key").asText();
@@ -1920,11 +2107,11 @@ public final class BMSIRArenaOverlay {
                 }
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem("マイ難易度表")) {
-                ImGui.inputText("表ID", USER_TABLE_ID);
-                ImGui.inputText("Arena共有キー", USER_TABLE_KEY);
-                ImGui.textDisabled("公開表は共有キーを空欄にします");
-                if (ImGui.button("表を読み込む")) {
+            if (ImGui.beginTabItem(t("マイ難易度表", "My tables"))) {
+                ImGui.inputText(t("表ID", "Table ID"), USER_TABLE_ID);
+                ImGui.inputText(t("Arena共有キー", "Arena share key"), USER_TABLE_KEY);
+                ImGui.textDisabled(t("公開表は共有キーを空欄にします", "Leave the share key blank for public tables"));
+                if (ImGui.button(t("表を読み込む", "Load table"))) {
                     try {
                         int tableId = Integer.parseInt(USER_TABLE_ID.get().trim());
                         USER_TABLE_KEYS.put(tableId, USER_TABLE_KEY.get());
@@ -1933,7 +2120,7 @@ public final class BMSIRArenaOverlay {
                                 USER_TABLE_KEY.get()
                         );
                     } catch (NumberFormatException exception) {
-                        ImGuiNotify.warning("表IDは数字で入力してください");
+                        ImGuiNotify.warning(t("表IDは数字で入力してください", "Table ID must be numeric"));
                     }
                 }
                 for (JsonNode table : BMSIRArenaClient.customUserCatalogs()) {
@@ -1996,7 +2183,7 @@ public final class BMSIRArenaOverlay {
 
     private static void renderCustomLevels(String prefix, JsonNode levels) {
         if (!levels.isArray() || levels.isEmpty()) {
-            ImGui.textDisabled("Arenaで使用できるBMS譜面がありません");
+            ImGui.textDisabled(t("Arenaで使用できるBMS譜面がありません", "No Arena-compatible BMS charts"));
             return;
         }
         for (JsonNode level : levels) {
@@ -2086,20 +2273,20 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderPublicRoomList() {
-        ImGui.text("公開ルーム");
+        ImGui.text(t("公開ルーム", "Public rooms"));
         JsonNode rooms = BMSIRArenaClient.publicRoomsView();
         if (!rooms.isArray() || rooms.isEmpty()) {
-            ImGui.textDisabled("参加できる公開ルームはありません");
+            ImGui.textDisabled(t("参加できる公開ルームはありません", "No public rooms are available"));
             return;
         }
         int flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg;
         if (!ImGui.beginTable("##bmsir-public-rooms", 5, flags)) {
             return;
         }
-        ImGui.tableSetupColumn("部屋名");
+        ImGui.tableSetupColumn(t("部屋名", "Room"));
         ImGui.tableSetupColumn("HOST");
-        ImGui.tableSetupColumn("人数");
-        ImGui.tableSetupColumn("ルール");
+        ImGui.tableSetupColumn(t("人数", "Players"));
+        ImGui.tableSetupColumn(t("ルール", "Rules"));
         ImGui.tableSetupColumn("");
         ImGui.tableHeadersRow();
         for (JsonNode room : rooms) {
@@ -2107,7 +2294,7 @@ public final class BMSIRArenaOverlay {
             boolean locked = room.path("locked").asBoolean(false);
             ImGui.tableNextRow();
             tableText(
-                    (locked ? "[鍵] " : "")
+                    (locked ? t("[鍵] ", "[LOCKED] ") : "")
                             + room.path("room_name").asText(code)
             );
             tableText(room.path("host_name").asText(""));
@@ -2122,7 +2309,7 @@ public final class BMSIRArenaOverlay {
                             + gaugeLabel(room.path("forced_gauge").asText("free"))
             );
             ImGui.tableNextColumn();
-            if (ImGui.smallButton("選択##public-room-" + code)) {
+            if (ImGui.smallButton(t("選択", "Select") + "##public-room-" + code)) {
                 PRIVATE_ROOM_CODE.set(code);
                 ROOM_PASSWORD.set("");
             }
@@ -2133,13 +2320,13 @@ public final class BMSIRArenaOverlay {
     private static void renderLobbyChat(float height) {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config != null && config.isBmsirArenaMuteChat()) {
-            ImGui.textDisabled("チャットは設定でミュートされています");
+            ImGui.textDisabled(t("チャットは設定でミュートされています", "Chat is muted in settings"));
             return;
         }
         List<JsonNode> messages = BMSIRArenaClient.lobbyChatMessages();
         if (ImGui.beginChild("##bmsir-arena-lobby-chat-log", 0, height, true)) {
             if (messages.isEmpty()) {
-                ImGui.textDisabled("メッセージはまだありません");
+                ImGui.textDisabled(t("メッセージはまだありません", "No messages yet"));
             }
             for (JsonNode message : messages) {
                 ImGui.textWrapped(
@@ -2154,7 +2341,7 @@ public final class BMSIRArenaOverlay {
         ImGui.sameLine();
         ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
         if (
-                ImGui.button("送信##lobby-chat")
+                ImGui.button(t("送信", "Send") + "##lobby-chat")
                         && !LOBBY_CHAT_INPUT.get().isBlank()
         ) {
             BMSIRArenaClient.requestLobbyChat(LOBBY_CHAT_INPUT.get());
@@ -2169,7 +2356,7 @@ public final class BMSIRArenaOverlay {
             case "first_to" -> 2;
             default -> 0;
         });
-        if (ImGui.combo("試合形式", SERIES_FORMAT, SERIES_FORMATS)) {
+        if (ImGui.combo(t("試合形式", "Match format"), SERIES_FORMAT, seriesFormats())) {
             config.setBmsirArenaSeriesFormat(switch (SERIES_FORMAT.get()) {
                 case 1 -> "all_picks";
                 case 2 -> "first_to";
@@ -2178,12 +2365,18 @@ public final class BMSIRArenaOverlay {
         }
         if (SERIES_FORMAT.get() == 2) {
             FIRST_TO_WINS.set(config.getBmsirArenaFirstToWins());
-            if (ImGui.inputInt("先取本数（2～5）", FIRST_TO_WINS)) {
+            if (ImGui.inputInt(t("先取本数（2～5）", "Wins required (2-5)"), FIRST_TO_WINS)) {
                 config.setBmsirArenaFirstToWins(FIRST_TO_WINS.get());
             }
-            ImGui.textDisabled("各プレイヤーが先取本数ぶん選曲し、重複なしで抽選します");
+            ImGui.textDisabled(t(
+                    "各プレイヤーが先取本数ぶん選曲し、重複なしで抽選します",
+                    "Each player nominates the target number of distinct charts"
+            ));
         } else if (SERIES_FORMAT.get() == 1) {
-            ImGui.textDisabled("全員が1曲ずつ選び、全候補を重複なしで回します");
+            ImGui.textDisabled(t(
+                    "全員が1曲ずつ選び、全候補を重複なしで回します",
+                    "Every player nominates one chart and all distinct picks are played"
+            ));
         }
     }
 
@@ -2195,7 +2388,7 @@ public final class BMSIRArenaOverlay {
                 "oraja".equals(config.getBmsirRulesetProfile()) ? 1 : 0
         );
         if (ImGui.combo(
-                "判定・ゲージ仕様" + idSuffix,
+                t("判定・ゲージ仕様", "Ruleset") + idSuffix,
                 RULESET_PROFILE,
                 RULESET_PROFILES
         )) {
@@ -2207,9 +2400,9 @@ public final class BMSIRArenaOverlay {
 
     private static String scoreRuleLabel(String rule) {
         return switch (rule) {
-            case "minbp" -> "BP Arena / CB（少ない順）";
-            case "max_combo" -> "MAX COMBO（多い順）";
-            default -> "EX SCORE（多い順）";
+            case "minbp" -> t("BP Arena / CB（少ない順）", "BP Arena / CB (lowest first)");
+            case "max_combo" -> t("MAX COMBO（多い順）", "MAX COMBO (highest first)");
+            default -> t("EX SCORE（多い順）", "EX SCORE (highest first)");
         };
     }
 
@@ -2219,7 +2412,7 @@ public final class BMSIRArenaOverlay {
             case "hard" -> "HARD";
             case "exhard" -> "EXHARD";
             case "hazard" -> "HAZARD";
-            default -> "自由";
+            default -> t("自由", "Free");
         };
     }
 
@@ -2229,10 +2422,12 @@ public final class BMSIRArenaOverlay {
 
     static String seriesFormatLabel(String format, int firstToWins) {
         return switch (format) {
-            case "bo2" -> "BO2（2曲総合）";
-            case "all_picks" -> "全員の曲を回す";
-            case "first_to" -> Math.max(2, Math.min(5, firstToWins)) + "本先取";
-            default -> "1曲";
+            case "bo2" -> t("BO2（2曲総合）", "BO2 (two-chart total)");
+            case "all_picks" -> t("全員の曲を回す", "All picks");
+            case "first_to" -> BMSIRArenaI18n.isEnglish()
+                    ? "First to " + Math.max(2, Math.min(5, firstToWins))
+                    : Math.max(2, Math.min(5, firstToWins)) + "本先取";
+            default -> t("1曲", "Single");
         };
     }
 
@@ -2245,7 +2440,7 @@ public final class BMSIRArenaOverlay {
             return;
         }
         ImGui.separator();
-        ImGui.text("参加者");
+        ImGui.text(t("参加者", "Participants"));
         boolean host = BMSIRArenaClient.isCurrentRoomHost();
         boolean single = "single".equals(BMSIRArenaClient.currentSeriesFormat());
         for (JsonNode player : match.path("players")) {
@@ -2263,30 +2458,46 @@ public final class BMSIRArenaOverlay {
                 label.append(" [READY]");
             }
             if (player.has("participating") && !player.path("participating").asBoolean()) {
-                label.append(" [観戦]");
+                label.append(t(" [観戦]", " [SPECTATOR]"));
             }
             if (player.path("pending").asBoolean()) {
-                label.append(" [次戦参加]");
+                label.append(t(" [次戦参加]", " [NEXT MATCH]"));
             }
             int wins = player.path("series_wins").asInt();
             if (!single) {
-                label.append("  ").append(wins).append("勝");
+                label.append("  ").append(wins).append(t("勝", " wins"));
+            }
+            int roomMatches = player.path("room_matches").asInt();
+            if (roomMatches > 0) {
+                label.append("  ")
+                        .append(player.path("room_wins").asInt())
+                        .append("W-")
+                        .append(player.path("room_losses").asInt())
+                        .append("L-")
+                        .append(player.path("room_draws").asInt())
+                        .append("D / ")
+                        .append(String.format(
+                                Locale.ROOT,
+                                "%.1f%%",
+                                player.path("room_win_rate").asDouble()
+                                        * 100.0
+                        ));
             }
             ImGui.text(label.toString());
             if (!host || playerId == BMSIRArenaClient.currentPlayerId()) {
                 continue;
             }
             ImGui.sameLine();
-            if (ImGui.smallButton("キック##room-kick-" + playerId)) {
+            if (ImGui.smallButton(t("キック", "Kick") + "##room-kick-" + playerId)) {
                 BMSIRArenaClient.requestRoomKick(playerId);
             }
             ImGui.sameLine();
-            if (ImGui.smallButton("HOST移譲##room-host-" + playerId)) {
+            if (ImGui.smallButton(t("HOST移譲", "Transfer host") + "##room-host-" + playerId)) {
                 BMSIRArenaClient.requestRoomTransferHost(playerId);
             }
             if (single) {
                 ImGui.sameLine();
-                if (ImGui.smallButton("選曲担当##room-selector-" + playerId)) {
+                if (ImGui.smallButton(t("選曲担当", "Set selector") + "##room-selector-" + playerId)) {
                     BMSIRArenaClient.requestRoomSetSelector(playerId);
                 }
             }
@@ -2299,7 +2510,7 @@ public final class BMSIRArenaOverlay {
         if (current.isObject() && current.size() > 0) {
             ImGui.text(String.format(
                     Locale.ROOT,
-                    "あなた: %d位  /  R %d",
+                    t("あなた: %d位  /  R %d", "You: #%d / R %d"),
                     current.path("rank").asInt(),
                     Math.round(current.path("rating_exact").asDouble())
             ));
@@ -2307,7 +2518,7 @@ public final class BMSIRArenaOverlay {
         List<JsonNode> rows = new ArrayList<>();
         ranking.path("rows").forEach(rows::add);
         if (rows.isEmpty()) {
-            ImGui.textDisabled("ランキング対象の対戦結果はまだありません");
+            ImGui.textDisabled(t("ランキング対象の対戦結果はまだありません", "No rated match results yet"));
             return;
         }
         int flags = ImGuiTableFlags.Borders
@@ -2372,7 +2583,7 @@ public final class BMSIRArenaOverlay {
     static String ratingChangeText(double before, double after, double delta) {
         return String.format(
                 Locale.ROOT,
-                "レート %d → %d (%+.1f)",
+                t("レート %d → %d (%+.1f)", "Rating %d -> %d (%+.1f)"),
                 Math.round(before),
                 Math.round(after),
                 delta
@@ -2382,7 +2593,7 @@ public final class BMSIRArenaOverlay {
     private static void renderManual() {
         JsonNode manual = BMSIRArenaClient.manualView();
         if (!manual.isObject() || manual.size() == 0) {
-            ImGui.textDisabled("マニュアルを取得できていません。");
+            ImGui.textDisabled(t("マニュアルを取得できていません。", "The manual has not been downloaded."));
         } else {
             ImGui.textWrapped(
                     manual.path("title").asText("BMS-IR Arena マニュアル")
@@ -2399,28 +2610,31 @@ public final class BMSIRArenaOverlay {
                 }
             }
         }
-        if (ImGui.button(FontAwesomeIcons.SyncAlt + " マニュアルを更新")) {
+        if (ImGui.button(FontAwesomeIcons.SyncAlt + t(" マニュアルを更新", " Refresh manual"))) {
             BMSIRArenaClient.requestArenaManual();
         }
         ImGui.textDisabled(
-                "取得済みの内容はローカルに保存され、オフライン時も表示できます。"
+                t(
+                        "取得済みの内容はローカルに保存され、オフライン時も表示できます。",
+                        "Downloaded content is cached locally and remains available offline."
+                )
         );
     }
 
     private static void renderChat(boolean allowInput, float height) {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         ImBoolean muted = new ImBoolean(config != null && config.isBmsirArenaMuteChat());
-        if (ImGui.checkbox("チャットをミュート", muted) && config != null) {
+        if (ImGui.checkbox(t("チャットをミュート", "Mute chat"), muted) && config != null) {
             config.setBmsirArenaMuteChat(muted.get());
         }
         if (muted.get()) {
-            ImGui.textDisabled("チャットはこの本体でのみ非表示です");
+            ImGui.textDisabled(t("チャットはこの本体でのみ非表示です", "Chat is hidden only on this client"));
             return;
         }
         List<JsonNode> messages = BMSIRArenaClient.chatMessages();
         if (ImGui.beginChild("##bmsir-arena-chat-log", 0, height, true)) {
             if (messages.isEmpty()) {
-                ImGui.textDisabled("メッセージはまだありません");
+                ImGui.textDisabled(t("メッセージはまだありません", "No messages yet"));
             }
             for (JsonNode message : messages) {
                 ImGui.textWrapped(
@@ -2436,12 +2650,12 @@ public final class BMSIRArenaOverlay {
                         || (!BMSIRArenaClient.isReserved()
                                 && BMSIRArenaClient.currentRoomCode().isBlank())
         ) {
-            ImGui.textDisabled("対戦中の入力は無効です");
+            ImGui.textDisabled(t("対戦中の入力は無効です", "Chat input is disabled during play"));
             return;
         }
         ImGui.inputText("##bmsir-arena-chat-input", CHAT_INPUT);
         ImGui.sameLine();
-        boolean send = ImGui.button("送信");
+        boolean send = ImGui.button(t("送信", "Send"));
         if (send && !CHAT_INPUT.get().isBlank()) {
             BMSIRArenaClient.requestChat(CHAT_INPUT.get());
             CHAT_INPUT.set("");
@@ -2469,38 +2683,73 @@ public final class BMSIRArenaOverlay {
     }
 
     private static void renderSettings(PlayerConfig config) {
-        ImGui.text("表示モード");
-        if (ImGui.radioButton("通常", config.getBmsirArenaOverlayMode() == 0)) {
+        LANGUAGE.set("en".equals(config.getBmsirArenaLanguage()) ? 1 : 0);
+        if (ImGui.combo(
+                t("Arena UI言語", "Arena UI language"),
+                LANGUAGE,
+                new String[]{"日本語", "English"}
+        )) {
+            config.setBmsirArenaLanguage(LANGUAGE.get() == 1 ? "en" : "ja");
+            BMSIRArenaI18n.setLanguage(config.getBmsirArenaLanguage());
+            saveSettingsOrWarn();
+        }
+        ImGui.text(t("表示モード", "Display mode"));
+        if (ImGui.radioButton(t("通常", "Full"), config.getBmsirArenaOverlayMode() == 0)) {
             config.setBmsirArenaOverlayMode(0);
         }
         ImGui.sameLine();
-        if (ImGui.radioButton("コンパクト", config.getBmsirArenaOverlayMode() == 1)) {
+        if (ImGui.radioButton(t("コンパクト", "Compact"), config.getBmsirArenaOverlayMode() == 1)) {
             config.setBmsirArenaOverlayMode(1);
         }
         ImGui.sameLine();
-        if (ImGui.radioButton("非表示", config.getBmsirArenaOverlayMode() == 2)) {
+        if (ImGui.radioButton(t("非表示", "Hidden"), config.getBmsirArenaOverlayMode() == 2)) {
             setVisible(false);
         }
         renderOverlayHotkeySetting(config);
-        ImGui.textDisabled("戻らない場合は固定のF5メニューから再表示できます");
-        if (ImGui.button("Arenaログフォルダを開く")) {
+        ImGui.textDisabled(t(
+                "戻らない場合は固定のF5メニューから再表示できます",
+                "The fixed F5 menu can restore a hidden overlay"
+        ));
+        if (ImGui.button(t("Arenaログフォルダを開く", "Open Arena log folder"))) {
             if (!BMSIRArenaLog.openLogFolder()) {
-                ImGuiNotify.warning("Arenaログフォルダを開けませんでした");
+                ImGuiNotify.warning(t(
+                        "Arenaログフォルダを開けませんでした",
+                        "Could not open the Arena log folder"
+                ));
             }
         }
         ImGui.sameLine();
         ImGui.textDisabled(BMSIRArenaLog.logFileName());
-        ImGui.textDisabled("認証情報とチャット本文はログへ記録しません");
+        ImGui.textDisabled(t(
+                "認証情報とチャット本文はログへ記録しません",
+                "Credentials and chat messages are never logged"
+        ));
+        ImBoolean detailedLog = new ImBoolean(
+                config.isBmsirArenaDetailedLogEnabled()
+        );
+        if (ImGui.checkbox(t("詳細Arenaログ", "Detailed Arena log"), detailedLog)) {
+            config.setBmsirArenaDetailedLogEnabled(detailedLog.get());
+            BMSIRArenaLog.setDetailedEnabled(detailedLog.get());
+            saveSettingsOrWarn();
+        }
+        ImGui.textDisabled(t(
+                "OFFでは接続・状態遷移・警告・エラーだけを記録します",
+                "OFF records only connections, state changes, warnings, and errors"
+        ));
         GRAPH_HIGHLIGHT.set(config.getBmsirArenaGraphHighlight());
         if (ImGui.combo(
-                "グラフの強調",
+                t("グラフの強調", "Graph highlight"),
                 GRAPH_HIGHLIGHT,
-                new String[]{"現在1位", "自分"}
+                new String[]{t("現在1位", "Leader"), t("自分", "Self")}
         )) {
             config.setBmsirArenaGraphHighlight(GRAPH_HIGHLIGHT.get());
         }
         TARGET_MODE.set(arenaTargetModeIndex(config.getBmsirArenaTargetMode()));
-        if (ImGui.combo("本体ターゲット", TARGET_MODE, ARENA_TARGET_MODES)) {
+        if (ImGui.combo(
+                t("本体ターゲット", "Main target"),
+                TARGET_MODE,
+                arenaTargetModeLabels()
+        )) {
             config.setBmsirArenaTargetMode(arenaTargetMode(TARGET_MODE.get()));
             if (
                     !PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED.equals(
@@ -2513,20 +2762,27 @@ public final class BMSIRArenaOverlay {
         }
         renderArenaTargetPlayerSelector(config);
         GRAPH_ORDER.set(arenaGraphOrderIndex(config.getBmsirArenaGraphOrder()));
-        if (ImGui.combo("グラフの並び", GRAPH_ORDER, ARENA_GRAPH_ORDERS)) {
+        if (ImGui.combo(
+                t("グラフの並び", "Graph order"),
+                GRAPH_ORDER,
+                arenaGraphOrderLabels()
+        )) {
             config.setBmsirArenaGraphOrder(arenaGraphOrder(GRAPH_ORDER.get()));
             saveSettingsOrWarn();
         }
-        ImGui.textDisabled("順位順では自分の棒は赤、入室順固定では色も入室順で固定します");
+        ImGui.textDisabled(t(
+                "順位順では自分の棒は赤、入室順固定では色も入室順で固定します",
+                "Rank order marks self in red; entry order also fixes player colors"
+        ));
 
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
-        if (ImGui.checkbox("プレイ中もマウスカーソルを表示", cursor)) {
+        if (ImGui.checkbox(t("プレイ中もマウスカーソルを表示", "Show cursor during play"), cursor)) {
             config.setBmsirArenaShowCursor(cursor.get());
         }
         ImBoolean presentation = new ImBoolean(
                 config.isBmsirArenaPresentationOverlayEnabled()
         );
-        if (ImGui.checkbox("重要フェーズを画面中央に大きく表示", presentation)) {
+        if (ImGui.checkbox(t("重要フェーズを画面中央に大きく表示", "Show large phase announcements"), presentation)) {
             config.setBmsirArenaPresentationOverlayEnabled(
                     presentation.get()
             );
@@ -2534,47 +2790,59 @@ public final class BMSIRArenaOverlay {
         ImBoolean countdownSe = new ImBoolean(
                 config.isBmsirArenaCountdownSeEnabled()
         );
-        if (ImGui.checkbox("Arena 3・2・1カウントSE", countdownSe)) {
+        if (ImGui.checkbox(t("Arena 3・2・1カウントSE", "Arena 3-2-1 sound"), countdownSe)) {
             config.setBmsirArenaCountdownSeEnabled(countdownSe.get());
         }
         ImBoolean startSe = new ImBoolean(config.isBmsirArenaStartSeEnabled());
-        if (ImGui.checkbox("Arena開始SE", startSe)) {
+        if (ImGui.checkbox(t("Arena開始SE", "Arena start sound"), startSe)) {
             config.setBmsirArenaStartSeEnabled(startSe.get());
         }
         ImBoolean phaseWarning = new ImBoolean(
                 config.isBmsirArenaPhaseWarningEnabled()
         );
-        if (ImGui.checkbox("選曲・OP残り10秒／5秒の警告SE", phaseWarning)) {
+        if (ImGui.checkbox(t("選曲・OP残り10秒／5秒の警告SE", "10/5 second selection warning sound"), phaseWarning)) {
             config.setBmsirArenaPhaseWarningEnabled(phaseWarning.get());
         }
         int[] notificationVolume = {
                 config.getBmsirArenaNotificationSeVolume()
         };
         if (ImGui.sliderInt(
-                "Arena通知SE音量",
+                t("Arena通知SE音量", "Arena sound volume"),
                 notificationVolume,
                 0,
                 100
         )) {
             config.setBmsirArenaNotificationSeVolume(notificationVolume[0]);
         }
+        if (ImGui.button(t("Arena通知音をテスト", "Test Arena sound"))) {
+            BMSIRArenaClient.playPresentationSound(
+                    bms.player.beatoraja.SystemSoundManager.SoundType.ARENA_MATCH_FOUND,
+                    config.getBmsirArenaNotificationSeVolume() / 100.0f
+            );
+        }
         ImBoolean unrestricted = new ImBoolean(
                 config.isBmsirArenaUnrestrictedRating()
         );
-        if (ImGui.checkbox("レート制限なしマッチを許可", unrestricted)) {
+        if (ImGui.checkbox(t("レート制限なしマッチを許可", "Allow unrestricted rating matches"), unrestricted)) {
             config.setBmsirArenaUnrestrictedRating(unrestricted.get());
         }
-        ImGui.textDisabled("距離のある即時マッチは相手も許可した場合だけ成立します");
+        ImGui.textDisabled(t(
+                "距離のある即時マッチは相手も許可した場合だけ成立します",
+                "A wide-rating instant match requires consent from both players"
+        ));
         ImBoolean allowCpu = new ImBoolean(config.isBmsirArenaAllowCpu());
-        if (ImGui.checkbox("1人待機中のCPU戦を許可", allowCpu)) {
+        if (ImGui.checkbox(t("1人待機中のCPU戦を許可", "Allow CPU match while waiting alone"), allowCpu)) {
             config.setBmsirArenaAllowCpu(allowCpu.get());
         }
-        ImGui.textDisabled("OFFの場合、人間がもう1人来るまで待機します。2人以上ではCPU補充します");
+        ImGui.textDisabled(t(
+                "OFFの場合、人間がもう1人来るまで待機します。2人以上ではCPU補充します",
+                "OFF waits for a second human; with 2+ humans, CPUs always fill four slots"
+        ));
         ImBoolean allowHigherSelection = new ImBoolean(
                 config.isBmsirArenaAllowHigherSelection()
         );
         if (ImGui.checkbox(
-                "高レート基準の選曲を許可",
+                t("高レート基準の選曲を許可", "Allow higher-rating chart limits"),
                 allowHigherSelection
         )) {
             config.setBmsirArenaAllowHigherSelection(
@@ -2582,24 +2850,27 @@ public final class BMSIRArenaOverlay {
             );
         }
         ImGui.textDisabled(
-                "ONの場合、自分の解放済み上限は部屋の最低選曲基準から除外されます"
+                t(
+                        "ONの場合、自分の解放済み上限は部屋の最低選曲基準から除外されます",
+                        "ON excludes your unlocked limit from the room's minimum chart limit"
+                )
         );
         ImBoolean mirror = new ImBoolean(config.isBmsirArenaRandomMirror());
-        if (ImGui.checkbox("同期RANDOMを左右反転して受け取る", mirror)) {
+        if (ImGui.checkbox(t("同期RANDOMを左右反転して受け取る", "Mirror synchronized RANDOM"), mirror)) {
             config.setBmsirArenaRandomMirror(mirror.get());
         }
         ImBoolean stay = new ImBoolean(config.isBmsirArenaStayInRoom());
-        if (ImGui.checkbox("ルーム対戦後も部屋に残る", stay)) {
+        if (ImGui.checkbox(t("ルーム対戦後も部屋に残る", "Stay in room after a match"), stay)) {
             config.setBmsirArenaStayInRoom(stay.get());
             if (!"ranked".equals(BMSIRArenaClient.currentMatchMode())) {
                 BMSIRArenaClient.requestRoomStay(stay.get());
             }
         }
         ImGui.separator();
-        ImGui.textWrapped(
-                "Arenaウィンドウの位置とサイズは5／7／9／10／14KEYごと、"
-                        + "通常・コンパクト・プレイ中グラフ・ステータスごとに保存されます。"
-        );
+        ImGui.textWrapped(t(
+                "Arenaウィンドウの位置とサイズは5／7／9／10／14KEYごと、通常・コンパクト・プレイ中グラフ・ステータスごとに保存されます。",
+                "Arena window positions and sizes are saved per 5/7/9/10/14KEY layout and per full, compact, graph, and status window."
+        ));
     }
 
     private static void renderArenaTargetPlayerSelector(PlayerConfig config) {
@@ -2612,7 +2883,10 @@ public final class BMSIRArenaOverlay {
         }
         JsonNode match = BMSIRArenaClient.currentMatchView();
         if (!match.path("players").isArray()) {
-            ImGui.textDisabled("試合中に対象プレイヤーを選択できます");
+            ImGui.textDisabled(t(
+                    "試合中に対象プレイヤーを選択できます",
+                    "Select a target player during a match"
+            ));
             return;
         }
         int ownPlayerId = BMSIRArenaClient.currentPlayerId();
@@ -2633,7 +2907,10 @@ public final class BMSIRArenaOverlay {
             }
         }
         if (!rendered) {
-            ImGui.textDisabled("指定できる対戦相手がいません");
+            ImGui.textDisabled(t(
+                    "指定できる対戦相手がいません",
+                    "No opponent can be selected"
+            ));
         }
     }
 
@@ -2643,6 +2920,22 @@ public final class BMSIRArenaOverlay {
             case PlayerConfig.BMSIR_ARENA_TARGET_ABOVE -> 2;
             case PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED -> 3;
             default -> 0;
+        };
+    }
+
+    private static String[] arenaTargetModeLabels() {
+        return new String[]{
+                "OFF",
+                t("1位の対戦相手", "Leading opponent"),
+                t("自分の直上", "Opponent directly above"),
+                t("指定プレイヤー", "Selected player")
+        };
+    }
+
+    private static String[] arenaGraphOrderLabels() {
+        return new String[]{
+                t("順位順", "Rank order"),
+                t("入室順固定", "Fixed entry order")
         };
     }
 
@@ -2667,13 +2960,16 @@ public final class BMSIRArenaOverlay {
 
     private static void saveSettingsOrWarn() {
         if (!BMSIRArenaClient.saveArenaConfig()) {
-            ImGuiNotify.warning("Arena設定を保存できませんでした");
+            ImGuiNotify.warning(t(
+                    "Arena設定を保存できませんでした",
+                    "Could not save Arena settings"
+            ));
         }
     }
 
     private static void renderOverlayHotkeySetting(PlayerConfig config) {
         ImGui.text(
-                "オーバーレイ表示キー: "
+                t("オーバーレイ表示キー: ", "Overlay hotkey: ")
                         + BMSIRArenaHotkey.label(
                                 config.getBmsirArenaOverlayHotkeyKeys()
                         )
@@ -2681,33 +2977,39 @@ public final class BMSIRArenaOverlay {
         if (hotkeyCaptureActive) {
             ImGui.textColored(
                     ImColor.rgb(255, 211, 106),
-                    "登録したいキーをすべて押して、全部離してください"
+                    t(
+                            "登録したいキーをすべて押して、全部離してください",
+                            "Press every key in the shortcut, then release them"
+                    )
             );
             if (!HOTKEY_CAPTURE_KEYS.isEmpty()) {
                 ImGui.text(
-                        "入力中: "
+                        t("入力中: ", "Pressed: ")
                                 + BMSIRArenaHotkey.label(capturedHotkeyKeys())
                 );
             }
             ImGui.textDisabled(
-                    "1キー単体も可／Escでキャンセル／解除は下の「解除」ボタン"
+                    t(
+                            "1キー単体も可／Escでキャンセル／解除は下の「解除」ボタン",
+                            "A single key is allowed / Esc cancels / Clear removes the shortcut"
+                    )
             );
             captureOverlayHotkey(config);
             return;
         }
-        if (ImGui.button("表示キーを変更")) {
+        if (ImGui.button(t("表示キーを変更", "Change hotkey"))) {
             HOTKEY_CAPTURE_KEYS.clear();
             hotkeyCaptureActive = true;
         }
         ImGui.sameLine();
-        if (ImGui.button("初期値へ戻す")) {
+        if (ImGui.button(t("初期値へ戻す", "Restore default"))) {
             config.setBmsirArenaOverlayHotkeyKeys(
                     BMSIRArenaHotkey.defaultKeys()
             );
             saveHotkeyOrWarn();
         }
         ImGui.sameLine();
-        if (ImGui.button("解除")) {
+        if (ImGui.button(t("解除", "Clear"))) {
             config.setBmsirArenaOverlayHotkeyKeys(new int[0]);
             saveHotkeyOrWarn();
         }
@@ -2736,9 +3038,9 @@ public final class BMSIRArenaOverlay {
         BMSIRArenaClient.discardArenaOverlayHotkeyKeys(captured);
         if (saveHotkeyOrWarn()) {
             ImGuiNotify.info(
-                    "Arena表示キーを "
+                    t("Arena表示キーを ", "Arena hotkey changed to ")
                             + BMSIRArenaHotkey.label(captured)
-                            + " に変更しました"
+                            + t(" に変更しました", "")
             );
         }
     }
@@ -2747,7 +3049,10 @@ public final class BMSIRArenaOverlay {
         if (BMSIRArenaClient.saveArenaConfig()) {
             return true;
         }
-        ImGuiNotify.warning("Arena表示キーを保存できませんでした");
+        ImGuiNotify.warning(t(
+                "Arena表示キーを保存できませんでした",
+                "Could not save the Arena hotkey"
+        ));
         return false;
     }
 

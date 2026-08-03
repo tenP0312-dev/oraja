@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 8;
+        private int schemaVersion = 9;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -180,6 +180,7 @@ public final class BMSIRArenaConfigStore {
         private int intermissionSeconds = 0;
         private BMSIRManiacSettings maniacSettings = new BMSIRManiacSettings();
         private boolean detailedLogEnabled = false;
+        private String language = "ja";
 
         static Settings from(PlayerConfig player) {
             Settings settings = new Settings();
@@ -237,6 +238,7 @@ public final class BMSIRArenaConfigStore {
                     player.getBmsirManiacSettings()
             );
             settings.detailedLogEnabled = player.isBmsirArenaDetailedLogEnabled();
+            settings.language = player.getBmsirArenaLanguage();
             return settings;
         }
 
@@ -315,6 +317,7 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaIntermissionSeconds(intermissionSeconds);
             player.setBmsirManiacSettings(maniacSettings);
             player.setBmsirArenaDetailedLogEnabled(detailedLogEnabled);
+            player.setBmsirArenaLanguage(language);
         }
     }
 }

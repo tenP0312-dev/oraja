@@ -46,9 +46,30 @@ public final class ManiacOptionsMenu {
 
             combo("HIDDEN / SUDDEN 1P", settings.getHiddenSudden1P(), HIDDEN_SUDDEN, settings::setHiddenSudden1P);
             combo("HIDDEN / SUDDEN 2P", settings.getHiddenSudden2P(), HIDDEN_SUDDEN, settings::setHiddenSudden2P);
-            combo("EXTRA MODE", settings.getExtraMode(), OFF_LEVEL_1_3, settings::setExtraMode);
-            percent("ADD NOTES", settings.getAddNotes(), settings::setAddNotes);
-            percent("ADD LONGNOTES", settings.getAddLongNotes(), settings::setAddLongNotes);
+            combo("EXTRA MODE", settings.getExtraMode(), OFF_LEVEL_1_3, value -> {
+                settings.setExtraMode(value);
+                if (value > 0) {
+                    settings.setAddNotes(0);
+                    settings.setAddLongNotes(0);
+                    settings.setDoubleBattle(false);
+                }
+            });
+            percent("ADD NOTES", settings.getAddNotes(), value -> {
+                settings.setAddNotes(value);
+                if (value > 0) {
+                    settings.setExtraMode(0);
+                    settings.setAddLongNotes(0);
+                    settings.setDoubleBattle(false);
+                }
+            });
+            percent("ADD LONGNOTES", settings.getAddLongNotes(), value -> {
+                settings.setAddLongNotes(value);
+                if (value > 0) {
+                    settings.setExtraMode(0);
+                    settings.setAddNotes(0);
+                    settings.setDoubleBattle(false);
+                }
+            });
             percent("ADD MINES", settings.getAddMines(), settings::setAddMines);
             combo("ACCELERATION", settings.getAcceleration(), ACCELERATION, settings::setAcceleration);
             combo("SOFTLANDING", settings.getSoftLanding(), OFF_LEVEL_1_2, settings::setSoftLanding);
@@ -69,8 +90,16 @@ public final class ManiacOptionsMenu {
             ImBoolean doubleBattle = new ImBoolean(settings.isDoubleBattle());
             if (ImGui.checkbox("DOUBLE BATTLE", doubleBattle)) {
                 settings.setDoubleBattle(doubleBattle.get());
+                if (doubleBattle.get()) {
+                    settings.setExtraMode(0);
+                    settings.setAddNotes(0);
+                    settings.setAddLongNotes(0);
+                }
                 save();
             }
+            ImGui.textDisabled(
+                    "EXTRA / ADD NOTES / ADD LONGNOTES / DB are mutually exclusive"
+            );
             int link = switch (settings.getRandomLink()) {
                 case BMSIRManiacSettings.RANDOM_LINK_SYNC -> 1;
                 case BMSIRManiacSettings.RANDOM_LINK_SYMMETRY -> 2;

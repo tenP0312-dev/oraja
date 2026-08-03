@@ -120,6 +120,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirLongNoteFixed;
 	@FXML
+	private ComboBox<String> bmsirArenaLanguage;
+	@FXML
 	private ComboBox<String> bmsirArenaTargetMode;
 	@FXML
 	private ComboBox<String> bmsirArenaGraphOrder;
@@ -418,6 +420,7 @@ public class PlayConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		arenaIdentity.setText(Version.getArenaDisplayName());
+		bmsirArenaLanguage.getItems().setAll("日本語", "English");
 		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
 		bmsirArenaTargetMode.getItems().setAll(
 				"OFF",
@@ -681,6 +684,9 @@ public class PlayConfigurationView implements Initializable {
 		);
 		bmsirLongNoteFixed.setSelected(true);
 		bmsirLongNoteFixed.setDisable(true);
+		bmsirArenaLanguage.getSelectionModel().select(
+				"en".equals(player.getBmsirArenaLanguage()) ? 1 : 0
+		);
 		bmsirRulesetProfile.getSelectionModel().select(
 				"oraja".equals(player.getBmsirRulesetProfile()) ? 1 : 0
 		);
@@ -840,6 +846,11 @@ public class PlayConfigurationView implements Initializable {
 		);
 		player.setBmsirDanLocalSyncEnabled(
 				bmsirDanLocalSyncEnabled.isSelected()
+		);
+		player.setBmsirArenaLanguage(
+				bmsirArenaLanguage.getSelectionModel().getSelectedIndex() == 1
+						? "en"
+						: "ja"
 		);
 		player.setBmsirArenaTargetMode(
 				bmsirArenaTargetModeValue(

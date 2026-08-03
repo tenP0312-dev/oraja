@@ -337,6 +337,7 @@ public final class PlayerConfig {
 	private int bmsirArenaIntermissionSeconds = 0;
 	private BMSIRManiacSettings bmsirManiacSettings = new BMSIRManiacSettings();
 	private boolean bmsirArenaDetailedLogEnabled = false;
+	private String bmsirArenaLanguage = "ja";
 	
 	private String twitterConsumerKey;
 
@@ -1161,6 +1162,17 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaDetailedLogEnabled(boolean enabled) {
 		bmsirArenaDetailedLogEnabled = enabled;
+	}
+
+	public String getBmsirArenaLanguage() {
+		bmsirArenaLanguage = "en".equalsIgnoreCase(bmsirArenaLanguage)
+				? "en"
+				: "ja";
+		return bmsirArenaLanguage;
+	}
+
+	public void setBmsirArenaLanguage(String language) {
+		bmsirArenaLanguage = "en".equalsIgnoreCase(language) ? "en" : "ja";
 	}
 
 	public String getTargetid() {
