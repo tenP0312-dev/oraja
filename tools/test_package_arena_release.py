@@ -1,4 +1,5 @@
 from pathlib import Path
+import plistlib
 import tempfile
 import unittest
 import zipfile
@@ -36,12 +37,30 @@ class ArenaReleasePackageTest(unittest.TestCase):
         )
         license_path = root / "LICENSE"
         license_path.write_text("GPL", encoding="utf-8")
+        launcher_app = root / "BMS-IR Arena Test.app"
+        executable = launcher_app / "Contents" / "MacOS" / "bmsir-arena-launcher"
+        executable.parent.mkdir(parents=True)
+        executable.write_bytes(b"\xcf\xfa\xed\xfe" + CONFIGURED_LAUNCHER_MARKER)
+        executable.chmod(0o755)
+        resources = launcher_app / "Contents" / "Resources"
+        resources.mkdir(parents=True)
+        (resources / "icon.icns").write_bytes(b"icon")
+        (launcher_app / "Contents" / "Info.plist").write_bytes(
+            plistlib.dumps(
+                {
+                    "CFBundleExecutable": "bmsir-arena-launcher",
+                    "CFBundleIdentifier": "org.bms-ir.arena.launcher.test",
+                    "CFBundleName": "BMS-IR Arena Test",
+                }
+            )
+        )
         return {
             "body": body,
             "plugin": plugin,
             "assets": assets,
             "runtime": runtime,
             "license": license_path,
+            "launcher_app": launcher_app,
         }
 
     def test_builds_self_contained_archive_without_mutable_player_data(self):
@@ -59,6 +78,8 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 project_license=fixture["license"],
                 output_dir=root / "dist",
                 confirmed=True,
+                launcher_app=fixture["launcher_app"],
+                test_build=True,
             )
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
@@ -71,6 +92,10 @@ class ArenaReleasePackageTest(unittest.TestCase):
             self.assertIn("runtime/bin/java", names)
             self.assertIn("runtime/legal/java.base/LICENSE", names)
             self.assertIn("BMS-IR-Arena-config.command", names)
+            self.assertIn("BMS-IR Arena Test.app/Contents/Info.plist", names)
+            self.assertIn(
+                "BMS-IR Arena Test.app/Contents/MacOS/bmsir-arena-launcher", names
+            )
             self.assertIn("release-manifest.json", names)
             self.assertEqual("0.4.14\n", version)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
@@ -90,6 +115,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
                     project_license=fixture["license"],
                     output_dir=root / "dist",
                     confirmed=False,
+                    launcher_app=fixture["launcher_app"],
                 )
 
     def test_windows_test_archive_contains_portable_test_launcher(self):
@@ -169,6 +195,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 project_license=fixture["license"],
                 output_dir=root / "dist",
                 confirmed=True,
+                launcher_app=fixture["launcher_app"],
                 distribution_version="0.4.14.2",
             )
             self.assertIn("0.4.14.2-macos-aarch64", output.name)
@@ -177,6 +204,32 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 manifest = archive.read("release-manifest.json").decode("utf-8")
             self.assertEqual("0.4.14.2\n", marker)
             self.assertIn('"version": "0.4.14.2"', manifest)
+
+    def test_rejects_macos_launcher_without_online_update_configuration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = self.fixture(root)
+            executable = (
+                fixture["launcher_app"]
+                / "Contents"
+                / "MacOS"
+                / "bmsir-arena-launcher"
+            )
+            executable.write_bytes(b"\xcf\xfa\xed\xfevalidation-only")
+            executable.chmod(0o755)
+            with self.assertRaisesRegex(ValueError, "update endpoint"):
+                build_release(
+                    platform="macos-aarch64",
+                    body_jar=fixture["body"],
+                    plugin_jar=fixture["plugin"],
+                    base_assets=fixture["assets"],
+                    java_home=fixture["runtime"],
+                    project_license=fixture["license"],
+                    output_dir=root / "dist",
+                    confirmed=True,
+                    launcher_app=fixture["launcher_app"],
+                    test_build=True,
+                )
 
 
 if __name__ == "__main__":

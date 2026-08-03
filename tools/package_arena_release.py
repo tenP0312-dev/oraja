@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import plistlib
 import re
 import shutil
 import stat
@@ -75,6 +76,38 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_tree(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        if path.is_symlink():
+            raise ValueError(f"Launcher app must not contain symlinks: {path}")
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        digest.update(relative)
+        digest.update(b"\0")
+        digest.update(bytes([1 if path.stat().st_mode & 0o111 else 0]))
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def macos_launcher_executable(launcher_app: Path) -> Path:
+    if launcher_app.suffix != ".app" or not launcher_app.is_dir():
+        raise ValueError("macOS packages require a reviewed .app launcher bundle")
+    info_path = launcher_app / "Contents" / "Info.plist"
+    try:
+        info = plistlib.loads(info_path.read_bytes())
+    except (OSError, plistlib.InvalidFileException) as exc:
+        raise ValueError("macOS launcher has no valid Contents/Info.plist") from exc
+    executable_name = str(info.get("CFBundleExecutable") or "").strip()
+    executable = launcher_app / "Contents" / "MacOS" / executable_name
+    if not executable_name or not executable.is_file():
+        raise ValueError("macOS launcher bundle executable is missing")
+    return executable
+
+
 def parse_runtime_release(java_home: Path) -> dict[str, str]:
     release_path = java_home / "release"
     if not release_path.is_file():
@@ -103,6 +136,7 @@ def validate_inputs(
     java_home: Path,
     project_license: Path,
     launcher_exe: Path | None,
+    launcher_app: Path | None,
     confirmed: bool,
 ) -> dict[str, str]:
     if not confirmed:
@@ -137,6 +171,8 @@ def validate_inputs(
     if not (java_home / "legal").is_dir():
         raise ValueError("Runtime legal notices are missing")
     if platform == "windows-x86-64":
+        if launcher_app is not None:
+            raise ValueError("Portable launcher app is only valid for macOS packages")
         if launcher_exe is None or not launcher_exe.is_file():
             raise ValueError("Windows packages require a reviewed portable launcher EXE")
         launcher_bytes = launcher_exe.read_bytes()
@@ -146,8 +182,20 @@ def validate_inputs(
             raise ValueError(
                 "Portable launcher was built without the update endpoint or release verification key"
             )
-    elif launcher_exe is not None:
-        raise ValueError("Portable launcher EXE is only valid for Windows packages")
+    else:
+        if launcher_exe is not None:
+            raise ValueError("Portable launcher EXE is only valid for Windows packages")
+        if launcher_app is None:
+            raise ValueError("macOS packages require a reviewed portable launcher app")
+        launcher_binary = macos_launcher_executable(launcher_app)
+        launcher_bytes = launcher_binary.read_bytes()
+        if not launcher_bytes.startswith(b"\xcf\xfa\xed\xfe"):
+            raise ValueError("Portable launcher input is not a 64-bit macOS executable")
+        if CONFIGURED_LAUNCHER_MARKER not in launcher_bytes:
+            raise ValueError(
+                "Portable launcher was built without the update endpoint or release verification key"
+            )
+        sha256_tree(launcher_app)
     return release
 
 
@@ -199,8 +247,13 @@ def write_readme(
     distribution_version: str,
 ) -> None:
     launcher = launcher_filename or "BMS-IR-Arena-config.command"
+    fallback_launcher = (
+        "BMS-IR-Arena-config.bat"
+        if platform == "windows-x86-64"
+        else "BMS-IR-Arena-config.command"
+    )
     fallback = (
-        "\n従来どおり BMS-IR-Arena-config.bat から起動することもできます。\n"
+        f"\n従来どおり {fallback_launcher} から起動することもできます。\n"
         if launcher_filename
         else ""
     )
@@ -247,6 +300,7 @@ def build_release(
     output_dir: Path,
     confirmed: bool,
     launcher_exe: Path | None = None,
+    launcher_app: Path | None = None,
     test_build: bool = False,
     distribution_version: str | None = None,
 ) -> Path:
@@ -261,6 +315,7 @@ def build_release(
         java_home=java_home,
         project_license=project_license,
         launcher_exe=launcher_exe,
+        launcher_app=launcher_app,
         confirmed=confirmed,
     )
     channel_suffix = "-test" if test_build else ""
@@ -285,6 +340,9 @@ def build_release(
         if launcher_exe is not None:
             launcher_filename = "BMS-IR Arena Test.exe" if test_build else "BMS-IR Arena.exe"
             shutil.copy2(launcher_exe, root / launcher_filename)
+        elif launcher_app is not None:
+            launcher_filename = "BMS-IR Arena Test.app" if test_build else "BMS-IR Arena.app"
+            safe_copy_tree(launcher_app, root / launcher_filename)
         (root / "bmsir-arena-version.txt").write_text(
             f"{distribution_version}\n",
             encoding="ascii",
@@ -302,7 +360,11 @@ def build_release(
             "plugin_filename": plugin_jar.name,
             "plugin_sha256": sha256_file(plugin_jar),
             "launcher_filename": launcher_filename,
-            "launcher_sha256": sha256_file(launcher_exe) if launcher_exe is not None else None,
+            "launcher_sha256": (
+                sha256_file(launcher_exe)
+                if launcher_exe is not None
+                else sha256_tree(launcher_app) if launcher_app is not None else None
+            ),
         }
         (root / "release-manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -322,6 +384,7 @@ def main() -> int:
     parser.add_argument("--base-assets", type=Path, required=True)
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--launcher-exe", type=Path)
+    parser.add_argument("--launcher-app", type=Path)
     parser.add_argument("--test-build", action="store_true")
     parser.add_argument("--distribution-version")
     parser.add_argument("--project-license", type=Path, default=Path(__file__).resolve().parents[1] / "LICENSE")
@@ -338,6 +401,7 @@ def main() -> int:
         output_dir=args.output_dir.resolve(),
         confirmed=args.confirm_base_assets_redistributable,
         launcher_exe=args.launcher_exe.resolve() if args.launcher_exe else None,
+        launcher_app=args.launcher_app.resolve() if args.launcher_app else None,
         test_build=args.test_build,
         distribution_version=args.distribution_version,
     )

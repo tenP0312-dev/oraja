@@ -477,8 +477,8 @@ The public page offers two forms for each supported OS:
 - non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.69.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
   a Java 21 runtime, distribution-cleared base assets, and launch scripts. The
-  Windows package also contains the portable launcher EXE; BAT startup remains
-  available.
+  Windows package contains the portable launcher EXE and the macOS package
+  contains the portable app bundle; BAT and command startup remain available.
 
 Build the Java-bundled ZIP only from a clean asset source whose redistribution
 terms have been checked. The packager copies only the fixed visual/audio asset
@@ -494,6 +494,7 @@ python tools/package_arena_release.py \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
+  --launcher-app "/reviewed/BMS-IR Arena.app" \
   --output-dir dist \
   --confirm-base-assets-redistributable
 ```
@@ -515,11 +516,11 @@ python tools/package_arena_release.py \
   --confirm-base-assets-redistributable
 ```
 
-Test packages name the launcher `BMS-IR Arena Test.exe` and select the test
-update channel. The ZIP contains `release-manifest.json` with body, plugin,
-and launcher SHA-256 values plus the initial local version marker. Generated
-JARs and ZIPs remain release artifacts and must not be committed to the source
-repository.
+Test packages name the launcher `BMS-IR Arena Test.exe` or
+`BMS-IR Arena Test.app` and select the test update channel. The ZIP contains
+`release-manifest.json` with body, plugin, and launcher SHA-256 values plus the
+initial local version marker. Generated JARs and ZIPs remain release artifacts
+and must not be committed to the source repository.
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
 7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the
