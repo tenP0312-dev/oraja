@@ -1,3 +1,23 @@
+# Arena oraja 0.4.14
+
+## MANIAC play, Double Battle, and Arena presentation
+
+- Added an LR2-compatible MANIAC OPTIONS screen on F2 hold, including EX
+  modes, note transforms, mines, strict-judge options, and visual effects.
+- Added Double Battle conversion with existing DP options, configurable random
+  linking, Random Trainer support, and an optional native-DP warning.
+- MANIAC and Double Battle records use a separate `bmsir_maniac.db`. Ranked
+  transforms use isolated BMS-IR leaderboards, ghosts, and score sync; a safe
+  vanilla `score.db` export is available from pre-launch configuration.
+- Split the Arena graph into its own window, added score differences, match
+  state, rating changes, persistent private-room records, notification-sound
+  testing, and optional detailed protocol logging.
+- Added Japanese and English text for Arena surfaces, the Ctrl+Shift+F5 menu,
+  and BMS-IR pre-launch settings. The READY note preview now uses a one-second
+  fade cycle.
+- Added the portable launcher and signed patch format. Windows test packages
+  launch from `BMS-IR Arena Test.exe`; the existing BAT remains available.
+
 # Arena oraja 0.4.13
 
 ## Leaderboard, overlay, and play-setting refinements

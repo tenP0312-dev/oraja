@@ -21,7 +21,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.13"
+VERSION = "0.4.14"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.69.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {
@@ -101,6 +101,7 @@ def validate_inputs(
     base_assets: Path,
     java_home: Path,
     project_license: Path,
+    launcher_exe: Path | None,
     confirmed: bool,
 ) -> dict[str, str]:
     if not confirmed:
@@ -134,6 +135,14 @@ def validate_inputs(
         raise ValueError(f"Runtime executable is missing: {spec['java']}")
     if not (java_home / "legal").is_dir():
         raise ValueError("Runtime legal notices are missing")
+    if platform == "windows-x86-64":
+        if launcher_exe is None or not launcher_exe.is_file():
+            raise ValueError("Windows packages require a reviewed portable launcher EXE")
+        with launcher_exe.open("rb") as source:
+            if source.read(2) != b"MZ":
+                raise ValueError("Portable launcher input is not a Windows executable")
+    elif launcher_exe is not None:
+        raise ValueError("Portable launcher EXE is only valid for Windows packages")
     return release
 
 
@@ -178,11 +187,12 @@ def write_launchers(root: Path, platform: str) -> None:
     launcher.chmod(0o755)
 
 
-def write_readme(root: Path, platform: str) -> None:
-    launcher = (
-        "BMS-IR-Arena-config.bat"
-        if platform == "windows-x86-64"
-        else "BMS-IR-Arena-config.command"
+def write_readme(root: Path, platform: str, launcher_filename: str | None) -> None:
+    launcher = launcher_filename or "BMS-IR-Arena-config.command"
+    fallback = (
+        "\n従来どおり BMS-IR-Arena-config.bat から起動することもできます。\n"
+        if launcher_filename
+        else ""
     )
     (root / "README-BMS-IR-Arena.txt").write_text(
         f"Arena oraja {VERSION} / Java 21 bundled\n"
@@ -191,7 +201,7 @@ def write_readme(root: Path, platform: str) -> None:
         "2. BMS-IRのIR ID (190xxx) と登録時パスワードをIR設定へ入力します。\n"
         "3. IR設定の BMS-IR Arena をONにします。\n"
         "4. 本体起動後、Arenaオーバーレイの対戦タブからエントリーします。\n\n"
-        "同梱runtimeを使うため、システム側へのJava導入は不要です。\n"
+        f"同梱runtimeを使うため、システム側へのJava導入は不要です。{fallback}"
         "曲データ、プレイヤー設定、スコアDBは同梱していません。\n"
         "Arenaの詳細: https://www.bms-ir.org/new/arena\n\n"
         "English\n"
@@ -226,6 +236,8 @@ def build_release(
     project_license: Path,
     output_dir: Path,
     confirmed: bool,
+    launcher_exe: Path | None = None,
+    test_build: bool = False,
 ) -> Path:
     release = validate_inputs(
         platform=platform,
@@ -234,9 +246,11 @@ def build_release(
         base_assets=base_assets,
         java_home=java_home,
         project_license=project_license,
+        launcher_exe=launcher_exe,
         confirmed=confirmed,
     )
-    archive_name = f"BMS-IR-Arena-oraja-{VERSION}-{platform}-java21.zip"
+    channel_suffix = "-test" if test_build else ""
+    archive_name = f"BMS-IR-Arena-oraja-{VERSION}-{platform}{channel_suffix}-java21.zip"
     with tempfile.TemporaryDirectory(prefix="bmsir-arena-release-") as temporary:
         root = Path(temporary) / archive_name.removesuffix(".zip")
         root.mkdir()
@@ -250,17 +264,25 @@ def build_release(
         shutil.copy2(plugin_jar, plugin_dir / PLUGIN_FILENAME)
         shutil.copy2(project_license, root / "LICENSE")
         safe_copy_tree(java_home, root / "runtime")
+        launcher_filename = None
+        if launcher_exe is not None:
+            launcher_filename = "BMS-IR Arena Test.exe" if test_build else "BMS-IR Arena.exe"
+            shutil.copy2(launcher_exe, root / launcher_filename)
+        (root / "bmsir-arena-version.txt").write_text(f"{VERSION}\n", encoding="ascii")
         write_launchers(root, platform)
-        write_readme(root, platform)
+        write_readme(root, platform, launcher_filename)
         manifest = {
             "product": "Arena oraja",
             "version": VERSION,
+            "channel": "test" if test_build else "stable",
             "platform": platform,
             "java_version": release.get("JAVA_VERSION", ""),
             "body_filename": body_jar.name,
             "body_sha256": sha256_file(body_jar),
             "plugin_filename": plugin_jar.name,
             "plugin_sha256": sha256_file(plugin_jar),
+            "launcher_filename": launcher_filename,
+            "launcher_sha256": sha256_file(launcher_exe) if launcher_exe is not None else None,
         }
         (root / "release-manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -279,6 +301,8 @@ def main() -> int:
     parser.add_argument("--plugin-jar", type=Path, required=True)
     parser.add_argument("--base-assets", type=Path, required=True)
     parser.add_argument("--java-home", type=Path, required=True)
+    parser.add_argument("--launcher-exe", type=Path)
+    parser.add_argument("--test-build", action="store_true")
     parser.add_argument("--project-license", type=Path, default=Path(__file__).resolve().parents[1] / "LICENSE")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--confirm-base-assets-redistributable", action="store_true")
@@ -292,6 +316,8 @@ def main() -> int:
         project_license=args.project_license.resolve(),
         output_dir=args.output_dir.resolve(),
         confirmed=args.confirm_base_assets_redistributable,
+        launcher_exe=args.launcher_exe.resolve() if args.launcher_exe else None,
+        test_build=args.test_build,
     )
     print(output)
     return 0

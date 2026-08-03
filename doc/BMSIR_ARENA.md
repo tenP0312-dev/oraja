@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.13`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,6 +14,10 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
+Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, Double Battle, isolated
+MANIAC local and online records, a mode-following leaderboard and ghost,
+vanilla DB export, split Arena graph/status presentation, private-room records,
+Japanese/English Arena UI, and the portable signed-update launcher.
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
 restores a persistent F5 overlay switch, adds judge-timing restoration with a
 Lua API, makes INFO toasts optional, removes duplicate startup IR logins, and
@@ -108,7 +112,8 @@ Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
 first-timing preview switches, 0.4.6 adds the Dan local-sync switch, 0.4.11
 adds Arena target and graph-order switches, and 0.4.13 upgrades the sidecar to
 schema 7 for cover HI-SPEED recalculation, judge restoration, INFO toasts, and
-the last visible overlay mode.
+the last visible overlay mode. Version 0.4.14 upgrades it to schema 9 for
+MANIAC, Double Battle, Arena language, graph presentation, and detailed logs.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -440,14 +445,16 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
 
 - non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.69.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
-  a Java 21 runtime, distribution-cleared base assets, and launch scripts.
+  a Java 21 runtime, distribution-cleared base assets, and launch scripts. The
+  Windows package also contains the portable launcher EXE; BAT startup remains
+  available.
 
 Build the Java-bundled ZIP only from a clean asset source whose redistribution
 terms have been checked. The packager copies only the fixed visual/audio asset
@@ -459,7 +466,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -468,9 +475,27 @@ python tools/package_arena_release.py \
 ```
 
 Use `windows-x86-64` with a matching Windows x64 Java 21 runtime for the
-Windows archive. The ZIP contains `release-manifest.json` with the body and
-plugin SHA-256 values. Generated JARs and ZIPs remain release artifacts and
-must not be committed to the source repository.
+Windows archive and pass the reviewed portable launcher. Add `--test-build`
+only for an internal test package:
+
+```bash
+python tools/package_arena_release.py \
+  --platform windows-x86-64 \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14-windows-x86-64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
+  --base-assets /reviewed/clean-beatoraja-assets \
+  --java-home /reviewed/windows-java-21-home \
+  --launcher-exe /reviewed/BMS-IR-Arena-launcher.exe \
+  --output-dir dist \
+  --test-build \
+  --confirm-base-assets-redistributable
+```
+
+Test packages name the launcher `BMS-IR Arena Test.exe` and select the test
+update channel. The ZIP contains `release-manifest.json` with body, plugin,
+and launcher SHA-256 values plus the initial local version marker. Generated
+JARs and ZIPs remain release artifacts and must not be committed to the source
+repository.
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
 7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the

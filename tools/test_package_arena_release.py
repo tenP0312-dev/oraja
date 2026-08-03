@@ -12,7 +12,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar"
+        body = root / "BMS-IR-Arena-oraja-0.4.14-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)
@@ -61,12 +61,14 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 launcher = archive.read(
                     "BMS-IR-Arena-config.command"
                 ).decode("utf-8")
+                version = archive.read("bmsir-arena-version.txt").decode("ascii")
             self.assertIn("beatoraja.jar", names)
             self.assertIn(f"ir/{PLUGIN_FILENAME}", names)
             self.assertIn("runtime/bin/java", names)
             self.assertIn("runtime/legal/java.base/LICENSE", names)
             self.assertIn("BMS-IR-Arena-config.command", names)
             self.assertIn("release-manifest.json", names)
+            self.assertEqual("0.4.14\n", version)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
 
@@ -85,6 +87,41 @@ class ArenaReleasePackageTest(unittest.TestCase):
                     output_dir=root / "dist",
                     confirmed=False,
                 )
+
+    def test_windows_test_archive_contains_portable_test_launcher(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = self.fixture(root)
+            body = root / "BMS-IR-Arena-oraja-0.4.14-windows-x86-64.jar"
+            fixture["body"].rename(body)
+            fixture["body"] = body
+            (fixture["runtime"] / "bin" / "java").unlink()
+            (fixture["runtime"] / "bin" / "java.exe").write_text("java", encoding="utf-8")
+            (fixture["runtime"] / "release").write_text(
+                'JAVA_VERSION="21.0.1"\nOS_NAME="Windows"\nOS_ARCH="amd64"\n',
+                encoding="utf-8",
+            )
+            launcher = root / "launcher.exe"
+            launcher.write_bytes(b"MZportable")
+            output = build_release(
+                platform="windows-x86-64",
+                body_jar=fixture["body"],
+                plugin_jar=fixture["plugin"],
+                base_assets=fixture["assets"],
+                java_home=fixture["runtime"],
+                project_license=fixture["license"],
+                output_dir=root / "dist",
+                confirmed=True,
+                launcher_exe=launcher,
+                test_build=True,
+            )
+            self.assertIn("-test-java21.zip", output.name)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+                manifest = archive.read("release-manifest.json").decode("utf-8")
+            self.assertIn("BMS-IR Arena Test.exe", names)
+            self.assertIn("BMS-IR-Arena-config.bat", names)
+            self.assertIn('"channel": "test"', manifest)
 
 
 if __name__ == "__main__":
