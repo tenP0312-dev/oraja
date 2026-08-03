@@ -119,4 +119,5 @@ public final class BMSIRManiacPlayContext {
     public String placementHash() { return placementHash; }
     public boolean isDoubleBattleApplied() { return doubleBattleApplied; }
     public boolean isDoubleBattleSuspended() { return doubleBattleSuspended; }
+    public String randomLink() { return settings.getRandomLink(); }
 }

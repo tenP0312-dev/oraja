@@ -117,11 +117,12 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 		int keys = mode.key / mode.player;
 		int[] repr = new int[keys];
 		if(showShufflePattern) {
-			if (mode.scratchKey.length > 0 && !isScratchLaneModify) { // BEAT-*K
-				System.arraycopy(random, keys * player, repr, 0, keys - 1);
-				repr[keys - 1] = mode.scratchKey[player];
-			} else {
-				System.arraycopy(random, keys * player, repr, 0, keys);
+			int start = keys * player;
+			for (int local = 0; local < keys; local++) {
+				int lane = start + local;
+				repr[local] = !isScratchLaneModify && mode.isScratchKey(lane)
+						? lane
+						: random[lane];
 			}
 		}
 		return repr;
@@ -257,6 +258,35 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 				setAssistLevel(AssistLevel.ASSIST);
 				return result;
 			}
+		}
+	}
+
+	/** Copies the already modified 1P keys to 2P for DBM/DBR link modes. */
+	public static final class DoubleBattleLinkModifier extends LaneShuffleModifier {
+		private final boolean symmetry;
+
+		public DoubleBattleLinkModifier(boolean symmetry) {
+			super(1, false, false);
+			this.symmetry = symmetry;
+			setAssistLevel(AssistLevel.NONE);
+		}
+
+		@Override
+		protected int[] makeRandom(int[] keys, BMSModel model) {
+			int[] result = IntStream.range(0, model.getMode().key).toArray();
+			int sideWidth = model.getMode().key / 2;
+			int[] sourceKeys = getKeys(model.getMode(), 0, false);
+			for (int index = 0; index < keys.length && index < sourceKeys.length; index++) {
+				int sourceIndex = symmetry ? sourceKeys.length - 1 - index : index;
+				result[keys[index]] = sourceKeys[sourceIndex];
+			}
+			for (int scratch : model.getMode().scratchKey) {
+				if (scratch >= sideWidth) {
+					int source = scratch - sideWidth;
+					if (source >= 0 && source < result.length) result[scratch] = source;
+				}
+			}
+			return result;
 		}
 	}
 

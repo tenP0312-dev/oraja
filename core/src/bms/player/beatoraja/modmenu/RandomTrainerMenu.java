@@ -1,5 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
+import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import imgui.ImColor;
 import imgui.ImGui;
 import imgui.flag.*;
@@ -17,6 +19,7 @@ public class RandomTrainerMenu {
     private static ImBoolean BLACK_WHITE_RANDOM_PERMUTATION = new ImBoolean(false);
 
     private static ArrayList<String> LANE_ORDER = new ArrayList<>(Arrays.asList("1","2","3","4","5","6","7"));
+    private static ArrayList<String> LANE_ORDER_2P = new ArrayList<>(Arrays.asList("1","2","3","4","5","6","7"));
 
     private static final ImBoolean TRACK_RAN_WHEN_DISABLED = new ImBoolean(false);
 
@@ -40,7 +43,13 @@ public class RandomTrainerMenu {
             }
 
             // Key display
-            dragAndDropKeyDisplay();
+            dragAndDropKeyDisplay(LANE_ORDER, "1P Random Select", "RT_LANE_MEMBER_1P", true);
+            PlayerConfig player = BMSIRArenaClient.playerConfig();
+            boolean show2P = player != null
+                    && player.getBmsirManiacSettings().isDoubleBattle();
+            if (show2P) {
+                dragAndDropKeyDisplay(LANE_ORDER_2P, "2P Random Select", "RT_LANE_MEMBER_2P", false);
+            }
             //ImGui.newLine();
 
             // Random History
@@ -72,12 +81,29 @@ public class RandomTrainerMenu {
             if (ImGui.button("Shift Right")) {
                 shiftRightLaneOrder();
             }
+            if (show2P) {
+                ImGui.text("2P Controls");
+                if (ImGui.button("2P Mirror")) {
+                    mirrorLaneOrder(LANE_ORDER_2P);
+                }
+                ImGui.sameLine();
+                if (ImGui.button("2P Shift Left")) {
+                    shiftLeftLaneOrder(LANE_ORDER_2P);
+                }
+                ImGui.sameLine();
+                if (ImGui.button("2P Shift Right")) {
+                    shiftRightLaneOrder(LANE_ORDER_2P);
+                }
+            }
 
             RandomTrainer.setActive(RANDOM_TRAINER_ENABLED.get());
             if (RANDOM_TRAINER_ENABLED.get()) {
                 String currentUILaneOrder = String.join("", LANE_ORDER);
-                if (currentUILaneOrder != RandomTrainer.getLaneOrder()) {
+                if (!currentUILaneOrder.equals(RandomTrainer.getConfiguredLaneOrder())) {
                     RandomTrainer.setLaneOrder(currentUILaneOrder);
+                }
+                if (show2P) {
+                    RandomTrainer.setLaneOrder2P(String.join("", LANE_ORDER_2P));
                 }
             }
         }
@@ -122,61 +148,69 @@ public class RandomTrainerMenu {
         }
     }
 
-    private static void dragAndDropKeyDisplay() {
-        ImGui.text("Random Select");
+    private static void dragAndDropKeyDisplay(
+            ArrayList<String> laneOrder,
+            String label,
+            String payloadName,
+            boolean allowRandomMask
+    ) {
+        ImGui.text(label);
         ImGui.sameLine();
 //        ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(196,196,196));
 //        ImGui.text("(drag and drop to reorder lanes)");
 //        ImGui.popStyleColor();
         helpMarker("Drag and drop to reorder lanes, right click to toggle random.");
         ImGui.newLine();
-        for(int i = 0; i < LANE_ORDER.size(); i++) {
+        ImGui.pushID(payloadName);
+        for(int i = 0; i < laneOrder.size(); i++) {
             ImGui.pushID(i);
             ImGui.sameLine();
-            boolean toRandom = RandomTrainer.isLaneToRandom(LANE_ORDER.get(i).charAt(0));
+            boolean toRandom = allowRandomMask
+                    && RandomTrainer.isLaneToRandom(laneOrder.get(i).charAt(0));
             if (toRandom) {
                 ImGui.pushStyleColor(ImGuiCol.Button, ImColor.rgb(180,100,140));
                 ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(230,230,230));
-            } else if (Integer.parseInt(LANE_ORDER.get(i)) % 2 == 0) {
+            } else if (Integer.parseInt(laneOrder.get(i)) % 2 == 0) {
                 ImGui.pushStyleColor(ImGuiCol.Button, ImColor.rgb(0,0,139));
                 ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(230,230,230));
             } else {
                 ImGui.pushStyleColor(ImGuiCol.Button, ImColor.rgb(230,230,230));
                 ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(49,49,49));
             }
-            if (BLACK_WHITE_RANDOM_PERMUTATION.get()) {
+            if (allowRandomMask && BLACK_WHITE_RANDOM_PERMUTATION.get()) {
                 ImGui.button("", 50, 80);
             } else if (toRandom) {
                 ImGui.button("?", 50, 80);
             } else {
-                ImGui.button(LANE_ORDER.get(i), 50, 80);
+                ImGui.button(laneOrder.get(i), 50, 80);
             }
 
             ImGui.popStyleColor(2);
 
             if (ImGui.beginDragDropSource(ImGuiDragDropFlags.None)) {
-                ImGui.setDragDropPayload("RT_LANE_MEMBER", (Object) i);
+                ImGui.setDragDropPayload(payloadName, (Object) i);
                 ImGui.endDragDropSource();
             }
             if (ImGui.beginDragDropTarget()) {
-                if (ImGui.acceptDragDropPayload("RT_LANE_MEMBER", Integer.class) != null) {
-                    int payload_i = ImGui.acceptDragDropPayload("RT_LANE_MEMBER");
+                if (ImGui.acceptDragDropPayload(payloadName, Integer.class) != null) {
+                    int payload_i = ImGui.acceptDragDropPayload(payloadName);
 
-                    Collections.swap(LANE_ORDER, i, payload_i);
+                    Collections.swap(laneOrder, i, payload_i);
                 }
 
                 ImGui.endDragDropTarget();
             }
-            if (ImGui.isItemClicked(1)) {
+            if (allowRandomMask && ImGui.isItemClicked(1)) {
                 if (toRandom) {
-                    RandomTrainer.removeLaneToRandom(LANE_ORDER.get(i).charAt(0));
+                    RandomTrainer.removeLaneToRandom(laneOrder.get(i).charAt(0));
                 } else {
-                    RandomTrainer.setLaneToRandom(LANE_ORDER.get(i).charAt(0));
+                    RandomTrainer.setLaneToRandom(laneOrder.get(i).charAt(0));
                 }
             }
             ImGui.popID();
 
         }
+        ImGui.popID();
     }
 
     private static void changeLaneOrder(String random) {
@@ -193,7 +227,7 @@ public class RandomTrainerMenu {
      * 1234567 -> 7654321
      */
     public static void mirrorLaneOrder() {
-        changeLaneOrder(new StringBuilder(getLaneOrder()).reverse().toString());
+        mirrorLaneOrder(LANE_ORDER);
     }
 
     /**
@@ -201,8 +235,7 @@ public class RandomTrainerMenu {
      *  |----| -> |----|
      */
     public static void shiftLeftLaneOrder() {
-        String s = getLaneOrder();
-        changeLaneOrder(s.substring(1) + s.charAt(0));
+        shiftLeftLaneOrder(LANE_ORDER);
     }
 
     /**
@@ -210,7 +243,26 @@ public class RandomTrainerMenu {
      * |----|  ->  |----|
      */
     public static void shiftRightLaneOrder() {
-        String s = getLaneOrder();
-        changeLaneOrder(s.charAt(s.length() - 1) + s.substring(0, s.length() - 1));
+        shiftRightLaneOrder(LANE_ORDER);
+    }
+
+    private static void mirrorLaneOrder(ArrayList<String> laneOrder) {
+        changeLaneOrder(laneOrder, new StringBuilder(String.join("", laneOrder)).reverse().toString());
+    }
+
+    private static void shiftLeftLaneOrder(ArrayList<String> laneOrder) {
+        String value = String.join("", laneOrder);
+        changeLaneOrder(laneOrder, value.substring(1) + value.charAt(0));
+    }
+
+    private static void shiftRightLaneOrder(ArrayList<String> laneOrder) {
+        String value = String.join("", laneOrder);
+        changeLaneOrder(laneOrder, value.charAt(value.length() - 1) + value.substring(0, value.length() - 1));
+    }
+
+    private static void changeLaneOrder(ArrayList<String> laneOrder, String random) {
+        for (int index = 0; index < laneOrder.size(); index++) {
+            laneOrder.set(index, String.valueOf(random.charAt(index)));
+        }
     }
 }
