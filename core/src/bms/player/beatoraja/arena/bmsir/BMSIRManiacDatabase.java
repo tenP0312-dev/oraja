@@ -151,6 +151,56 @@ public final class BMSIRManiacDatabase {
         }
     }
 
+    public void recordSynced(
+            String storageHash,
+            String baseSha256,
+            String virtualChartId,
+            BMSIRManiacSettings settings,
+            String generationSeed,
+            String placementHash,
+            int bestEx,
+            long updatedAt
+    ) {
+        if (storageHash == null || storageHash.isBlank() || settings == null) return;
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement meta = connection.prepareStatement("""
+                    INSERT INTO maniac_score_meta(
+                        storage_hash, base_sha256, virtual_chart_id, ranking_class,
+                        options, generation_seed, algorithm_version, placement_hash,
+                        best_ex, source, updated_at
+                    ) VALUES(?,?,?,?,?,?,?,?,?,'ir_sync',?)
+                    ON CONFLICT(storage_hash) DO UPDATE SET
+                        base_sha256=excluded.base_sha256,
+                        virtual_chart_id=excluded.virtual_chart_id,
+                        ranking_class=excluded.ranking_class,
+                        options=CASE WHEN excluded.best_ex > maniac_score_meta.best_ex
+                            THEN excluded.options ELSE maniac_score_meta.options END,
+                        generation_seed=excluded.generation_seed,
+                        algorithm_version=excluded.algorithm_version,
+                        placement_hash=CASE WHEN excluded.best_ex > maniac_score_meta.best_ex
+                            THEN excluded.placement_hash ELSE maniac_score_meta.placement_hash END,
+                        source=CASE WHEN excluded.best_ex > maniac_score_meta.best_ex
+                            THEN 'ir_sync' ELSE maniac_score_meta.source END,
+                        best_ex=MAX(maniac_score_meta.best_ex, excluded.best_ex),
+                        updated_at=MAX(maniac_score_meta.updated_at, excluded.updated_at)
+                    """)) {
+            int index = 1;
+            meta.setString(index++, storageHash);
+            meta.setString(index++, baseSha256);
+            meta.setString(index++, virtualChartId);
+            meta.setString(index++, settings.rankingClass().name());
+            meta.setString(index++, settings.canonicalOptions());
+            meta.setString(index++, generationSeed);
+            meta.setInt(index++, BMSIRManiacSettings.ALGORITHM_VERSION);
+            meta.setString(index++, placementHash == null ? "" : placementHash);
+            meta.setInt(index++, bestEx);
+            meta.setLong(index, updatedAt);
+            meta.executeUpdate();
+        } catch (SQLException error) {
+            logger.error("MANIAC sync metadata write failed: {}", error.getMessage());
+        }
+    }
+
     private static String required(Map<String, String> values, String key) {
         String value = values.get(key);
         return value == null ? "" : value;

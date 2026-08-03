@@ -6,6 +6,7 @@ import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.ir.IRScoreData;
+import bms.player.beatoraja.ir.LeaderboardEntry;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,9 +26,13 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Dedicated transport for isolated MANIAC and Double Battle rankings. */
 public final class BMSIRManiacApiClient {
@@ -36,6 +41,9 @@ public final class BMSIRManiacApiClient {
     private static final Map<String, RankingData> CACHE = new ConcurrentHashMap<>();
     private static final String SCORE_PATH = "/api/bmsir-arena/v1/maniac/score";
     private static final String RANKING_PATH = "/api/bmsir-arena/v1/maniac/ranking";
+    private static final String GHOST_PATH = "/api/bmsir-arena/v1/maniac/ghost";
+    private static final String SYNC_PATH = "/api/bmsir-arena/v1/maniac/sync";
+    private static final AtomicBoolean SYNC_RUNNING = new AtomicBoolean();
 
     private BMSIRManiacApiClient() {
     }
@@ -121,6 +129,127 @@ public final class BMSIRManiacApiClient {
         worker.setDaemon(true);
         worker.start();
         return ranking;
+    }
+
+    public static LeaderboardEntry[] loadLeaderboard(MainController main, SongData song) {
+        Identity identity = identity(main, song);
+        if (identity == null) return new LeaderboardEntry[0];
+        try {
+            Auth auth = auth(main);
+            ObjectNode response = post(main, RANKING_PATH, identityPayload(identity, auth));
+            List<LeaderboardEntry> entries = new ArrayList<>();
+            JsonNode items = response.path("items");
+            boolean hasOwnOnlineScore = false;
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    int playerId = item.path("player_id").asInt();
+                    ScoreData score = score(item, response, auth.playerId());
+                    hasOwnOnlineScore |= playerId == auth.playerId();
+                    entries.add(LeaderboardEntry.newEntryBMSIRManiac(
+                            new IRScoreData(score),
+                            playerId
+                    ));
+                }
+            }
+            ScoreData local = localScore(main, identity);
+            if (local != null) {
+                LeaderboardEntry ownOnline = entries.stream()
+                        .filter(entry -> entry.getBMSIRPlayerId() == auth.playerId())
+                        .findFirst()
+                        .orElse(null);
+                if (!hasOwnOnlineScore || ownOnline == null
+                        || local.getExscore() > ownOnline.getIrScore().getExscore()) {
+                    entries.remove(ownOnline);
+                    local.setPlayer("");
+                    entries.add(LeaderboardEntry.newEntryBMSIRManiac(
+                            new IRScoreData(local),
+                            0
+                    ));
+                }
+            }
+            entries.sort(Comparator.comparingInt(
+                    (LeaderboardEntry entry) -> entry.getIrScore().getExscore()
+            ).reversed());
+            return entries.toArray(LeaderboardEntry[]::new);
+        } catch (Exception error) {
+            logger.warn("MANIAC leaderboard request failed: {}", error.getMessage());
+            return new LeaderboardEntry[0];
+        }
+    }
+
+    public static GhostScore loadGhost(
+            MainController main,
+            SongData song,
+            int targetPlayerId
+    ) {
+        Identity identity = identity(main, song);
+        if (identity == null || targetPlayerId <= 0) return null;
+        try {
+            Auth auth = auth(main);
+            ObjectNode payload = identityPayload(identity, auth);
+            payload.put("target_player_id", targetPlayerId);
+            ObjectNode response = post(main, GHOST_PATH, payload);
+            if (response.path("algorithm_version").asInt()
+                    != BMSIRManiacSettings.ALGORITHM_VERSION) {
+                throw new IOException("algorithm_mismatch");
+            }
+            return new GhostScore(
+                    response.path("name").asText(""),
+                    response.path("ghost").asText(""),
+                    response.path("placement_hash").asText(""),
+                    response.path("random_seed").asLong(-1L),
+                    identity.settings()
+            );
+        } catch (Exception error) {
+            logger.warn("MANIAC ghost request failed: {}", error.getMessage());
+            return null;
+        }
+    }
+
+    public static void syncOwnScoresAsync(MainController main) {
+        if (main == null || !SYNC_RUNNING.compareAndSet(false, true)) return;
+        Thread worker = new Thread(() -> {
+            try {
+                Auth auth = auth(main);
+                ObjectNode request = JSON.createObjectNode();
+                request.put("player_id", auth.playerId());
+                request.put("passmd5", auth.passmd5());
+                ObjectNode response = post(main, SYNC_PATH, request);
+                JsonNode items = response.path("items");
+                int imported = 0;
+                if (items.isArray()) {
+                    for (JsonNode item : items) {
+                        String base = item.path("base_sha256").asText("");
+                        BMSIRManiacSettings settings = BMSIRManiacSettings.fromCanonicalOptions(
+                                item.path("canonical_options").asText("")
+                        );
+                        if (settings == null || base.isBlank()) continue;
+                        ScoreData score = score(
+                                item,
+                                item.path("virtual_chart_id").asText(""),
+                                auth.playerId()
+                        );
+                        main.getPlayDataAccessor().syncManiacScoreData(
+                                settings.storageChartId(base),
+                                base,
+                                item.path("virtual_chart_id").asText(null),
+                                settings,
+                                item.path("generation_seed").asText(""),
+                                item.path("placement_hash").asText(""),
+                                score
+                        );
+                        imported++;
+                    }
+                }
+                logger.info("MANIAC score sync completed: {} records", imported);
+            } catch (Exception error) {
+                logger.warn("MANIAC score sync failed: {}", error.getMessage());
+            } finally {
+                SYNC_RUNNING.set(false);
+            }
+        }, "bmsir-maniac-sync");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     public static boolean submitScore(
@@ -270,30 +399,37 @@ public final class BMSIRManiacApiClient {
         if (!items.isArray()) return new IRScoreData[0];
         IRScoreData[] result = new IRScoreData[items.size()];
         for (int index = 0; index < result.length; index++) {
-            JsonNode item = items.get(index);
-            ScoreData score = new ScoreData();
-            score.setSha256(response.path("virtual_chart_id").asText(""));
-            score.setPlayer(item.path("player_id").asInt() == ownPlayerId
-                    ? ""
-                    : item.path("name").asText(""));
-            score.setClear(item.path("clear").asInt());
-            int exscore = item.path("exscore").asInt();
-            score.setEpg(item.has("pg") ? item.path("pg").asInt() : exscore / 2);
-            score.setEgr(item.has("gr") ? item.path("gr").asInt() : exscore % 2);
-            score.setEgd(item.path("gd").asInt());
-            score.setEbd(item.path("bd").asInt());
-            score.setEpr(item.path("pr").asInt());
-            score.setCombo(item.path("maxcombo").asInt());
-            score.setNotes(item.path("totalnotes").asInt());
-            score.setPassnotes(score.getNotes());
-            score.setMinbp(item.path("minbp").asInt());
-            score.setOption(item.path("opt_this").asInt());
-            score.setSeed(item.path("random_seed").asLong(-1L));
-            score.setGhost(item.path("ghost").asText(""));
-            score.setDate(parseDate(item.path("achieved_at").asText("")));
-            result[index] = new IRScoreData(score);
+            result[index] = new IRScoreData(score(items.get(index), response, ownPlayerId));
         }
         return result;
+    }
+
+    private static ScoreData score(JsonNode item, JsonNode response, int ownPlayerId) {
+		return score(item, response.path("virtual_chart_id").asText(""), ownPlayerId);
+	}
+
+    private static ScoreData score(JsonNode item, String chartId, int ownPlayerId) {
+        ScoreData score = new ScoreData();
+        score.setSha256(chartId == null ? "" : chartId);
+        score.setPlayer(item.path("player_id").asInt() == ownPlayerId
+                ? ""
+                : item.path("name").asText(""));
+        score.setClear(item.path("clear").asInt());
+        int exscore = item.path("exscore").asInt();
+        score.setEpg(item.has("pg") ? item.path("pg").asInt() : exscore / 2);
+        score.setEgr(item.has("gr") ? item.path("gr").asInt() : exscore % 2);
+        score.setEgd(item.path("gd").asInt());
+        score.setEbd(item.path("bd").asInt());
+        score.setEpr(item.path("pr").asInt());
+        score.setCombo(item.path("maxcombo").asInt());
+        score.setNotes(item.path("totalnotes").asInt());
+        score.setPassnotes(score.getNotes());
+        score.setMinbp(item.path("minbp").asInt());
+        score.setOption(item.path("opt_this").asInt());
+        score.setSeed(item.path("random_seed").asLong(-1L));
+        score.setGhost(item.path("ghost").asText(""));
+        score.setDate(parseDate(item.path("achieved_at").asText("")));
+        return score;
     }
 
     private static long parseDate(String value) {
@@ -332,6 +468,15 @@ public final class BMSIRManiacApiClient {
     }
 
     private record Auth(int playerId, String passmd5) {
+    }
+
+    public record GhostScore(
+            String playerName,
+            String ghost,
+            String placementHash,
+            long randomSeed,
+            BMSIRManiacSettings settings
+    ) {
     }
 
     private record Identity(

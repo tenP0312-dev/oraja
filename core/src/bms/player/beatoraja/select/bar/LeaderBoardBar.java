@@ -12,6 +12,9 @@ import bms.player.beatoraja.skin.property.StringPropertyFactory;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.ReplayData;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.model.Mode;
 import javafx.util.Pair;
 
@@ -35,6 +38,9 @@ public class LeaderBoardBar extends DirectoryBar {
 
 	@Override
 	public Bar[] getChildren() {
+		if (BMSIRManiacApiClient.hasOnlineRanking(selector.main, songData)) {
+			return fromIRScoreData(BMSIRManiacApiClient.loadLeaderboard(selector.main, songData));
+		}
 		// NOTE: For further devs, the leaderboard's children is sorted by 'exscore', if you want to implement a
 		// different sort strategy, you need to change two 'fromIRScoreData' implementation
 		Pair<IRScoreData, LeaderboardEntry[]> scores = LR2IRAccessor.getScoreData(
@@ -115,6 +121,10 @@ public class LeaderBoardBar extends DirectoryBar {
 	private FunctionBar createFunctionBar(int rank, LeaderboardEntry entry, boolean isSelfScore) {
         IRScoreData scoreData = entry.getIrScore();
 		FunctionBar irScoreBar = new FunctionBar((selector, self) -> {
+			if (entry.isBMSIRManiac()) {
+				startManiacGhost(entry, scoreData);
+				return;
+			}
             if (!entry.isLR2IR()) { return; }
 
             if (songData.getBMSModel().getMode() != Mode.BEAT_7K) {
@@ -176,6 +186,43 @@ public class LeaderBoardBar extends DirectoryBar {
         irScoreBar.setLamp(scoreData.clear.id);
         return irScoreBar;
     }
+
+	private void startManiacGhost(LeaderboardEntry entry, IRScoreData scoreData) {
+		if (entry.getBMSIRPlayerId() <= 0) {
+			ImGuiNotify.info("This MANIAC score is local only and has no online ghost.");
+			return;
+		}
+		BMSIRManiacApiClient.GhostScore ghost = BMSIRManiacApiClient.loadGhost(
+				selector.main,
+				songData,
+				entry.getBMSIRPlayerId()
+		);
+		if (ghost == null || ghost.ghost().isBlank()) {
+			ImGuiNotify.error("Failed to load the MANIAC ghost.");
+			return;
+		}
+		ScoreData target = scoreData.convertToScoreData();
+		target.setPlayer(ghost.playerName());
+		target.setGhost(ghost.ghost());
+		SongBar play = new SongBar(songData);
+		play.setRivalScore(target);
+
+		ReplayData chartOption = new ReplayData();
+		chartOption.randomoption = target.getOption() % 10;
+		chartOption.randomoption2 = (target.getOption() / 10) % 10;
+		chartOption.doubleoption = target.getOption() / 100;
+		chartOption.randomoptionseed = target.getSeed() % (65536L * 256L);
+		chartOption.randomoption2seed = target.getSeed() / (65536L * 256L);
+		chartOption.bmsirManiacSettings = new BMSIRManiacSettings(ghost.settings());
+		chartOption.bmsirManiacVirtualChartId = ghost.settings().virtualChartId(songData.getSha256());
+		chartOption.bmsirManiacGenerationSeed = ghost.settings().generationSeed(songData.getSha256());
+		chartOption.bmsirManiacAlgorithmVersion = BMSIRManiacSettings.ALGORITHM_VERSION;
+		chartOption.bmsirManiacPlacementHash = ghost.placementHash();
+
+		selector.selectSong(BMSPlayerMode.PLAY);
+		selector.readChart(songData, play);
+		selector.main.getPlayerResource().setChartOption(chartOption);
+	}
 
 	private String getCurrentPlayerName() {
 		return StringPropertyFactory.getStringProperty(StringPropertyFactory.StringType.player.name())

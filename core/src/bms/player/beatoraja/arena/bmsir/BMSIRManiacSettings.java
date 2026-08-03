@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Persisted LR2 MANIAC OPTIONS and Double Battle settings.
@@ -112,6 +114,59 @@ public final class BMSIRManiacSettings {
         sideJump = percent(sideJump);
         setRandomLink(randomLink);
         return this;
+    }
+
+    public static BMSIRManiacSettings fromCanonicalOptions(String canonical) {
+        if (canonical == null || canonical.isBlank()) return null;
+        Map<String, String> values = new HashMap<>();
+        for (String entry : canonical.split(",")) {
+            int separator = entry.indexOf('=');
+            if (separator > 0) {
+                values.put(entry.substring(0, separator), entry.substring(separator + 1));
+            }
+        }
+        if (integer(values, "algorithm") != ALGORITHM_VERSION) return null;
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setHiddenSudden1P(integer(values, "hs1"));
+        settings.setHiddenSudden2P(integer(values, "hs2"));
+        settings.setExtraMode(integer(values, "extra"));
+        settings.setAddNotes(integer(values, "notes"));
+        settings.setAddLongNotes(integer(values, "long"));
+        settings.setAddMines(integer(values, "mines"));
+        settings.setAcceleration(integer(values, "accel"));
+        settings.setSoftLanding(integer(values, "soft"));
+        settings.setEarthquake(integer(values, "earthquake"));
+        settings.setTornado(integer(values, "tornado"));
+        settings.setSuperLoop(integer(values, "superloop"));
+        settings.setGambol(integer(values, "gambol"));
+        settings.setCharacter(integer(values, "char"));
+        settings.setHeartbeat(integer(values, "heartbeat"));
+        settings.setLoudness(integer(values, "loudness"));
+        settings.setNabeatsu(integer(values, "nabeatsu"));
+        settings.setSinCurve(integer(values, "sin"));
+        settings.setWave(integer(values, "wave"));
+        settings.setSpiral(integer(values, "spiral"));
+        settings.setSideJump(integer(values, "sidejump"));
+        settings.setDoubleBattle(Boolean.parseBoolean(values.getOrDefault("db", "false")));
+        settings.setRandomLink(values.get("link"));
+        String seed = values.getOrDefault("seed", "fixed");
+        if (!"fixed".equals(seed)) {
+            try {
+                settings.setGenerationSeedOverride(Long.parseUnsignedLong(seed));
+            } catch (NumberFormatException error) {
+                return null;
+            }
+        }
+        settings.validate();
+        return settings.isActive() ? settings : null;
+    }
+
+    private static int integer(Map<String, String> values, String key) {
+        try {
+            return Integer.parseInt(values.getOrDefault(key, "0"));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     public boolean isActive() {

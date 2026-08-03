@@ -194,6 +194,52 @@ public final class PlayDataAccessor {
 				: maniacScoredb.getScoreData(storageHash, 0);
 	}
 
+	public void syncManiacScoreData(
+			String storageHash,
+			String baseSha256,
+			String virtualChartId,
+			BMSIRManiacSettings settings,
+			String generationSeed,
+			String placementHash,
+			ScoreData incoming
+	) {
+		if (storageHash == null || storageHash.isBlank() || incoming == null || settings == null) {
+			return;
+		}
+		int mode = Math.max(0, incoming.getMode());
+		ScoreData stored = maniacScoredb.getScoreData(storageHash, mode);
+		int playcount = stored == null ? 0 : stored.getPlaycount();
+		int clearcount = stored == null ? 0 : stored.getClearcount();
+		if (stored == null) {
+			stored = new ScoreData();
+			stored.setSha256(storageHash);
+			stored.setMode(mode);
+			stored.setNotes(incoming.getNotes());
+			stored.setPassnotes(incoming.getPassnotes());
+			stored.setMinbp(Integer.MAX_VALUE);
+		}
+		stored.setNotes(Math.max(stored.getNotes(), incoming.getNotes()));
+		stored.setPassnotes(Math.max(stored.getPassnotes(), incoming.getPassnotes()));
+		stored.update(incoming, true);
+		stored.setDate(Math.max(stored.getDate(), incoming.getDate()));
+		stored.setPlaycount(playcount);
+		stored.setClearcount(clearcount);
+		stored.setScorehash(getScoreHash(stored));
+		maniacScoredb.setScoreData(stored);
+		if (maniacMetadata != null) {
+			maniacMetadata.recordSynced(
+					storageHash,
+					baseSha256,
+					virtualChartId,
+					settings,
+					generationSeed,
+					placementHash,
+					incoming.getExscore(),
+					incoming.getDate()
+			);
+		}
+	}
+
 	/**
 	 * スコアデータをまとめて読み込み、collectorに渡す
 	 * @param collector スコアデータのcollector

@@ -27,6 +27,7 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRScoreDatabaseExport;
 import bms.player.beatoraja.song.*;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -154,6 +155,8 @@ public class PlayConfigurationView implements Initializable {
 	private CheckBox bmsirJudgeTimingRestoreEnabled;
 	@FXML
 	private CheckBox bmsirInfoNotificationsEnabled;
+	@FXML
+	private Button bmsirExportVanillaScoreDb;
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
 
@@ -1185,6 +1188,42 @@ public class PlayConfigurationView implements Initializable {
 		} catch (ClassNotFoundException e1) {
 		}
 
+	}
+
+	@FXML
+	public void exportBmsirVanillaScoreDatabase() {
+		if (config == null || players.getValue() == null) return;
+		bmsirExportVanillaScoreDb.setDisable(true);
+		Path playerDirectory = Paths.get(config.getPlayerpath(), players.getValue());
+		Thread worker = new Thread(() -> {
+			try {
+				BMSIRScoreDatabaseExport.ExportResult result =
+						BMSIRScoreDatabaseExport.export(playerDirectory);
+				Platform.runLater(() -> {
+					bmsirExportVanillaScoreDb.setDisable(false);
+					Alert alert = new Alert(Alert.AlertType.INFORMATION);
+					alert.setTitle("BMS-IR Arena");
+					alert.setHeaderText("Vanilla score database created");
+					alert.setContentText(
+							result.path() + "\n\nNormal scores: " + result.normalScores()
+							+ "\nExcluded MANIAC scores: " + result.excludedManiacScores()
+					);
+					alert.showAndWait();
+				});
+			} catch (Exception error) {
+				logger.warn("Vanilla score database export failed: {}", error.getMessage());
+				Platform.runLater(() -> {
+					bmsirExportVanillaScoreDb.setDisable(false);
+					Alert alert = new Alert(Alert.AlertType.ERROR);
+					alert.setTitle("BMS-IR Arena");
+					alert.setHeaderText("Score database export failed");
+					alert.setContentText(error.getMessage());
+					alert.showAndWait();
+				});
+			}
+		}, "bmsir-score-db-export");
+		worker.setDaemon(true);
+		worker.start();
 	}
 
 	@FXML

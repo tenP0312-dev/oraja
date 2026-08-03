@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test;
 
 public class BMSIRManiacSettingsTest {
     @Test
+    public void canonicalOptionsRoundTripForIrSync() {
+        BMSIRManiacSettings source = new BMSIRManiacSettings();
+        source.setExtraMode(2);
+        source.setTornado(30);
+
+        BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(
+                source.canonicalOptions()
+        );
+
+        assertEquals(source.canonicalOptions(), restored.canonicalOptions());
+        assertEquals(BMSIRManiacSettings.RankingClass.EXTRA, restored.rankingClass());
+    }
+
+    @Test
     public void defaultsAreNormalAndInactive() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         assertFalse(settings.isActive());

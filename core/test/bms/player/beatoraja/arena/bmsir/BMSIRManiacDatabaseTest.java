@@ -55,6 +55,49 @@ class BMSIRManiacDatabaseTest {
         }
     }
 
+    @Test
+    void irSyncDoesNotIncreaseLocalPlayCountsOrHistory() throws Exception {
+        Config config = new Config();
+        config.setPlayerpath(temporaryDirectory.toString());
+        config.setPlayername("player1");
+        java.nio.file.Files.createDirectories(temporaryDirectory.resolve("player1"));
+        PlayerConfig player = new PlayerConfig();
+        player.setId("player1");
+        PlayDataAccessor accessor = new PlayDataAccessor(config, player);
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setExtraMode(2);
+        ScoreData score = new ScoreData();
+        score.setEpg(20);
+        score.setNotes(20);
+        score.setPassnotes(20);
+        score.setMinbp(0);
+        score.setClear(5);
+        score.setDate(1234);
+        String storage = settings.storageChartId("base-chart");
+
+        accessor.syncManiacScoreData(
+                storage,
+                "base-chart",
+                settings.virtualChartId("base-chart"),
+                settings,
+                Long.toUnsignedString(settings.generationSeed("base-chart")),
+                "placement",
+                score
+        );
+
+        ScoreData restored = accessor.readManiacScoreData(storage, 0);
+        assertEquals(40, restored.getExscore());
+        assertEquals(0, restored.getPlaycount());
+        assertEquals(0, restored.getClearcount());
+        Path db = temporaryDirectory.resolve("player1/bmsir_maniac.db");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + db)) {
+            assertEquals(0, connection.createStatement()
+                    .executeQuery("SELECT COUNT(*) FROM maniac_play_history").getInt(1));
+            assertEquals("ir_sync", connection.createStatement()
+                    .executeQuery("SELECT source FROM maniac_score_meta").getString(1));
+        }
+    }
+
     private static BMSModel model() {
         BMSModel model = new BMSModel();
         model.setSHA256("base-chart");

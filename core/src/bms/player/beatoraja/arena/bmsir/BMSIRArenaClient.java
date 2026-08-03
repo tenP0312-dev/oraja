@@ -241,6 +241,7 @@ public final class BMSIRArenaClient {
         shutdown();
         main = controller;
         initialized = true;
+        BMSIRManiacApiClient.syncOwnScoresAsync(controller);
         BMSIRArenaLog.event(
                 "initialize",
                 "client_version", CLIENT_VERSION,

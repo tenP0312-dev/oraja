@@ -641,6 +641,15 @@ public class BMSPlayer extends MainState {
 				if (resource.getManiacPlayContext() != null) {
 					resource.getManiacPlayContext().updatePlacement(model);
 				}
+				if (resource.getChartOption() != null
+						&& resource.getChartOption().bmsirManiacPlacementHash != null
+						&& !resource.getChartOption().bmsirManiacPlacementHash.isBlank()
+						&& resource.getManiacPlayContext() != null
+						&& !resource.getChartOption().bmsirManiacPlacementHash.equals(
+						resource.getManiacPlayContext().placementHash())) {
+					resource.setRivalScoreData(null);
+					ImGuiNotify.error("MANIAC ghost placement did not match this client build.");
+				}
 
 		}
 
