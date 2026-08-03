@@ -1,5 +1,6 @@
 from pathlib import Path
 import plistlib
+import stat
 import tempfile
 import unittest
 import zipfile
@@ -29,6 +30,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         runtime = root / "java-home"
         (runtime / "bin").mkdir(parents=True)
         (runtime / "bin" / "java").write_text("java", encoding="utf-8")
+        (runtime / "bin" / "java").chmod(0o755)
         (runtime / "legal" / "java.base").mkdir(parents=True)
         (runtime / "legal" / "java.base" / "LICENSE").write_text("runtime", encoding="utf-8")
         (runtime / "release").write_text(
@@ -87,6 +89,14 @@ class ArenaReleasePackageTest(unittest.TestCase):
                     "BMS-IR-Arena-config.command"
                 ).decode("utf-8")
                 version = archive.read("bmsir-arena-version.txt").decode("ascii")
+                executable_modes = [
+                    archive.getinfo(name).external_attr >> 16
+                    for name in (
+                        "runtime/bin/java",
+                        "BMS-IR Arena Test.app/Contents/MacOS/bmsir-arena-launcher",
+                        "BMS-IR-Arena-config.command",
+                    )
+                ]
             self.assertIn("beatoraja.jar", names)
             self.assertIn(f"ir/{PLUGIN_FILENAME}", names)
             self.assertIn("runtime/bin/java", names)
@@ -100,6 +110,8 @@ class ArenaReleasePackageTest(unittest.TestCase):
             self.assertEqual("0.4.14\n", version)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
+            self.assertTrue(all(stat.S_ISREG(mode) for mode in executable_modes))
+            self.assertTrue(all(mode & stat.S_IXUSR for mode in executable_modes))
 
     def test_requires_explicit_asset_redistribution_confirmation(self):
         with tempfile.TemporaryDirectory() as temporary:

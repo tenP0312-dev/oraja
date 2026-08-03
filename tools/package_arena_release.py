@@ -284,7 +284,10 @@ def zip_directory(root: Path, output: Path) -> None:
             relative = path.relative_to(root).as_posix()
             info = zipfile.ZipInfo(relative, ZIP_EPOCH)
             mode = path.stat().st_mode
-            info.external_attr = (stat.S_IMODE(mode) & 0xFFFF) << 16
+            info.create_system = 3
+            info.external_attr = (
+                (stat.S_IFREG | stat.S_IMODE(mode)) & 0xFFFF
+            ) << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
