@@ -156,6 +156,28 @@ class ArenaReleasePackageTest(unittest.TestCase):
                     test_build=True,
                 )
 
+    def test_distribution_revision_updates_archive_and_version_marker(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = self.fixture(root)
+            output = build_release(
+                platform="macos-aarch64",
+                body_jar=fixture["body"],
+                plugin_jar=fixture["plugin"],
+                base_assets=fixture["assets"],
+                java_home=fixture["runtime"],
+                project_license=fixture["license"],
+                output_dir=root / "dist",
+                confirmed=True,
+                distribution_version="0.4.14.2",
+            )
+            self.assertIn("0.4.14.2-macos-aarch64", output.name)
+            with zipfile.ZipFile(output) as archive:
+                marker = archive.read("bmsir-arena-version.txt").decode("ascii")
+                manifest = archive.read("release-manifest.json").decode("utf-8")
+            self.assertEqual("0.4.14.2\n", marker)
+            self.assertIn('"version": "0.4.14.2"', manifest)
+
 
 if __name__ == "__main__":
     unittest.main()

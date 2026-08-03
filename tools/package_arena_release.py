@@ -192,7 +192,12 @@ def write_launchers(root: Path, platform: str) -> None:
     launcher.chmod(0o755)
 
 
-def write_readme(root: Path, platform: str, launcher_filename: str | None) -> None:
+def write_readme(
+    root: Path,
+    platform: str,
+    launcher_filename: str | None,
+    distribution_version: str,
+) -> None:
     launcher = launcher_filename or "BMS-IR-Arena-config.command"
     fallback = (
         "\n従来どおり BMS-IR-Arena-config.bat から起動することもできます。\n"
@@ -200,7 +205,7 @@ def write_readme(root: Path, platform: str, launcher_filename: str | None) -> No
         else ""
     )
     (root / "README-BMS-IR-Arena.txt").write_text(
-        f"Arena oraja {VERSION} / Java 21 bundled\n"
+        f"Arena oraja {distribution_version} / Java 21 bundled\n"
         "================================================\n\n"
         f"1. {launcher} を起動します。\n"
         "2. BMS-IRのIR ID (190xxx) と登録時パスワードをIR設定へ入力します。\n"
@@ -243,7 +248,11 @@ def build_release(
     confirmed: bool,
     launcher_exe: Path | None = None,
     test_build: bool = False,
+    distribution_version: str | None = None,
 ) -> Path:
+    distribution_version = (distribution_version or VERSION).strip()
+    if not re.fullmatch(r"\d+(?:\.\d+){2,3}", distribution_version):
+        raise ValueError("Distribution version must contain three or four numeric components")
     release = validate_inputs(
         platform=platform,
         body_jar=body_jar,
@@ -255,7 +264,10 @@ def build_release(
         confirmed=confirmed,
     )
     channel_suffix = "-test" if test_build else ""
-    archive_name = f"BMS-IR-Arena-oraja-{VERSION}-{platform}{channel_suffix}-java21.zip"
+    archive_name = (
+        f"BMS-IR-Arena-oraja-{distribution_version}-{platform}"
+        f"{channel_suffix}-java21.zip"
+    )
     with tempfile.TemporaryDirectory(prefix="bmsir-arena-release-") as temporary:
         root = Path(temporary) / archive_name.removesuffix(".zip")
         root.mkdir()
@@ -273,12 +285,15 @@ def build_release(
         if launcher_exe is not None:
             launcher_filename = "BMS-IR Arena Test.exe" if test_build else "BMS-IR Arena.exe"
             shutil.copy2(launcher_exe, root / launcher_filename)
-        (root / "bmsir-arena-version.txt").write_text(f"{VERSION}\n", encoding="ascii")
+        (root / "bmsir-arena-version.txt").write_text(
+            f"{distribution_version}\n",
+            encoding="ascii",
+        )
         write_launchers(root, platform)
-        write_readme(root, platform, launcher_filename)
+        write_readme(root, platform, launcher_filename, distribution_version)
         manifest = {
             "product": "Arena oraja",
-            "version": VERSION,
+            "version": distribution_version,
             "channel": "test" if test_build else "stable",
             "platform": platform,
             "java_version": release.get("JAVA_VERSION", ""),
@@ -308,6 +323,7 @@ def main() -> int:
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--launcher-exe", type=Path)
     parser.add_argument("--test-build", action="store_true")
+    parser.add_argument("--distribution-version")
     parser.add_argument("--project-license", type=Path, default=Path(__file__).resolve().parents[1] / "LICENSE")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--confirm-base-assets-redistributable", action="store_true")
@@ -323,6 +339,7 @@ def main() -> int:
         confirmed=args.confirm_base_assets_redistributable,
         launcher_exe=args.launcher_exe.resolve() if args.launcher_exe else None,
         test_build=args.test_build,
+        distribution_version=args.distribution_version,
     )
     print(output)
     return 0
