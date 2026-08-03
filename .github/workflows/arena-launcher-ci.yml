@@ -33,8 +33,8 @@ jobs:
         working-directory: arena-launcher/src-tauri
         run: cargo build --release --locked
 
-      - name: Install Tauri CLI for macOS app validation
-        if: runner.os == 'macOS'
+      - name: Install Tauri CLI for app validation
+        if: runner.os == 'macOS' || github.event_name == 'workflow_dispatch'
         run: cargo install tauri-cli --version 2.11.4 --locked
 
       - name: Bundle unsigned macOS validation app
