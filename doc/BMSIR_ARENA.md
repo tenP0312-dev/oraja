@@ -483,9 +483,9 @@ enforced in Rust and cached locally, so a later network failure cannot
 re-enable an old version. The Arena service compatibility gate remains the
 final enforcement point for clients that never received that signed policy.
 Pull-request CI produces explicitly unsigned validation artifacts; manually
-dispatched CI builds only configured internal-test launchers and reuses the
-cached Tauri CLI instead of rebuilding both configured and unconfigured
-launchers. Official launcher publication remains blocked
+dispatched CI builds only configured internal-test launchers and downloads the
+SHA-256-pinned official Tauri CLI binary instead of compiling it or rebuilding
+both configured and unconfigured launchers. Official launcher publication remains blocked
 until Authenticode and Developer ID/notarization credentials plus the reviewed
 manifest public key are available.
 

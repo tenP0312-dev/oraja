@@ -35,17 +35,33 @@ jobs:
         working-directory: arena-launcher/src-tauri
         run: cargo build --release --locked
 
-      - name: Cache Tauri CLI
-        id: tauri-cli-cache
-        if: runner.os == 'macOS' || github.event_name == 'workflow_dispatch'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tauri*
-          key: tauri-cli-2.11.4-${{ runner.os }}-${{ runner.arch }}
+      - name: Install pinned Tauri CLI for macOS
+        if: runner.os == 'macOS'
+        run: |
+          archive="$RUNNER_TEMP/cargo-tauri.zip"
+          curl --fail --location --silent --show-error \
+            https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v2.11.4/cargo-tauri-aarch64-apple-darwin.zip \
+            --output "$archive"
+          echo "82bdcb9ae7f407882321680ae50750f11623fae22445f8b00b096e10f815d604  $archive" | shasum -a 256 --check
+          unzip -j "$archive" cargo-tauri -d "$HOME/.cargo/bin"
+          chmod 755 "$HOME/.cargo/bin/cargo-tauri"
+          cargo tauri --version
 
-      - name: Install Tauri CLI for app validation
-        if: (runner.os == 'macOS' || github.event_name == 'workflow_dispatch') && steps.tauri-cli-cache.outputs.cache-hit != 'true'
-        run: cargo install tauri-cli --version 2.11.4 --locked
+      - name: Install pinned Tauri CLI for Windows internal build
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "cargo-tauri.zip"
+          Invoke-WebRequest `
+            -Uri "https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v2.11.4/cargo-tauri-x86_64-pc-windows-msvc.zip" `
+            -OutFile $archive
+          $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          if ($actual -ne "0743e30a661a35d63339b24cf63828f97ba5389a1d7f13b368a542794dd0a3f3") {
+            throw "Tauri CLI archive SHA-256 mismatch: $actual"
+          }
+          Expand-Archive -Path $archive -DestinationPath $env:RUNNER_TEMP -Force
+          Copy-Item (Join-Path $env:RUNNER_TEMP "cargo-tauri.exe") (Join-Path $env:USERPROFILE ".cargo/bin/cargo-tauri.exe") -Force
+          cargo tauri --version
 
       - name: Bundle unsigned macOS validation app
         if: runner.os == 'macOS' && github.event_name == 'pull_request'
