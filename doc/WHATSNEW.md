@@ -1,4 +1,8 @@
-# Arena oraja 0.4.14.16
+# Arena oraja 0.4.14.17
+
+- Restored the launcher self-update path for users who skipped the previous
+  internal test release. The test patch now includes launcher 0.2.11 together
+  with the Arena body update.
 
 ## MANIAC play, Double Battle, and Arena presentation
 
