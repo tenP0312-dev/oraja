@@ -472,7 +472,8 @@ overall transferred bytes, percent, verified file count, and the following
 verification, application, and launcher-restart phases. Existing installations
 hash the signed delta paths and download only changed or missing files. A
 verified staged launcher can restart as its own short-lived update helper and
-relaunch after replacement. An EXE placed in an empty portable directory
+relaunch after replacement. The verified helper is copied outside staging, and
+successful updates remove both staging and rollback data before launch. An EXE placed in an empty portable directory
 immediately checks its selected channel and downloads one signed compressed
 bootstrap ZIP, verifies its full file inventory, and then applies the current
 sparse delta. Missing files do not become `current` merely because
