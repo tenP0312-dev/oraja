@@ -27,6 +27,13 @@ import static bms.player.beatoraja.select.MusicSelectKeyProperty.MusicSelectKey.
 public final class MusicSelectInputProcessor {
 
     static final long MANIAC_OPTIONS_HOLD_MILLIS = 1000L;
+    static final long MANIAC_MENU_REPEAT_DELAY_MILLIS = 350L;
+    static final long MANIAC_MENU_REPEAT_INTERVAL_MILLIS = 90L;
+    static final int MANIAC_KEY_1 = 0;
+    static final int MANIAC_KEY_2 = 1;
+    static final int MANIAC_KEY_4 = 3;
+    static final int MANIAC_KEY_6 = 5;
+    static final int MANIAC_KEY_7 = 6;
 
     /**
      * バー移動中のカウンタ
@@ -57,6 +64,12 @@ public final class MusicSelectInputProcessor {
     private final MusicSelector select;
 
     private final F2HoldDetector f2HoldDetector = new F2HoldDetector();
+    private final ChordHoldDetector maniacChordDetector = new ChordHoldDetector();
+    private final RepeatPressDetector maniacDownDetector = new RepeatPressDetector();
+    private final RepeatPressDetector maniacUpDetector = new RepeatPressDetector();
+    private final PressEdgeDetector maniacSelectDetector = new PressEdgeDetector();
+    private final PressEdgeDetector maniacBackDetector = new PressEdgeDetector();
+    private boolean suppressManiacControlsUntilChordRelease;
 
     public MusicSelectInputProcessor(MusicSelector select) {
         this.select = select;
@@ -75,8 +88,12 @@ public final class MusicSelectInputProcessor {
         final BarManager barManager = select.getBarManager();
         final Bar current = select.getBarManager().getSelected();
 
-        handleF2(input, System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        handleF2(input, now);
         if (ImGuiRenderer.isManiacOptionsOpen()) {
+            return;
+        }
+        if (handleManiacChord(input, now)) {
             return;
         }
 
@@ -419,13 +436,14 @@ public final class MusicSelectInputProcessor {
             case SHORT_PRESS -> {
                 if (ImGuiRenderer.isManiacOptionsOpen()) {
                     ImGuiRenderer.closeManiacOptions();
+                    resetManiacMenuControls();
                 } else {
                     select.executeEvent(EventType.update_folder);
                 }
             }
             case LONG_PRESS -> {
                 if (!ImGuiRenderer.isManiacOptionsOpen()) {
-                    ImGuiRenderer.showManiacOptions();
+                    openManiacOptions(false);
                 }
             }
             case NONE -> {
@@ -435,11 +453,71 @@ public final class MusicSelectInputProcessor {
 
     void inputManiacOptions() {
         BMSPlayerInputProcessor input = select.main.getInputProcessor();
-        handleF2(input, System.currentTimeMillis());
-        if (ImGuiRenderer.isManiacOptionsOpen()
-                && input.isControlKeyPressed(ControlKeys.ESCAPE)) {
-            ImGuiRenderer.closeManiacOptions();
+        long now = System.currentTimeMillis();
+        handleF2(input, now);
+        if (!ImGuiRenderer.isManiacOptionsOpen()) {
+            return;
         }
+        if (input.isControlKeyPressed(ControlKeys.ESCAPE)) {
+            ImGuiRenderer.closeManiacOptions();
+            resetManiacMenuControls();
+            return;
+        }
+
+        if (suppressManiacControlsUntilChordRelease) {
+            if (!input.getKeyState(MANIAC_KEY_2)
+                    && !input.getKeyState(MANIAC_KEY_4)
+                    && !input.getKeyState(MANIAC_KEY_6)) {
+                suppressManiacControlsUntilChordRelease = false;
+                resetManiacMenuControls();
+            }
+            return;
+        }
+
+        if (maniacBackDetector.update(input.getKeyState(MANIAC_KEY_7))) {
+            input.resetKeyChangedTime(MANIAC_KEY_7);
+            ImGuiRenderer.closeManiacOptions();
+            resetManiacMenuControls();
+            return;
+        }
+        if (maniacDownDetector.update(input.getKeyState(MANIAC_KEY_1), now)) {
+            ImGuiRenderer.moveManiacOptionsSelection(1);
+        }
+        if (maniacUpDetector.update(input.getKeyState(MANIAC_KEY_2), now)) {
+            ImGuiRenderer.moveManiacOptionsSelection(-1);
+        }
+        if (maniacSelectDetector.update(input.getKeyState(MANIAC_KEY_6))) {
+            ImGuiRenderer.cycleManiacOption();
+        }
+    }
+
+    private boolean handleManiacChord(BMSPlayerInputProcessor input, long now) {
+        boolean chordPressed = input.getKeyState(MANIAC_KEY_2)
+                && input.getKeyState(MANIAC_KEY_4)
+                && input.getKeyState(MANIAC_KEY_6);
+        if (maniacChordDetector.update(chordPressed, now)) {
+            openManiacOptions(true);
+        }
+        if (chordPressed) {
+            input.resetKeyChangedTime(MANIAC_KEY_2);
+            input.resetKeyChangedTime(MANIAC_KEY_4);
+            input.resetKeyChangedTime(MANIAC_KEY_6);
+            return true;
+        }
+        return false;
+    }
+
+    private void openManiacOptions(boolean fromChord) {
+        ImGuiRenderer.showManiacOptions();
+        suppressManiacControlsUntilChordRelease = fromChord;
+        resetManiacMenuControls();
+    }
+
+    private void resetManiacMenuControls() {
+        maniacDownDetector.reset();
+        maniacUpDetector.reset();
+        maniacSelectDetector.reset();
+        maniacBackDetector.reset();
     }
 
     static final class F2HoldDetector {
@@ -465,6 +543,68 @@ public final class MusicSelectInputProcessor {
                 return action;
             }
             return Action.NONE;
+        }
+    }
+
+    static final class ChordHoldDetector {
+        private long pressedAt = -1L;
+        private boolean handled;
+
+        boolean update(boolean pressed, long now) {
+            if (pressed && pressedAt < 0L) {
+                pressedAt = now;
+                handled = false;
+            }
+            if (pressed && !handled && now - pressedAt >= MANIAC_OPTIONS_HOLD_MILLIS) {
+                handled = true;
+                return true;
+            }
+            if (!pressed) {
+                pressedAt = -1L;
+                handled = false;
+            }
+            return false;
+        }
+    }
+
+    static final class RepeatPressDetector {
+        private boolean pressed;
+        private long nextRepeatAt;
+
+        boolean update(boolean current, long now) {
+            if (!current) {
+                reset();
+                return false;
+            }
+            if (!pressed) {
+                pressed = true;
+                nextRepeatAt = now + MANIAC_MENU_REPEAT_DELAY_MILLIS;
+                return true;
+            }
+            if (now >= nextRepeatAt) {
+                nextRepeatAt = now + MANIAC_MENU_REPEAT_INTERVAL_MILLIS;
+                return true;
+            }
+            return false;
+        }
+
+        void reset() {
+            pressed = false;
+            nextRepeatAt = 0L;
+        }
+    }
+
+    static final class PressEdgeDetector {
+        private boolean pressed;
+
+        boolean update(boolean current) {
+            boolean activated = current && !pressed;
+            pressed = current;
+            return activated;
+        }
+
+        void reset() {
+            pressed = false;
         }
     }
 }

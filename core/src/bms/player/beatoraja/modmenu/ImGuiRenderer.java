@@ -273,6 +273,18 @@ public class ImGuiRenderer {
         }
     }
 
+    public static void moveManiacOptionsSelection(int delta) {
+        if (SHOW_MANIAC_OPTIONS.get()) {
+            ManiacOptionsMenu.moveSelection(delta);
+        }
+    }
+
+    public static void cycleManiacOption() {
+        if (SHOW_MANIAC_OPTIONS.get()) {
+            ManiacOptionsMenu.cycleSelection();
+        }
+    }
+
     public static void helpMarker(String desc) {
         ImGui.textDisabled("(?)");
         if (ImGui.isItemHovered()) {

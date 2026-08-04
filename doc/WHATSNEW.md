@@ -1,10 +1,12 @@
-# Arena oraja 0.4.14
+# Arena oraja 0.4.14.13
 
 ## MANIAC play, Double Battle, and Arena presentation
 
 - Added an OpenLR2 Beta3 v100201-derived full-window black MANIAC OPTIONS
-  screen on F2 hold. Music Select input pauses while it is open and settings
-  are committed once when returning to Music Select. It includes EX modes,
+  screen on F2 hold or a one-second 2+4+6 key chord. The screen uses a simple
+  one-column text list: 1KEY moves down, 2KEY moves up, 6KEY cycles the value,
+  and 7KEY saves and returns to Music Select. Music Select input pauses while
+  it is open and settings are committed once when returning. It includes EX modes,
   note transforms, mines, strict-judge options, and visual
   effects. Ranked generated charts use a fixed MT19937 generation seed while
   normal RANDOM and Random Trainer remain per-play options.
@@ -27,6 +29,8 @@
 - Launcher 0.2.10 prefers the canonical updated `beatoraja.jar` when legacy
   versioned clients are also present. Its Arena launch button enters Music
   Select directly instead of opening pre-launch configuration.
+- Client windows and startup progress now display the full four-part internal
+  release version instead of truncating it to `0.4.14`.
 
 # Arena oraja 0.4.13
 
