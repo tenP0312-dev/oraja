@@ -258,7 +258,19 @@ public class ImGuiRenderer {
     }
 
     public static void showManiacOptions() {
-        SHOW_MANIAC_OPTIONS.set(true);
+        if (!SHOW_MANIAC_OPTIONS.get() && ManiacOptionsMenu.open()) {
+            SHOW_MANIAC_OPTIONS.set(true);
+        }
+    }
+
+    public static boolean isManiacOptionsOpen() {
+        return SHOW_MANIAC_OPTIONS.get();
+    }
+
+    public static void closeManiacOptions() {
+        if (SHOW_MANIAC_OPTIONS.get()) {
+            ManiacOptionsMenu.close(SHOW_MANIAC_OPTIONS);
+        }
     }
 
     public static void helpMarker(String desc) {

@@ -2,8 +2,10 @@
 
 ## MANIAC play, Double Battle, and Arena presentation
 
-- Added an OpenLR2 Beta3 v100201-derived MANIAC OPTIONS screen on F2 hold,
-  including EX modes, note transforms, mines, strict-judge options, and visual
+- Added an OpenLR2 Beta3 v100201-derived full-window black MANIAC OPTIONS
+  screen on F2 hold. Music Select input pauses while it is open and settings
+  are committed once when returning to Music Select. It includes EX modes,
+  note transforms, mines, strict-judge options, and visual
   effects. Ranked generated charts use a fixed MT19937 generation seed while
   normal RANDOM and Random Trainer remain per-play options.
 - Added Double Battle conversion with existing DP options, configurable random
@@ -12,7 +14,8 @@
   transforms use isolated BMS-IR leaderboards, ghosts, and score sync; a safe
   vanilla `score.db` export is available from pre-launch configuration. Music
   Select lamps now follow the exact active MANIAC/Double Battle settings and
-  refresh immediately when F2 settings or synchronized records change.
+  clear retained bar scores before reloading when F2 settings or synchronized
+  records change.
 - Split the Arena graph into its own window, added score differences, match
   state, rating changes, persistent private-room records, notification-sound
   testing, and optional detailed protocol logging.

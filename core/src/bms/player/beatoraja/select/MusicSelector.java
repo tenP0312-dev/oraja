@@ -18,6 +18,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.modmenu.ImGuiNotify;
+import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -223,7 +224,13 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void refreshScoreDisplay() {
+		manager.invalidatePlayerScoreDisplay();
 		scorecache.clear();
+		SongData[] visibleSongs = manager.getVisibleSongDatas();
+		if (visibleSongs.length > 0) {
+			scorecache.readScoreDatas((song, score) -> {
+			}, visibleSongs, config.getLnmode());
+		}
 		manager.updateBar();
 	}
 
@@ -390,6 +397,10 @@ public final class MusicSelector extends MainState {
 
 	public void input() {
 		final BMSPlayerInputProcessor input = main.getInputProcessor();
+		if (ImGuiRenderer.isManiacOptionsOpen()) {
+			musicinput.inputManiacOptions();
+			return;
+		}
 
 		if (input.getControlKeyState(ControlKeys.NUM6)) {
 			main.changeState(MainStateType.CONFIG);
@@ -401,6 +412,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void shutdown() {
+		ImGuiRenderer.closeManiacOptions();
 		preview.stop();
 		if (search != null) {
 			search.unfocus(this);

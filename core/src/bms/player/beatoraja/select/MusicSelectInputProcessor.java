@@ -76,6 +76,9 @@ public final class MusicSelectInputProcessor {
         final Bar current = select.getBarManager().getSelected();
 
         handleF2(input, System.currentTimeMillis());
+        if (ImGuiRenderer.isManiacOptionsOpen()) {
+            return;
+        }
 
         if (input.isControlKeyPressed(ControlKeys.NUM0)) {
             // 検索用ポップアップ表示。これ必要？
@@ -413,10 +416,29 @@ public final class MusicSelectInputProcessor {
                 input.getControlKeyState(ControlKeys.F2),
                 now
         )) {
-            case SHORT_PRESS -> select.executeEvent(EventType.update_folder);
-            case LONG_PRESS -> ImGuiRenderer.showManiacOptions();
+            case SHORT_PRESS -> {
+                if (ImGuiRenderer.isManiacOptionsOpen()) {
+                    ImGuiRenderer.closeManiacOptions();
+                } else {
+                    select.executeEvent(EventType.update_folder);
+                }
+            }
+            case LONG_PRESS -> {
+                if (!ImGuiRenderer.isManiacOptionsOpen()) {
+                    ImGuiRenderer.showManiacOptions();
+                }
+            }
             case NONE -> {
             }
+        }
+    }
+
+    void inputManiacOptions() {
+        BMSPlayerInputProcessor input = select.main.getInputProcessor();
+        handleF2(input, System.currentTimeMillis());
+        if (ImGuiRenderer.isManiacOptionsOpen()
+                && input.isControlKeyPressed(ControlKeys.ESCAPE)) {
+            ImGuiRenderer.closeManiacOptions();
         }
     }
 

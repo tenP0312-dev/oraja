@@ -119,7 +119,11 @@ backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
 
 Holding F2 for about one second on Music Select opens the one-column MANIAC
-OPTIONS screen; a short F2 press keeps the existing refresh command. EXTRA
+OPTIONS screen; a short F2 press keeps the existing refresh command. The
+screen is an opaque black full-window mode rather than a window over Music
+Select. Song selection input is suspended while it is open. Changes remain in
+a draft until `Apply and return`, Escape, or a new short F2 press commits them,
+saves once, reloads the effective score set, and returns to Music Select. EXTRA
 MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
 effects follow the algorithms and inclusive-random boundaries recovered from
 OpenLR2 Beta3 v100201. Ranked chart generation uses a BMS-IR-fixed MT19937
@@ -141,10 +145,11 @@ falling back to the normal leaderboard.
 Music Select reads its score and lamp from the exact effective MANIAC settings.
 Changing EXTRA MODE, an ADD option, a visual option, or Double Battle therefore
 switches the whole visible list and folder summaries to that setting's isolated
-record; it never falls back to the ordinary SP/DP lamp. F2 changes invalidate
-the visible score cache immediately, and a completed BMS-IR MANIAC sync does
-the same on the render thread. When Double Battle is enabled on a native DP
-chart, only Double Battle is suspended: the normal DP lamp is shown if no other
+record; it never falls back to the ordinary SP/DP lamp. Returning from the F2
+screen clears both the score cache and the score objects retained by visible
+bars before bulk-reading the selected mode, and a completed BMS-IR MANIAC sync
+uses the same reload path on the render thread. When Double Battle is enabled
+on a native DP chart, only Double Battle is suspended: the normal DP lamp is shown if no other
 MANIAC option remains, otherwise the remaining exact MANIAC settings select the
 lamp.
 

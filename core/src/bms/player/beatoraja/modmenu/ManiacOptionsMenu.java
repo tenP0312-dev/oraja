@@ -5,6 +5,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import imgui.ImGui;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
@@ -26,6 +27,9 @@ public final class ManiacOptionsMenu {
             "OFF", "10%", "20%", "30%", "40%", "50%",
             "60%", "70%", "80%", "90%", "100%"
     };
+    private static BMSIRManiacSettings draft;
+    private static String originalOptions;
+    private static boolean originalWarning;
 
     private ManiacOptionsMenu() {
     }
@@ -34,24 +38,78 @@ public final class ManiacOptionsMenu {
         return BMSIRArenaI18n.text(japanese, english);
     }
 
-    public static void show(ImBoolean visible) {
+    static boolean open() {
         PlayerConfig player = BMSIRArenaClient.playerConfig();
         if (player == null) {
+            return false;
+        }
+        draft = new BMSIRManiacSettings(player.getBmsirManiacSettings());
+        originalOptions = draft.canonicalOptions();
+        originalWarning = draft.isWarnDoubleBattleOnDp();
+        return true;
+    }
+
+    static void close(ImBoolean visible) {
+        visible.set(false);
+        PlayerConfig player = BMSIRArenaClient.playerConfig();
+        BMSIRManiacSettings selected = draft;
+        draft = null;
+        if (player == null || selected == null) {
+            originalOptions = null;
+            return;
+        }
+
+        selected.validate();
+        boolean scoreSettingsChanged = !selected.canonicalOptions().equals(originalOptions);
+        boolean configChanged = scoreSettingsChanged
+                || selected.isWarnDoubleBattleOnDp() != originalWarning;
+        originalOptions = null;
+        if (!configChanged) {
+            return;
+        }
+
+        player.setBmsirManiacSettings(selected);
+        if (!BMSIRArenaClient.saveArenaConfig()) {
+            ImGuiNotify.warning(t(
+                    "マニアックオプションを保存できませんでした",
+                    "MANIAC OPTIONS could not be saved"
+            ));
+        }
+        if (scoreSettingsChanged) {
+            BMSIRArenaClient.refreshManiacScoreDisplay();
+        }
+    }
+
+    public static void show(ImBoolean visible) {
+        if (draft == null && !open()) {
             visible.set(false);
             return;
         }
-        BMSIRManiacSettings settings = player.getBmsirManiacSettings();
-        settings.validate();
+        BMSIRManiacSettings settings = draft;
 
-        ImGui.setNextWindowPos(windowWidth * 0.5f, windowHeight * 0.06f, ImGuiCond.FirstUseEver, 0.5f, 0.0f);
-        ImGui.setNextWindowSizeConstraints(360.0f, 300.0f, Math.max(420.0f, windowWidth * 0.48f), windowHeight * 0.88f);
-        if (ImGui.begin(t("マニアックオプション", "MANIAC OPTIONS") + "###maniac-options",
-                visible, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+        ImGui.setNextWindowPos(0.0f, 0.0f, ImGuiCond.Always);
+        ImGui.setNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always);
+        ImGui.pushStyleColor(ImGuiCol.WindowBg, 0.0f, 0.0f, 0.0f, 1.0f);
+        boolean closeRequested = false;
+        int flags = ImGuiWindowFlags.NoDecoration
+                | ImGuiWindowFlags.NoMove
+                | ImGuiWindowFlags.NoResize
+                | ImGuiWindowFlags.NoSavedSettings
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+        if (ImGui.begin(t("マニアックオプション", "MANIAC OPTIONS") + "###maniac-options-screen", flags)) {
+            float contentWidth = Math.min(560.0f, Math.max(320.0f, windowWidth - 48.0f));
+            ImGui.setCursorPosX(Math.max(16.0f, (windowWidth - contentWidth) * 0.5f));
+            ImGui.beginChild("###maniac-options-content", contentWidth, windowHeight - 24.0f, false);
+            ImGui.text(t("マニアックオプション", "MANIAC OPTIONS"));
             ImGui.textDisabled(t(
-                    "F2短押し: フォルダ更新 / 長押し: この画面を開く",
-                    "F2: short press updates folders / hold opens this window"
+                    "設定中は選曲操作を停止します。F2短押し／Escでも適用して戻れます。",
+                    "Music Select is paused. Press F2 or Esc to apply and return."
             ));
+            if (ImGui.button(t("適用して選曲へ戻る", "Apply and return to Music Select"))) {
+                closeRequested = true;
+            }
             ImGui.separator();
+            ImGui.pushItemWidth(Math.min(300.0f, contentWidth * 0.58f));
 
             combo("HIDDEN / SUDDEN 1P", settings.getHiddenSudden1P(), HIDDEN_SUDDEN, settings::setHiddenSudden1P);
             combo("HIDDEN / SUDDEN 2P", settings.getHiddenSudden2P(), HIDDEN_SUDDEN, settings::setHiddenSudden2P);
@@ -104,7 +162,6 @@ public final class ManiacOptionsMenu {
                     settings.setAddNotes(0);
                     settings.setAddLongNotes(0);
                 }
-                save();
             }
             ImGui.textDisabled(t(
                     "EXTRA / ADD NOTES / ADD LONGNOTES / DBは同時に使用できません",
@@ -130,7 +187,6 @@ public final class ManiacOptionsMenu {
                     "Warn when DB is suspended on a DP chart"
             ), warning)) {
                 settings.setWarnDoubleBattleOnDp(warning.get());
-                save(false);
             }
 
             ImGui.separator();
@@ -139,8 +195,18 @@ public final class ManiacOptionsMenu {
             ImGui.textWrapped(detail.isEmpty()
                     ? t("すべてのオプションがOFFです", "All options are OFF")
                     : detail);
+            ImGui.separator();
+            if (ImGui.button(t("適用して選曲へ戻る", "Apply and return to Music Select"))) {
+                closeRequested = true;
+            }
+            ImGui.popItemWidth();
+            ImGui.endChild();
         }
         ImGui.end();
+        ImGui.popStyleColor();
+        if (closeRequested) {
+            close(visible);
+        }
     }
 
     private static void percent(String label, int value, IntConsumer setter) {
@@ -151,23 +217,6 @@ public final class ManiacOptionsMenu {
         ImInt selected = new ImInt(Math.max(0, Math.min(value, choices.length - 1)));
         if (ImGui.combo(label, selected, choices)) {
             setter.accept(selected.get());
-            save(true);
-        }
-    }
-
-    private static void save() {
-        save(true);
-    }
-
-    private static void save(boolean refreshScores) {
-        if (!BMSIRArenaClient.saveArenaConfig()) {
-            ImGuiNotify.warning(t(
-                    "マニアックオプションを保存できませんでした",
-                    "MANIAC OPTIONS could not be saved"
-            ));
-        }
-        if (refreshScores) {
-            BMSIRArenaClient.refreshManiacScoreDisplay();
         }
     }
 }
