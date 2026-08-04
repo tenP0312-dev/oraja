@@ -469,19 +469,23 @@ control switches the launcher language, and the announcement list remains
 visible when the installed body is current. The header shows the installed
 body and launcher versions separately. Installation and update operations show
 overall transferred bytes, percent, verified file count, and the following
-verification, application, and launcher-restart phases. A verified staged launcher
-can restart as its own short-lived update helper and relaunch after replacement.
-An EXE placed in an empty portable directory immediately checks its selected
-channel and offers the complete signed body, Java runtime, and Arena plugin as
-an initial installation. Missing files do not become `current` merely because
+verification, application, and launcher-restart phases. Existing installations
+hash the signed delta paths and download only changed or missing files. A
+verified staged launcher can restart as its own short-lived update helper and
+relaunch after replacement. An EXE placed in an empty portable directory
+immediately checks its selected channel and downloads one signed compressed
+bootstrap ZIP, verifies its full file inventory, and then applies the current
+sparse delta. Missing files do not become `current` merely because
 the launcher's compiled body version matches the channel version. The UI keeps
 launch actions disabled until its initial update check completes. A signed
 mandatory update, revoked body, or minimum-launcher requirement is also
 enforced in Rust and cached locally, so a later network failure cannot
 re-enable an old version. The Arena service compatibility gate remains the
 final enforcement point for clients that never received that signed policy.
-CI outputs are explicitly
-unsigned validation artifacts; official launcher publication remains blocked
+Pull-request CI produces explicitly unsigned validation artifacts; manually
+dispatched CI builds only configured internal-test launchers and reuses the
+cached Tauri CLI instead of rebuilding both configured and unconfigured
+launchers. Official launcher publication remains blocked
 until Authenticode and Developer ID/notarization credentials plus the reviewed
 manifest public key are available.
 
