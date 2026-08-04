@@ -493,7 +493,7 @@ public final class MusicSelector extends MainState {
 			}
 
 			if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
-				currentir = BMSIRManiacApiClient.getOrCreateRanking(main, song);
+				currentir = BMSIRManiacApiClient.ensureRankingLoaded(main, song);
 			} else if (main.getIRStatus().length > 0 && currentir == null
 					&& !BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
 				currentir = new RankingData();

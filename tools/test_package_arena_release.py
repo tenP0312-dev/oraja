@@ -19,7 +19,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.14.17-macos-aarch64.jar"
+        body = root / "BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)
@@ -109,7 +109,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 "BMS-IR Arena Test.app/Contents/MacOS/bmsir-arena-launcher", names
             )
             self.assertIn("release-manifest.json", names)
-            self.assertEqual("0.4.14.17\n", version)
+            self.assertEqual("0.4.14.18\n", version)
             self.assertIn(f"-jar {BODY_FILENAME}", launcher)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
@@ -137,7 +137,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.17-windows-x86-64.jar"
+            body = root / "BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
@@ -176,7 +176,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.17-windows-x86-64.jar"
+            body = root / "BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
@@ -215,14 +215,14 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 output_dir=root / "dist",
                 confirmed=True,
                 launcher_app=fixture["launcher_app"],
-                distribution_version="0.4.14.17",
+                distribution_version="0.4.14.18",
             )
-            self.assertIn("0.4.14.17-macos-aarch64", output.name)
+            self.assertIn("0.4.14.18-macos-aarch64", output.name)
             with zipfile.ZipFile(output) as archive:
                 marker = archive.read("bmsir-arena-version.txt").decode("ascii")
                 manifest = archive.read("release-manifest.json").decode("utf-8")
-            self.assertEqual("0.4.14.17\n", marker)
-            self.assertIn('"version": "0.4.14.17"', manifest)
+            self.assertEqual("0.4.14.18\n", marker)
+            self.assertIn('"version": "0.4.14.18"', manifest)
 
     def test_rejects_macos_launcher_without_online_update_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:

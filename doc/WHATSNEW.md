@@ -1,4 +1,4 @@
-# Arena oraja 0.4.14.17
+# Arena oraja 0.4.14.18
 
 - Restored the launcher self-update path for users who skipped the previous
   internal test release. The test patch now includes launcher 0.2.11 together
@@ -47,6 +47,10 @@
   opening pre-launch configuration.
 - Client windows and startup progress now display the full four-part internal
   release version instead of truncating it to `0.4.14`.
+- EXTRA MODE, ADD NOTES, and LOUDNESS now collapse existing long notes before
+  generation as LR2 does. Dedicated MANIAC IR targets cannot fall through to
+  the ordinary leaderboard, and the legacy CONSTANT display reads the active
+  PlayConfig.
 
 # Arena oraja 0.4.13
 

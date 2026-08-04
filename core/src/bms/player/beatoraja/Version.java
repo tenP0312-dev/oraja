@@ -11,7 +11,7 @@ public class Version {
     public static final int VERSION_MAJOR = 0;
     public static final int VERSION_MINOR = 5;
     public static final int VERSION_PATCH = 0;
-    public static final String ARENA_CLIENT_VERSION = "0.4.14.17";
+    public static final String ARENA_CLIENT_VERSION = "0.4.14.18";
 
     public static final BuildType BUILD_TYPE;
     public static final String version;

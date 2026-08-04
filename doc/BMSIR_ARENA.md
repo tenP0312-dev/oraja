@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.17`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.18`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,10 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.18` collapses existing long notes before LR2 EXTRA MODE,
+ADD NOTES, and LOUDNESS generation, keeps MANIAC IR targets on the active
+isolated leaderboard during immediate chart starts, and makes the legacy
+CONSTANT skin property read the same selected PlayConfig as its toggle.
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
 restores a persistent F5 overlay switch, adds judge-timing restoration with a
 Lua API, makes INFO toasts optional, removes duplicate startup IR logins, and
@@ -144,6 +148,9 @@ pre-launch EXTRA setting now read and write this same MANIAC EXTRA MODE at
 levels 0--3. The former beatoraja Extra Note modifier is not applied, so these
 controls no longer create an unrelated ASSIST-only chart. A skin-side change
 is saved immediately and reloads the matching MANIAC score and lamp.
+As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
+start note and remove the end marker before generating notes. Generated notes
+therefore cannot overlap and render inside an old long-note body.
 
 Any MANIAC option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
@@ -526,7 +533,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.17-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -547,7 +554,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.17-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -563,7 +570,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.17-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

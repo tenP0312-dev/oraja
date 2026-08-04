@@ -42,6 +42,11 @@ public final class BMSIRManiacModifier extends PatternModifier {
         long seed = settings.generationSeed(model.getSHA256());
         LR2Random random = new LR2Random((int) seed);
 
+        if (settings.getExtraMode() > 0 || settings.getAddNotes() > 0
+                || settings.getLoudness() > 0) {
+            collapseLongNotes(model);
+        }
+
         if (settings.getExtraMode() > 0) {
             applyExtraMode(model, settings.getExtraMode());
         }
@@ -65,6 +70,32 @@ public final class BMSIRManiacModifier extends PatternModifier {
 
     public String getPlacementHash() {
         return placementHash;
+    }
+
+    /** LR2 resets every LN end to its start before note-generating MANIAC options. */
+    private static void collapseLongNotes(BMSModel model) {
+        TimeLine[] timelines = model.getAllTimeLines();
+        Map<Note, TimeLine> owners = noteOwners(timelines);
+        for (TimeLine timeline : timelines) {
+            for (int lane = 0; lane < timeline.getLaneCount(); lane++) {
+                Note note = timeline.getNote(lane);
+                if (!(note instanceof LongNote longNote) || longNote.isEnd()) continue;
+                LongNote end = longNote.getPair();
+                if (end != null) {
+                    TimeLine endOwner = owners.get(end);
+                    if (endOwner != null) endOwner.setNote(lane, null);
+                }
+                NormalNote normal = new NormalNote(
+                        longNote.getWav(),
+                        longNote.getMicroStarttime(),
+                        longNote.getMicroDuration()
+                );
+                timeline.setNote(lane, normal);
+                for (Note layered : longNote.getLayeredNotes()) {
+                    normal.addLayeredNote(layered);
+                }
+            }
+        }
     }
 
     private static void applyExtraMode(BMSModel model, int requestedLevel) {

@@ -109,11 +109,29 @@ public final class BMSIRManiacApiClient {
         );
     }
 
+    public static RankingData ensureRankingLoaded(MainController main, SongData song) {
+        return startRankingLoad(main, song, false);
+    }
+
     public static RankingData loadRanking(MainController main, SongData song) {
+        return startRankingLoad(main, song, true);
+    }
+
+    private static RankingData startRankingLoad(
+            MainController main,
+            SongData song,
+            boolean refreshFinished
+    ) {
         Identity identity = identity(main, song);
         if (identity == null) return null;
         RankingData ranking = CACHE.computeIfAbsent(identity.cacheKey(), ignored -> new RankingData());
-        ranking.beginAccess();
+        synchronized (ranking) {
+            if (ranking.getState() == RankingData.ACCESS
+                    || (!refreshFinished && ranking.getState() == RankingData.FINISH)) {
+                return ranking;
+            }
+            ranking.beginAccess();
+        }
         Thread worker = new Thread(() -> {
             try {
                 Auth auth = auth(main);
@@ -127,6 +145,11 @@ public final class BMSIRManiacApiClient {
         worker.setDaemon(true);
         worker.start();
         return ranking;
+    }
+
+    public static ScoreData getLocalScore(MainController main, SongData song) {
+        Identity identity = identity(main, song);
+        return identity == null ? null : localScore(main, identity);
     }
 
     public static LeaderboardEntry[] loadLeaderboard(MainController main, SongData song) {

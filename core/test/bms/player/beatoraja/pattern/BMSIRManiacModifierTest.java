@@ -10,7 +10,9 @@ import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +61,61 @@ class BMSIRManiacModifierTest {
         // OpenLR2 lane 1 is occupied within 500 ms, so odd WAV 1 shifts to lane 2.
         assertEquals(0, background.getBackGroundNotes().length);
         assertEquals(1, background.getNote(1).getWav());
+    }
+
+    @Test
+    void extraModeCollapsesExistingLongNotesLikeLr2() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setExtraMode(1);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("lr2-extra-longnote");
+        model.setWavList(new String[]{"", "hold.ogg", "finish.ogg"});
+        TimeLine startLine = line(0, 0);
+        LongNote start = new LongNote(1, 20_000, 100_000);
+        start.setType(LongNote.TYPE_LONGNOTE);
+        startLine.setNote(0, start);
+        TimeLine endLine = line(0.5, 1_000_000);
+        LongNote end = new LongNote(-1);
+        end.setType(LongNote.TYPE_LONGNOTE);
+        endLine.setNote(0, end);
+        start.setPair(end);
+        endLine.setNote(6, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{startLine, endLine});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        NormalNote collapsed = assertInstanceOf(NormalNote.class, startLine.getNote(0));
+        assertEquals(1, collapsed.getWav());
+        assertEquals(20_000, collapsed.getMicroStarttime());
+        assertEquals(100_000, collapsed.getMicroDuration());
+        assertNull(endLine.getNote(0));
+    }
+
+    @Test
+    void addNotesAlsoCollapsesExistingLongNotesLikeLr2() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(100);
+        BMSModel model = new BMSModel();
+        model.setMode(Mode.BEAT_7K);
+        model.setBpm(120);
+        model.setSHA256("lr2-add-notes-longnote");
+        TimeLine startLine = line(0, 0);
+        LongNote start = new LongNote(1);
+        start.setType(LongNote.TYPE_LONGNOTE);
+        startLine.setNote(0, start);
+        TimeLine endLine = line(0.5, 1_000_000);
+        LongNote end = new LongNote(-1);
+        end.setType(LongNote.TYPE_LONGNOTE);
+        endLine.setNote(0, end);
+        start.setPair(end);
+        model.setAllTimeLine(new TimeLine[]{startLine, endLine});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        assertInstanceOf(NormalNote.class, startLine.getNote(0));
+        assertNull(endLine.getNote(0));
     }
 
     @Test

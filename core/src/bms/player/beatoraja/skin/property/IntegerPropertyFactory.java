@@ -1280,7 +1280,16 @@ public class IntegerPropertyFactory {
 
 		
 		// 旧仕様
-		assist_constant(BUTTON_ASSIST_CONSTANT, (state) -> (state.resource.getPlayerConfig().getScrollMode() == 1 ? 1 : 0)),
+		assist_constant(BUTTON_ASSIST_CONSTANT, (state) -> {
+			if (state instanceof MusicSelector selector) {
+				final PlayConfig playConfig = selector.getSelectedBarPlayConfig();
+				return playConfig != null && playConfig.isEnableConstant() ? 1 : 0;
+			}
+			if (state instanceof BMSPlayer player) {
+				return player.getLanerender().getPlayConfig().isEnableConstant() ? 1 : 0;
+			}
+			return 0;
+		}),
 		assist_legacy(BUTTON_ASSIST_LEGACY, (state) -> (state.resource.getPlayerConfig().getLongnoteMode() == 1 ? 1 : 0)),
 		assist_nomine(BUTTON_ASSIST_NOMINE, (state) -> (state.resource.getPlayerConfig().getMineMode() == 1 ? 1 : 0)),
 		
