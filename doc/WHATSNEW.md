@@ -24,6 +24,9 @@
   settings. The READY note preview now uses a one-second fade cycle.
 - Added the portable launcher and signed patch format. Windows test packages
   launch from `BMS-IR Arena Test.exe`; the existing BAT remains available.
+- Launcher 0.2.10 prefers the canonical updated `beatoraja.jar` when legacy
+  versioned clients are also present. Its Arena launch button enters Music
+  Select directly instead of opening pre-launch configuration.
 
 # Arena oraja 0.4.13
 
