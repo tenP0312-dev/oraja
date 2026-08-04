@@ -43,7 +43,7 @@ jobs:
             https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v2.11.4/cargo-tauri-aarch64-apple-darwin.zip \
             --output "$archive"
           echo "82bdcb9ae7f407882321680ae50750f11623fae22445f8b00b096e10f815d604  $archive" | shasum -a 256 --check
-          unzip -j "$archive" cargo-tauri -d "$HOME/.cargo/bin"
+          unzip -jo "$archive" cargo-tauri -d "$HOME/.cargo/bin"
           chmod 755 "$HOME/.cargo/bin/cargo-tauri"
           cargo tauri --version
 
