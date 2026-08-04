@@ -1,4 +1,4 @@
-# Arena oraja 0.4.14.14
+# Arena oraja 0.4.14.15
 
 ## MANIAC play, Double Battle, and Arena presentation
 
@@ -33,9 +33,10 @@
   settings. The READY note preview now uses a one-second fade cycle.
 - Added the portable launcher and signed patch format. Windows test packages
   launch from `BMS-IR Arena Test.exe`; the existing BAT remains available.
-- Launcher 0.2.10 prefers the canonical updated `beatoraja.jar` when legacy
-  versioned clients are also present. Its Arena launch button enters Music
-  Select directly instead of opening pre-launch configuration.
+- Launcher 0.2.11 installs and prefers the dedicated `Arena-oraja.jar` while
+  retaining `beatoraja.jar` and versioned clients only as compatibility
+  fallbacks. Its Arena launch button enters Music Select directly instead of
+  opening pre-launch configuration.
 - Client windows and startup progress now display the full four-part internal
   release version instead of truncating it to `0.4.14`.
 

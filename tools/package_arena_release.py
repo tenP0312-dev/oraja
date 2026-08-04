@@ -22,7 +22,8 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.14.14"
+VERSION = "0.4.14.15"
+BODY_FILENAME = "Arena-oraja.jar"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.69.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {
@@ -224,7 +225,7 @@ def write_launchers(root: Path, platform: str) -> None:
             "@echo off\r\n"
             "pushd %~dp0\r\n"
             '"runtime\\bin\\java.exe" "-DcustomIRDirectory=%CD%\\ir" '
-            '-Xms1g -Xmx4g -jar beatoraja.jar\r\n'
+            f'-Xms1g -Xmx4g -jar {BODY_FILENAME}\r\n'
             "popd\r\n",
             encoding="utf-8",
         )
@@ -234,7 +235,7 @@ def write_launchers(root: Path, platform: str) -> None:
         "#!/bin/sh\n"
         'cd "$(dirname "$0")" || exit 1\n'
         'exec "./runtime/bin/java" "-DcustomIRDirectory=$PWD/ir" '
-        '-Xms1g -Xmx4g -jar beatoraja.jar\n',
+        f'-Xms1g -Xmx4g -jar {BODY_FILENAME}\n',
         encoding="utf-8",
     )
     launcher.chmod(0o755)
@@ -333,7 +334,7 @@ def build_release(
             source = base_assets / directory
             if source.is_dir():
                 safe_copy_tree(source, root / directory)
-        shutil.copy2(body_jar, root / "beatoraja.jar")
+        shutil.copy2(body_jar, root / BODY_FILENAME)
         plugin_dir = root / "ir"
         plugin_dir.mkdir()
         shutil.copy2(plugin_jar, plugin_dir / PLUGIN_FILENAME)

@@ -6,6 +6,7 @@ import unittest
 import zipfile
 
 from package_arena_release import (
+    BODY_FILENAME,
     CONFIGURED_LAUNCHER_MARKER,
     PLUGIN_FILENAME,
     build_release,
@@ -18,7 +19,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.14.14-macos-aarch64.jar"
+        body = root / "BMS-IR-Arena-oraja-0.4.14.15-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)
@@ -97,7 +98,8 @@ class ArenaReleasePackageTest(unittest.TestCase):
                         "BMS-IR-Arena-config.command",
                     )
                 ]
-            self.assertIn("beatoraja.jar", names)
+            self.assertIn(BODY_FILENAME, names)
+            self.assertNotIn("beatoraja.jar", names)
             self.assertIn(f"ir/{PLUGIN_FILENAME}", names)
             self.assertIn("runtime/bin/java", names)
             self.assertIn("runtime/legal/java.base/LICENSE", names)
@@ -107,7 +109,8 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 "BMS-IR Arena Test.app/Contents/MacOS/bmsir-arena-launcher", names
             )
             self.assertIn("release-manifest.json", names)
-            self.assertEqual("0.4.14.14\n", version)
+            self.assertEqual("0.4.14.15\n", version)
+            self.assertIn(f"-jar {BODY_FILENAME}", launcher)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
             self.assertTrue(all(stat.S_ISREG(mode) for mode in executable_modes))
@@ -134,7 +137,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.14-windows-x86-64.jar"
+            body = root / "BMS-IR-Arena-oraja-0.4.14.15-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
@@ -161,15 +164,19 @@ class ArenaReleasePackageTest(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
                 manifest = archive.read("release-manifest.json").decode("utf-8")
+                launcher = archive.read("BMS-IR-Arena-config.bat").decode("utf-8")
             self.assertIn("BMS-IR Arena Test.exe", names)
             self.assertIn("BMS-IR-Arena-config.bat", names)
+            self.assertIn(BODY_FILENAME, names)
+            self.assertNotIn("beatoraja.jar", names)
+            self.assertIn(f"-jar {BODY_FILENAME}", launcher)
             self.assertIn('"channel": "test"', manifest)
 
     def test_rejects_launcher_without_online_update_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.14-windows-x86-64.jar"
+            body = root / "BMS-IR-Arena-oraja-0.4.14.15-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
