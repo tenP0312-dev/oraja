@@ -198,7 +198,7 @@ public class EventFactory {
 		optiondp(54, (state, arg1) -> {
 			if(state instanceof MusicSelector) {
 	            PlayerConfig config = state.resource.getPlayerConfig();
-	            config.setDoubleoption((config.getDoubleoption() + (arg1 >= 0 ? 1 : 3)) % 4);
+	            config.setDoubleoption((config.getDoubleoption() + 1) % 2);
 	            state.play(OPTION_CHANGE);
 			}
 		}),

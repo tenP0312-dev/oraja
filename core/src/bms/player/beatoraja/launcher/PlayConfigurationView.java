@@ -472,7 +472,7 @@ public class PlayConfigurationView implements Initializable {
 				"ALL-SCR", "RANDOM-EX", "S-RANDOM-EX" };
 		initComboBox(scoreop, scoreOptions);
 		initComboBox(scoreop2, scoreOptions);
-		initComboBox(doubleop, new String[] { "OFF", "FLIP", "BATTLE", "BATTLE AS" });
+		initComboBox(doubleop, new String[] { "OFF", "FLIP" });
 		initComboBox(seventoninepattern, new String[] { "OFF", "SC1KEY2~8", "SC1KEY3~9", "SC2KEY3~9", "SC8KEY1~7", "SC9KEY1~7", "SC9KEY2~8" });
 		String[] seventoninestring = new String[]{arg1.getString("SEVEN_TO_NINE_OFF"),arg1.getString("SEVEN_TO_NINE_NO_MASHING"),arg1.getString("SEVEN_TO_NINE_ALTERNATION")};
 		initComboBox(seventoninetype, seventoninestring);

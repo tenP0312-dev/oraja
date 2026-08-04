@@ -31,6 +31,28 @@ class BMSIRManiacPlayContextTest {
     }
 
     @Test
+    void doubleBattleAutoScratchMovesBothScratchLanesToBackground() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+        settings.setAutoScratch(true);
+        BMSModel model = model(Mode.BEAT_7K);
+        model.getAllTimeLines()[0].setNote(
+                Mode.BEAT_7K.scratchKey[0],
+                new NormalNote(2)
+        );
+
+        BMSIRManiacPlayContext context =
+                BMSIRManiacPlayContext.prepare(settings, model, false);
+
+        assertNotNull(context);
+        assertTrue(context.settings().isAutoScratch());
+        for (int scratch : Mode.BEAT_14K.scratchKey) {
+            assertNull(model.getAllTimeLines()[0].getNote(scratch));
+        }
+        assertTrue(model.getAllTimeLines()[0].getBackGroundNotes().length > 0);
+    }
+
+    @Test
     void nativeDoubleChartRemainsNormalAndReportsSuspension() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setDoubleBattle(true);

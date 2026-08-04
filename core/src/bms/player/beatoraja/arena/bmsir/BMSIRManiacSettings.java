@@ -53,6 +53,7 @@ public final class BMSIRManiacSettings {
     private int spiral;
     private int sideJump;
     private boolean doubleBattle;
+    private boolean autoScratch;
     private String randomLink = RANDOM_LINK_OFF;
     private boolean warnDoubleBattleOnDp = true;
     private Long generationSeedOverride;
@@ -85,6 +86,7 @@ public final class BMSIRManiacSettings {
         spiral = source.spiral;
         sideJump = source.sideJump;
         doubleBattle = source.doubleBattle;
+        autoScratch = source.autoScratch;
         randomLink = source.randomLink;
         warnDoubleBattleOnDp = source.warnDoubleBattleOnDp;
         generationSeedOverride = source.generationSeedOverride;
@@ -112,6 +114,9 @@ public final class BMSIRManiacSettings {
         wave = percent(wave);
         spiral = percent(spiral);
         sideJump = percent(sideJump);
+        if (!doubleBattle) {
+            autoScratch = false;
+        }
         setRandomLink(randomLink);
         return this;
     }
@@ -148,6 +153,7 @@ public final class BMSIRManiacSettings {
         settings.setSpiral(integer(values, "spiral"));
         settings.setSideJump(integer(values, "sidejump"));
         settings.setDoubleBattle(Boolean.parseBoolean(values.getOrDefault("db", "false")));
+        settings.setAutoScratch(Boolean.parseBoolean(values.getOrDefault("autoscratch", "false")));
         settings.setRandomLink(values.get("link"));
         String seed = values.getOrDefault("seed", "fixed");
         if (!"fixed".equals(seed)) {
@@ -232,7 +238,7 @@ public final class BMSIRManiacSettings {
 
     public String canonicalOptions() {
         validate();
-        return String.join(",",
+        String base = String.join(",",
                 "hs1=" + hiddenSudden1P,
                 "hs2=" + hiddenSudden2P,
                 "extra=" + extraMode,
@@ -254,7 +260,12 @@ public final class BMSIRManiacSettings {
                 "spiral=" + spiral,
                 "sidejump=" + sideJump,
                 "db=" + doubleBattle,
-                "link=" + randomLink,
+                "link=" + randomLink
+        );
+        if (autoScratch) {
+            base += ",autoscratch=true";
+        }
+        return base + "," + String.join(",",
                 "seed=" + (generationSeedOverride == null ? "fixed" : generationSeedOverride),
                 "algorithm=" + ALGORITHM_VERSION
         );
@@ -276,14 +287,17 @@ public final class BMSIRManiacSettings {
             case EXTRA -> "extra-" + extraMode;
             case ADD_NOTES -> "add-notes-" + addNotes;
             case ADD_LONGNOTES -> "add-longnotes-" + addLongNotes;
-            case DOUBLE_BATTLE -> "double-battle";
+            case DOUBLE_BATTLE -> autoScratch
+                    ? "double-battle-autoscratch"
+                    : "double-battle";
             case LOCAL_ONLY -> "local-only";
         };
     }
 
     public String compactOptionText() {
         List<String> values = new ArrayList<>();
-        if (doubleBattle) values.add("DB" + randomLinkSuffix());
+        if (doubleBattle) values.add("DB" + randomLinkSuffix()
+                + (autoScratch ? " AUTO SCRATCH" : ""));
         if (extraMode > 0) values.add("EXTRA Lv" + extraMode);
         if (addNotes > 0) values.add("ADD " + addNotes + "%");
         if (addLongNotes > 0) values.add("LN " + addLongNotes + "%");
@@ -317,7 +331,8 @@ public final class BMSIRManiacSettings {
             return compact;
         }
         // Temporarily collect without the compact threshold.
-        if (doubleBattle) values.add("DB" + randomLinkSuffix());
+        if (doubleBattle) values.add("DB" + randomLinkSuffix()
+                + (autoScratch ? " AUTO SCRATCH" : ""));
         if (extraMode > 0) values.add("EXTRA Lv" + extraMode);
         if (addNotes > 0) values.add("ADD NOTES " + addNotes + "%");
         if (addLongNotes > 0) values.add("ADD LONGNOTES " + addLongNotes + "%");
@@ -419,7 +434,12 @@ public final class BMSIRManiacSettings {
     public int getSideJump() { return sideJump; }
     public void setSideJump(int value) { sideJump = value; validate(); }
     public boolean isDoubleBattle() { return doubleBattle; }
-    public void setDoubleBattle(boolean value) { doubleBattle = value; }
+    public void setDoubleBattle(boolean value) {
+        doubleBattle = value;
+        if (!value) autoScratch = false;
+    }
+    public boolean isAutoScratch() { return autoScratch; }
+    public void setAutoScratch(boolean value) { autoScratch = doubleBattle && value; }
     public String getRandomLink() { validate(); return randomLink; }
     public void setRandomLink(String value) {
         String normalized = value == null ? RANDOM_LINK_OFF : value.toLowerCase(Locale.ROOT);

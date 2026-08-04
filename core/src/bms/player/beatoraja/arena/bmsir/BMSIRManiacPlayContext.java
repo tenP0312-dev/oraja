@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.BMSModel;
 import bms.model.Mode;
 import bms.player.beatoraja.pattern.BMSIRManiacModifier;
+import bms.player.beatoraja.pattern.AutoplayModifier;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.PlayerBattleModifier;
 
 /** Immutable play identity plus the placement hash produced during loading. */
@@ -87,6 +88,9 @@ public final class BMSIRManiacPlayContext {
                 default -> model.getMode();
             });
             new PlayerBattleModifier().modify(model);
+            if (settings.isAutoScratch()) {
+                new AutoplayModifier(model.getMode().scratchKey).modify(model);
+            }
         }
         updatePlacement(model);
         mark(model);

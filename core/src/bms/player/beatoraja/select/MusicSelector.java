@@ -241,6 +241,9 @@ public final class MusicSelector extends MainState {
 		play = null;
 		showNoteGraph = false;
 		resource.setPlayerData(main.getPlayDataAccessor().readPlayerData());
+		if (playedsong != null || playedcourse != null) {
+			manager.invalidatePlayerScoreDisplay();
+		}
 		if (playedsong != null) {
 			scorecache.update(playedsong, config.getLnmode());
 			playedsong = null;

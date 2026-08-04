@@ -51,6 +51,10 @@ import bms.player.beatoraja.skin.SkinType;
 public class BMSPlayer extends MainState {
 	private static final Logger logger = LoggerFactory.getLogger(BMSPlayer.class);
 
+	static int normalDoubleOption(int option) {
+		return option == 1 ? 1 : 0;
+	}
+
 	private BMSModel model;
 
 	private LaneRenderer lanerender;
@@ -127,7 +131,7 @@ public class BMSPlayer extends MainState {
 
 		playinfo.randomoption = config.getRandom();
 		playinfo.randomoption2 = config.getRandom2();
-		playinfo.doubleoption = config.getDoubleoption();
+		playinfo.doubleoption = normalDoubleOption(config.getDoubleoption());
 
 		RandomTrainer randomtrainer = new RandomTrainer();
         Optional<GhostBattlePlay.Settings> ghostBattle = GhostBattlePlay.consume();
@@ -161,7 +165,7 @@ public class BMSPlayer extends MainState {
 			playinfo.randomoptionseed = chartOption.randomoptionseed;
 			playinfo.randomoption2 = chartOption.randomoption2;
 			playinfo.randomoption2seed = chartOption.randomoption2seed;
-			playinfo.doubleoption = chartOption.doubleoption;
+			playinfo.doubleoption = normalDoubleOption(chartOption.doubleoption);
 			playinfo.rand = chartOption.rand;
 		}
 		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
@@ -201,7 +205,7 @@ public class BMSPlayer extends MainState {
 						playinfo.randomoptionseed = replay.randomoptionseed;
 						playinfo.randomoption2 = replay.randomoption2;
 						playinfo.randomoption2seed = replay.randomoption2seed;
-						playinfo.doubleoption = replay.doubleoption;
+						playinfo.doubleoption = normalDoubleOption(replay.doubleoption);
 						playinfo.rand = replay.rand;
 						isReplayPatternPlay = true;
 					} else if(main.getInputProcessor().getKeyState(2)) {
@@ -209,7 +213,7 @@ public class BMSPlayer extends MainState {
 						logger.info("リプレイ再現モード : オプション");
 						playinfo.randomoption = replay.randomoption;
 						playinfo.randomoption2 = replay.randomoption2;
-						playinfo.doubleoption = replay.doubleoption;
+						playinfo.doubleoption = normalDoubleOption(replay.doubleoption);
 						isReplayPatternPlay = true;
 					}
 					if(main.getInputProcessor().getKeyState(4)) {
@@ -364,27 +368,6 @@ public class BMSPlayer extends MainState {
 				playtime = model.getLastNoteTime() + TIME_MARGIN;
 			}
 
-			if (playinfo.doubleoption >= 2) {
-				if(model.getMode() == Mode.BEAT_5K || model.getMode() == Mode.BEAT_7K || model.getMode() == Mode.KEYBOARD_24K) {
-					switch (model.getMode()) {
-						case BEAT_5K -> model.setMode(Mode.BEAT_10K);
-						case BEAT_7K -> model.setMode(Mode.BEAT_14K);
-						case KEYBOARD_24K -> model.setMode(Mode.KEYBOARD_24K_DOUBLE);
-					}
-					LaneShuffleModifier mod = new PlayerBattleModifier();
-					mod.modify(model);
-					if(playinfo.doubleoption == 3) {
-						PatternModifier as = new AutoplayModifier(model.getMode().scratchKey);
-						as.modify(model);
-					}
-					assist = Math.max(assist, 1);
-					score = false;
-					logger.info("譜面オプション : BATTLE (L-ASSIST)");
-				} else {
-					// SPでなければBATTLEは未適用
-					playinfo.doubleoption = 0;
-				}
-			}
 		}
 
 		logger.info("譜面オプション設定");
@@ -414,7 +397,7 @@ public class BMSPlayer extends MainState {
 				playinfo.randomoptionseed = rd.randomoptionseed;
 				playinfo.randomoption2 = rd.randomoption2;
 				playinfo.randomoption2seed = rd.randomoption2seed;
-				playinfo.doubleoption = rd.doubleoption;
+				playinfo.doubleoption = normalDoubleOption(rd.doubleoption);
 				playinfo.oneBassTarget = rd.oneBassTarget;
 				playinfo.oneBassTarget2 = rd.oneBassTarget2;
 			}

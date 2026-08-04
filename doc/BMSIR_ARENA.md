@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.13`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.14`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,8 +14,9 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
-Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, Double Battle, isolated
-MANIAC local and online records, a mode-following leaderboard and ghost,
+Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, MANIAC-owned Double
+Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
+mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
@@ -112,8 +113,9 @@ Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
 first-timing preview switches, 0.4.6 adds the Dan local-sync switch, 0.4.11
 adds Arena target and graph-order switches, and 0.4.13 upgrades the sidecar to
 schema 7 for cover HI-SPEED recalculation, judge restoration, INFO toasts, and
-the last visible overlay mode. Version 0.4.14 upgrades it to schema 9 for
-MANIAC, Double Battle, Arena language, graph presentation, and detailed logs.
+the last visible overlay mode. Version 0.4.14 upgrades it to schema 10 for
+MANIAC, Double Battle AUTO SCRATCH, Arena language, graph presentation, and
+detailed logs.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -121,7 +123,9 @@ passwords, or unrelated player settings.
 Holding F2 for about one second on Music Select opens the one-column MANIAC
 OPTIONS screen; a short F2 press keeps the existing refresh command. The
 screen is an opaque black full-window mode rather than a window over Music
-Select. Song selection input is suspended while it is open. Changes remain in
+Select. Its enlarged list uses the available width and shows a brief
+description of the selected option on wide screens. Song selection input is
+suspended while it is open. Changes remain in
 a draft until `Apply and return`, Escape, or a new short F2 press commits them,
 saves once, reloads the effective score set, and returns to Music Select. EXTRA
 MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
@@ -142,13 +146,22 @@ and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
 ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
 
+Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
+native-DP warning are configured only in MANIAC OPTIONS. The ordinary DP
+option contains only OFF and FLIP. Saved legacy BATTLE and BATTLE AS values
+are normalized to OFF and cannot reactivate Double Battle behind another
+MANIAC option. Manual-scratch and auto-scratch Double Battle use different
+local and online identities; existing manual Double Battle records keep their
+original identity.
+
 Music Select reads its score and lamp from the exact effective MANIAC settings.
 Changing EXTRA MODE, an ADD option, a visual option, or Double Battle therefore
 switches the whole visible list and folder summaries to that setting's isolated
 record; it never falls back to the ordinary SP/DP lamp. Returning from the F2
-screen clears both the score cache and the score objects retained by visible
-bars before bulk-reading the selected mode, and a completed BMS-IR MANIAC sync
-uses the same reload path on the render thread. When Double Battle is enabled
+screen or from a completed play clears both the score cache and the score
+objects retained by visible bars before bulk-reading the selected mode, and a
+completed BMS-IR MANIAC sync uses the same reload path on the render thread.
+When Double Battle is enabled
 on a native DP chart, only Double Battle is suspended: the normal DP lamp is shown if no other
 MANIAC option remains, otherwise the remaining exact MANIAC settings select the
 lamp.
@@ -505,7 +518,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.13-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.14-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -526,7 +539,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.13-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.14-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -542,7 +555,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.13-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.14-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

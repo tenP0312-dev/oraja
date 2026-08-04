@@ -1,4 +1,4 @@
-# Arena oraja 0.4.14.13
+# Arena oraja 0.4.14.14
 
 ## MANIAC play, Double Battle, and Arena presentation
 
@@ -10,14 +10,21 @@
   note transforms, mines, strict-judge options, and visual
   effects. Ranked generated charts use a fixed MT19937 generation seed while
   normal RANDOM and Random Trainer remain per-play options.
-- Added Double Battle conversion with existing DP options, configurable random
-  linking, Random Trainer support, and an optional native-DP warning.
+- Moved Double Battle completely into MANIAC OPTIONS. The normal DP option now
+  contains only OFF and FLIP; legacy BATTLE and BATTLE AS values are disabled
+  and normalized to OFF. Double Battle now exposes AUTO SCRATCH, RANDOM LINK,
+  Random Trainer support, and the optional native-DP warning together.
+- Manual-scratch and auto-scratch Double Battle keep separate local and BMS-IR
+  ranking identities. AUTO SCRATCH moves both generated scratch lanes to
+  autoplay while preserving existing manual Double Battle records.
 - MANIAC and Double Battle records use a separate `bmsir_maniac.db`. Ranked
   transforms use isolated BMS-IR leaderboards, ghosts, and score sync; a safe
   vanilla `score.db` export is available from pre-launch configuration. Music
   Select lamps now follow the exact active MANIAC/Double Battle settings and
-  clear retained bar scores before reloading when F2 settings or synchronized
-  records change.
+  clear retained bar scores before reloading after a play, when F2 settings
+  change, or when synchronized records change.
+- Enlarged the MANIAC OPTIONS text and added a brief description for the
+  selected option on wide screens.
 - Split the Arena graph into its own window, added score differences, match
   state, rating changes, persistent private-room records, notification-sound
   testing, and optional detailed protocol logging.

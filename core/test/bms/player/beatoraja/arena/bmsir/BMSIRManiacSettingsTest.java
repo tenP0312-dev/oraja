@@ -65,6 +65,32 @@ public class BMSIRManiacSettingsTest {
     }
 
     @Test
+    public void autoScratchUsesItsOwnDoubleBattleIdentity() {
+        BMSIRManiacSettings manual = new BMSIRManiacSettings();
+        manual.setDoubleBattle(true);
+        BMSIRManiacSettings assisted = new BMSIRManiacSettings(manual);
+        assisted.setAutoScratch(true);
+
+        assertFalse(manual.canonicalOptions().contains("autoscratch"));
+        assertTrue(assisted.canonicalOptions().contains("autoscratch=true"));
+        assertNotEquals(manual.storageChartId("abc"), assisted.storageChartId("abc"));
+        assertNotEquals(manual.virtualChartId("abc"), assisted.virtualChartId("abc"));
+        assertTrue(BMSIRManiacSettings.fromCanonicalOptions(
+                assisted.canonicalOptions()
+        ).isAutoScratch());
+    }
+
+    @Test
+    public void autoScratchCannotRemainEnabledWithoutDoubleBattle() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+        settings.setAutoScratch(true);
+        settings.setDoubleBattle(false);
+
+        assertFalse(settings.isAutoScratch());
+    }
+
+    @Test
     public void percentagesAreRoundedAndClampedToMenuSteps() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setAddMines(26);

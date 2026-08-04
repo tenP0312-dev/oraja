@@ -441,7 +441,7 @@ public final class PlayerConfig {
 	}
 
 	public void setDoubleoption(int doubleoption) {
-		this.doubleoption = doubleoption;
+		this.doubleoption = doubleoption == 1 ? 1 : 0;
 	}
 
 	public int getExtranoteDepth() {
@@ -1488,7 +1488,7 @@ public final class PlayerConfig {
 		gauge = MathUtils.clamp(gauge, 0, 5);
 		random = MathUtils.clamp(random, 0, 9);
 		random2 = MathUtils.clamp(random2, 0, 9);
-		doubleoption = MathUtils.clamp(doubleoption, 0, 3);
+		doubleoption = doubleoption == 1 ? 1 : 0;
 		chartReplicationMode = chartReplicationMode != null ? chartReplicationMode : "NONE";
 		targetid = targetid!= null ? targetid : "MAX";
 		targetlist = targetlist != null ? targetlist : new String[0];
