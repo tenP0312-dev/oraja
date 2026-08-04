@@ -1150,6 +1150,44 @@ public final class PlayerConfig {
 		return bmsirManiacSettings.validate();
 	}
 
+	public int getBmsirExtraMode() {
+		return getBmsirManiacSettings().getExtraMode();
+	}
+
+	public void setBmsirExtraMode(int value) {
+		getBmsirManiacSettings().selectExtraMode(value);
+		extranoteDepth = 0;
+	}
+
+	public int getBmsirDoubleOption() {
+		BMSIRManiacSettings settings = getBmsirManiacSettings();
+		if (settings.isDoubleBattle()) {
+			return settings.isAutoScratch() ? 3 : 2;
+		}
+		return doubleoption == 1 ? 1 : 0;
+	}
+
+	public void setBmsirDoubleOption(int value) {
+		switch (MathUtils.clamp(value, 0, 3)) {
+		case 1:
+			doubleoption = 1;
+			getBmsirManiacSettings().selectDoubleBattle(false, false);
+			break;
+		case 2:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(true, false);
+			break;
+		case 3:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(true, true);
+			break;
+		default:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(false, false);
+			break;
+		}
+	}
+
 	public void setBmsirManiacSettings(BMSIRManiacSettings settings) {
 		bmsirManiacSettings = settings == null
 				? new BMSIRManiacSettings()
@@ -1520,7 +1558,8 @@ public final class PlayerConfig {
 		longnoteMode = MathUtils.clamp(longnoteMode, 0, LongNoteModifier.Mode.values().length);
 		longnoteRate = MathUtils.clamp(longnoteRate, 0.0, 1.0);
 		mineMode = MathUtils.clamp(mineMode, 0, MineNoteModifier.Mode.values().length);
-		extranoteDepth = MathUtils.clamp(extranoteDepth, 0, 100);
+		// Arena oraja uses the LR2-compatible MANIAC EXTRA MODE instead.
+		extranoteDepth = 0;
 
 		if(irconfig == null || irconfig.length == 0) {
 			String[] irnames = IRConnectionManager.getAllAvailableIRConnectionName();

@@ -3905,7 +3905,6 @@ public final class BMSIRArenaClient {
         config.setLongnoteMode(0);
         config.setSevenToNinePattern(0);
         config.setSevenToNineType(0);
-        config.setExtranoteDepth(0);
         config.setBpmguide(false);
         config.setCustomJudge(false);
         int gauge = forcedGaugeOption(forcedGauge);
@@ -4086,7 +4085,6 @@ public final class BMSIRArenaClient {
         private final int longNoteMode;
         private final int sevenToNinePattern;
         private final int sevenToNineType;
-        private final int extraNoteDepth;
         private final int gauge;
         private final int gaugeAutoShift;
         private final boolean bpmGuide;
@@ -4107,7 +4105,6 @@ public final class BMSIRArenaClient {
             longNoteMode = config.getLongnoteMode();
             sevenToNinePattern = config.getSevenToNinePattern();
             sevenToNineType = config.getSevenToNineType();
-            extraNoteDepth = config.getExtranoteDepth();
             gauge = config.getGauge();
             gaugeAutoShift = config.getGaugeAutoShift();
             bpmGuide = config.isBpmguide();
@@ -4135,7 +4132,6 @@ public final class BMSIRArenaClient {
             config.setLongnoteMode(longNoteMode);
             config.setSevenToNinePattern(sevenToNinePattern);
             config.setSevenToNineType(sevenToNineType);
-            config.setExtranoteDepth(extraNoteDepth);
             config.setGauge(gauge);
             config.setGaugeAutoShift(gaugeAutoShift);
             config.setBpmguide(bpmGuide);

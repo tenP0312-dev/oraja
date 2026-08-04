@@ -332,10 +332,6 @@ public class BMSPlayer extends MainState {
 			if(config.getMineMode() > 0) {
 				mods.add(new MineNoteModifier(config.getMineMode() - 1));
 			}
-			if(config.getExtranoteDepth() > 0) {
-				mods.add(new ExtraNoteModifier(config.getExtranoteType(), config.getExtranoteDepth(), config.isExtranoteScratch()));
-			}
-
             // maybe we skip all that for gbattle
             if (ghostBattle.isPresent()){
                 mods = new Array<PatternModifier>();

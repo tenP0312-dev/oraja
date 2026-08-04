@@ -99,4 +99,41 @@ public class BMSIRManiacSettingsTest {
         assertEquals(100, settings.getWave());
         assertEquals(BMSIRManiacSettings.RankingClass.MANIAC_STANDARD, settings.rankingClass());
     }
+
+    @Test
+    public void selectingExtraModeClearsIncompatibleChartGeneration() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(30);
+        settings.setAddLongNotes(40);
+        settings.setDoubleBattle(true);
+        settings.setAutoScratch(true);
+        settings.setRandomLink(BMSIRManiacSettings.RANDOM_LINK_SYNC);
+
+        settings.selectExtraMode(3);
+
+        assertEquals(3, settings.getExtraMode());
+        assertEquals(0, settings.getAddNotes());
+        assertEquals(0, settings.getAddLongNotes());
+        assertFalse(settings.isDoubleBattle());
+        assertFalse(settings.isAutoScratch());
+        assertEquals(BMSIRManiacSettings.RANDOM_LINK_OFF, settings.getRandomLink());
+        assertEquals(BMSIRManiacSettings.RankingClass.EXTRA, settings.rankingClass());
+    }
+
+    @Test
+    public void selectingDoubleBattleClearsIncompatibleChartGeneration() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setExtraMode(2);
+        settings.setAddNotes(30);
+        settings.setAddLongNotes(40);
+
+        settings.selectDoubleBattle(true, true);
+
+        assertTrue(settings.isDoubleBattle());
+        assertTrue(settings.isAutoScratch());
+        assertEquals(0, settings.getExtraMode());
+        assertEquals(0, settings.getAddNotes());
+        assertEquals(0, settings.getAddLongNotes());
+        assertEquals(BMSIRManiacSettings.RankingClass.DOUBLE_BATTLE, settings.rankingClass());
+    }
 }

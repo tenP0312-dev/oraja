@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.15`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.16`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -139,6 +139,12 @@ Background folder refreshes keep the last committed `songdata.db` snapshot
 available to Music Select, so a refresh cannot temporarily replace the current
 folder with an empty list.
 
+The existing Music Select EXTRA NOTE skin property/button (`350`) and the
+pre-launch EXTRA setting now read and write this same MANIAC EXTRA MODE at
+levels 0--3. The former beatoraja Extra Note modifier is not applied, so these
+controls no longer create an unrelated ASSIST-only chart. A skin-side change
+is saved immediately and reloads the matching MANIAC score and lamp.
+
 Any MANIAC option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
 temporarily disable these modes. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
@@ -147,10 +153,12 @@ ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
 
 Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
-native-DP warning are configured only in MANIAC OPTIONS. The ordinary DP
-option contains only OFF and FLIP. Saved legacy BATTLE and BATTLE AS values
-are normalized to OFF and cannot reactivate Double Battle behind another
-MANIAC option. Manual-scratch and auto-scratch Double Battle use different
+native-DP warning can all be configured in MANIAC OPTIONS. Existing Music
+Select skins may also use the ordinary DP option's OFF, FLIP, BATTLE, and
+BATTLE AS display: BATTLE and BATTLE AS now select the same MANIAC Double
+Battle settings instead of the legacy L-ASSIST implementation. The skin and
+F2 controls save the same sidecar values and reload the exact Double Battle
+lamp immediately. Manual-scratch and auto-scratch Double Battle use different
 local and online identities; existing manual Double Battle records keep their
 original identity.
 
@@ -518,7 +526,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.15-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.16-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -539,7 +547,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.15-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.16-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -555,7 +563,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.15-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.16-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

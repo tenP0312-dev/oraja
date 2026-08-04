@@ -96,6 +96,9 @@ public final class ManiacOptionsMenu {
         }
 
         player.setBmsirManiacSettings(selected);
+        if (selected.isDoubleBattle()) {
+            player.setDoubleoption(0);
+        }
         if (!BMSIRArenaClient.saveArenaConfig()) {
             ImGuiNotify.warning(t(
                     "マニアックオプションを保存できませんでした",
@@ -228,28 +231,18 @@ public final class ManiacOptionsMenu {
     }
 
     private static void setDoubleBattle(boolean enabled) {
-        draft.setDoubleBattle(enabled);
-        if (enabled) {
-            draft.setExtraMode(0);
-            draft.setAddNotes(0);
-            draft.setAddLongNotes(0);
-        }
+        draft.selectDoubleBattle(enabled, enabled && draft.isAutoScratch());
     }
 
     private static void setAutoScratch(boolean enabled) {
         if (enabled && !draft.isDoubleBattle()) {
             setDoubleBattle(true);
         }
-        draft.setAutoScratch(enabled);
+        draft.selectDoubleBattle(draft.isDoubleBattle(), enabled);
     }
 
     private static void setExtraMode(int value) {
-        draft.setExtraMode(value);
-        if (value > 0) {
-            draft.setAddNotes(0);
-            draft.setAddLongNotes(0);
-            draft.setDoubleBattle(false);
-        }
+        draft.selectExtraMode(value);
     }
 
     private static void setAddNotes(int value) {

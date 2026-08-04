@@ -1048,11 +1048,20 @@ public class IntegerPropertyFactory {
 		}),
 		option_dp(54, (state) -> {
 			if(state instanceof BMSPlayer) {
+				var context = state.resource.getManiacPlayContext();
+				if (context != null && context.settings().isDoubleBattle()) {
+					return context.settings().isAutoScratch() ? 3 : 2;
+				}
 				return ((BMSPlayer)state).getOptionInformation().doubleoption;
 			} else if(state instanceof AbstractResult) {
-				return state.resource.getReplayData().doubleoption;
+				var replay = state.resource.getReplayData();
+				if (replay.bmsirManiacSettings != null
+						&& replay.bmsirManiacSettings.isDoubleBattle()) {
+					return replay.bmsirManiacSettings.isAutoScratch() ? 3 : 2;
+				}
+				return replay.doubleoption;
 			}
-			return state.resource.getPlayerConfig().getDoubleoption();
+			return state.resource.getPlayerConfig().getBmsirDoubleOption();
 		}),
 
 		hsfix(55, (state) -> {
@@ -1197,7 +1206,7 @@ public class IntegerPropertyFactory {
 		}),
 		guidese(343, (state) -> (state.resource.getPlayerConfig().isGuideSE() ? 1 : 0)),
 
-		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getExtranoteDepth())),
+		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getBmsirExtraMode())),
 		minemode(351, (state) -> (state.resource.getPlayerConfig().getMineMode())),
 		scrollmode(352, (state) -> (state.resource.getPlayerConfig().getScrollMode())),
 		longnotemode(353, (state) -> (state.resource.getPlayerConfig().getLongnoteMode())),

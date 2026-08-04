@@ -399,6 +399,17 @@ public final class BMSIRManiacSettings {
     public void setHiddenSudden2P(int value) { hiddenSudden2P = value; validate(); }
     public int getExtraMode() { return extraMode; }
     public void setExtraMode(int value) { extraMode = value; validate(); }
+    public void selectExtraMode(int value) {
+        extraMode = clamp(value, 0, 3);
+        if (extraMode > 0) {
+            addNotes = 0;
+            addLongNotes = 0;
+            doubleBattle = false;
+            autoScratch = false;
+            randomLink = RANDOM_LINK_OFF;
+        }
+        validate();
+    }
     public int getAddNotes() { return addNotes; }
     public void setAddNotes(int value) { addNotes = value; validate(); }
     public int getAddLongNotes() { return addLongNotes; }
@@ -434,6 +445,16 @@ public final class BMSIRManiacSettings {
     public int getSideJump() { return sideJump; }
     public void setSideJump(int value) { sideJump = value; validate(); }
     public boolean isDoubleBattle() { return doubleBattle; }
+    public void selectDoubleBattle(boolean enabled, boolean withAutoScratch) {
+        doubleBattle = enabled;
+        autoScratch = enabled && withAutoScratch;
+        if (enabled) {
+            extraMode = 0;
+            addNotes = 0;
+            addLongNotes = 0;
+        }
+        validate();
+    }
     public void setDoubleBattle(boolean value) {
         doubleBattle = value;
         if (!value) autoScratch = false;

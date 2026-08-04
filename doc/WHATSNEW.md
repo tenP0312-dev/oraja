@@ -1,4 +1,4 @@
-# Arena oraja 0.4.14.15
+# Arena oraja 0.4.14.16
 
 ## MANIAC play, Double Battle, and Arena presentation
 
@@ -10,10 +10,14 @@
   note transforms, mines, strict-judge options, and visual
   effects. Ranked generated charts use a fixed MT19937 generation seed while
   normal RANDOM and Random Trainer remain per-play options.
-- Moved Double Battle completely into MANIAC OPTIONS. The normal DP option now
-  contains only OFF and FLIP; legacy BATTLE and BATTLE AS values are disabled
-  and normalized to OFF. Double Battle now exposes AUTO SCRATCH, RANDOM LINK,
-  Random Trainer support, and the optional native-DP warning together.
+- Unified the existing Music Select `EXTRA NOTE` control and pre-launch setting
+  with the LR2-compatible MANIAC EXTRA MODE. The old ASSIST-only Extra Note
+  modifier is disabled, so the skin, F2 screen, dedicated score DB, and online
+  ranking now use one OFF / LEVEL 1 / LEVEL 2 / LEVEL 3 setting.
+- Restored OFF / FLIP / BATTLE / BATTLE AS to the normal DP option display.
+  BATTLE and BATTLE AS now control MANIAC Double Battle and its AUTO SCRATCH
+  setting instead of the legacy L-ASSIST implementation. F2 remains available
+  for the same settings plus RANDOM LINK and the native-DP warning.
 - Manual-scratch and auto-scratch Double Battle keep separate local and BMS-IR
   ranking identities. AUTO SCRATCH moves both generated scratch lanes to
   autoplay while preserving existing manual Double Battle records.
@@ -21,8 +25,8 @@
   transforms use isolated BMS-IR leaderboards, ghosts, and score sync; a safe
   vanilla `score.db` export is available from pre-launch configuration. Music
   Select lamps now follow the exact active MANIAC/Double Battle settings and
-  clear retained bar scores before reloading after a play, when F2 settings
-  change, or when synchronized records change.
+  clear retained bar scores before reloading after a play, when F2 or skin
+  settings change, or when synchronized records change.
 - Enlarged the MANIAC OPTIONS text and added a brief description for the
   selected option on wide screens.
 - Split the Arena graph into its own window, added score differences, match

@@ -764,7 +764,7 @@ public class PlayConfigurationView implements Initializable {
 		hranthresholdbpm.getValueFactory().setValue(player.getHranThresholdBPM());
 		judgeregion.setSelected(player.isShowjudgearea());
 		markprocessednote.setSelected(player.isMarkprocessednote());
-		extranotedepth.getValueFactory().setValue(player.getExtranoteDepth());
+		extranotedepth.getValueFactory().setValue(player.getBmsirExtraMode());
 
 		autosavereplay1.getSelectionModel().select(player.getAutoSaveReplay()[0]);
 		autosavereplay2.getSelectionModel().select(player.getAutoSaveReplay()[1]);
@@ -933,7 +933,7 @@ public class PlayConfigurationView implements Initializable {
 		player.setLongnoteRate(longnoterate.getValue());
 		player.setHranThresholdBPM(getValue(hranthresholdbpm));
 		player.setMarkprocessednote(markprocessednote.isSelected());
-		player.setExtranoteDepth(extranotedepth.getValue());
+		player.setBmsirExtraMode(extranotedepth.getValue());
 
 		player.setAutoSaveReplay( new int[]{autosavereplay1.getValue(),autosavereplay2.getValue(),
 				autosavereplay3.getValue(),autosavereplay4.getValue()});
