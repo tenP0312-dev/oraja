@@ -32,8 +32,10 @@ repository.
 - Run the smallest relevant Gradle tests after a stable change.
 - For ordinary client changes, run `./gradlew core:test` and the applicable
   target build when the environment supports it.
-- For launcher changes, run `cargo test --locked` in
-  `arena-launcher/src-tauri` and the applicable unsigned bundle validation.
+- The desktop launcher now lives in its own repository,
+  `tenP0312-dev/oraja-Rancher`. For launcher changes, clone that repository
+  and run `cargo test --locked` in its `src-tauri` directory, plus the
+  applicable unsigned bundle validation.
 - On the normal macOS development host, use macOS-only builds and an isolated
   macOS install for implementation iterations. Do not dispatch Windows and
   macOS release CI after every edit. Once the change is stable, run the

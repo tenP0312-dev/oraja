@@ -489,8 +489,10 @@ The server release gate checks both Arena protocol release and build identity.
 That gate controls supported distribution; server-side score/state validation
 remains necessary because an open-source client identity can be imitated.
 
-The source tree also contains `arena-launcher/`, a Tauri 2 launcher for Windows
-x64 and macOS arm64. It preserves unknown INI fields and layout, accepts Java
+The desktop launcher lives in its own repository,
+[`tenP0312-dev/oraja-Rancher`](https://github.com/tenP0312-dev/oraja-Rancher),
+a Tauri 2 launcher for Windows x64 and macOS arm64. It preserves unknown INI
+fields and layout, accepts Java
 21 or newer, detects the bundled Windows `runtime/bin/java.exe`, blocks
 ambiguous duplicate BMS-IR plugin jars, and transactionally replaces one older
 versioned plugin with its verified successor. It verifies canonical Ed25519
