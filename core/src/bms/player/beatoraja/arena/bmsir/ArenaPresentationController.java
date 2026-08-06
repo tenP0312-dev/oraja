@@ -141,14 +141,14 @@ public final class ArenaPresentationController {
         if (nowNanos < startFlashUntil) {
             return current.announcement(
                     ArenaPresentationState.Phase.COUNTDOWN,
-                    "START!",
+                    BMSIRArenaI18n.text("スタート！", "START!"),
                     ""
             );
         }
         if (nowNanos < matchFoundFlashUntil) {
             return current.announcement(
                     ArenaPresentationState.Phase.MATCH_FOUND,
-                    "MATCH FOUND",
+                    BMSIRArenaI18n.text("マッチ成立", "MATCH FOUND"),
                     current.detail()
             );
         }

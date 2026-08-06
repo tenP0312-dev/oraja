@@ -6,11 +6,16 @@ import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BMSIRArenaOverlayTest {
+    @AfterEach
+    void resetLanguage() {
+        BMSIRArenaI18n.setLanguage("ja");
+    }
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Test
@@ -88,6 +93,7 @@ class BMSIRArenaOverlayTest {
 
     @Test
     void battleGraphsAlwaysGrowTowardTheWinningDirection() throws Exception {
+        BMSIRArenaI18n.setLanguage("en");
         JsonNode player = JSON.readTree("""
                 {
                   "exscore": 180,
@@ -110,6 +116,19 @@ class BMSIRArenaOverlayTest {
                 "LOWEST COMBO BREAK WINS",
                 BMSIRArenaOverlay.ruleBattleTitle("minbp")
         );
+    }
+
+    @Test
+    void ruleBattleTitleFollowsTheSelectedLanguage() {
+        BMSIRArenaI18n.setLanguage("ja");
+        assertEquals("コンボ切れ最少勝負", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals("最大コンボ対決", BMSIRArenaOverlay.ruleBattleTitle("max_combo"));
+        assertEquals("EXスコア対決", BMSIRArenaOverlay.ruleBattleTitle("exscore"));
+
+        BMSIRArenaI18n.setLanguage("en");
+        assertEquals("LOWEST COMBO BREAK WINS", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals("MAX COMBO BATTLE", BMSIRArenaOverlay.ruleBattleTitle("max_combo"));
+        assertEquals("EX SCORE BATTLE", BMSIRArenaOverlay.ruleBattleTitle("exscore"));
     }
 
     @Test

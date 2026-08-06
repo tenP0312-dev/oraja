@@ -285,7 +285,7 @@ public final class BMSIRArenaOverlay {
         if (state.requiredCount() > 0
                 && state.phase() != ArenaPresentationState.Phase.LOADING) {
             ImGui.text(
-                    "READY "
+                    t("準備完了 ", "READY ")
                             + state.readyCount()
                             + " / "
                             + state.requiredCount()
@@ -404,7 +404,7 @@ public final class BMSIRArenaOverlay {
         }
         String roomCode = BMSIRArenaClient.currentRoomCode();
         if (!roomCode.isBlank()) {
-            ImGui.textDisabled("ROOM " + roomCode);
+            ImGui.textDisabled(t("部屋 ", "ROOM ") + roomCode);
         }
         if (!gameplay && ImGui.button(t("通常表示へ", "Full View"))) {
             BMSIRArenaClient.playerConfig().setBmsirArenaOverlayMode(0);
@@ -1020,9 +1020,9 @@ public final class BMSIRArenaOverlay {
 
     static String ruleBattleTitle(String scoreRule) {
         return switch (scoreRule) {
-            case "minbp" -> "LOWEST COMBO BREAK WINS";
-            case "max_combo" -> "MAX COMBO BATTLE";
-            default -> "EX SCORE BATTLE";
+            case "minbp" -> t("コンボ切れ最少勝負", "LOWEST COMBO BREAK WINS");
+            case "max_combo" -> t("最大コンボ対決", "MAX COMBO BATTLE");
+            default -> t("EXスコア対決", "EX SCORE BATTLE");
         };
     }
 

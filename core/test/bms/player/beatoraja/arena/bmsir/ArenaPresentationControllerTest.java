@@ -14,10 +14,12 @@ class ArenaPresentationControllerTest {
     @AfterEach
     void reset() {
         ArenaPresentationController.resetForTest();
+        BMSIRArenaI18n.setLanguage("ja");
     }
 
     @Test
     void phaseSoundsAreMonotonicAndDoNotReplayAfterClockCorrection() {
+        BMSIRArenaI18n.setLanguage("en");
         PlayerConfig config = new PlayerConfig();
         List<SoundType> sounds = new ArrayList<>();
         ArenaPresentationController.SoundSink sink =
@@ -95,6 +97,49 @@ class ArenaPresentationControllerTest {
         assertEquals(
                 "START!",
                 ArenaPresentationController.visibleState(100L).title()
+        );
+    }
+
+    @Test
+    void announcementTitlesFollowTheSelectedLanguage() {
+        PlayerConfig config = new PlayerConfig();
+        List<SoundType> sounds = new ArrayList<>();
+        ArenaPresentationController.SoundSink sink =
+                (sound, volume) -> sounds.add(sound);
+
+        BMSIRArenaI18n.setLanguage("ja");
+        ArenaPresentationController.update(
+                state(ArenaPresentationState.Phase.IDLE, "", 0, 0, 0, false),
+                config,
+                sink,
+                0L
+        );
+        ArenaPresentationController.update(
+                state(ArenaPresentationState.Phase.MATCHING, "", 0, 0, 0, false),
+                config,
+                sink,
+                1L
+        );
+        ArenaPresentationController.update(
+                state(ArenaPresentationState.Phase.MATCH_FOUND, "m1", 0, 0, 2, false),
+                config,
+                sink,
+                2L
+        );
+        assertEquals(
+                "マッチ成立",
+                ArenaPresentationController.visibleState(2L).title()
+        );
+
+        ArenaPresentationController.update(
+                state(ArenaPresentationState.Phase.PLAYING, "m1", 0, 2, 2, true),
+                config,
+                sink,
+                20L
+        );
+        assertEquals(
+                "スタート！",
+                ArenaPresentationController.visibleState(20L).title()
         );
     }
 
