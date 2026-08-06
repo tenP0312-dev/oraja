@@ -8,9 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// Shares BMSIRArenaI18n's static language field with BMSIRArenaI18nTest and
+// ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
+@ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaOverlayTest {
     @AfterEach
     void resetLanguage() {

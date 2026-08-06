@@ -4,12 +4,16 @@ import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.SystemSoundManager.SoundType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// Shares BMSIRArenaI18n's static language field with BMSIRArenaI18nTest and
+// BMSIRArenaOverlayTest; see the lock note on BMSIRArenaI18nTest.
+@ResourceLock("bmsir-arena-i18n-language")
 class ArenaPresentationControllerTest {
     @AfterEach
     void reset() {

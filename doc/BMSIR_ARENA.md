@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.18`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.19`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,11 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.19` forces the MANIAC API to HTTPS and auto-upgrades legacy
+`ws://` Arena server settings to `wss://`, keeps BORDERLESS mode across a
+fullscreen round-trip, fixes the Start Here green-number calculation to
+include SUD+ lane cover and LIFT together, and localizes the remaining
+hardcoded English strings in the Arena overlay.
 Version `0.4.14.18` collapses existing long notes before LR2 EXTRA MODE,
 ADD NOTES, and LOUDNESS generation, keeps MANIAC IR targets on the active
 isolated leaderboard during immediate chart starts, and makes the legacy

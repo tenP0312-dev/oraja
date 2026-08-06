@@ -2,9 +2,14 @@ package bms.player.beatoraja.arena.bmsir;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// BMSIRArenaI18n's selected language is a shared static field. Classes run
+// concurrently by default (junit-platform.properties), so every test class
+// that reads or writes it must share this lock or their assertions race.
+@ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaI18nTest {
     @AfterEach
     void restoreJapaneseDefault() {
