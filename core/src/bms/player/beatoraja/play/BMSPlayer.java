@@ -666,9 +666,10 @@ public class BMSPlayer extends MainState {
 		if (!score) {
 			ImGuiNotify.warning("Score nullifying options enabled. Next play will not be saved");
 		}
-		if (forceNoIRSend) {
-			ImGuiNotify.error("Special mod options enabled. Next play will not be submitted to IR");
-		}
+		// No on-screen notice here: forceNoIRSend already follows directly from
+		// options the player themselves turned on (freq trainer, MANIAC), so
+		// the outcome is not a surprise. IR submission behavior is unchanged;
+		// only this popup is removed.
 		logger.info("アシストレベル : {} - スコア保存 : {} - no IR submit : {}", assist, score, forceNoIRSend);
 
 		resource.setUpdateScore(score);
