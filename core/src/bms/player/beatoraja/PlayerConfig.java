@@ -713,6 +713,8 @@ public final class PlayerConfig {
 	public String getBmsirArenaServer() {
 		if (bmsirArenaServer == null || bmsirArenaServer.isBlank()) {
 			bmsirArenaServer = "wss://www.bms-ir.org/new/arena/ws/client";
+		} else {
+			bmsirArenaServer = upgradeToSecureArenaServerScheme(bmsirArenaServer);
 		}
 		return bmsirArenaServer;
 	}
@@ -720,7 +722,22 @@ public final class PlayerConfig {
 	public void setBmsirArenaServer(String bmsirArenaServer) {
 		this.bmsirArenaServer = bmsirArenaServer == null || bmsirArenaServer.isBlank()
 				? "wss://www.bms-ir.org/new/arena/ws/client"
-				: bmsirArenaServer.trim();
+				: upgradeToSecureArenaServerScheme(bmsirArenaServer.trim());
+	}
+
+	/**
+	 * Older releases stored the Arena server as plain {@code ws://}/{@code http://}.
+	 * Silently upgrade those saved values to their TLS equivalent so stale local
+	 * configuration cannot fall back to an unencrypted connection.
+	 */
+	private static String upgradeToSecureArenaServerScheme(String value) {
+		if (value.regionMatches(true, 0, "ws://", 0, 5)) {
+			return "wss://" + value.substring(5);
+		}
+		if (value.regionMatches(true, 0, "http://", 0, 7)) {
+			return "https://" + value.substring(7);
+		}
+		return value;
 	}
 
 	public boolean isBmsirArenaUnrestrictedRating() {
