@@ -22,6 +22,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
+import org.lwjgl.glfw.GLFW;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.*;
 import com.badlogic.gdx.utils.StringBuilder;
@@ -725,7 +726,9 @@ public class MainController {
 			graphics.getWindow().setPosition(windowX, windowY);
 			config.setDisplaymode(returnMode);
 		} else {
-			lastWindowedDisplayMode = rememberedWindowedMode(config.getDisplaymode());
+			lastWindowedDisplayMode = rememberedWindowedMode(isWindowBorderlessMode()
+					? Config.DisplayMode.BORDERLESS
+					: Config.DisplayMode.WINDOW);
 			Graphics.DisplayMode windowResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
 					.filter(mode -> mode.width == config.getWindowWidth()
 							&& mode.height == config.getWindowHeight())
@@ -733,6 +736,18 @@ public class MainController {
 					.orElse(Gdx.graphics.getDisplayMode());
 			Gdx.graphics.setFullscreenMode(windowResOrCurrent);
 			config.setDisplaymode(Config.DisplayMode.FULLSCREEN);
+		}
+	}
+
+	private boolean isWindowBorderlessMode() {
+		Lwjgl3Graphics graphics = (Lwjgl3Graphics) Gdx.graphics;
+		if (graphics.getWindow() == null) {
+			return false;
+		}
+		try {
+			return GLFW.glfwGetWindowAttrib(graphics.getWindow().getWindowHandle(), GLFW.GLFW_DECORATED) == GLFW.GLFW_FALSE;
+		} catch (UnsatisfiedLinkError | NoSuchMethodError | Exception e) {
+			return config.getDisplaymode() == Config.DisplayMode.BORDERLESS;
 		}
 	}
 
