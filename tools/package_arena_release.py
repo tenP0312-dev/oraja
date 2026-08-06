@@ -22,7 +22,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.14.18"
+VERSION = "0.4.14.19"
 BODY_FILENAME = "Arena-oraja.jar"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.69.jar"
 PLATFORM_SPECS = {
@@ -139,6 +139,7 @@ def validate_inputs(
     launcher_exe: Path | None,
     launcher_app: Path | None,
     confirmed: bool,
+    distribution_version: str,
 ) -> dict[str, str]:
     if not confirmed:
         raise ValueError(
@@ -146,7 +147,7 @@ def validate_inputs(
             "--confirm-base-assets-redistributable after checking their licenses"
         )
     spec = PLATFORM_SPECS[platform]
-    expected_body_name = f"BMS-IR-Arena-oraja-{VERSION}-{platform}.jar"
+    expected_body_name = f"BMS-IR-Arena-oraja-{distribution_version}-{platform}.jar"
     if body_jar.name != expected_body_name or not body_jar.is_file():
         raise ValueError(f"Expected reviewed body JAR named {expected_body_name}")
     if plugin_jar.name != PLUGIN_FILENAME or not plugin_jar.is_file():
@@ -321,6 +322,7 @@ def build_release(
         launcher_exe=launcher_exe,
         launcher_app=launcher_app,
         confirmed=confirmed,
+        distribution_version=distribution_version,
     )
     channel_suffix = "-test" if test_build else ""
     archive_name = (

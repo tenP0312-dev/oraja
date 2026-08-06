@@ -9,6 +9,7 @@ from package_arena_release import (
     BODY_FILENAME,
     CONFIGURED_LAUNCHER_MARKER,
     PLUGIN_FILENAME,
+    VERSION,
     build_release,
 )
 
@@ -19,7 +20,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
 
     def fixture(self, root: Path) -> dict[str, Path]:
-        body = root / "BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar"
+        body = root / f"BMS-IR-Arena-oraja-{VERSION}-macos-aarch64.jar"
         plugin = root / PLUGIN_FILENAME
         self.write_jar(body)
         self.write_jar(plugin)
@@ -109,7 +110,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 "BMS-IR Arena Test.app/Contents/MacOS/bmsir-arena-launcher", names
             )
             self.assertIn("release-manifest.json", names)
-            self.assertEqual("0.4.14.18\n", version)
+            self.assertEqual(f"{VERSION}\n", version)
             self.assertIn(f"-jar {BODY_FILENAME}", launcher)
             self.assertIn("-DcustomIRDirectory=$PWD/ir", launcher)
             self.assertFalse(any(name.startswith("player/") for name in names))
@@ -137,7 +138,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar"
+            body = root / f"BMS-IR-Arena-oraja-{VERSION}-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
@@ -176,7 +177,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
-            body = root / "BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar"
+            body = root / f"BMS-IR-Arena-oraja-{VERSION}-windows-x86-64.jar"
             fixture["body"].rename(body)
             fixture["body"] = body
             (fixture["runtime"] / "bin" / "java").unlink()
@@ -205,6 +206,12 @@ class ArenaReleasePackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fixture = self.fixture(root)
+            # Exercise a distribution_version that differs from the module
+            # default: the reviewed body JAR must be named for that explicit
+            # revision, not for VERSION.
+            revised_body = root / "BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar"
+            fixture["body"].rename(revised_body)
+            fixture["body"] = revised_body
             output = build_release(
                 platform="macos-aarch64",
                 body_jar=fixture["body"],
