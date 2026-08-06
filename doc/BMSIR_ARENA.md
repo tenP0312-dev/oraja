@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.13`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.18`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -14,9 +14,21 @@ public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
+Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, MANIAC-owned Double
+Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
+mode-following leaderboard and ghost,
+vanilla DB export, split Arena graph/status presentation, private-room records,
+Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.18` collapses existing long notes before LR2 EXTRA MODE,
+ADD NOTES, and LOUDNESS generation, keeps MANIAC IR targets on the active
+isolated leaderboard during immediate chart starts, and makes the legacy
+CONSTANT skin property read the same selected PlayConfig as its toggle.
 Version `0.4.13` unifies the in-game song ranking as `BMS-IR Leaderboard`,
 restores a persistent F5 overlay switch, adds judge-timing restoration with a
-Lua API, makes INFO toasts optional, and removes duplicate startup IR logins.
+Lua API, makes INFO toasts optional, removes duplicate startup IR logins, and
+recovers the existing player selection when a fresh system config has not yet
+stored its player ID. DP Arena options use one compact `RAN / -` line and append
+`/ FLIP` on the same line when enabled.
 Version `0.4.12` adds an in-window startup progress log, three configurable
 START+6/7 modes, and individually configurable physical NUMPAD 0--9 shortcuts.
 Version `0.4.11` adds main-skin Arena target injection, fixed entry-order score
@@ -105,10 +117,74 @@ Arena values from `config_player.json`; 0.4.5-dev adds the one-bass and
 first-timing preview switches, 0.4.6 adds the Dan local-sync switch, 0.4.11
 adds Arena target and graph-order switches, and 0.4.13 upgrades the sidecar to
 schema 7 for cover HI-SPEED recalculation, judge restoration, INFO toasts, and
-the last visible overlay mode.
+the last visible overlay mode. Version 0.4.14 upgrades it to schema 10 for
+MANIAC, Double Battle AUTO SCRATCH, Arena language, graph presentation, and
+detailed logs.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
+
+Holding F2 for about one second on Music Select opens the one-column MANIAC
+OPTIONS screen; a short F2 press keeps the existing refresh command. The
+screen is an opaque black full-window mode rather than a window over Music
+Select. Its enlarged list uses the available width and shows a brief
+description of the selected option on wide screens. Song selection input is
+suspended while it is open. Changes remain in
+a draft until `Apply and return`, Escape, or a new short F2 press commits them,
+saves once, reloads the effective score set, and returns to Music Select. EXTRA
+MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
+effects follow the algorithms and inclusive-random boundaries recovered from
+OpenLR2 Beta3 v100201. Ranked chart generation uses a BMS-IR-fixed MT19937
+seed so the generated base chart is identical for every player. Normal
+RANDOM, MIRROR, S-RANDOM, Random Trainer, and borrowed leaderboard placement
+are applied afterward in the same way as an ordinary chart and do not split
+the ranking. Replays retain the actual option seed and placement hash.
+Background folder refreshes keep the last committed `songdata.db` snapshot
+available to Music Select, so a refresh cannot temporarily replace the current
+folder with an empty list.
+
+The existing Music Select EXTRA NOTE skin property/button (`350`) and the
+pre-launch EXTRA setting now read and write this same MANIAC EXTRA MODE at
+levels 0--3. The former beatoraja Extra Note modifier is not applied, so these
+controls no longer create an unrelated ASSIST-only chart. A skin-side change
+is saved immediately and reloads the matching MANIAC score and lamp.
+As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
+start note and remove the end marker before generating notes. Generated notes
+therefore cannot overlap and render inside an old long-note body.
+
+Any MANIAC option or Double Battle play is written only to
+`bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
+temporarily disable these modes. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
+and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
+ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
+falling back to the normal leaderboard.
+
+Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
+native-DP warning can all be configured in MANIAC OPTIONS. Existing Music
+Select skins may also use the ordinary DP option's OFF, FLIP, BATTLE, and
+BATTLE AS display: BATTLE and BATTLE AS now select the same MANIAC Double
+Battle settings instead of the legacy L-ASSIST implementation. The skin and
+F2 controls save the same sidecar values and reload the exact Double Battle
+lamp immediately. Manual-scratch and auto-scratch Double Battle use different
+local and online identities; existing manual Double Battle records keep their
+original identity.
+
+Music Select reads its score and lamp from the exact effective MANIAC settings.
+Changing EXTRA MODE, an ADD option, a visual option, or Double Battle therefore
+switches the whole visible list and folder summaries to that setting's isolated
+record; it never falls back to the ordinary SP/DP lamp. Returning from the F2
+screen or from a completed play clears both the score cache and the score
+objects retained by visible bars before bulk-reading the selected mode, and a
+completed BMS-IR MANIAC sync uses the same reload path on the render thread.
+When Double Battle is enabled
+on a native DP chart, only Double Battle is suspended: the normal DP lamp is shown if no other
+MANIAC option remains, otherwise the remaining exact MANIAC settings select the
+lamp.
+
+`本体UI言語` selects Japanese or English for Arena windows and phase messages,
+F2 MANIAC OPTIONS, built-in Ctrl+Shift+F5 windows, and their notifications.
+The BMS-IR-specific pre-launch controls are translated by the launcher's normal
+resource-bundle locale and save the same language setting used after startup.
 
 `判定自動調整値を曲終了後に戻す` is OFF by default. When enabled, a play
 that starts while automatic judge-timing adjustment is ON snapshots the
@@ -331,7 +407,8 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   counter stale still update spectators. A normal completion uses the
   server-selected chart total; hard fail keeps the actual processed count.
 - SP sends only the active 1P lane option even if stale 2P/FLIP settings exist.
-  DP sends both sides and FLIP together with the chart play mode.
+  DP sends both sides and FLIP together with the chart play mode and displays
+  them on one line, such as `RAN / -` or `RAN / MIR / FLIP`.
 - The chat tab talks only to participants in the current match. Messages are
   limited to 200 normalized characters and one accepted message per second;
   the latest 50 return after reconnect and disappear when the match ends.
@@ -413,13 +490,36 @@ That gate controls supported distribution; server-side score/state validation
 remains necessary because an open-source client identity can be imitated.
 
 The source tree also contains `arena-launcher/`, a Tauri 2 launcher for Windows
-x64 and macOS arm64. It preserves unknown INI fields and layout, accepts only
-Java 17, blocks duplicate BMS-IR plugin jars, verifies canonical Ed25519 release
-manifests and every artifact hash before replacement, and rolls back a failed
-transaction. Its signed Markdown release notes are rendered without executing
-release HTML. A verified staged launcher can restart as its own short-lived
-update helper and relaunch after replacement. CI outputs are explicitly
-unsigned validation artifacts; official launcher publication remains blocked
+x64 and macOS arm64. It preserves unknown INI fields and layout, accepts Java
+21 or newer, detects the bundled Windows `runtime/bin/java.exe`, blocks
+ambiguous duplicate BMS-IR plugin jars, and transactionally replaces one older
+versioned plugin with its verified successor. It verifies canonical Ed25519
+release manifests and every artifact hash before replacement, and restores the
+prior plugin and files after a failed transaction. Its signed Markdown release
+notes and announcement list support Japanese and English and are rendered
+without executing release HTML. The upper-right `🌐 日本語` / `🌐 English`
+control switches the launcher language, and the announcement list remains
+visible when the installed body is current. The header shows the installed
+body and launcher versions separately. Installation and update operations show
+overall transferred bytes, percent, verified file count, and the following
+verification, application, and launcher-restart phases. Existing installations
+hash the signed delta paths and download only changed or missing files. A
+verified staged launcher can restart as its own short-lived update helper and
+relaunch after replacement. The verified helper is copied outside staging, and
+successful updates remove both staging and rollback data before launch. An EXE placed in an empty portable directory
+immediately checks its selected channel and downloads one signed compressed
+bootstrap ZIP, verifies its full file inventory, and then applies the current
+sparse delta. Missing files do not become `current` merely because
+the launcher's compiled body version matches the channel version. The UI keeps
+launch actions disabled until its initial update check completes. A signed
+mandatory update, revoked body, or minimum-launcher requirement is also
+enforced in Rust and cached locally, so a later network failure cannot
+re-enable an old version. The Arena service compatibility gate remains the
+final enforcement point for clients that never received that signed policy.
+Pull-request CI produces explicitly unsigned validation artifacts; manually
+dispatched CI builds only configured internal-test launchers and downloads the
+SHA-256-pinned official Tauri CLI binary instead of compiling it or rebuilding
+both configured and unconfigured launchers. Official launcher publication remains blocked
 until Authenticode and Developer ID/notarization credentials plus the reviewed
 manifest public key are available.
 
@@ -433,14 +533,16 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
 
 - non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.69.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
-  a Java 21 runtime, distribution-cleared base assets, and launch scripts.
+  a Java 21 runtime, distribution-cleared base assets, and launch scripts. The
+  Windows package contains the portable launcher EXE and the macOS package
+  contains the portable app bundle; BAT and command startup remain available.
 
 Build the Java-bundled ZIP only from a clean asset source whose redistribution
 terms have been checked. The packager copies only the fixed visual/audio asset
@@ -452,18 +554,37 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.13-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
+  --launcher-app "/reviewed/BMS-IR Arena.app" \
   --output-dir dist \
   --confirm-base-assets-redistributable
 ```
 
 Use `windows-x86-64` with a matching Windows x64 Java 21 runtime for the
-Windows archive. The ZIP contains `release-manifest.json` with the body and
-plugin SHA-256 values. Generated JARs and ZIPs remain release artifacts and
-must not be committed to the source repository.
+Windows archive and pass the reviewed portable launcher. Add `--test-build`
+only for an internal test package:
+
+```bash
+python tools/package_arena_release.py \
+  --platform windows-x86-64 \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
+  --base-assets /reviewed/clean-beatoraja-assets \
+  --java-home /reviewed/windows-java-21-home \
+  --launcher-exe /reviewed/BMS-IR-Arena-launcher.exe \
+  --output-dir dist \
+  --test-build \
+  --confirm-base-assets-redistributable
+```
+
+Test packages name the launcher `BMS-IR Arena Test.exe` or
+`BMS-IR Arena Test.app` and select the test update channel. The ZIP contains
+`release-manifest.json` with body, plugin, and launcher SHA-256 values plus the
+initial local version marker. Generated JARs and ZIPs remain release artifacts
+and must not be committed to the source repository.
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
 7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the
@@ -481,7 +602,7 @@ application logger. FFmpeg native loading completes synchronously before the
 first decoder thread starts. Playback commands wake an unbounded blocking
 queue without interrupting JavaCPP file extraction, including commands queued
 during decoder initialization. Release acceptance must test both skin movies
-and in-play BGA on the target Windows/Java 17 body.
+and in-play BGA on the target Windows/Java 21 bundle.
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
 commit, record the artifact hashes privately for rollout, and configure the

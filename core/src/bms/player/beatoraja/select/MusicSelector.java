@@ -7,13 +7,18 @@ import java.nio.file.*;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.modmenu.ImGuiNotify;
+import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -126,12 +131,44 @@ public final class MusicSelector extends MainState {
 		scorecache = new ScoreDataCache() {
 			@Override
 			protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
+				BMSIRManiacSettings settings = BMSIRManiacApiClient.effectiveSettings(main, song);
+				if (settings != null) {
+					return pda.readManiacScoreData(
+							settings.storageChartId(song.getSha256()),
+							lnmode
+					);
+				}
 				return pda.readScoreData(song.getSha256(), song.hasUndefinedLongNote(), lnmode);
 			}
 
 			@Override
 			protected void readScoreDatasFromSource(ScoreDataCollector collector, SongData[] songs, int lnmode) {
-				pda.readScoreDatas(collector, songs, lnmode);
+				Array<SongData> ordinary = new Array<>();
+				Array<SongData> maniac = new Array<>();
+				for (SongData song : songs) {
+					if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+						maniac.add(song);
+					} else {
+						ordinary.add(song);
+					}
+				}
+				if (ordinary.notEmpty()) {
+					pda.readScoreDatas(collector, ordinary.toArray(SongData.class), lnmode);
+				}
+				if (maniac.notEmpty()) {
+					pda.readManiacScoreDatas(
+							collector,
+							maniac.toArray(SongData.class),
+							lnmode,
+							song -> {
+								BMSIRManiacSettings settings =
+										BMSIRManiacApiClient.effectiveSettings(main, song);
+								return settings == null
+										? null
+										: settings.storageChartId(song.getSha256());
+							}
+					);
+				}
 			}
 		};
 		
@@ -186,6 +223,17 @@ public final class MusicSelector extends MainState {
 		return rivalcache;
 	}
 
+	public void refreshScoreDisplay() {
+		manager.invalidatePlayerScoreDisplay();
+		scorecache.clear();
+		SongData[] visibleSongs = manager.getVisibleSongDatas();
+		if (visibleSongs.length > 0) {
+			scorecache.readScoreDatas((song, score) -> {
+			}, visibleSongs, config.getLnmode());
+		}
+		manager.updateBar();
+	}
+
 	public void create() {
 		BMSIROrajaHelperBridge.publishScene("select");
 		main.getSoundManager().shuffle();
@@ -193,6 +241,9 @@ public final class MusicSelector extends MainState {
 		play = null;
 		showNoteGraph = false;
 		resource.setPlayerData(main.getPlayDataAccessor().readPlayerData());
+		if (playedsong != null || playedcourse != null) {
+			manager.invalidatePlayerScoreDisplay();
+		}
 		if (playedsong != null) {
 			scorecache.update(playedsong, config.getLnmode());
 			playedsong = null;
@@ -270,12 +321,19 @@ public final class MusicSelector extends MainState {
 			currentRankingDuration = -1;
 			if (current instanceof SongBar && ((SongBar) current).existsSong() && play == null) {
 				SongData song = ((SongBar) current).getSongData();
-				RankingData irc = main.getRankingDataCache().get(song, config.getLnmode());
-				if(irc == null) {
-					irc = new RankingData();
-					main.getRankingDataCache().put(song, config.getLnmode(), irc);
+				RankingData irc;
+				if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+					irc = BMSIRManiacApiClient.loadRanking(main, song);
+				} else if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+					irc = null;
+				} else {
+					irc = main.getRankingDataCache().get(song, config.getLnmode());
+					if(irc == null) {
+						irc = new RankingData();
+						main.getRankingDataCache().put(song, config.getLnmode(), irc);
+					}
+					irc.load(this, song);
 				}
-				irc.load(this, song);
 	            currentir = irc;
 			}				
 			if (current instanceof GradeBar && ((GradeBar) current).existsAllSongs() && play == null) {
@@ -342,6 +400,10 @@ public final class MusicSelector extends MainState {
 
 	public void input() {
 		final BMSPlayerInputProcessor input = main.getInputProcessor();
+		if (ImGuiRenderer.isManiacOptionsOpen()) {
+			musicinput.inputManiacOptions();
+			return;
+		}
 
 		if (input.getControlKeyState(ControlKeys.NUM6)) {
 			main.changeState(MainStateType.CONFIG);
@@ -353,6 +415,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void shutdown() {
+		ImGuiRenderer.closeManiacOptions();
 		preview.stop();
 		if (search != null) {
 			search.unfocus(this);
@@ -363,7 +426,13 @@ public final class MusicSelector extends MainState {
 	
 	public void select(Bar current) {
 		if (BMSIRArenaClient.isSelectionBlocked() && !BMSIRArenaClient.isNominationOpen()) {
-			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
+			ImGuiNotify.info(
+					BMSIRArenaI18n.text(
+							"Arenaの対戦準備中です。次の通常選曲はできません",
+							"Arena is preparing the match. Normal song selection is unavailable"
+					),
+					3000
+			);
 			return;
 		}
 		if (current instanceof DirectoryBar dirbar) {
@@ -423,7 +492,10 @@ public final class MusicSelector extends MainState {
 				}
 			}
 
-			if(main.getIRStatus().length > 0 && currentir == null) {
+			if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+				currentir = BMSIRManiacApiClient.ensureRankingLoaded(main, song);
+			} else if (main.getIRStatus().length > 0 && currentir == null
+					&& !BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
 				currentir = new RankingData();
 				main.getRankingDataCache().put(song, config.getLnmode(), currentir);
 			}
@@ -482,7 +554,10 @@ public final class MusicSelector extends MainState {
 			playedsong = song;
 			main.changeState(MainStateType.DECIDE);
 		} else {
-			ImGuiNotify.error("Failed to loading BMS : Song not found, or Song has error", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"BMSを読み込めませんでした: 楽曲が見つからないか、譜面にエラーがあります",
+					"Failed to load BMS: Song not found or chart has an error"
+			), 1200);
 		}
 	}
 	
@@ -497,7 +572,10 @@ public final class MusicSelector extends MainState {
 		}
 
 		if (!_readCourse(mode, gradeBar)) {
-			ImGuiNotify.error("Failed to loading Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"コースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load course: Some songs were not found"
+			), 1200);
 			logger.info("段位の楽曲が揃っていません");
 		}
 	}
@@ -512,7 +590,10 @@ public final class MusicSelector extends MainState {
 		randomCourseBar.getCourseData().lotterySongDatas(main);
 		final GradeBar gradeBar = new GradeBar(randomCourseBar.getCourseData().createCourseData());
 		if (!gradeBar.existsAllSongs()) {
-			ImGuiNotify.error("Failed to loading Random Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"ランダムコースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load random course: Some songs were not found"
+			), 1200);
 			logger.info("ランダムコースの楽曲が揃っていません");
 			return;
 		}
@@ -522,7 +603,10 @@ public final class MusicSelector extends MainState {
 			manager.updateBar();
 			manager.setSelected(gradeBar);
 		} else {
-			ImGuiNotify.error("Failed to loading Random Course : Some of songs not found", 1200);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"ランダムコースを読み込めませんでした: 一部の楽曲が見つかりません",
+					"Failed to load random course: Some songs were not found"
+			), 1200);
 			logger.info("ランダムコースの楽曲が揃っていません");
 		}
 	}
@@ -760,8 +844,20 @@ public final class MusicSelector extends MainState {
 		final Bar current = manager.getSelected();
 		if(main.getIRStatus().length > 0) {
 			if(current instanceof SongBar && ((SongBar) current).existsSong()) {
-				currentir = main.getRankingDataCache().get(((SongBar) current).getSongData(), config.getLnmode());
-				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+				SongData song = ((SongBar) current).getSongData();
+				if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
+					currentir = BMSIRManiacApiClient.getCachedRanking(main, song);
+					currentRankingDuration = (currentir != null
+							? Math.max(rankingReloadDuration
+							- (System.currentTimeMillis() - currentir.getLastUpdateTime()), 0)
+							: 0) + rankingDuration;
+				} else if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
+					currentir = null;
+					currentRankingDuration = -1;
+				} else {
+					currentir = main.getRankingDataCache().get(song, config.getLnmode());
+					currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+				}
 			} else if(current instanceof GradeBar && ((GradeBar) current).existsAllSongs()) {
 				currentir = main.getRankingDataCache().get(((GradeBar) current).getCourseData(), config.getLnmode());
 				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
@@ -791,8 +887,32 @@ public final class MusicSelector extends MainState {
 			return;
 		}
 		if (BMSIRArenaClient.isSelectionBlocked()) {
-			ImGuiNotify.info("Arenaの対戦準備中です。次の通常選曲はできません", 3000);
+			ImGuiNotify.info(
+					BMSIRArenaI18n.text(
+							"Arenaの対戦準備中です。次の通常選曲はできません",
+							"Arena is preparing the match. Normal song selection is unavailable"
+					),
+					3000
+			);
 			return;
+		}
+		Bar selected = manager.getSelected();
+		if (selected instanceof SongBar songBar && songBar.existsSong()) {
+			BMSIRManiacSettings maniac = config.getBmsirManiacSettings();
+			Mode chartMode = Stream.of(Mode.values())
+					.filter(candidate -> candidate.id == songBar.getSongData().getMode())
+					.findFirst()
+					.orElse(null);
+			if (maniac.isWarnDoubleBattleOnDp()
+					&& BMSIRManiacPlayContext.isDoubleBattleSuspended(maniac, chartMode)) {
+				ImGuiNotify.warning(
+						BMSIRArenaI18n.text(
+								"DBを使用してDPを遊んでいます。DBは適用されません",
+								"DOUBLE BATTLE is enabled on a DP chart and will not be applied"
+						),
+						4000
+				);
+			}
 		}
 		play = mode;
 	}

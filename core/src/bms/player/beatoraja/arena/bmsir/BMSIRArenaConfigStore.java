@@ -41,6 +41,14 @@ public final class BMSIRArenaConfigStore {
             String playerId,
             PlayerConfig player
     ) {
+        if (player == null
+                || playerPath == null
+                || playerPath.isBlank()
+                || playerId == null
+                || playerId.isBlank()) {
+            logger.warn("BMS-IR Arena settings were not loaded: player path or id is missing");
+            return false;
+        }
         Path path = sidecarPath(playerPath, playerId);
         if (!Files.exists(path)) {
             boolean written = write(playerPath, player);
@@ -67,8 +75,12 @@ public final class BMSIRArenaConfigStore {
     }
 
     public static boolean write(String playerPath, PlayerConfig player) {
-        if (player == null || player.getId() == null || player.getId().isBlank()) {
-            logger.error("BMS-IR Arena settings were not saved: player id is missing");
+        if (playerPath == null
+                || playerPath.isBlank()
+                || player == null
+                || player.getId() == null
+                || player.getId().isBlank()) {
+            logger.error("BMS-IR Arena settings were not saved: player path or id is missing");
             return false;
         }
         Path path = sidecarPath(playerPath, player.getId());
@@ -122,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 7;
+        private int schemaVersion = 10;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -166,6 +178,9 @@ public final class BMSIRArenaConfigStore {
         private int nominationSeconds = 60;
         private int optionSeconds = 10;
         private int intermissionSeconds = 0;
+        private BMSIRManiacSettings maniacSettings = new BMSIRManiacSettings();
+        private boolean detailedLogEnabled = false;
+        private String language = "ja";
 
         static Settings from(PlayerConfig player) {
             Settings settings = new Settings();
@@ -219,6 +234,11 @@ public final class BMSIRArenaConfigStore {
             settings.nominationSeconds = player.getBmsirArenaNominationSeconds();
             settings.optionSeconds = player.getBmsirArenaOptionSeconds();
             settings.intermissionSeconds = player.getBmsirArenaIntermissionSeconds();
+            settings.maniacSettings = new BMSIRManiacSettings(
+                    player.getBmsirManiacSettings()
+            );
+            settings.detailedLogEnabled = player.isBmsirArenaDetailedLogEnabled();
+            settings.language = player.getBmsirArenaLanguage();
             return settings;
         }
 
@@ -295,6 +315,9 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaNominationSeconds(nominationSeconds);
             player.setBmsirArenaOptionSeconds(optionSeconds);
             player.setBmsirArenaIntermissionSeconds(intermissionSeconds);
+            player.setBmsirManiacSettings(maniacSettings);
+            player.setBmsirArenaDetailedLogEnabled(detailedLogEnabled);
+            player.setBmsirArenaLanguage(language);
         }
     }
 }

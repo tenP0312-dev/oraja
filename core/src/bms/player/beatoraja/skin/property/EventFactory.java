@@ -2,6 +2,7 @@ package bms.player.beatoraja.skin.property;
 
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.config.KeyConfiguration;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.MainState.MainStateType;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
@@ -67,6 +68,20 @@ public class EventFactory {
 		}
 
 		return null;
+	}
+
+	static int cycleBmsirExtraMode(PlayerConfig config, int direction) {
+		int delta = direction >= 0 ? 1 : -1;
+		int value = Math.floorMod(config.getBmsirExtraMode() + delta, 4);
+		config.setBmsirExtraMode(value);
+		return value;
+	}
+
+	static int cycleBmsirDoubleOption(PlayerConfig config, int direction) {
+		int delta = direction >= 0 ? 1 : -1;
+		int value = Math.floorMod(config.getBmsirDoubleOption() + delta, 4);
+		config.setBmsirDoubleOption(value);
+		return value;
 	}
 
 	public enum EventType {
@@ -198,7 +213,9 @@ public class EventFactory {
 		optiondp(54, (state, arg1) -> {
 			if(state instanceof MusicSelector) {
 	            PlayerConfig config = state.resource.getPlayerConfig();
-	            config.setDoubleoption((config.getDoubleoption() + (arg1 >= 0 ? 1 : 3)) % 4);
+	            cycleBmsirDoubleOption(config, arg1);
+	            BMSIRArenaClient.saveArenaConfig();
+	            BMSIRArenaClient.refreshManiacScoreDisplay();
 	            state.play(OPTION_CHANGE);
 			}
 		}),
@@ -699,9 +716,10 @@ public class EventFactory {
 
 		extranotedepth(350, (state, arg1) -> {
 			if(state instanceof MusicSelector) {
-				final int depthlength = 4;
 				PlayerConfig config = state.resource.getPlayerConfig();
-				config.setExtranoteDepth((config.getExtranoteDepth() + (arg1 >= 0 ? 1 : depthlength - 1)) % depthlength);
+				cycleBmsirExtraMode(config, arg1);
+				BMSIRArenaClient.saveArenaConfig();
+				BMSIRArenaClient.refreshManiacScoreDisplay();
 				state.play(OPTION_CHANGE);
 			}
 		}),

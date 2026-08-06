@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.13**. Reviewed Windows and macOS
+The current client source version is **0.4.14.18**. Reviewed Windows and macOS
 packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 

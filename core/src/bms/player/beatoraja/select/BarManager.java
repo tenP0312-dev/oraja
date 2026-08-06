@@ -329,6 +329,36 @@ public class BarManager {
 		return updateBar(null);
 	}
 
+	void invalidatePlayerScoreDisplay() {
+		if (loader != null) {
+			loader.stopRunning();
+			loader = null;
+		}
+		clearPlayerScores(currentsongs);
+	}
+
+	SongData[] getVisibleSongDatas() {
+		if (currentsongs == null) {
+			return new SongData[0];
+		}
+		return Stream.of(currentsongs)
+				.filter(bar -> bar instanceof SongBar && ((SongBar) bar).existsSong())
+				.map(bar -> ((SongBar) bar).getSongData())
+				.toArray(SongData[]::new);
+	}
+
+	static void clearPlayerScores(Bar[] bars) {
+		if (bars == null) {
+			return;
+		}
+		for (Bar bar : bars) {
+			bar.setScore(null);
+			if (bar instanceof DirectoryBar directory) {
+				directory.clear();
+			}
+		}
+	}
+
 	public boolean updateBar(Bar bar) {
 		Bar prevbar = currentsongs != null ? currentsongs[selectedindex] : null;
 		int prevdirsize = dir.size;
@@ -811,7 +841,7 @@ public class BarManager {
 		/**
 		 * 読み込み終了フラグ
 		 */
-		private boolean stop = false;
+		private volatile boolean stop = false;
 
 		public BarContentsLoaderThread(MusicSelector select, Bar[] bar) {
 			this.select = select;
@@ -830,10 +860,17 @@ public class BarManager {
 			// loading score
 			// TODO collectorを使用してスコアをまとめて取得
 			for (Bar bar : bars) {
+				if (isStale()) {
+					break;
+				}
 				if (bar instanceof SongBar && ((SongBar) bar).existsSong()) {
 					SongData sd = ((SongBar) bar).getSongData();
 					if (bar.getScore() == null) {
-						bar.setScore(select.getScoreDataCache().readScoreData(sd, config.getLnmode()));
+						ScoreData score = select.getScoreDataCache().readScoreData(sd, config.getLnmode());
+						if (isStale()) {
+							break;
+						}
+						bar.setScore(score);
 					}
 					if (rival != null && bar.getRivalScore() == null) {
 						final ScoreData rivalScore = rival.readScoreData(sd, config.getLnmode());
@@ -912,6 +949,10 @@ public class BarManager {
 		 */
 		public void stopRunning() {
 			stop = true;
+		}
+
+		private boolean isStale() {
+			return stop || select.getBarManager().loader != this;
 		}
 	}
 }

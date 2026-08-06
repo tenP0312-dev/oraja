@@ -4,40 +4,42 @@ import java.util.Arrays;
 
 /** Actions assignable to the physical numeric keypad. */
 public enum BMSIRNumpadAction {
-    NONE("none", "なし"),
-    JUDGE_AUTO("judge_auto", "判定タイミング自動調整 ON/OFF"),
-    JUDGE_PLUS("judge_plus", "判定タイミング +"),
-    JUDGE_MINUS("judge_minus", "判定タイミング -"),
-    KEY_CONFIG("key_config", "キーコンフィグ"),
-    SKIN_CONFIG("skin_config", "スキンコンフィグ"),
-    BMS_SEARCH("bms_search", "BMS検索"),
-    MODE_FILTER("mode_filter", "キーモードフィルター変更"),
-    SORT("sort", "ソート変更"),
-    REPLAY("replay", "リプレイ切替"),
-    RIVAL("rival", "ライバル変更"),
-    SAME_FOLDER("same_folder", "同一フォルダ譜面表示"),
-    OPEN_DOCUMENT("open_document", "同梱テキスト表示"),
-    OPEN_IR("open_ir", "IR表示"),
-    FAVORITE_SONG("favorite_song", "曲のお気に入り"),
-    FAVORITE_CHART("favorite_chart", "譜面のお気に入り"),
-    UPDATE_FOLDER("update_folder", "曲フォルダ更新"),
-    OPEN_FOLDER("open_folder", "選択曲のフォルダを開く"),
-    PRACTICE("practice", "プラクティス開始"),
-    AUTOPLAY("autoplay", "オートプレイ開始"),
-    ARENA_OVERLAY("arena_overlay", "Arenaオーバーレイ ON/OFF"),
-    MOD_MENU("mod_menu", "Modメニュー ON/OFF"),
-    FPS("fps", "FPS表示 ON/OFF"),
-    FULLSCREEN("fullscreen", "フルスクリーン ON/OFF"),
-    SCREENSHOT("screenshot", "スクリーンショット");
+    NONE("none", "なし", "None"),
+    JUDGE_AUTO("judge_auto", "判定タイミング自動調整 ON/OFF", "Toggle automatic judge timing"),
+    JUDGE_PLUS("judge_plus", "判定タイミング +", "Judge timing +"),
+    JUDGE_MINUS("judge_minus", "判定タイミング -", "Judge timing -"),
+    KEY_CONFIG("key_config", "キーコンフィグ", "Key configuration"),
+    SKIN_CONFIG("skin_config", "スキンコンフィグ", "Skin configuration"),
+    BMS_SEARCH("bms_search", "BMS検索", "BMS search"),
+    MODE_FILTER("mode_filter", "キーモードフィルター変更", "Change key-mode filter"),
+    SORT("sort", "ソート変更", "Change sort"),
+    REPLAY("replay", "リプレイ切替", "Change replay"),
+    RIVAL("rival", "ライバル変更", "Change rival"),
+    SAME_FOLDER("same_folder", "同一フォルダ譜面表示", "Show charts in the same folder"),
+    OPEN_DOCUMENT("open_document", "同梱テキスト表示", "Show included text"),
+    OPEN_IR("open_ir", "IR表示", "Open IR"),
+    FAVORITE_SONG("favorite_song", "曲のお気に入り", "Toggle song favorite"),
+    FAVORITE_CHART("favorite_chart", "譜面のお気に入り", "Toggle chart favorite"),
+    UPDATE_FOLDER("update_folder", "曲フォルダ更新", "Refresh song folders"),
+    OPEN_FOLDER("open_folder", "選択曲のフォルダを開く", "Open selected chart folder"),
+    PRACTICE("practice", "プラクティス開始", "Start practice"),
+    AUTOPLAY("autoplay", "オートプレイ開始", "Start autoplay"),
+    ARENA_OVERLAY("arena_overlay", "Arenaオーバーレイ ON/OFF", "Toggle Arena overlay"),
+    MOD_MENU("mod_menu", "Modメニュー ON/OFF", "Toggle Mod menu"),
+    FPS("fps", "FPS表示 ON/OFF", "Toggle FPS display"),
+    FULLSCREEN("fullscreen", "フルスクリーン ON/OFF", "Toggle fullscreen"),
+    SCREENSHOT("screenshot", "スクリーンショット", "Screenshot");
 
     public static final int KEY_COUNT = 10;
 
     private final String id;
     private final String label;
+    private final String englishLabel;
 
-    BMSIRNumpadAction(String id, String label) {
+    BMSIRNumpadAction(String id, String label, String englishLabel) {
         this.id = id;
         this.label = label;
+        this.englishLabel = englishLabel;
     }
 
     public String id() {
@@ -46,6 +48,10 @@ public enum BMSIRNumpadAction {
 
     public String label() {
         return label;
+    }
+
+    public String label(boolean english) {
+        return english ? englishLabel : label;
     }
 
     public static BMSIRNumpadAction fromId(String id) {

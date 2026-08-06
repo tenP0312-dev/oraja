@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.play.SkinNote.SkinLane;
 
 import bms.model.*;
@@ -50,6 +52,11 @@ public class LaneRenderer {
 	private PlayConfig playconfig;
 	private StartHerePreviewData startHerePreview;
 	private final Rectangle startHerePreviewDestination = new Rectangle();
+	private final BMSIRManiacVisualEffects.Transform maniacTransform =
+			new BMSIRManiacVisualEffects.Transform();
+	private final BMSIRManiacVisualEffects.Transform maniacLongEndTransform =
+			new BMSIRManiacVisualEffects.Transform();
+	private BMSIRManiacSettings maniacSettings;
 
 	private int currentduration;
 
@@ -85,6 +92,8 @@ public class LaneRenderer {
 
 		this.skin = (PlaySkin) main.getSkin();
 		this.config = main.resource.getPlayerConfig();
+		BMSIRManiacPlayContext maniacContext = main.resource.getManiacPlayContext();
+		this.maniacSettings = maniacContext == null ? null : maniacContext.settings();
 		this.playconfig = config.getPlayConfig(model.getMode()).getPlayconfig().clone();
 
 		init(model);
@@ -103,6 +112,8 @@ public class LaneRenderer {
 	public void init(BMSModel model) {
 		pos = 0;
 		this.model = model;
+		BMSIRManiacPlayContext maniacContext = main.resource.getManiacPlayContext();
+		this.maniacSettings = maniacContext == null ? null : maniacContext.settings();
 		List<TimeLine> tls = new ArrayList<TimeLine>();
 		double cbpm = model.getBpm();
 		double cscr = 1.0;
@@ -152,6 +163,7 @@ public class LaneRenderer {
 		}
 		this.hispeedmargin = playconfig.getHispeedMargin();
 		this.startHerePreview = StartHerePreviewData.build(model);
+		updateStartHerePreviewMetrics();
 	}
 
 	public float getHispeed() {
@@ -181,6 +193,7 @@ public class LaneRenderer {
 
 	public void rebuildStartHerePreview() {
 		this.startHerePreview = StartHerePreviewData.build(model);
+		updateStartHerePreviewMetrics();
 	}
 
 	public boolean isEnableLift() {
@@ -212,6 +225,7 @@ public class LaneRenderer {
 
 	public void setEnableLanecover(boolean b) {
 		playconfig.setEnablelanecover(b);
+		updateStartHerePreviewMetrics();
 	}
 
 	public boolean isEnableLanecover() {
@@ -243,6 +257,7 @@ public class LaneRenderer {
 		}
 		if (playconfig.getHispeed() + f > 0 && playconfig.getHispeed() + f < 20) {
 			playconfig.setHispeed(playconfig.getHispeed() + f);
+			updateStartHerePreviewMetrics();
 		}
 	}
 	
@@ -265,10 +280,12 @@ public class LaneRenderer {
 				main.getState(),
 				playconfig.isStartHerePreviewEnabled()
 		)) {
+			updateStartHerePreviewMetrics();
 			updatePlayCoverOffsets(lanes);
 			if (drawStartHerePreview(
 					sprite,
 					lanes,
+					time,
 					offsetX,
 					offsetY,
 					offsetW,
@@ -534,6 +551,26 @@ public class LaneRenderer {
 							dsty -= (dsth - scale) / 2;
 						}
 					}
+					BMSIRManiacVisualEffects.apply(
+							maniacTransform,
+							maniacSettings,
+							lane,
+							lanes.length,
+							model.getMode().player,
+							i,
+							now,
+							dstx,
+							dsty,
+							dstw,
+							dsth,
+							(float) hl,
+							(float) hu
+					);
+					if (!maniacTransform.visible) continue;
+					dstx = maniacTransform.x;
+					dsty = maniacTransform.y;
+					dstw = maniacTransform.width;
+					dsth = maniacTransform.height;
 					if (note instanceof NormalNote) {
 						// draw normal note
 						if (lanes[lane].dstnote2 != Integer.MIN_VALUE) {
@@ -574,9 +611,27 @@ public class LaneRenderer {
 								prevtl = nowtl;
 							}
 							if (dy > 0) {
+								BMSIRManiacVisualEffects.apply(
+										maniacLongEndTransform,
+										maniacSettings,
+										lane,
+										lanes.length,
+										model.getMode().player,
+										i,
+										now,
+										dstx,
+										(float) (dsty + dy),
+										dstw,
+										dsth,
+										(float) hl,
+										(float) hu
+								);
+								if (!maniacLongEndTransform.visible) continue;
+								float transformedDy = maniacLongEndTransform.y - dsty;
+								if (transformedDy <= 0f) continue;
 								final float dscale = dsth > scale ? (dsth - scale) / 2 : 0;
-								this.drawLongNote(sprite, lanes[lane].longImage, dstx, (float) (dsty + dy), dstw,
-										(float) (dsty < (lanes[lane].region.y - dscale) ? dsty - (lanes[lane].region.y -dscale) : dy), dsth, lane,
+								this.drawLongNote(sprite, lanes[lane].longImage, dstx, maniacLongEndTransform.y, dstw,
+										(float) (dsty < (lanes[lane].region.y - dscale) ? dsty - (lanes[lane].region.y -dscale) : transformedDy), dsth, lane,
 										ln);
 							}
 							// System.out.println(dy);
@@ -681,9 +736,39 @@ public class LaneRenderer {
 		}
 	}
 
+	private void updateStartHerePreviewMetrics() {
+		if (startHerePreview == null || !startHerePreview.isValid()) {
+			return;
+		}
+		nowbpm = startHerePreview.anchorBpm();
+		currentduration = startHerePreviewDuration(
+				nowbpm,
+				startHerePreview.anchorScroll(),
+				playconfig.getHispeed(),
+				playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0f
+		);
+	}
+
+	static int startHerePreviewDuration(
+			double bpm,
+			double scroll,
+			float hispeed,
+			float laneCover
+	) {
+		if (!Double.isFinite(bpm) || bpm <= 0.0
+				|| !Double.isFinite(scroll) || scroll <= 0.0
+				|| !Float.isFinite(hispeed) || hispeed <= 0f) {
+			return 1;
+		}
+		double visible = Math.max(0.0, Math.min(1.0, 1.0 - laneCover));
+		double duration = 240000.0 / bpm / hispeed / scroll * visible;
+		return Double.isFinite(duration) ? Math.max(1, (int) Math.round(duration)) : 1;
+	}
+
 	private boolean drawStartHerePreview(
 			SkinObjectRenderer sprite,
 			SkinLane[] lanes,
+			long time,
 			float offsetX,
 			float offsetY,
 			float offsetW,
@@ -737,7 +822,7 @@ public class LaneRenderer {
 					playconfig.isEnablelanecover(),
 					playconfig.getLanecover()
 			);
-			sprite.setColor(Color.WHITE);
+			sprite.setColor(1f, 1f, 1f, startHerePreviewAlpha(time));
 			sprite.draw(
 					lane.noteImage,
 					startHerePreviewDestination.x,
@@ -748,6 +833,14 @@ public class LaneRenderer {
 		}
 		sprite.setColor(Color.WHITE);
 		return true;
+	}
+
+	static float startHerePreviewAlpha(long time) {
+		long cycleMillis = Math.floorMod(time, 1000L);
+		float triangle = cycleMillis <= 500L
+				? cycleMillis / 500f
+				: (1000L - cycleMillis) / 500f;
+		return 0.65f + 0.35f * triangle;
 	}
 
 	static boolean showsStartHerePreview(int state, boolean enabled) {

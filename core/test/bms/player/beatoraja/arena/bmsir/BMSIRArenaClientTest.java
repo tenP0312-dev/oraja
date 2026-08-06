@@ -28,12 +28,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.13", Version.getArenaClientVersion());
+        assertEquals("0.4.14.18", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertEquals("Arena oraja 0.4.13", Version.getArenaDisplayName());
+        assertEquals("Arena oraja 0.4.14.18", Version.getArenaDisplayName());
     }
 
     @Test
@@ -310,8 +310,12 @@ class BMSIRArenaClientTest {
         assertEquals(1, config.getRandom2());
         assertEquals(1, config.getDoubleoption());
         assertEquals(
-                "1P : RAN\n2P : MIR\nFLIP",
+                "RAN / MIR / FLIP",
                 BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
+        );
+        assertEquals(
+                "RAN / -",
+                BMSIRArenaClient.playOptionLabel(2, Mode.BEAT_14K.id)
         );
 
         BMSIRArenaClient.applyLockedPlayOption(

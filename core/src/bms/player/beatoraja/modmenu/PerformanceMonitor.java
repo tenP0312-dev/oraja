@@ -1,6 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.PerformanceMetrics;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
@@ -13,6 +14,10 @@ import imgui.type.ImFloat;
 import java.util.*;
 
 public class PerformanceMonitor {
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     static HashMap<Integer, Vector<PerformanceMetrics.EventResult>> eventTree;
     static long lastEventUpdate = 0;
@@ -31,13 +36,14 @@ public class PerformanceMonitor {
         }
 
         // TODO: render 'watch' times in the same table
-        if (ImGui.begin("Performance Monitor", showPerformanceMonitor)) {
-            if (ImGui.collapsingHeader("Watch")) {
+        if (ImGui.begin(t("パフォーマンスモニター", "Performance Monitor") + "###performance-monitor",
+                showPerformanceMonitor)) {
+            if (ImGui.collapsingHeader(t("計測", "Watch"))) {
                 updateWatchData();
                 renderWatchData();
             }
 
-            if (ImGui.collapsingHeader("Events", ImGuiTreeNodeFlags.DefaultOpen)) {
+            if (ImGui.collapsingHeader(t("イベント", "Events"), ImGuiTreeNodeFlags.DefaultOpen)) {
                 renderEventTable();
             }
         }
@@ -102,12 +108,13 @@ public class PerformanceMonitor {
 
     private static void renderEventTable() {
         ImGui.setNextItemWidth(ImGui.getContentRegionAvail().x / 5.f);
-        ImGui.sliderFloat("Filter short events", filterShortThreshold, 0.0f, 4.0f);
+        ImGui.sliderFloat(t("短いイベントを除外", "Filter short events"),
+                filterShortThreshold, 0.0f, 4.0f);
 
         if (ImGui.beginTable("event-table", 3, ImGuiTableFlags.ScrollY)) {
-            ImGui.tableSetupColumn("Event", ImGuiTableColumnFlags.WidthStretch, 3.0f);
-            ImGui.tableSetupColumn("Time", ImGuiTableColumnFlags.WidthStretch, 1.5f);
-            ImGui.tableSetupColumn("Thread", ImGuiTableColumnFlags.WidthStretch, 1.0f);
+            ImGui.tableSetupColumn(t("イベント", "Event"), ImGuiTableColumnFlags.WidthStretch, 3.0f);
+            ImGui.tableSetupColumn(t("時間", "Time"), ImGuiTableColumnFlags.WidthStretch, 1.5f);
+            ImGui.tableSetupColumn(t("スレッド", "Thread"), ImGuiTableColumnFlags.WidthStretch, 1.0f);
             ImGui.tableHeadersRow();
 
             ImGui.tableNextRow();

@@ -34,6 +34,15 @@ repository.
   target build when the environment supports it.
 - For launcher changes, run `cargo test --locked` in
   `arena-launcher/src-tauri` and the applicable unsigned bundle validation.
+- On the normal macOS development host, use macOS-only builds and an isolated
+  macOS install for implementation iterations. Do not dispatch Windows and
+  macOS release CI after every edit. Once the change is stable, run the
+  cross-platform CI build once as the final pre-distribution check.
+- Test a sparse update during ordinary launcher iterations. Repeat the full
+  empty-directory bootstrap download only when bootstrap extraction,
+  inventory verification, self-update, cleanup, or storage behavior changed.
+  A bug found during final validation must still be fixed and retested; these
+  limits prevent redundant passes, not necessary regression work.
 - For UI or rendering changes, verify the affected flow in a real client at
   desktop resolution and check that controls remain usable at smaller window
   sizes.

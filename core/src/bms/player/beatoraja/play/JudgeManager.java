@@ -8,6 +8,7 @@ import java.util.stream.IntStream;
 
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.Score;
 import com.badlogic.gdx.utils.FloatArray;
@@ -212,6 +213,12 @@ public class JudgeManager {
         nreleasemargin = rule.longnoteMargin;
         smjudge = rule.getJudge(NoteType.SCRATCH, judgerank, scratchJudgeWindowRate);
         scnendmjudge = rule.getJudge(NoteType.LONGSCRATCH_END, judgerank, scratchJudgeWindowRate);
+        BMSIRManiacPlayContext maniac = resource.getManiacPlayContext();
+        if (maniac != null && maniac.settings().getGambol() > 0) {
+            int level = maniac.settings().getGambol();
+            BMSIRManiacVisualEffects.applyGambol(nmjudge, level);
+            BMSIRManiacVisualEffects.applyGambol(smjudge, level);
+        }
         sreleasemargin = rule.longscratchMargin;
         mjudgestart = mjudgeend = 0;
         for (long[] l : nmjudge) {

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 public class RandomTrainer {
     private static final Logger logger = LoggerFactory.getLogger(RandomTrainer.class);
     private static String laneOrder = "1234567";
+    private static String laneOrder2P = "1234567";
     private static ArrayList<Character> lanesToRandom = new ArrayList<>();
 
     private static boolean blackWhitePermute;
@@ -101,6 +102,21 @@ public class RandomTrainer {
 
     public static void setLaneOrder(String number) {
         laneOrder = number;
+    }
+
+    public static String getConfiguredLaneOrder() {
+        return laneOrder;
+    }
+
+    public static String getLaneOrder2P() {
+        return laneOrder2P;
+    }
+
+    public static void setLaneOrder2P(String number) {
+        if (number != null && number.matches("[1-7]{7}")
+                && number.chars().distinct().count() == 7) {
+            laneOrder2P = number;
+        }
     }
 
     public static ArrayDeque<RandomHistoryEntry> getRandomHistory() {

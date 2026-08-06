@@ -10,8 +10,10 @@ import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.PlayerInformation;
 import bms.player.beatoraja.RivalDataAccessor;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.select.ScoreDataCache;
+import bms.player.beatoraja.song.SongData;
 
 /**
  * スコアターゲット
@@ -363,12 +365,19 @@ class InternetRankingTargetProperty extends TargetProperty {
 
     @Override
     public ScoreData getTarget(MainController main) {
-    	final RankingData ranking = main.getPlayerResource().getRankingData();
+		final SongData song = main.getPlayerResource().getSongdata();
+		final boolean maniacRanking = BMSIRManiacApiClient.hasOnlineRanking(main, song);
+		final RankingData ranking = maniacRanking
+				? BMSIRManiacApiClient.ensureRankingLoaded(main, song)
+				: main.getPlayerResource().getRankingData();
     	if(ranking == null) {
 			targetScore.setPlayer("NO DATA");
 			targetScore.setOption(0);
 			return targetScore;    		
     	}
+		if (maniacRanking) {
+			main.getPlayerResource().setRankingData(ranking);
+		}
     	
     	if(ranking.getState() == RankingData.FINISH) {
     		if(ranking.getTotalPlayer() > 0) {
@@ -386,7 +395,9 @@ class InternetRankingTargetProperty extends TargetProperty {
     		return targetScore;
     	}
 		Thread irprocess = new Thread(() -> {
-    		ranking.load(main.getCurrentState(), main.getPlayerResource().getSongdata());
+			if (!maniacRanking) {
+				ranking.load(main.getCurrentState(), song);
+			}
 			while(ranking.getState() == RankingData.NONE  || ranking.getState() == RankingData.ACCESS) {
 				try {
 					Thread.sleep(500);
@@ -415,8 +426,11 @@ class InternetRankingTargetProperty extends TargetProperty {
     }
     
     private int getTargetRank(MainController main, RankingData ranking) {
-        ScoreData now = main.getPlayDataAccessor().readScoreData(main.getPlayerResource().getBMSModel()
-                , main.getPlayerConfig().getLnmode());
+        SongData song = main.getPlayerResource().getSongdata();
+        ScoreData now = BMSIRManiacApiClient.hasOnlineRanking(main, song)
+                ? BMSIRManiacApiClient.getLocalScore(main, song)
+                : main.getPlayDataAccessor().readScoreData(main.getPlayerResource().getBMSModel(),
+                        main.getPlayerConfig().getLnmode());
         final int nowscore = now != null ? now.getExscore() : 0;
 		switch(target) {
 		case NEXT:
@@ -477,4 +491,3 @@ class InternetRankingTargetProperty extends TargetProperty {
     }
 
 }
-

@@ -18,20 +18,26 @@ public final class StartHerePreviewData {
     }
 
     private static final StartHerePreviewData INVALID =
-            new StartHerePreviewData(false, 0, List.of());
+            new StartHerePreviewData(false, 0, List.of(), 120.0, 1.0);
 
     private final boolean valid;
     private final int laneCount;
     private final List<PreviewNote> notes;
+    private final double anchorBpm;
+    private final double anchorScroll;
 
     private StartHerePreviewData(
             boolean valid,
             int laneCount,
-            List<PreviewNote> notes
+            List<PreviewNote> notes,
+            double anchorBpm,
+            double anchorScroll
     ) {
         this.valid = valid;
         this.laneCount = laneCount;
         this.notes = Collections.unmodifiableList(new ArrayList<>(notes));
+        this.anchorBpm = anchorBpm;
+        this.anchorScroll = anchorScroll;
     }
 
     public static StartHerePreviewData build(BMSModel model) {
@@ -74,7 +80,54 @@ public final class StartHerePreviewData {
         if (notes.isEmpty()) {
             return INVALID;
         }
-        return new StartHerePreviewData(true, laneCount, notes);
+        return new StartHerePreviewData(
+                true,
+                laneCount,
+                notes,
+                resolvePositiveBpm(model, firstMicroTime),
+                resolvePositiveScroll(model, firstMicroTime)
+        );
+    }
+
+    private static double resolvePositiveBpm(BMSModel model, long anchorMicroTime) {
+        double before = positiveOrZero(model.getBpm());
+        double after = 0.0;
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            double bpm = positiveOrZero(timeline.getBPM());
+            if (timeline.getMicroTime() <= anchorMicroTime && bpm > 0.0) {
+                before = bpm;
+            } else if (timeline.getMicroTime() > anchorMicroTime && bpm > 0.0) {
+                after = bpm;
+                break;
+            }
+        }
+        if (before > 0.0) {
+            return before;
+        }
+        if (after > 0.0) {
+            return after;
+        }
+        double main = positiveOrZero(model.getBpm());
+        return main > 0.0 ? main : 120.0;
+    }
+
+    private static double resolvePositiveScroll(BMSModel model, long anchorMicroTime) {
+        double before = 1.0;
+        double after = 0.0;
+        for (TimeLine timeline : model.getAllTimeLines()) {
+            double scroll = positiveOrZero(timeline.getScroll());
+            if (timeline.getMicroTime() <= anchorMicroTime && scroll > 0.0) {
+                before = scroll;
+            } else if (timeline.getMicroTime() > anchorMicroTime && scroll > 0.0) {
+                after = scroll;
+                break;
+            }
+        }
+        return before > 0.0 ? before : after > 0.0 ? after : 1.0;
+    }
+
+    private static double positiveOrZero(double value) {
+        return Double.isFinite(value) && value > 0.0 ? value : 0.0;
     }
 
     public boolean isValid() {
@@ -87,5 +140,13 @@ public final class StartHerePreviewData {
 
     public List<PreviewNote> notes() {
         return notes;
+    }
+
+    public double anchorBpm() {
+        return anchorBpm;
+    }
+
+    public double anchorScroll() {
+        return anchorScroll;
     }
 }
