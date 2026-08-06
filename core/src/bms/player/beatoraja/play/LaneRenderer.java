@@ -745,7 +745,10 @@ public class LaneRenderer {
 				nowbpm,
 				startHerePreview.anchorScroll(),
 				playconfig.getHispeed(),
-				playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0f
+				playconfig.isEnablelanecover(),
+				playconfig.getLanecover(),
+				playconfig.isEnablelift(),
+				playconfig.getLift()
 		);
 	}
 
@@ -753,16 +756,38 @@ public class LaneRenderer {
 			double bpm,
 			double scroll,
 			float hispeed,
-			float laneCover
+			boolean laneCoverEnabled,
+			float laneCover,
+			boolean liftEnabled,
+			float lift
 	) {
 		if (!Double.isFinite(bpm) || bpm <= 0.0
 				|| !Double.isFinite(scroll) || scroll <= 0.0
 				|| !Float.isFinite(hispeed) || hispeed <= 0f) {
 			return 1;
 		}
-		double visible = Math.max(0.0, Math.min(1.0, 1.0 - laneCover));
+		double effectiveLaneCover = effectiveLaneCover(
+				laneCoverEnabled,
+				laneCover,
+				liftEnabled,
+				lift
+		);
+		double visible = Math.max(0.0, Math.min(1.0, 1.0 - effectiveLaneCover));
 		double duration = 240000.0 / bpm / hispeed / scroll * visible;
 		return Double.isFinite(duration) ? Math.max(1, (int) Math.round(duration)) : 1;
+	}
+
+	static double effectiveLaneCover(
+			boolean laneCoverEnabled,
+			float laneCover,
+			boolean liftEnabled,
+			float lift
+	) {
+		float clampedLaneCover = Math.max(0f, Math.min(1f, laneCover));
+		float clampedLift = liftEnabled ? Math.max(0f, Math.min(1f, lift)) : 0f;
+		return laneCoverEnabled
+				? clampedLaneCover * (1.0 - clampedLift)
+				: 0.0;
 	}
 
 	private boolean drawStartHerePreview(
@@ -859,14 +884,18 @@ public class LaneRenderer {
 			boolean laneCoverEnabled,
 			float laneCover
 	) {
-		float clampedLift = Math.max(0f, Math.min(1f, lift));
-		float clampedCover = Math.max(0f, Math.min(1f, laneCover));
 		float upper = laneRegion.y + laneRegion.height;
 		float lower = liftEnabled
-				? laneRegion.y + laneRegion.height * clampedLift
+				? laneRegion.y + laneRegion.height * Math.max(0f, Math.min(1f, lift))
 				: laneRegion.y;
+		double effectiveLaneCover = effectiveLaneCover(
+				laneCoverEnabled,
+				laneCover,
+				liftEnabled,
+				lift
+		);
 		return laneCoverEnabled
-				? upper + (lower - upper) * clampedCover
+				? (float) (upper + (lower - upper) * effectiveLaneCover)
 				: upper;
 	}
 

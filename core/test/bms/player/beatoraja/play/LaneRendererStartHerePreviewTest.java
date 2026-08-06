@@ -51,7 +51,7 @@ class LaneRendererStartHerePreviewTest {
         Rectangle lane = new Rectangle(10f, 20f, 30f, 100f);
 
         assertEquals(
-                80f,
+                88f,
                 LaneRenderer.startHerePreviewTop(lane, true, 0.2f, true, 0.5f)
         );
     }
@@ -108,11 +108,12 @@ class LaneRendererStartHerePreviewTest {
         ));
     }
 
-	@Test
-	void computesGreenNumberBeforeStaticPreviewReturns() {
-		assertEquals(800, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, 0.0f));
-		assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, 0.5f));
-		assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 2.0, 2.0f, 0.0f));
-		assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, 0.0f));
-	}
+    @Test
+    void computesGreenNumberBeforeStaticPreviewReturns() {
+        assertEquals(800, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
+        assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, true, 0.5f, false, 0.0f));
+        assertEquals(480, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, true, 0.5f, true, 0.2f));
+        assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 2.0, 2.0f, false, 0.0f, false, 0.0f));
+        assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
+    }
 }
