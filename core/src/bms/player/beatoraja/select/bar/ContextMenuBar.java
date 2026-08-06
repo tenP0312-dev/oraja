@@ -214,26 +214,19 @@ public class ContextMenuBar extends DirectoryBar {
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {
         var leaderboard = new FunctionBar((selector, self) -> {
-            selector.getBarManager().updateBar(new LeaderBoardBar(selector, song, false));
+            selector.getBarManager().updateBar(new LeaderBoardBar(selector, song));
             selector.play(FOLDER_OPEN);
-        }, "Leaderboard", STYLE_SPECIAL);
-        if (0 < selector.main.getIRStatus().length) { options.add(leaderboard); }
-
-        var lr2ir = new FunctionBar((selector, self) -> {
-            selector.getBarManager().updateBar(new LeaderBoardBar(selector, song, true));
-            selector.play(FOLDER_OPEN);
-        }, "LR2IR Leaderboard", STYLE_SPECIAL);
-        options.add(lr2ir);
+        }, "BMS-IR Leaderboard", STYLE_SPECIAL);
+        options.add(leaderboard);
     }
 
     private void addMetaEntries(ArrayList<Bar> options) {
-        var lr2irPage = new FunctionBar((selector, self) -> {
-            String urlBase =
-                "http://www.dream-pro.info/~lavalse/LR2IR/search.cgi?mode=ranking&bmsmd5=";
+        var bmsirPage = new FunctionBar((selector, self) -> {
+            String urlBase = "https://www.bms-ir.org/new/song?songmd5=";
             boolean success = ContextMenuBar.browserOpen(urlBase + song.getMd5());
             selector.play(success ? FOLDER_OPEN : OPTION_CHANGE);
-        }, "Open LR2IR page", STYLE_FOLDER);
-        if (song.getMd5() != null) options.add(lr2irPage);
+        }, "Open BMS-IR page", STYLE_FOLDER);
+        if (song.getMd5() != null) options.add(bmsirPage);
 
         var chartViewer = new FunctionBar((selector, self) -> {
             String urlBase = "https://bms-score-viewer.pages.dev/view?md5=";

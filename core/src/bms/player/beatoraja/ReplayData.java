@@ -81,6 +81,11 @@ public final class ReplayData implements Validatable {
 	 */
 	public int doubleoption = 0;
 	/**
+	 * LR2ワンバスで固定した配置先レーン。未使用・旧リプレイは-1。
+	 */
+	public int oneBassTarget = -1;
+	public int oneBassTarget2 = -1;
+	/**
 	 * プレイコンフィグ
 	 */
 	public PlayConfig config;

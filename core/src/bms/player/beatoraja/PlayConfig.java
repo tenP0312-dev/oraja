@@ -57,6 +57,28 @@ public class PlayConfig implements Cloneable {
 	public static final float HISPEEDMARGIN_MIN = 0f;
 
 	/**
+	 * READY中に譜面先頭の静的プレビューを表示する。
+	 */
+	private boolean startHerePreviewEnabled = true;
+
+	/**
+	 * 0.4.0-devの静的プレビュー設定とのJSON/Lua互換用。
+	 * 最初の発音タイミング表示では参照しない。
+	 */
+	private int startHerePreviewMeasures = 2;
+
+	/**
+	 * 0.4.0-devの静的プレビュー設定とのJSON互換用。
+	 * 最初の発音タイミング表示では参照しない。
+	 */
+	private int startHerePreviewMaxNotes = 256;
+
+	public static final int START_HERE_PREVIEW_MEASURES_MIN = 1;
+	public static final int START_HERE_PREVIEW_MEASURES_MAX = 8;
+	public static final int START_HERE_PREVIEW_MAX_NOTES_MIN = 32;
+	public static final int START_HERE_PREVIEW_MAX_NOTES_MAX = 512;
+
+	/**
 	 * レーンカバー表示量(0-1)
 	 */
 	private float lanecover = 0.2f;
@@ -143,6 +165,30 @@ public class PlayConfig implements Cloneable {
 
 	public void setHispeedMargin(float hispeedmargin) {
 		this.hispeedmargin = hispeedmargin;
+	}
+
+	public boolean isStartHerePreviewEnabled() {
+		return startHerePreviewEnabled;
+	}
+
+	public void setStartHerePreviewEnabled(boolean startHerePreviewEnabled) {
+		this.startHerePreviewEnabled = startHerePreviewEnabled;
+	}
+
+	public int getStartHerePreviewMeasures() {
+		return startHerePreviewMeasures;
+	}
+
+	public void setStartHerePreviewMeasures(int startHerePreviewMeasures) {
+		this.startHerePreviewMeasures = startHerePreviewMeasures;
+	}
+
+	public int getStartHerePreviewMaxNotes() {
+		return startHerePreviewMaxNotes;
+	}
+
+	public void setStartHerePreviewMaxNotes(int startHerePreviewMaxNotes) {
+		this.startHerePreviewMaxNotes = startHerePreviewMaxNotes;
 	}
 
 	public int getFixhispeed() {
@@ -252,6 +298,16 @@ public class PlayConfig implements Cloneable {
 		duration = MathUtils.clamp(duration, DURATION_MIN, DURATION_MAX);
 		constantFadeinTime = MathUtils.clamp(constantFadeinTime, CONSTANT_FADEIN_MIN, CONSTANT_FADEIN_MAX);
 		hispeedmargin = MathUtils.clamp(hispeedmargin, HISPEEDMARGIN_MIN, HISPEEDMARGIN_MAX);
+		startHerePreviewMeasures = MathUtils.clamp(
+				startHerePreviewMeasures,
+				START_HERE_PREVIEW_MEASURES_MIN,
+				START_HERE_PREVIEW_MEASURES_MAX
+		);
+		startHerePreviewMaxNotes = MathUtils.clamp(
+				startHerePreviewMaxNotes,
+				START_HERE_PREVIEW_MAX_NOTES_MIN,
+				START_HERE_PREVIEW_MAX_NOTES_MAX
+		);
 		fixhispeed = MathUtils.clamp(fixhispeed, 0, FIX_HISPEED_MINBPM);
 		lanecover = MathUtils.clamp(lanecover, 0f, 1f);
 		lift = MathUtils.clamp(lift, 0f, 1f);

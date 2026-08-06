@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
+import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
@@ -92,17 +93,29 @@ public class BarManager {
 	private final Array<RandomCourseResult> randomCourseResult = new Array<>();
 
 	BarContentsLoaderThread loader;
+	private TableDataAccessor startupTableDataAccessor;
+	private BMSSearchAccessor startupSearchAccessor;
+	private Array<TableBar> startupTables;
 
 	public BarManager(MusicSelector select) {
 		this.select = select;
 	}
 	
 	void init() {
-		TableDataAccessor tdaccessor = new TableDataAccessor(select.resource.getConfig().getTablepath());
+		initLocalTables();
+		initIrTables();
+		initCourses();
+		initFavoritesAndCommands();
+	}
+
+	void initLocalTables() {
+		startupTableDataAccessor = new TableDataAccessor(
+				select.resource.getConfig().getTablepath()
+		);
 
         TableData[] unsortedtables;
         try (var perf = PerformanceMetrics.get().Event("Saved table load")) {
-            unsortedtables = tdaccessor.readAll();
+			unsortedtables = startupTableDataAccessor.readAll();
         }
 
 		final List<TableData> sortedtables = new ArrayList<TableData>(unsortedtables.length);
@@ -120,22 +133,40 @@ public class BarManager {
 
 		Arrays.stream(unsortedtables).filter(Objects::nonNull).forEach(td -> sortedtables.add(td));
 
-		BMSSearchAccessor bmssearcha = new BMSSearchAccessor(select.resource.getConfig().getTablepath());
+		startupSearchAccessor = new BMSSearchAccessor(
+				select.resource.getConfig().getTablepath()
+		);
 
-		Array<TableBar> table = new Array<TableBar>();
+		startupTables = new Array<TableBar>();
 
 		sortedtables.stream().map(td -> {
 			if (td.getName().equals("BMS Search")) {
-				return new TableBar(select, td, bmssearcha);
+				return new TableBar(select, td, startupSearchAccessor);
 			} else {
 				return new TableBar(select, td,
 						new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl()));
 			}			
-		}).forEach(table::add);;
+		}).forEach(startupTables::add);
+	}
 
+	void initIrTables() {
+		if (startupTables == null) {
+			initLocalTables();
+		}
 		if(select.main.getIRStatus().length > 0) {
-			IRResponse<IRTableData[]> response = select.main.getIRStatus()[0].connection.getTableDatas();
+			MainController.IRStatus primaryIr = select.main.getIRStatus()[0];
+			IRResponse<IRTableData[]> response = primaryIr.connection.getTableDatas();
 			if(response.isSucceeded()) {
+				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
+						&& BMSIRDanCourseCache.isBmsirPrimaryName(
+								primaryIr.config.getIrname()
+						)) {
+					BMSIRDanCourseCache.sync(
+							select.resource.getConfig().getPlayerpath(),
+							select.resource.getPlayerConfig().getId(),
+							response.getData()
+					);
+				}
 				for(IRTableData irtd : response.getData()) {
 					TableData td = new TableData();
 					td.setName(irtd.name);
@@ -191,7 +222,7 @@ public class BarManager {
 					}).toArray(CourseData[]::new));
 					
 					if(td.validate()) {
-						table.add(new TableBar(select, td, new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl())));						
+						startupTables.add(new TableBar(select, td, new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl())));
 					}
 				}
 			} else {
@@ -199,22 +230,37 @@ public class BarManager {
 			}
 		}
 
+		BMSSearchAccessor searchAccessor = startupSearchAccessor;
+		TableDataAccessor tableDataAccessor = startupTableDataAccessor;
 		new Thread(() -> {
-			TableData td = bmssearcha.read();
+			TableData td = searchAccessor.read();
 			if (td != null) {
-				tdaccessor.write(td);
+				tableDataAccessor.write(td);
 			}
 		}).start();
 
-		this.tables = table.toArray(TableBar.class);
+		this.tables = startupTables.toArray(TableBar.class);
+	}
 
-
+	void initCourses() {
 		TableDataAccessor.TableAccessor courseReader = new TableDataAccessor.TableAccessor("course") {
 			@Override
 			public TableData read() {
 				TableData td = new TableData();
 				td.setName("COURSE");
-				td.setCourse(new CourseDataAccessor("course").readAll());
+				CourseData[] personalCourses = new CourseDataAccessor("course").readAll();
+				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()) {
+					CourseData[] bmsirCourses = BMSIRDanCourseCache.read(
+							select.resource.getConfig().getPlayerpath(),
+							select.resource.getPlayerConfig().getId()
+					);
+					td.setCourse(Stream.concat(
+							Stream.of(personalCourses),
+							Stream.of(bmsirCourses)
+					).toArray(CourseData[]::new));
+				} else {
+					td.setCourse(personalCourses);
+				}
 				return td;
 			}
 
@@ -223,7 +269,9 @@ public class BarManager {
 			}
 		};
 		courses = new TableBar(select, courseReader.read(), courseReader);
+	}
 
+	void initFavoritesAndCommands() {
 		CourseData[] cds = new CourseDataAccessor("favorite").readAll();
 //		if(cds.length == 0) {
 //			cds = new CourseData[1];
@@ -269,6 +317,9 @@ public class BarManager {
 		}
 
 		commands = l.toArray(Bar.class);
+		startupTableDataAccessor = null;
+		startupSearchAccessor = null;
+		startupTables = null;
 	}
 	
 	public boolean updateBar() {

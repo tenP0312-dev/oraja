@@ -75,8 +75,6 @@ public final class BarRenderer {
 		durationhigh = select.resource.getConfig().getScrollDurationHigh();
 		analogTicksPerScroll = select.resource.getConfig().getAnalogTicksPerScroll();
 
-		manager.init();
-		
 		bararea = Stream.generate(BarArea::new).limit(barlength).toArray(BarArea[]::new);
 	}
 

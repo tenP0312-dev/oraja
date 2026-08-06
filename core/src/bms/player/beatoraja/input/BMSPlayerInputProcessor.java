@@ -9,11 +9,15 @@ import org.slf4j.LoggerFactory;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.PlayModeConfig.*;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.input.BMSPlayerInputDevice.Type;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.utils.Array;
 
 /**
@@ -23,10 +27,12 @@ import com.badlogic.gdx.utils.Array;
  */
 public class BMSPlayerInputProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(BMSPlayerInputProcessor.class);
-	
+
 	private boolean enable = true;
 
 	private KeyBoardInputProcesseor kbinput;
+	private final PlayerConfig playerConfig;
+	private boolean arenaOverlayChordDown;
 
 	private BMControllerInputProcessor[] bminput;
 
@@ -35,6 +41,7 @@ public class BMSPlayerInputProcessor {
 	private KeyLogger keylog = new KeyLogger();
 
 	public BMSPlayerInputProcessor(Config config, PlayerConfig player) {
+		this.playerConfig = player;
 		Resolution resolution = config.getResolution();
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
 		// Gdx.input.setInputProcessor(kbinput);
@@ -326,6 +333,27 @@ public class BMSPlayerInputProcessor {
 	public boolean isControlKeyPressed(ControlKeys key, int heldModifiers, int... notHeldModifiers) {
 		return kbinput.isKeyPressed(key.keycode, heldModifiers, notHeldModifiers);
 	}
+
+	public boolean isNumpadPressed(int number) {
+		ControlKeys key = numpadControlKey(number);
+		return key != null && isControlKeyPressed(key);
+	}
+
+	static ControlKeys numpadControlKey(int number) {
+		ControlKeys[] keys = {
+				ControlKeys.NUMPAD0,
+				ControlKeys.NUMPAD1,
+				ControlKeys.NUMPAD2,
+				ControlKeys.NUMPAD3,
+				ControlKeys.NUMPAD4,
+				ControlKeys.NUMPAD5,
+				ControlKeys.NUMPAD6,
+				ControlKeys.NUMPAD7,
+				ControlKeys.NUMPAD8,
+				ControlKeys.NUMPAD9
+		};
+		return number >= 0 && number < keys.length ? keys[number] : null;
+	}
 	
 	protected void keyChanged(BMSPlayerInputDevice device, long presstime, int i, boolean pressed) {
 		if (!enable) {
@@ -393,6 +421,9 @@ public class BMSPlayerInputProcessor {
 	}
 
 	public boolean isActivated(KeyCommand key) {
+		if (BMSIRArenaOverlay.isHotkeyCaptureActive()) {
+			return false;
+		}
 		final int MASK_CTRL = KeyBoardInputProcesseor.MASK_CTRL;
 		final int MASK_CTRL_SHIFT = KeyBoardInputProcesseor.MASK_CTRL|KeyBoardInputProcesseor.MASK_SHIFT;
 
@@ -424,14 +455,40 @@ public class BMSPlayerInputProcessor {
 		case OPEN_SKIN_CONFIGURATION:
 			return isControlKeyPressed(ControlKeys.F12);
 		case TOGGLE_MOD_MENU:
-			return isControlKeyPressed(ControlKeys.F5) || isControlKeyPressed(ControlKeys.INSERT);
-		case TOGGLE_BMSIR_ARENA_OVERLAY:
 			return isControlKeyPressed(
 					ControlKeys.F5,
-					MASK_CTRL_SHIFT
+					0,
+					KeyBoardInputProcesseor.MASK_SHIFT,
+					KeyBoardInputProcesseor.MASK_CTRL,
+					KeyBoardInputProcesseor.MASK_ALT
+			) || isControlKeyPressed(ControlKeys.INSERT);
+		case TOGGLE_BMSIR_ARENA_OVERLAY:
+			int[] keys = playerConfig.getBmsirArenaOverlayHotkeyKeys();
+			boolean chordDown = BMSIRArenaHotkey.isExactNormalizedPressed(
+					keys,
+					Gdx.input::isKeyPressed
 			);
+			boolean activated = chordDown && !arenaOverlayChordDown;
+			arenaOverlayChordDown = chordDown;
+			if (activated) {
+				discardArenaOverlayHotkeyKeys(keys);
+			}
+			return activated;
 		}
 		return false;
+	}
+
+	public void discardArenaOverlayHotkeyKeys(int[] keys) {
+		int[] configured = BMSIRArenaHotkey.normalizeKeys(keys);
+		if (configured == null) {
+			return;
+		}
+		for (int raw = Keys.UNKNOWN + 1; raw <= Keys.MAX_KEYCODE; raw++) {
+			int logical = BMSIRArenaHotkey.normalizeKey(raw);
+			if (Arrays.stream(configured).anyMatch(key -> key == logical)) {
+				kbinput.discardKeyPress(raw);
+			}
+		}
 	}
 	
 	public boolean isSelectPressed() {

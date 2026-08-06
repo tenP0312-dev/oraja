@@ -1,6 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.arena.lobby.GraphMenu;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.controller.Lwjgl3ControllerManager;
@@ -69,6 +70,7 @@ public class ImGuiRenderer {
         ImPlot.createContext();
         ImGuiIO io = ImGui.getIO();
         io.setIniFilename("layout.ini");
+        io.addConfigFlags(ImGuiConfigFlags.NoMouseCursorChange);
         io.getFonts().addFontDefault();
 
         final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder(); // Glyphs ranges provide
@@ -122,7 +124,7 @@ public class ImGuiRenderer {
         ImGui.setNextWindowPos(relativeX, relativeY, ImGuiCond.Once);
 
         if (SHOW_MOD_MENU.get()) {
-            ImGui.begin("Endless Dream", ImGuiWindowFlags.AlwaysAutoResize);
+            ImGui.begin("Arena oraja", ImGuiWindowFlags.AlwaysAutoResize);
 
             ImGui.checkbox("Show Rate Modifier Window", SHOW_FREQ_PLUS);
             ImGui.checkbox("Show Random Trainer Window", SHOW_RANDOM_TRAINER);
@@ -138,12 +140,18 @@ public class ImGuiRenderer {
             ImGui.checkbox("Show Misc Setting Window", SHOW_MISC_SETTING);
             ImGui.checkbox("Show Arena Menu", SHOW_ARENA_MENU);
             ImGui.checkbox("Show Graph", SHOW_GRAPH_MENU);
-            if (BMSIRArenaOverlay.isHidden()) {
-                ImGui.separator();
-                if (ImGui.button("Show BMS-IR Arena Overlay")) {
-                    BMSIRArenaOverlay.restoreVisibility();
+            ImGui.separator();
+            ImBoolean showBmsirArenaOverlay = new ImBoolean(
+                    !BMSIRArenaOverlay.isHidden()
+            );
+            if (ImGui.checkbox(
+                    "Show BMS-IR Arena Overlay",
+                    showBmsirArenaOverlay
+            )) {
+                BMSIRArenaOverlay.setVisible(showBmsirArenaOverlay.get());
+                if (!BMSIRArenaClient.saveArenaConfig()) {
+                    ImGuiNotify.warning("Arena表示設定を保存できませんでした");
                 }
-                ImGui.textDisabled("Arena overlay recovery");
             }
 
             if (SHOW_FREQ_PLUS.get()) {
@@ -187,7 +195,7 @@ public class ImGuiRenderer {
             }
 
 
-            if (ImGui.treeNode("Endless Dream Debug Information")) {
+            if (ImGui.treeNode("Arena oraja Debug Information")) {
                 float axis;
 
                 ImGui.text("Commit hash: " + Version.getGitCommitHash());
@@ -207,6 +215,10 @@ public class ImGuiRenderer {
 
 
     public static void end() {
+        BMSIRArenaOverlay.updateKeyboardInputCapture(
+                ImGui.getIO().getWantCaptureKeyboard()
+                        || ImGui.getIO().getWantTextInput()
+        );
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 

@@ -183,6 +183,45 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 		}
 	}
 
+	/**
+	 * 旧リプレイの交換前seedを再現しつつ、新形式の条件付き通常RANDOM seedも扱う。
+	 * 新形式では元1鍵が既に指定先へ来るため、この交換はno-opになる。
+	 */
+	public static final class OneBassLaneRandomShuffleModifier
+			extends LaneRandomShuffleModifier {
+		private final int targetLane;
+
+		public OneBassLaneRandomShuffleModifier(int player, int targetLane) {
+			super(player, false);
+			this.targetLane = targetLane;
+		}
+
+		@Override
+		protected int[] makeRandom(int[] keys, BMSModel model) {
+			int[] result = super.makeRandom(keys, model);
+			if (
+					keys.length == 0
+							|| IntStream.of(keys).noneMatch(lane -> lane == targetLane)
+			) {
+				return result;
+			}
+			int sourceLane = keys[0];
+			int sourceDestination = -1;
+			for (int destination : keys) {
+				if (result[destination] == sourceLane) {
+					sourceDestination = destination;
+					break;
+				}
+			}
+			if (sourceDestination >= 0 && sourceDestination != targetLane) {
+				int swap = result[targetLane];
+				result[targetLane] = result[sourceDestination];
+				result[sourceDestination] = swap;
+			}
+			return result;
+		}
+	}
+
 	public static class PlayerFlipModifier extends LaneShuffleModifier {
 
 		public PlayerFlipModifier() {
@@ -394,4 +433,3 @@ public abstract class LaneShuffleModifier extends PatternModifier {
 		}
 	}
 }
-

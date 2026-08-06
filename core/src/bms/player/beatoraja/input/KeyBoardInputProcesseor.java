@@ -6,6 +6,7 @@ import bms.player.beatoraja.PlayModeConfig.KeyboardConfig;
 import bms.player.beatoraja.Resolution;
 import bms.player.beatoraja.modmenu.ArenaMenu;
 import bms.player.beatoraja.modmenu.SkinWidgetManager;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.utils.IntArray;
@@ -101,7 +102,9 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	public void poll(final long microtime) {
 		// NOTE: For further dev came here, it's better to wrap this variable instead of
 		// accessing imgui menu's field directly
-        boolean acceptInput = !SkinWidgetManager.focus && !ArenaMenu.isFocused;
+        boolean acceptInput = !SkinWidgetManager.focus
+                && !ArenaMenu.isFocused
+                && !BMSIRArenaOverlay.isKeyboardInputCaptured();
 		if (acceptInput && !textmode) {
 			for (int i = 0; i < keys.length; i++) {
 				if(keys[i] < 0) {
@@ -126,6 +129,8 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 				keystate[control[1]] = selectpressed;
 				this.bmsPlayerInputProcessor.setSelectPressed(selectpressed);
 			}
+		} else if (!acceptInput) {
+			releaseCapturedKeys(microtime);
 		}
 		
 		for (ControlKeys key : ControlKeys.values()) {
@@ -138,6 +143,31 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		}
 		
 		mouseScratchInput.poll(microtime);
+	}
+
+	private void releaseCapturedKeys(long microtime) {
+		for (int index = 0; index < keys.length; index++) {
+			int keycode = keys[index];
+			if (keycode >= 0 && keystate[keycode]) {
+				keystate[keycode] = false;
+				keytime[keycode] = microtime;
+				bmsPlayerInputProcessor.keyChanged(this, microtime, index, false);
+				bmsPlayerInputProcessor.setAnalogState(index, false, 0);
+			}
+		}
+		if (keystate[control[0]]) {
+			keystate[control[0]] = false;
+			bmsPlayerInputProcessor.startChanged(false);
+		}
+		if (keystate[control[1]]) {
+			keystate[control[1]] = false;
+			bmsPlayerInputProcessor.setSelectPressed(false);
+		}
+		for (ControlKeys key : ControlKeys.values()) {
+			keystate[key.keycode] = false;
+			keytime[key.keycode] = Long.MIN_VALUE;
+			keymodifiers[key.keycode] = 0;
+		}
 	}
 
 	private int currentlyHeldModifiers() {
@@ -175,6 +205,22 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 			return true;
 		}
 		return false;
+	}
+
+	public boolean isKeyPressedExact(int keycode, int modifiers) {
+		if (keystate[keycode]
+				&& keytime[keycode] != Long.MIN_VALUE
+				&& keymodifiers[keycode] == modifiers) {
+			keytime[keycode] = Long.MIN_VALUE;
+			return true;
+		}
+		return false;
+	}
+
+	public void discardKeyPress(int keycode) {
+		if (keycode >= 0 && keycode < keytime.length) {
+			keytime[keycode] = Long.MIN_VALUE;
+		}
 	}
 
 	public boolean mouseMoved(int x, int y) {
@@ -278,6 +324,17 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		INSERT(27, Keys.INSERT, false),
 		DEL(28, Keys.FORWARD_DEL, false),
 		ESCAPE(29, Keys.ESCAPE, false),
+
+		NUMPAD0(30, Keys.NUMPAD_0, false),
+		NUMPAD1(31, Keys.NUMPAD_1, false),
+		NUMPAD2(32, Keys.NUMPAD_2, false),
+		NUMPAD3(33, Keys.NUMPAD_3, false),
+		NUMPAD4(34, Keys.NUMPAD_4, false),
+		NUMPAD5(35, Keys.NUMPAD_5, false),
+		NUMPAD6(36, Keys.NUMPAD_6, false),
+		NUMPAD7(37, Keys.NUMPAD_7, false),
+		NUMPAD8(38, Keys.NUMPAD_8, false),
+		NUMPAD9(39, Keys.NUMPAD_9, false),
 		;
 		
 		public final int id;

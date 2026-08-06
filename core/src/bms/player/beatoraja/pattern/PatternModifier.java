@@ -137,6 +137,17 @@ public abstract class PatternModifier {
 	 * @return レーン番号の配列
 	 */
 	protected int[] getKeys(Mode mode, int player, boolean containsScratch) {
+		return getKeysForPlayer(mode, player, containsScratch);
+	}
+
+	public static int[] getKeysForPlayer(
+			Mode mode,
+			int player,
+			boolean containsScratch
+	) {
+		if (mode == null) {
+			return new int[0];
+		}
 		if(player >= mode.player) {
 			return new int[0];
 		}

@@ -143,9 +143,15 @@ public class ScoreDataProperty {
     
     public void updateTargetScore(int rivalscore) {
     	this.rivalscore = rivalscore;
-        rivalscorerate = ((float)rivalscore)  / (totalnotes * 2);
+        rivalscorerate = totalnotes == 0 ? 0 : ((float)rivalscore)  / (totalnotes * 2);
         rivalrateInt = (int)(rivalscorerate * 100);
         rivalrateAfterDot = ((int)(rivalscorerate * 10000)) % 100;
+    }
+
+    public void updateLiveTargetScore(int rivalscore) {
+        updateTargetScore(rivalscore);
+        nowrivalscore = rivalscore;
+        nowrivalscorerate = totalnotes == 0 ? 0 : ((float)rivalscore) / (totalnotes * 2);
     }
 
     public void setTargetScore(int bestscore, int rivalscore, int totalnotes) {
@@ -157,11 +163,11 @@ public class ScoreDataProperty {
         this.bestGhost = bestGhost;
         this.rivalscore = rivalscore;
         this.rivalGhost = rivalGhost;
-        this.totalnotes = totalnotes;
-        bestscorerate= ((float)bestscore)  / (totalnotes * 2);
+        this.totalnotes = Math.max(0, totalnotes);
+        bestscorerate = this.totalnotes == 0 ? 0 : ((float)bestscore) / (this.totalnotes * 2);
         bestrateInt = (int)(bestscorerate * 100);
         bestrateAfterDot = ((int)(bestscorerate * 10000)) % 100;
-        rivalscorerate= ((float)rivalscore)  / (totalnotes * 2);
+        rivalscorerate = this.totalnotes == 0 ? 0 : ((float)rivalscore) / (this.totalnotes * 2);
         for(int i = 0;i < bestrank.length;i++) {
             bestrank[i] = bestscorerate >= 1f * i / bestrank.length;
         }
@@ -169,8 +175,42 @@ public class ScoreDataProperty {
         rivalrateAfterDot = ((int)(rivalscorerate * 10000)) % 100;
 
         // ゴーストとノーツ数が異なる場合（ランダム分岐でノーツ数が変わった場合）はゴーストを再生しない
-        useBestGhost = bestGhost != null && bestGhost.length == totalnotes;
-        useRivalGhost = rivalGhost != null && rivalGhost.length == totalnotes;
+        useBestGhost = bestGhost != null && bestGhost.length == this.totalnotes;
+        useRivalGhost = rivalGhost != null && rivalGhost.length == this.totalnotes;
+        previousNotes = 0;
+        nowbestscore = 0;
+        nowbestscorerate = 0;
+        nowrivalscore = 0;
+        nowrivalscorerate = 0;
+    }
+
+    public void refreshTargetScoreProgress(int notes) {
+        int currentNotes = totalnotes == 0 ? 0 : Math.max(0, Math.min(notes, totalnotes));
+        nowbestscore = targetScoreAt(bestscore, bestGhost, useBestGhost, currentNotes);
+        nowbestscorerate = totalnotes == 0 ? 0 : (float) nowbestscore / (totalnotes * 2);
+        nowrivalscore = targetScoreAt(rivalscore, rivalGhost, useRivalGhost, currentNotes);
+        nowrivalscorerate = totalnotes == 0 ? 0 : (float) nowrivalscore / (totalnotes * 2);
+        previousNotes = currentNotes;
+    }
+
+    private int targetScoreAt(
+            int targetScore,
+            int[] ghost,
+            boolean useGhost,
+            int notes
+    ) {
+        if (totalnotes == 0 || notes <= 0) {
+            return 0;
+        }
+        if (useGhost) {
+            int score = 0;
+            int limit = Math.min(notes, ghost.length);
+            for (int i = 0; i < limit; i++) {
+                score += getExScore(ghost[i]);
+            }
+            return score;
+        }
+        return targetScore * notes / totalnotes;
     }
 
     public int getNowScore() {

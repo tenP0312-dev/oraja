@@ -7,7 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -15,17 +20,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Sends the final Arena lane placement to oraja_helper on Windows.
+ * Publishes the final lane placement for the bundled OBS/browser view.
  *
- * The helper's named pipe is optional. Writes happen on a daemon thread so a
- * missing or stopped helper can never stall chart loading or gameplay.
+ * The legacy helper named pipe remains optional on Windows. All writes happen
+ * on a daemon thread so a missing view can never stall chart loading/gameplay.
  */
 public final class BMSIROrajaHelperBridge {
     private static final String PIPE_PATH = "\\\\.\\pipe\\oraja_helper";
+    private static final Path SNAPSHOT_DIRECTORY = Path.of("bmsir-helper");
+    private static final Path SNAPSHOT_PATH =
+            SNAPSHOT_DIRECTORY.resolve("current.json");
+    private static final Path VIEW_PATH =
+            SNAPSHOT_DIRECTORY.resolve("random_pattern_dp.html");
+    private static final String VIEW_RESOURCE =
+            "/resources/bmsir-helper/random_pattern_dp.html";
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final ExecutorService WRITER =
             Executors.newSingleThreadExecutor(new HelperThreadFactory());
     private static final AtomicLong LAST_FAILURE_LOG_NANOS = new AtomicLong();
+    private static volatile ObjectNode lastPlacement;
 
     private BMSIROrajaHelperBridge() {
     }
@@ -34,21 +47,46 @@ public final class BMSIROrajaHelperBridge {
             BMSModel model,
             ReplayData replay
     ) {
-        if (
-                model == null
-                        || replay == null
-                        || !BMSIRArenaClient.isArenaPlayActive()
-                        || !isWindows()
-        ) {
+        publishPlacement(model, replay);
+    }
+
+    public static void publishPlacement(BMSModel model, ReplayData replay) {
+        if (model == null || replay == null) {
             return;
         }
         ObjectNode message = placementMessage(model, replay);
+        lastPlacement = message.deepCopy();
         WRITER.execute(() -> writeMessage(message));
+    }
+
+    public static void publishScene(String scene) {
+        String normalized = switch (scene == null ? "" : scene) {
+            case "select", "play", "result" -> scene;
+            default -> "select";
+        };
+        WRITER.execute(() -> {
+            try {
+                ObjectNode message = lastPlacement == null
+                        ? loadSnapshot()
+                        : lastPlacement.deepCopy();
+                if (message == null) {
+                    return;
+                }
+                message.put("scene", normalized);
+                message.put("updatedAt", System.currentTimeMillis());
+                lastPlacement = message.deepCopy();
+                writeMessage(message);
+            } catch (Exception error) {
+                logUnavailable("scene", error);
+            }
+        });
     }
 
     static ObjectNode placementMessage(BMSModel model, ReplayData replay) {
         Mode mode = model.getMode();
         ObjectNode message = JSON.createObjectNode();
+        message.put("schemaVersion", 1);
+        message.put("updatedAt", System.currentTimeMillis());
         message.put("scene", "play");
         message.put("title", model.getTitle());
         message.put("artist", model.getArtist());
@@ -63,7 +101,7 @@ public final class BMSIROrajaHelperBridge {
                 "option",
                 BMSIRArenaClient.playOptionLabel(
                         replay.randomoption,
-                        Mode.BEAT_7K.id
+                        mode.id
                 )
         );
         message.put(
@@ -76,7 +114,7 @@ public final class BMSIROrajaHelperBridge {
                     "option2P",
                     BMSIRArenaClient.playOptionLabel(
                             replay.randomoption2,
-                            Mode.BEAT_7K.id
+                            mode.id
                     )
             );
             message.put(
@@ -123,14 +161,13 @@ public final class BMSIROrajaHelperBridge {
     }
 
     private static void writeMessage(ObjectNode message) {
-        try (FileOutputStream pipe = new FileOutputStream(PIPE_PATH)) {
-            pipe.write(
-                    (JSON.writeValueAsString(message) + "\n")
-                            .getBytes(StandardCharsets.UTF_8)
-            );
-            pipe.flush();
+        byte[] payload;
+        try {
+            payload = (JSON.writeValueAsString(message) + "\n")
+                    .getBytes(StandardCharsets.UTF_8);
+            writeSnapshot(payload);
             BMSIRArenaLog.event(
-                    "oraja_helper_placement_sent",
+                    "pattern_view_snapshot_written",
                     "play_mode", message.path("playMode").asInt(),
                     "key_mode", message.path("keyMode").asInt(),
                     "option", message.path("optionId").asInt(),
@@ -140,17 +177,107 @@ public final class BMSIROrajaHelperBridge {
                     "flip", message.path("flip").asBoolean()
             );
         } catch (Exception error) {
-            long now = System.nanoTime();
-            long previous = LAST_FAILURE_LOG_NANOS.get();
-            if (
-                    now - previous >= TimeUnit.MINUTES.toNanos(1)
-                            && LAST_FAILURE_LOG_NANOS.compareAndSet(previous, now)
-            ) {
-                BMSIRArenaLog.event(
-                        "oraja_helper_unavailable",
-                        "error", error.getClass().getSimpleName()
+            logUnavailable("snapshot", error);
+            return;
+        }
+
+        if (!isWindows()) {
+            return;
+        }
+        try (FileOutputStream pipe = new FileOutputStream(PIPE_PATH)) {
+            pipe.write(payload);
+            pipe.flush();
+        } catch (Exception error) {
+            logUnavailable("legacy_pipe", error);
+        }
+    }
+
+    private static void writeSnapshot(byte[] payload) throws Exception {
+        Files.createDirectories(SNAPSHOT_DIRECTORY);
+        ensureViewFile();
+        Path temporary = SNAPSHOT_DIRECTORY.resolve("current.json.tmp");
+        Files.write(temporary, payload);
+        try {
+            Files.move(
+                    temporary,
+                    SNAPSHOT_PATH,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        } catch (AtomicMoveNotSupportedException ignored) {
+            Files.move(
+                    temporary,
+                    SNAPSHOT_PATH,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        }
+    }
+
+    private static ObjectNode loadSnapshot() {
+        if (!Files.isRegularFile(SNAPSHOT_PATH)) {
+            return null;
+        }
+        try {
+            var parsed = JSON.readTree(SNAPSHOT_PATH.toFile());
+            return parsed != null
+                    && parsed.isObject()
+                    && parsed.path("schemaVersion").asInt() == 1
+                    ? (ObjectNode) parsed
+                    : null;
+        } catch (Exception error) {
+            logUnavailable("snapshot_read", error);
+            return null;
+        }
+    }
+
+    private static void ensureViewFile() throws Exception {
+        if (Files.isRegularFile(VIEW_PATH)) {
+            return;
+        }
+        try (InputStream resource =
+                     BMSIROrajaHelperBridge.class.getResourceAsStream(
+                             VIEW_RESOURCE
+                     )) {
+            if (resource == null) {
+                throw new IllegalStateException("pattern view resource missing");
+            }
+            Path temporary = SNAPSHOT_DIRECTORY.resolve(
+                    "random_pattern_dp.html.tmp"
+            );
+            Files.copy(
+                    resource,
+                    temporary,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+            try {
+                Files.move(
+                        temporary,
+                        VIEW_PATH,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(
+                        temporary,
+                        VIEW_PATH,
+                        StandardCopyOption.REPLACE_EXISTING
                 );
             }
+        }
+    }
+
+    private static void logUnavailable(String target, Exception error) {
+        long now = System.nanoTime();
+        long previous = LAST_FAILURE_LOG_NANOS.get();
+        if (
+                now - previous >= TimeUnit.MINUTES.toNanos(1)
+                        && LAST_FAILURE_LOG_NANOS.compareAndSet(previous, now)
+        ) {
+            BMSIRArenaLog.event(
+                    "pattern_view_unavailable",
+                    "target", target,
+                    "error", error.getClass().getSimpleName()
+            );
         }
     }
 

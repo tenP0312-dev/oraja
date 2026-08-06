@@ -223,9 +223,21 @@ public class ImGuiNotify {
     }
 
     private static final List<Toast> notifications = new ArrayList<>();
+    private static volatile boolean infoEnabled = true;
 
     public static void insertNotification(Toast toast) {
+        if (toast != null && toast.getType() == ToastType.Info && !infoEnabled) {
+            return;
+        }
         notifications.add(toast);
+    }
+
+    public static void setInfoEnabled(boolean enabled) {
+        infoEnabled = enabled;
+    }
+
+    public static boolean isInfoEnabled() {
+        return infoEnabled;
     }
 
     public static void removeNotification(int index) {

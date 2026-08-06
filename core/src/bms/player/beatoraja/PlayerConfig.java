@@ -9,6 +9,9 @@ import org.slf4j.LoggerFactory;
 import java.text.ParseException;
 
 import bms.player.beatoraja.system.RobustFile;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
+import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.pattern.*;
@@ -30,6 +33,15 @@ import com.badlogic.gdx.utils.SerializationException;
  */
 public final class PlayerConfig {
 	private static final Logger logger = LoggerFactory.getLogger(PlayerConfig.class);
+	public static final String BMSIR_ARENA_TARGET_OFF = "off";
+	public static final String BMSIR_ARENA_TARGET_LEADER = "leader";
+	public static final String BMSIR_ARENA_TARGET_ABOVE = "above";
+	public static final String BMSIR_ARENA_TARGET_SPECIFIED = "specified";
+	public static final String BMSIR_ARENA_GRAPH_ORDER_RANK = "rank";
+	public static final String BMSIR_ARENA_GRAPH_ORDER_ENTRY = "entry";
+	public static final String BMSIR_COVER_CONTROL_ORAJA = "oraja";
+	public static final String BMSIR_COVER_CONTROL_LR2 = "lr2";
+	public static final String BMSIR_COVER_CONTROL_EXTENDED = "extended";
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -240,6 +252,15 @@ public final class PlayerConfig {
 	private IRConfig[] irconfig;
 
 	/**
+	 * Accept START + exactly one playable key as the destination for the
+	 * original chart's 1-key lane when ordinary RANDOM is selected.
+	 */
+	private boolean bmsirOneBassEnabled = true;
+
+	/** Keep the last successfully received BMS-IR class courses locally. */
+	private boolean bmsirDanLocalSyncEnabled = true;
+
+	/**
 	 * BMS-IR Arena connects only when this startup option is enabled.
 	 * Match entry itself is controlled from the authenticated BMS-IR Web page.
 	 */
@@ -250,6 +271,8 @@ public final class PlayerConfig {
 	private boolean bmsirArenaUnrestrictedRating = false;
 
 	private boolean bmsirArenaAllowCpu = true;
+
+	private boolean bmsirArenaAllowHigherSelection = false;
 
 	private boolean bmsirArenaRandomMirror = false;
 
@@ -263,6 +286,17 @@ public final class PlayerConfig {
 	 * 0: normal, 1: compact, 2: hidden.
 	 */
 	private int bmsirArenaOverlayMode = 0;
+	private int bmsirArenaLastVisibleOverlayMode = 0;
+
+	/** F1-F12 number used to toggle the Arena overlay. */
+	private int bmsirArenaOverlayHotkeyFunction = 5;
+	/** Shift=1, Ctrl=2, Alt=4. At least one modifier is required. */
+	private int bmsirArenaOverlayHotkeyModifiers = 3;
+	/**
+	 * Logical libGDX keyboard chord used to toggle the Arena overlay.
+	 * Null migrates the 0.4.1 F-key/modifier fields; empty disables the shortcut.
+	 */
+	private int[] bmsirArenaOverlayHotkeyKeys;
 
 	private boolean bmsirArenaShowCursor = false;
 	/** Keep this player in an unrated Arena room after each result. */
@@ -273,6 +307,23 @@ public final class PlayerConfig {
 	private boolean bmsirArenaSpectatorPublic = false;
 	/** Copy the host's complete lane option to every participant. */
 	private boolean bmsirArenaForceHostOption = false;
+	private boolean bmsirArenaAlwaysReady = false;
+	private int bmsirArenaGraphHighlight = 0;
+	private String bmsirArenaTargetMode = BMSIR_ARENA_TARGET_OFF;
+	private String bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
+	private String bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
+	private int bmsirCoverChangeStep = 10;
+	private boolean bmsirCoverHispeedAutoAdjustEnabled = false;
+	private String[] bmsirNumpadActions = BMSIRNumpadAction.defaultIds();
+	private int bmsirNumpadJudgeTimingStep = 1;
+	private boolean bmsirJudgeTimingRestoreEnabled = false;
+	private boolean bmsirInfoNotificationsEnabled = true;
+	/** Show the large, phase-specific Arena presentation banner. */
+	private boolean bmsirArenaPresentationOverlayEnabled = true;
+	private boolean bmsirArenaCountdownSeEnabled = true;
+	private boolean bmsirArenaStartSeEnabled = true;
+	private boolean bmsirArenaPhaseWarningEnabled = true;
+	private int bmsirArenaNotificationSeVolume = 100;
 	/** Hide Arena chat locally without changing room/server state. */
 	private boolean bmsirArenaMuteChat = false;
 	/** Which players nominate charts in a private room: all, host, or rotate. */
@@ -600,6 +651,53 @@ public final class PlayerConfig {
 		this.irconfig = irconfig;
 	}
 
+	public boolean isBmsirOneBassEnabled() {
+		return bmsirOneBassEnabled;
+	}
+
+	public void setBmsirOneBassEnabled(boolean bmsirOneBassEnabled) {
+		this.bmsirOneBassEnabled = bmsirOneBassEnabled;
+	}
+
+	public boolean isBmsirDanLocalSyncEnabled() {
+		return bmsirDanLocalSyncEnabled;
+	}
+
+	public void setBmsirDanLocalSyncEnabled(boolean enabled) {
+		this.bmsirDanLocalSyncEnabled = enabled;
+	}
+
+	/**
+	 * The startup launcher exposes the first-chord preview as one BMS-IR
+	 * setting, while PlayConfig keeps the rendering flag per play mode.
+	 */
+	public boolean isBmsirStartHerePreviewEnabled() {
+		for (Mode mode : bmsirSpecificPlayModes()) {
+			if (!getPlayConfig(mode).getPlayconfig().isStartHerePreviewEnabled()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public void setBmsirStartHerePreviewEnabled(boolean enabled) {
+		for (Mode mode : bmsirSpecificPlayModes()) {
+			getPlayConfig(mode).getPlayconfig().setStartHerePreviewEnabled(enabled);
+		}
+	}
+
+	private static Mode[] bmsirSpecificPlayModes() {
+		return new Mode[]{
+				Mode.BEAT_5K,
+				Mode.BEAT_7K,
+				Mode.BEAT_10K,
+				Mode.BEAT_14K,
+				Mode.POPN_9K,
+				Mode.KEYBOARD_24K,
+				Mode.KEYBOARD_24K_DOUBLE
+		};
+	}
+
 	public boolean isBmsirArenaEnabled() {
 		return bmsirArenaEnabled;
 	}
@@ -637,6 +735,14 @@ public final class PlayerConfig {
 		this.bmsirArenaAllowCpu = bmsirArenaAllowCpu;
 	}
 
+	public boolean isBmsirArenaAllowHigherSelection() {
+		return bmsirArenaAllowHigherSelection;
+	}
+
+	public void setBmsirArenaAllowHigherSelection(boolean bmsirArenaAllowHigherSelection) {
+		this.bmsirArenaAllowHigherSelection = bmsirArenaAllowHigherSelection;
+	}
+
 	public boolean isBmsirArenaRandomMirror() {
 		return bmsirArenaRandomMirror;
 	}
@@ -668,6 +774,69 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaOverlayMode(int bmsirArenaOverlayMode) {
 		this.bmsirArenaOverlayMode = Math.max(0, Math.min(2, bmsirArenaOverlayMode));
+		if (this.bmsirArenaOverlayMode < 2) {
+			bmsirArenaLastVisibleOverlayMode = this.bmsirArenaOverlayMode;
+		}
+	}
+
+	public int getBmsirArenaLastVisibleOverlayMode() {
+		bmsirArenaLastVisibleOverlayMode = Math.max(
+				0,
+				Math.min(1, bmsirArenaLastVisibleOverlayMode)
+		);
+		return bmsirArenaLastVisibleOverlayMode;
+	}
+
+	public void setBmsirArenaLastVisibleOverlayMode(int mode) {
+		bmsirArenaLastVisibleOverlayMode = Math.max(0, Math.min(1, mode));
+	}
+
+	public int getBmsirArenaOverlayHotkeyFunction() {
+		bmsirArenaOverlayHotkeyFunction = Math.max(
+				1,
+				Math.min(12, bmsirArenaOverlayHotkeyFunction)
+		);
+		return bmsirArenaOverlayHotkeyFunction;
+	}
+
+	public void setBmsirArenaOverlayHotkeyFunction(
+			int bmsirArenaOverlayHotkeyFunction
+	) {
+		this.bmsirArenaOverlayHotkeyFunction = Math.max(
+				1,
+				Math.min(12, bmsirArenaOverlayHotkeyFunction)
+		);
+	}
+
+	public int getBmsirArenaOverlayHotkeyModifiers() {
+		bmsirArenaOverlayHotkeyModifiers &= 7;
+		if (bmsirArenaOverlayHotkeyModifiers == 0) {
+			bmsirArenaOverlayHotkeyModifiers = 3;
+		}
+		return bmsirArenaOverlayHotkeyModifiers;
+	}
+
+	public void setBmsirArenaOverlayHotkeyModifiers(
+			int bmsirArenaOverlayHotkeyModifiers
+	) {
+		int modifiers = bmsirArenaOverlayHotkeyModifiers & 7;
+		this.bmsirArenaOverlayHotkeyModifiers = modifiers == 0 ? 3 : modifiers;
+	}
+
+	public int[] getBmsirArenaOverlayHotkeyKeys() {
+		if (bmsirArenaOverlayHotkeyKeys == null) {
+			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.fromLegacy(
+					getBmsirArenaOverlayHotkeyFunction(),
+					getBmsirArenaOverlayHotkeyModifiers()
+			);
+		}
+		return bmsirArenaOverlayHotkeyKeys.clone();
+	}
+
+	public void setBmsirArenaOverlayHotkeyKeys(int[] keys) {
+		bmsirArenaOverlayHotkeyKeys = keys == null
+				? null
+				: BMSIRArenaHotkey.normalizeKeys(keys);
 	}
 
 	public boolean isBmsirArenaShowCursor() {
@@ -708,6 +877,188 @@ public final class PlayerConfig {
 
 	public void setBmsirArenaForceHostOption(boolean bmsirArenaForceHostOption) {
 		this.bmsirArenaForceHostOption = bmsirArenaForceHostOption;
+	}
+
+	public boolean isBmsirArenaAlwaysReady() {
+		return bmsirArenaAlwaysReady;
+	}
+
+	public void setBmsirArenaAlwaysReady(boolean bmsirArenaAlwaysReady) {
+		this.bmsirArenaAlwaysReady = bmsirArenaAlwaysReady;
+	}
+
+	public int getBmsirArenaGraphHighlight() {
+		bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
+		return bmsirArenaGraphHighlight;
+	}
+
+	public void setBmsirArenaGraphHighlight(int bmsirArenaGraphHighlight) {
+		this.bmsirArenaGraphHighlight = Math.max(0, Math.min(1, bmsirArenaGraphHighlight));
+	}
+
+	public String getBmsirArenaTargetMode() {
+		if (!BMSIR_ARENA_TARGET_LEADER.equals(bmsirArenaTargetMode)
+				&& !BMSIR_ARENA_TARGET_ABOVE.equals(bmsirArenaTargetMode)
+				&& !BMSIR_ARENA_TARGET_SPECIFIED.equals(bmsirArenaTargetMode)) {
+			bmsirArenaTargetMode = BMSIR_ARENA_TARGET_OFF;
+		}
+		return bmsirArenaTargetMode;
+	}
+
+	public void setBmsirArenaTargetMode(String bmsirArenaTargetMode) {
+		String normalized = bmsirArenaTargetMode == null
+				? BMSIR_ARENA_TARGET_OFF
+				: bmsirArenaTargetMode.toLowerCase();
+		this.bmsirArenaTargetMode =
+				BMSIR_ARENA_TARGET_LEADER.equals(normalized)
+						|| BMSIR_ARENA_TARGET_ABOVE.equals(normalized)
+						|| BMSIR_ARENA_TARGET_SPECIFIED.equals(normalized)
+						? normalized
+						: BMSIR_ARENA_TARGET_OFF;
+	}
+
+	public String getBmsirArenaGraphOrder() {
+		if (!BMSIR_ARENA_GRAPH_ORDER_ENTRY.equals(bmsirArenaGraphOrder)) {
+			bmsirArenaGraphOrder = BMSIR_ARENA_GRAPH_ORDER_RANK;
+		}
+		return bmsirArenaGraphOrder;
+	}
+
+	public void setBmsirArenaGraphOrder(String bmsirArenaGraphOrder) {
+		this.bmsirArenaGraphOrder =
+				BMSIR_ARENA_GRAPH_ORDER_ENTRY.equalsIgnoreCase(
+						bmsirArenaGraphOrder
+				)
+						? BMSIR_ARENA_GRAPH_ORDER_ENTRY
+						: BMSIR_ARENA_GRAPH_ORDER_RANK;
+	}
+
+	public String getBmsirCoverControlMode() {
+		if (!BMSIR_COVER_CONTROL_LR2.equals(bmsirCoverControlMode)
+				&& !BMSIR_COVER_CONTROL_EXTENDED.equals(bmsirCoverControlMode)) {
+			bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
+		}
+		return bmsirCoverControlMode;
+	}
+
+	public void setBmsirCoverControlMode(String mode) {
+		String normalized = mode == null
+				? BMSIR_COVER_CONTROL_ORAJA
+				: mode.toLowerCase(Locale.ROOT);
+		bmsirCoverControlMode = BMSIR_COVER_CONTROL_LR2.equals(normalized)
+				|| BMSIR_COVER_CONTROL_EXTENDED.equals(normalized)
+				? normalized
+				: BMSIR_COVER_CONTROL_ORAJA;
+	}
+
+	public int getBmsirCoverChangeStep() {
+		bmsirCoverChangeStep = Math.max(1, Math.min(1000, bmsirCoverChangeStep));
+		return bmsirCoverChangeStep;
+	}
+
+	public void setBmsirCoverChangeStep(int step) {
+		bmsirCoverChangeStep = Math.max(1, Math.min(1000, step));
+	}
+
+	public boolean isBmsirCoverHispeedAutoAdjustEnabled() {
+		return bmsirCoverHispeedAutoAdjustEnabled;
+	}
+
+	public void setBmsirCoverHispeedAutoAdjustEnabled(boolean enabled) {
+		bmsirCoverHispeedAutoAdjustEnabled = enabled;
+	}
+
+	public String[] getBmsirNumpadActions() {
+		bmsirNumpadActions = BMSIRNumpadAction.normalizeIds(bmsirNumpadActions);
+		return bmsirNumpadActions.clone();
+	}
+
+	public void setBmsirNumpadActions(String[] actions) {
+		bmsirNumpadActions = BMSIRNumpadAction.normalizeIds(actions);
+	}
+
+	public int getBmsirNumpadJudgeTimingStep() {
+		bmsirNumpadJudgeTimingStep = Math.max(
+				1,
+				Math.min(20, bmsirNumpadJudgeTimingStep)
+		);
+		return bmsirNumpadJudgeTimingStep;
+	}
+
+	public void setBmsirNumpadJudgeTimingStep(int step) {
+		bmsirNumpadJudgeTimingStep = Math.max(1, Math.min(20, step));
+	}
+
+	public boolean isBmsirJudgeTimingRestoreEnabled() {
+		return bmsirJudgeTimingRestoreEnabled;
+	}
+
+	public void setBmsirJudgeTimingRestoreEnabled(boolean enabled) {
+		bmsirJudgeTimingRestoreEnabled = enabled;
+	}
+
+	public boolean isBmsirInfoNotificationsEnabled() {
+		return bmsirInfoNotificationsEnabled;
+	}
+
+	public void setBmsirInfoNotificationsEnabled(boolean enabled) {
+		bmsirInfoNotificationsEnabled = enabled;
+	}
+
+	public boolean isBmsirArenaPresentationOverlayEnabled() {
+		return bmsirArenaPresentationOverlayEnabled;
+	}
+
+	public void setBmsirArenaPresentationOverlayEnabled(
+			boolean bmsirArenaPresentationOverlayEnabled
+	) {
+		this.bmsirArenaPresentationOverlayEnabled =
+				bmsirArenaPresentationOverlayEnabled;
+	}
+
+	public boolean isBmsirArenaCountdownSeEnabled() {
+		return bmsirArenaCountdownSeEnabled;
+	}
+
+	public void setBmsirArenaCountdownSeEnabled(
+			boolean bmsirArenaCountdownSeEnabled
+	) {
+		this.bmsirArenaCountdownSeEnabled = bmsirArenaCountdownSeEnabled;
+	}
+
+	public boolean isBmsirArenaStartSeEnabled() {
+		return bmsirArenaStartSeEnabled;
+	}
+
+	public void setBmsirArenaStartSeEnabled(boolean bmsirArenaStartSeEnabled) {
+		this.bmsirArenaStartSeEnabled = bmsirArenaStartSeEnabled;
+	}
+
+	public boolean isBmsirArenaPhaseWarningEnabled() {
+		return bmsirArenaPhaseWarningEnabled;
+	}
+
+	public void setBmsirArenaPhaseWarningEnabled(
+			boolean bmsirArenaPhaseWarningEnabled
+	) {
+		this.bmsirArenaPhaseWarningEnabled = bmsirArenaPhaseWarningEnabled;
+	}
+
+	public int getBmsirArenaNotificationSeVolume() {
+		bmsirArenaNotificationSeVolume = Math.max(
+				0,
+				Math.min(100, bmsirArenaNotificationSeVolume)
+		);
+		return bmsirArenaNotificationSeVolume;
+	}
+
+	public void setBmsirArenaNotificationSeVolume(
+			int bmsirArenaNotificationSeVolume
+	) {
+		this.bmsirArenaNotificationSeVolume = Math.max(
+				0,
+				Math.min(100, bmsirArenaNotificationSeVolume)
+		);
 	}
 
 	public boolean isBmsirArenaMuteChat() {
@@ -1033,6 +1384,20 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		setBmsirCoverControlMode(bmsirCoverControlMode);
+		setBmsirCoverChangeStep(bmsirCoverChangeStep);
+		setBmsirCoverHispeedAutoAdjustEnabled(
+				bmsirCoverHispeedAutoAdjustEnabled
+		);
+		setBmsirNumpadActions(bmsirNumpadActions);
+		setBmsirNumpadJudgeTimingStep(bmsirNumpadJudgeTimingStep);
+		setBmsirJudgeTimingRestoreEnabled(bmsirJudgeTimingRestoreEnabled);
+		setBmsirInfoNotificationsEnabled(bmsirInfoNotificationsEnabled);
+		if (bmsirArenaOverlayHotkeyKeys != null) {
+			bmsirArenaOverlayHotkeyKeys = BMSIRArenaHotkey.normalizeKeys(
+					bmsirArenaOverlayHotkeyKeys
+			);
+		}
 		if(skin == null) {
 			skin = new SkinConfig[SkinType.getMaxSkinTypeID() + 1];
 		}
@@ -1242,7 +1607,10 @@ public final class PlayerConfig {
 			player = loadPlayerConfigFromOldPath(path_old);
 		}
 
-		return validatePlayerConfig(playerid, player);
+		player = validatePlayerConfig(playerid, player);
+		BMSIRArenaConfigStore.loadOrMigrate(playerpath, playerid, player);
+		player.validate();
+		return player;
 	}
 
 	public static PlayerConfig validatePlayerConfig(String playerid, PlayerConfig player) {
@@ -1316,6 +1684,7 @@ public final class PlayerConfig {
         try {
             Path path = Paths.get(playerpath + "/" + player.getId() + "/" + configpath);
             RobustFile.write(path, configJson.getBytes(StandardCharsets.UTF_8));
+			BMSIRArenaConfigStore.write(playerpath, player);
         }
         catch (IOException e) {
             e.printStackTrace();

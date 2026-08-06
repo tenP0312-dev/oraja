@@ -10,7 +10,9 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory?>
 <?import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory?>
 <?import javafx.scene.control.Tab?>
@@ -467,6 +469,72 @@
                </VBox>
                 </VBox>
             </AnchorPane>
+        </Tab>
+        <Tab fx:id="bmsirSpecificTab" closable="false" text="%TAB_BMSIR_SPECIFIC">
+            <ScrollPane fitToWidth="true">
+                <VBox spacing="12.0">
+                    <padding>
+                        <Insets bottom="18.0" left="18.0" right="18.0" top="18.0" />
+                    </padding>
+                    <CheckBox fx:id="bmsirOneBassEnabled" mnemonicParsing="false" text="%BMSIR_ONE_BASS_ENABLED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ONE_BASS_DESCRIPTION" wrapText="true" />
+                    <CheckBox fx:id="bmsirStartHerePreviewEnabled" mnemonicParsing="false" text="%BMSIR_START_HERE_PREVIEW_ENABLED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_START_HERE_PREVIEW_DESCRIPTION" wrapText="true" />
+	                    <CheckBox fx:id="bmsirDanLocalSyncEnabled" mnemonicParsing="false" text="%BMSIR_DAN_LOCAL_SYNC_ENABLED" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_DAN_LOCAL_SYNC_DESCRIPTION" wrapText="true" />
+	                    <Separator />
+	                    <Label text="%BMSIR_ARENA_TARGET_MODE" />
+	                    <ComboBox fx:id="bmsirArenaTargetMode" prefWidth="180.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ARENA_TARGET_MODE_DESCRIPTION" wrapText="true" />
+	                    <Label text="%BMSIR_ARENA_GRAPH_ORDER" />
+	                    <ComboBox fx:id="bmsirArenaGraphOrder" prefWidth="180.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ARENA_GRAPH_ORDER_DESCRIPTION" wrapText="true" />
+	                    <Separator />
+	                    <Label text="%BMSIR_COVER_CONTROL_MODE" />
+	                    <ComboBox fx:id="bmsirCoverControlMode" prefWidth="360.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_COVER_CONTROL_MODE_DESCRIPTION" wrapText="true" />
+	                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+	                        <Label text="%BMSIR_COVER_CHANGE_STEP" />
+	                        <Spinner fx:id="bmsirCoverChangeStep" editable="true" prefWidth="90.0" />
+	                    </HBox>
+	                    <CheckBox fx:id="bmsirCoverHispeedAutoAdjustEnabled" mnemonicParsing="false" text="%BMSIR_COVER_HISPEED_AUTO_ADJUST_ENABLED" />
+	                    <Separator />
+	                    <Label text="%BMSIR_NUMPAD_SHORTCUTS" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_NUMPAD_SHORTCUTS_DESCRIPTION" wrapText="true" />
+	                    <GridPane hgap="12.0" vgap="6.0">
+	                        <Label text="NUMPAD 0" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+	                        <ComboBox fx:id="bmsirNumpad0" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+	                        <Label text="NUMPAD 1" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+	                        <ComboBox fx:id="bmsirNumpad1" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+	                        <Label text="NUMPAD 2" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+	                        <ComboBox fx:id="bmsirNumpad2" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+	                        <Label text="NUMPAD 3" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+	                        <ComboBox fx:id="bmsirNumpad3" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+	                        <Label text="NUMPAD 4" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+	                        <ComboBox fx:id="bmsirNumpad4" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+	                        <Label text="NUMPAD 5" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+	                        <ComboBox fx:id="bmsirNumpad5" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+	                        <Label text="NUMPAD 6" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+	                        <ComboBox fx:id="bmsirNumpad6" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+	                        <Label text="NUMPAD 7" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+	                        <ComboBox fx:id="bmsirNumpad7" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+	                        <Label text="NUMPAD 8" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+	                        <ComboBox fx:id="bmsirNumpad8" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+	                        <Label text="NUMPAD 9" GridPane.columnIndex="0" GridPane.rowIndex="9" />
+	                        <ComboBox fx:id="bmsirNumpad9" prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+	                    </GridPane>
+	                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+	                        <Label text="%BMSIR_NUMPAD_JUDGE_TIMING_STEP" />
+	                        <Spinner fx:id="bmsirNumpadJudgeTimingStep" editable="true" prefWidth="90.0" />
+	                        <Label text="ms" />
+	                    </HBox>
+	                    <CheckBox fx:id="bmsirJudgeTimingRestoreEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_TIMING_RESTORE_ENABLED" />
+	                    <CheckBox fx:id="bmsirInfoNotificationsEnabled" mnemonicParsing="false" text="%BMSIR_INFO_NOTIFICATIONS_ENABLED" />
+	                    <Separator />
+	                    <CheckBox fx:id="bmsirLongNoteFixed" disable="true" mnemonicParsing="false" selected="true" text="%BMSIR_LONG_NOTE_FIXED" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LONG_NOTE_FIXED_DESCRIPTION" wrapText="true" />
+                </VBox>
+            </ScrollPane>
         </Tab>
         <Tab fx:id="irTab" closable="false" text="IR">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">

@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.ScoreDataProperty;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.Version;
 import bms.player.beatoraja.pattern.LR2RandomPattern;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -26,13 +28,20 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.3.2-dev", Version.getArenaClientVersion());
+        assertEquals("0.4.13", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertTrue(Version.getArenaDisplayName().contains("BMS-IR Arena oraja 0.3.2-dev"));
-        assertTrue(Version.getArenaDisplayName().contains(Version.getLongVersion()));
+        assertEquals("Arena oraja 0.4.13", Version.getArenaDisplayName());
+    }
+
+    @Test
+    void idleArenaConnectionDoesNotBlockOrdinaryOneBass() {
+        assertFalse(BMSIRArenaClient.blocksLocalOneBass(false, false));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, false));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(false, true));
+        assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, true));
     }
 
     @Test
@@ -42,12 +51,28 @@ class BMSIRArenaClientTest {
         assertFalse(config.isBmsirArenaShowCursor());
         assertFalse(config.isBmsirArenaUnrestrictedRating());
         assertTrue(config.isBmsirArenaAllowCpu());
+        assertFalse(config.isBmsirArenaAllowHigherSelection());
         assertFalse(config.isBmsirArenaRandomMirror());
         assertTrue(config.isBmsirArenaStayInRoom());
         assertTrue(config.isBmsirArenaRoomParticipating());
         assertFalse(config.isBmsirArenaSpectatorPublic());
         assertFalse(config.isBmsirArenaForceHostOption());
         assertFalse(config.isBmsirArenaMuteChat());
+        assertFalse(config.isBmsirArenaAlwaysReady());
+        assertEquals(0, config.getBmsirArenaGraphHighlight());
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_OFF,
+                config.getBmsirArenaTargetMode()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK,
+                config.getBmsirArenaGraphOrder()
+        );
+        assertTrue(config.isBmsirArenaPresentationOverlayEnabled());
+        assertTrue(config.isBmsirArenaCountdownSeEnabled());
+        assertTrue(config.isBmsirArenaStartSeEnabled());
+        assertTrue(config.isBmsirArenaPhaseWarningEnabled());
+        assertEquals(100, config.getBmsirArenaNotificationSeVolume());
         assertEquals("all", config.getBmsirArenaNominationPolicy());
         assertEquals("single", config.getBmsirArenaSeriesFormat());
         assertEquals(2, config.getBmsirArenaFirstToWins());
@@ -55,6 +80,17 @@ class BMSIRArenaClientTest {
         assertEquals(10, config.getBmsirArenaOptionSeconds());
         assertEquals(0, config.getBmsirArenaIntermissionSeconds());
         assertEquals("lr2", config.getBmsirRulesetProfile());
+        assertEquals(0, config.getBmsirArenaLastVisibleOverlayMode());
+        assertFalse(config.isBmsirCoverHispeedAutoAdjustEnabled());
+        assertFalse(config.isBmsirJudgeTimingRestoreEnabled());
+        assertTrue(config.isBmsirInfoNotificationsEnabled());
+
+        config.setBmsirCoverChangeStep(2000);
+        assertEquals(1000, config.getBmsirCoverChangeStep());
+        config.setBmsirCoverChangeStep(0);
+        assertEquals(1, config.getBmsirCoverChangeStep());
+        config.setBmsirArenaLastVisibleOverlayMode(2);
+        assertEquals(1, config.getBmsirArenaLastVisibleOverlayMode());
 
         config.setBmsirArenaOverlayMode(99);
         assertEquals(2, config.getBmsirArenaOverlayMode());
@@ -66,6 +102,99 @@ class BMSIRArenaClientTest {
         config.setBmsirArenaFirstToWins(99);
         assertEquals("first_to", config.getBmsirArenaSeriesFormat());
         assertEquals(5, config.getBmsirArenaFirstToWins());
+        config.setBmsirArenaGraphHighlight(99);
+        assertEquals(1, config.getBmsirArenaGraphHighlight());
+        config.setBmsirArenaTargetMode("ABOVE");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_ABOVE,
+                config.getBmsirArenaTargetMode()
+        );
+        config.setBmsirArenaTargetMode("unknown");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_TARGET_OFF,
+                config.getBmsirArenaTargetMode()
+        );
+        config.setBmsirArenaGraphOrder("entry");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY,
+                config.getBmsirArenaGraphOrder()
+        );
+        config.setBmsirArenaGraphOrder("unknown");
+        assertEquals(
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK,
+                config.getBmsirArenaGraphOrder()
+        );
+        config.setBmsirArenaNotificationSeVolume(999);
+        assertEquals(100, config.getBmsirArenaNotificationSeVolume());
+        config.setBmsirArenaNotificationSeVolume(-1);
+        assertEquals(0, config.getBmsirArenaNotificationSeVolume());
+    }
+
+    @Test
+    void arenaTargetSelectionUsesLiveOpponentExscoreOrderAndFallbacks() throws Exception {
+        var match = JSON.readTree("""
+                {
+                  "players": [
+                    {"player_id": 1, "name": "Self", "exscore": 180},
+                    {"player_id": 2, "name": "Lead", "exscore": 200},
+                    {"player_id": 3, "name": "Low", "exscore": 170},
+                    {"player_id": 4, "name": "CPU", "exscore": 190, "test_bot": true}
+                  ]
+                }
+                """);
+
+        assertEquals(
+                2,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_LEADER,
+                        1,
+                        0
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                4,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_ABOVE,
+                        1,
+                        0
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                3,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED,
+                        1,
+                        3
+                ).path("player_id").asInt()
+        );
+        assertEquals(
+                2,
+                BMSIRArenaClient.arenaTargetPlayer(
+                        match,
+                        PlayerConfig.BMSIR_ARENA_TARGET_SPECIFIED,
+                        1,
+                        99
+                ).path("player_id").asInt()
+        );
+    }
+
+    @Test
+    void targetScoreProgressCanBeRecomputedAfterArenaLiveTarget() {
+        ScoreDataProperty property = new ScoreDataProperty();
+        property.setTargetScore(100, 180, 100);
+        property.updateLiveTargetScore(120);
+
+        assertEquals(120, property.getNowRivalScore());
+
+        property.setTargetScore(100, 180, 100);
+        property.refreshTargetScoreProgress(25);
+
+        assertEquals(25, property.getNowBestScore());
+        assertEquals(45, property.getNowRivalScore());
+        assertEquals(180, property.getRivalScore());
     }
 
     @Test
@@ -73,6 +202,7 @@ class BMSIRArenaClientTest {
         PlayerConfig config = new PlayerConfig();
         config.setBmsirArenaUnrestrictedRating(true);
         config.setBmsirArenaAllowCpu(false);
+        config.setBmsirArenaAllowHigherSelection(true);
 
         var message = BMSIRArenaClient.queueEntryMessage(config);
 
@@ -80,9 +210,15 @@ class BMSIRArenaClientTest {
         assertEquals("lr2", message.path("ruleset_profile").asText());
         assertTrue(message.path("unrestricted_rating").asBoolean());
         assertFalse(message.path("allow_cpu").asBoolean());
+        assertTrue(message.path("allow_higher_selection").asBoolean());
         assertTrue(
                 BMSIRArenaClient.queueEntryMessage(null)
                         .path("allow_cpu")
+                        .asBoolean()
+        );
+        assertFalse(
+                BMSIRArenaClient.queueEntryMessage(null)
+                        .path("allow_higher_selection")
                         .asBoolean()
         );
     }
@@ -106,6 +242,16 @@ class BMSIRArenaClientTest {
 
         score.setMinbp(4);
         assertEquals(4, BMSIRArenaClient.arenaMinBp(score));
+    }
+
+    @Test
+    void bpArenaUsesComboBreakJudgesOnly() {
+        ScoreData score = new ScoreData();
+        score.addJudgeCount(3, true, 2);
+        score.addJudgeCount(4, false, 3);
+        score.addJudgeCount(5, true, 7);
+
+        assertEquals(5, BMSIRArenaClient.arenaComboBreak(score));
     }
 
     @Test
@@ -164,7 +310,7 @@ class BMSIRArenaClientTest {
         assertEquals(1, config.getRandom2());
         assertEquals(1, config.getDoubleoption());
         assertEquals(
-                "1P: RANDOM / 2P: MIRROR / FLIP",
+                "1P : RAN\n2P : MIR\nFLIP",
                 BMSIRArenaClient.playOptionLabel(112, Mode.BEAT_14K.id)
         );
 
@@ -274,6 +420,27 @@ class BMSIRArenaClientTest {
                 95,
                 BMSIRArenaClient.finalProcessedNotes(score, true, 100)
         );
+
+        score.setPassnotes(120);
+        assertEquals(
+                100,
+                BMSIRArenaClient.finalProcessedNotes(score, true, 100)
+        );
+    }
+
+    @Test
+    void privateRoomPlayModesKeepFourteenKeyAsTheOnlySelection() {
+        BMSIRArenaClient.setRoomAllowedPlayModes(
+                JSON.createArrayNode().add(7)
+        );
+        BMSIRArenaClient.setRoomPlayModeAllowed(14, true);
+        BMSIRArenaClient.setRoomPlayModeAllowed(7, false);
+
+        assertEquals(1, BMSIRArenaClient.roomAllowedPlayModesView().size());
+        assertEquals(14, BMSIRArenaClient.roomAllowedPlayModesView().get(0).asInt());
+        BMSIRArenaClient.setRoomAllowedPlayModes(
+                JSON.createArrayNode().add(7)
+        );
     }
 
     @Test
@@ -337,6 +504,55 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void delayedNominationFolderRequestExpiresWithItsSelectionPhase() {
+        assertTrue(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                false,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-b",
+                "match-a",
+                15,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                14,
+                15,
+                "official",
+                "official"
+        ));
+        assertFalse(BMSIRArenaClient.nominationSelectionRequestIsCurrent(
+                true,
+                "match-a",
+                "match-a",
+                15,
+                15,
+                "custom",
+                "official"
+        ));
+    }
+
+    @Test
     void fillCountdownRoundsUpAndStopsAtZero() {
         assertEquals(
                 30,
@@ -381,6 +597,49 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void onlyIncompleteBo2ResultsCarryAForcedExitDeadline() throws Exception {
+        var firstRound = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "bo2", "complete": false}
+                }
+                """);
+        var finalRound = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "bo2", "complete": true}
+                }
+                """);
+        var nonBo2 = JSON.readTree("""
+                {
+                  "return_to_select_at": 1015.25,
+                  "series": {"series_format": "first_to", "complete": false}
+                }
+                """);
+
+        assertEquals(
+                1_015_250L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(firstRound)
+        );
+        assertEquals(
+                0L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(finalRound)
+        );
+        assertEquals(
+                0L,
+                BMSIRArenaClient.interRoundResultExitDeadlineMillis(nonBo2)
+        );
+        assertFalse(BMSIRArenaClient.interRoundResultDeadlineReached(
+                1_015_250L,
+                1_015_249L
+        ));
+        assertTrue(BMSIRArenaClient.interRoundResultDeadlineReached(
+                1_015_250L,
+                1_015_250L
+        ));
+    }
+
+    @Test
     void matchScopedMessagesRejectMissingAndDifferentMatchIds() throws Exception {
         assertTrue(BMSIRArenaClient.matchMessageMatches(
                 "match-a",
@@ -395,6 +654,45 @@ class BMSIRArenaClientTest {
                 JSON.readTree("{\"match_id\":\"match-a\"}")
         ));
         assertFalse(BMSIRArenaClient.matchMessageMatches("match-a", null));
+    }
+
+    @Test
+    void duplicateArenaErrorsNotifyOncePerMatchAndMessage() {
+        BMSIRArenaClient.resetArenaErrorNotifications();
+        try {
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertFalse(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-a",
+                    "invalid_live",
+                    "Arena max combo exceeds processed notes"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "match-b",
+                    "invalid_live",
+                    "processed notes exceed chart total"
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "",
+                    "authentication_failed",
+                    "Arena authentication failed."
+            ));
+            assertTrue(BMSIRArenaClient.shouldShowArenaError(
+                    "",
+                    "authentication_failed",
+                    "Arena authentication failed."
+            ));
+        } finally {
+            BMSIRArenaClient.resetArenaErrorNotifications();
+        }
     }
 
     @Test
@@ -467,6 +765,7 @@ class BMSIRArenaClientTest {
     void nominationCandidatesCombineNormalThenOfficialThroughTheCeiling() {
         SongData normalOne = song("a");
         SongData normalTwelve = song("b");
+        SongData normalThirteen = song("e");
         SongData officialOne = song("c");
         SongData officialTwo = song("d");
         TableData normal = new TableData();
@@ -475,7 +774,8 @@ class BMSIRArenaClientTest {
                 folder("☆0", song("z")),
                 folder("☆1", normalOne),
                 folder("☆12", normalTwelve),
-                folder("☆13", song("x"))
+                folder("☆13", normalThirteen),
+                folder("☆14", song("x"))
         });
         TableData official = new TableData();
         official.setName("発狂BMS難易度表");
@@ -488,23 +788,25 @@ class BMSIRArenaClientTest {
         SongData[] candidates =
                 BMSIRArenaClient.nominationCandidateElements(
                         new TableData[]{official, normal},
-                        13
+                        14
                 );
 
-        assertEquals(3, candidates.length);
+        assertEquals(4, candidates.length);
         assertEquals("a", candidates[0].getMd5());
         assertEquals("b", candidates[1].getMd5());
-        assertEquals("c", candidates[2].getMd5());
+        assertEquals("e", candidates[2].getMd5());
+        assertEquals("c", candidates[3].getMd5());
         Map<Integer, SongData[]> levels =
                 BMSIRArenaClient.nominationCandidateElementsByLevel(
                         new TableData[]{official, normal},
-                        14
+                        15
                 );
-        assertEquals(List.of(1, 12, 13, 14), List.copyOf(levels.keySet()));
+        assertEquals(List.of(1, 12, 13, 14, 15), List.copyOf(levels.keySet()));
         assertEquals(1, levels.get(1).length);
         assertEquals(1, levels.get(12).length);
         assertEquals(1, levels.get(13).length);
         assertEquals(1, levels.get(14).length);
+        assertEquals(1, levels.get(15).length);
         Map<Integer, SongData[]> initialLevels =
                 BMSIRArenaClient.nominationCandidateElementsByLevel(
                         new TableData[]{official, normal},
@@ -557,6 +859,41 @@ class BMSIRArenaClientTest {
         );
         assertEquals("/songs/a/chart.bms", ownedOne.getPath());
         assertEquals("/songs/b/chart.bms", ownedTwo.getPath());
+    }
+
+    @Test
+    void cpuChoosesAcrossTheInclusiveSixBandRange() {
+        SongData below = song("below");
+        SongData floor = song("floor");
+        SongData middle = song("middle");
+        SongData ceiling = song("ceiling");
+        SongData above = song("above");
+        Map<Integer, SongData[]> owned = new LinkedHashMap<>();
+        owned.put(4, new SongData[]{below});
+        owned.put(5, new SongData[]{floor});
+        owned.put(7, new SongData[]{middle});
+        owned.put(10, new SongData[]{ceiling});
+        owned.put(11, new SongData[]{above});
+
+        SongData[] candidates = BMSIRArenaClient.ownedCpuChartsInRange(
+                owned,
+                5,
+                10
+        );
+        SongData selected = BMSIRArenaClient.randomOwnedCpuChart(
+                owned,
+                5,
+                10
+        );
+
+        assertArrayEquals(
+                new SongData[]{floor, middle, ceiling},
+                candidates
+        );
+        assertTrue(
+                selected == floor || selected == middle || selected == ceiling,
+                "CPU must choose from every owned chart inside the six-band range"
+        );
     }
 
     private static TableData.TableFolder folder(

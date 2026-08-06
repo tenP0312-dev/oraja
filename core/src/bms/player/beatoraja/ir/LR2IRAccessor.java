@@ -8,24 +8,20 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import javafx.util.Pair;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.net.URL;
-import java.net.URI;
-import java.time.Duration;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.function.ToIntFunction;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Original repo from https://github.com/SayakaIsBaka/lr2ir-read-only
@@ -35,10 +31,23 @@ import java.util.function.ToIntFunction;
  * original form to make things easier
  */
 public class LR2IRAccessor {
-	private static final String IRUrl = "http://dream-pro.info/~lavalse/LR2IR/2";
+	private static final String IRUrl = "https://www.bms-ir.org/LR2IR/2";
+	private static final int CONNECT_TIMEOUT_MS = 5000;
+	private static final int READ_TIMEOUT_MS = 30000;
+	private static final int MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
+	private static final long RANKING_CACHE_MS = 30000L;
+	private static final int RANKING_CACHE_SIZE = 32;
 	private static ScoreDatabaseAccessor scoreDatabaseAccessor;
 
-    private static Map<String, LeaderboardEntry[]> lr2IRRankingCache = new HashMap<>();
+	private static final Map<String, RankingCacheEntry> bmsirRankingCache =
+			new LinkedHashMap<>(RANKING_CACHE_SIZE + 1, 0.75f, true) {
+				@Override
+				protected boolean removeEldestEntry(
+						Map.Entry<String, RankingCacheEntry> eldest
+				) {
+					return size() > RANKING_CACHE_SIZE;
+				}
+			};
 
 	public static void setScoreDatabaseAccessor(ScoreDatabaseAccessor scoreDatabaseAccessor) {
 		LR2IRAccessor.scoreDatabaseAccessor = scoreDatabaseAccessor;
@@ -62,11 +71,16 @@ public class LR2IRAccessor {
 			URL url = new URL(IRUrl + uri);
 			conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("POST");
+			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			conn.setReadTimeout(READ_TIMEOUT_MS);
 			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 			conn.setRequestProperty("Connection", "close");
+			conn.setRequestProperty("Accept-Encoding", "gzip");
 			conn.setDoOutput(true);
+			byte[] requestBody = data.getBytes(StandardCharsets.US_ASCII);
+			conn.setFixedLengthStreamingMode(requestBody.length);
 			try (OutputStream os = conn.getOutputStream()) {
-				os.write(data.getBytes());
+				os.write(requestBody);
 			}
 
 			int responseCode = conn.getResponseCode();
@@ -74,26 +88,95 @@ public class LR2IRAccessor {
 				throw new RuntimeException("HTTP error code: " + responseCode);
 			}
 
-			try (InputStream is = conn.getInputStream();
-				 BufferedReader reader = new BufferedReader(new InputStreamReader(is, Charset.forName("Shift_JIS")))) {
-
-				StringBuilder response = new StringBuilder();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					response.append(line);
-					response.append(System.lineSeparator());
-				}
-
-				return response.toString();
+			try (InputStream response = responseStream(conn)) {
+				return readResponse(response, Charset.forName("windows-31j"));
 			}
 		} catch (Exception e) {
-			ImGuiNotify.error("Failed to send request to LR2IR: " + e.getMessage());
+			ImGuiNotify.error("Failed to send request to BMS-IR: " + e.getMessage());
 			return null;
 		} finally {
 			if (conn != null) {
 				conn.disconnect();
 			}
 		}
+	}
+
+	private static String makeGETRequest(String uri) throws Exception {
+		HttpURLConnection conn = (HttpURLConnection) new URL(IRUrl + uri)
+				.openConnection();
+		try {
+			conn.setRequestMethod("GET");
+			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			conn.setReadTimeout(READ_TIMEOUT_MS);
+			conn.setRequestProperty("Accept-Encoding", "gzip");
+			int responseCode = conn.getResponseCode();
+			if (responseCode != HttpURLConnection.HTTP_OK) {
+				throw new RuntimeException("HTTP error code: " + responseCode);
+			}
+			try (InputStream response = responseStream(conn)) {
+				return readResponse(response, Charset.forName("windows-31j"));
+			}
+		} finally {
+			conn.disconnect();
+		}
+	}
+
+	private static InputStream responseStream(HttpURLConnection conn)
+			throws Exception {
+		InputStream stream = conn.getInputStream();
+		return "gzip".equalsIgnoreCase(conn.getContentEncoding())
+				? new GZIPInputStream(stream)
+				: stream;
+	}
+
+	private static String readResponse(InputStream stream, Charset charset)
+			throws Exception {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		byte[] buffer = new byte[8192];
+		int total = 0;
+		for (int read; (read = stream.read(buffer)) >= 0;) {
+			total += read;
+			if (total > MAX_RESPONSE_BYTES) {
+				throw new IllegalStateException("BMS-IR response is too large");
+			}
+			output.write(buffer, 0, read);
+		}
+		return output.toString(charset);
+	}
+
+	private static LeaderboardEntry[] cachedRanking(String key) {
+		synchronized (bmsirRankingCache) {
+			RankingCacheEntry cached = bmsirRankingCache.get(key);
+			if (cached == null
+					|| System.currentTimeMillis() - cached.loadedAt >= RANKING_CACHE_MS) {
+				return null;
+			}
+			return cached.entries;
+		}
+	}
+
+	private static void cacheRanking(String key, LeaderboardEntry[] entries) {
+		synchronized (bmsirRankingCache) {
+			bmsirRankingCache.put(
+					key,
+					new RankingCacheEntry(System.currentTimeMillis(), entries)
+			);
+		}
+	}
+
+	private static String rankingXml(String response) {
+		if (response == null) {
+			throw new IllegalArgumentException("empty BMS-IR response");
+		}
+		int xmlStart = response.indexOf("<?xml");
+		if (xmlStart < 0) {
+			xmlStart = response.indexOf("<ranking");
+		}
+		if (xmlStart < 0) {
+			throw new IllegalArgumentException("ranking XML is missing");
+		}
+		return response.substring(xmlStart)
+				.replace("<lastupdate></lastupdate>", "");
 	}
 
 	/**
@@ -108,20 +191,28 @@ public class LR2IRAccessor {
 		if (chart.md5 == null || chart.md5.isEmpty()) {
 			return new Pair<>(null, new LeaderboardEntry[0]);
 		}
-		LR2IRSongData lr2IRSongData = new LR2IRSongData(chart.md5, "114328");
+		LR2IRSongData lr2IRSongData = new LR2IRSongData(chart.md5, "0");
 		try {
             String requestURL = lr2IRSongData.toUrlEncodedForm();
-            LeaderboardEntry[] scoreData;
-            if (lr2IRRankingCache.containsKey(requestURL)) {
-                scoreData = lr2IRRankingCache.get(requestURL);
-            }
-            else {
+            LeaderboardEntry[] scoreData = cachedRanking(requestURL);
+            if (scoreData == null) {
                 String res = makePOSTRequest("/getrankingxml.cgi", requestURL);
-                Ranking ranking = (Ranking)convertXMLToObject(res.substring(1).replace("<lastupdate></lastupdate>", ""), Ranking.class);
+				Ranking ranking = (Ranking) convertXMLToObject(
+						rankingXml(res),
+						Ranking.class
+				);
+				if (ranking == null) {
+					throw new IllegalArgumentException("ranking XML could not be parsed");
+				}
                 scoreData = ranking.toBeatorajaScoreData(chart);
-                lr2IRRankingCache.put(requestURL, scoreData);
+				cacheRanking(requestURL, scoreData);
             }
-			ScoreData localScore = scoreDatabaseAccessor.getScoreData(chart.sha256, chart.hasUndefinedLN ? chart.lntype : 0);
+			ScoreData localScore = scoreDatabaseAccessor == null
+					? null
+					: scoreDatabaseAccessor.getScoreData(
+							chart.sha256,
+							chart.hasUndefinedLN ? chart.lntype : 0
+					);
 			if (localScore != null) {
 				// This is intentional behaivor, see IRScoreData's player definition
 				// and how we use this feature in LeaderBoardBar
@@ -130,7 +221,7 @@ public class LR2IRAccessor {
 			return new Pair<>(localScore == null ? null : new IRScoreData(localScore), scoreData);
 		} catch (Exception e) {
 			e.printStackTrace();
-			ImGuiNotify.error("Failed to get score data from LR2IR: " + e.getMessage());
+			ImGuiNotify.error("Failed to get score data from BMS-IR: " + e.getMessage());
 			return new Pair<>(null, new LeaderboardEntry[0]);
 		}
 	}
@@ -138,28 +229,18 @@ public class LR2IRAccessor {
     public static LR2GhostData getGhostData(String MD5, long scoreId) {
         String api = "/getghost.cgi?songmd5=" + MD5 + "&mode=top&targetid=" + scoreId;
         try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                                      .uri(URI.create(IRUrl + api))
-                                      .timeout(Duration.ofSeconds(5))
-                                      .GET()
-                                      .build();
-            HttpResponse<String> response =
-                client.send(request, HttpResponse.BodyHandlers.ofString());
-            int status = response.statusCode();
-            if(status != HttpURLConnection.HTTP_OK){
-                throw new RuntimeException("Unexpected http response code: " + status);
-            }
-
-            String body = response.body();
+			String body = makeGETRequest(api);
             return LR2GhostData.parse(body);
         }
         catch (Exception e) {
             e.printStackTrace();
-            ImGuiNotify.error(String.format("Failed to load ghost data."));
+			ImGuiNotify.error("Failed to load BMS-IR ghost data.");
             return null;
         }
     }
+
+	private record RankingCacheEntry(long loadedAt, LeaderboardEntry[] entries) {
+	}
 
 	public static class LR2IRSongData {
 		public String md5;
@@ -324,4 +405,3 @@ public class LR2IRAccessor {
 		}
 	}
 }
-

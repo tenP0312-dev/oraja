@@ -90,9 +90,17 @@ public class IRConnectionManager {
 
 		try {
 			String customIRDirectory = System.getProperty("customIRDirectory");
-			classes = customIRDirectory == null
-					? fetchIRConnectionFromClassPath()
-					: fetchIRConnectionFromCustomDirectory(customIRDirectory);
+			File localIRDirectory = new File("ir");
+			if (customIRDirectory != null && !customIRDirectory.isBlank()) {
+				classes = fetchIRConnectionFromCustomDirectory(customIRDirectory);
+			} else if (localIRDirectory.isDirectory()) {
+				classes = fetchIRConnectionFromClassPath();
+				classes.addAll(fetchIRConnectionFromCustomDirectory(
+						localIRDirectory.getAbsolutePath()
+				));
+			} else {
+				classes = fetchIRConnectionFromClassPath();
+			}
 		} catch (Exception e) {
 			logger.error("Failed to load ir connections: ", e);
 		}

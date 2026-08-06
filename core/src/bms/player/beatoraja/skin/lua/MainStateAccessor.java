@@ -2,6 +2,7 @@ package bms.player.beatoraja.skin.lua;
 
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.play.BMSPlayer;
+import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinPropertyMapper;
 import bms.player.beatoraja.skin.property.*;
@@ -137,6 +138,120 @@ public class MainStateAccessor {
 				return LuaInteger.ZERO;
 			}
 		});
+		table.set("play_hispeed_margin", new ZeroArgFunction() {
+			@Override
+			public LuaValue call() {
+				BMSPlayer player = currentPlayer();
+				return player == null || player.getLanerender() == null
+						? LuaValue.NIL
+						: LuaDouble.valueOf(player.getLanerender().getHispeedmargin());
+			}
+		});
+		table.set("set_play_hispeed_margin", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue value) {
+				BMSPlayer player = currentPlayer();
+				if (player == null || player.getLanerender() == null || !value.isnumber()) {
+					return LuaBoolean.FALSE;
+				}
+				float margin = value.tofloat();
+				if (!Float.isFinite(margin)) {
+					return LuaBoolean.FALSE;
+				}
+				margin = MathUtils.clamp(
+						margin,
+						bms.player.beatoraja.PlayConfig.HISPEEDMARGIN_MIN,
+						bms.player.beatoraja.PlayConfig.HISPEEDMARGIN_MAX
+				);
+				player.getLanerender().setHispeedmargin(margin);
+				player.getLanerender().getPlayConfig().setHispeedMargin(margin);
+				return LuaBoolean.TRUE;
+			}
+		});
+		table.set("start_here_preview_enabled", new ZeroArgFunction() {
+			@Override
+			public LuaValue call() {
+				BMSPlayer player = currentPlayer();
+				return player == null || player.getLanerender() == null
+						? LuaValue.NIL
+						: LuaBoolean.valueOf(
+								player.getLanerender()
+										.getPlayConfig()
+										.isStartHerePreviewEnabled()
+						);
+			}
+		});
+		table.set("set_start_here_preview_enabled", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue value) {
+				BMSPlayer player = currentPlayer();
+				if (player == null || player.getLanerender() == null || !value.isboolean()) {
+					return LuaBoolean.FALSE;
+				}
+				player.getLanerender()
+						.getPlayConfig()
+						.setStartHerePreviewEnabled(value.toboolean());
+				return LuaBoolean.TRUE;
+			}
+		});
+		table.set("start_here_preview_measures", new ZeroArgFunction() {
+			@Override
+			public LuaValue call() {
+				BMSPlayer player = currentPlayer();
+				return player == null || player.getLanerender() == null
+						? LuaValue.NIL
+						: LuaInteger.valueOf(
+								player.getLanerender()
+										.getPlayConfig()
+										.getStartHerePreviewMeasures()
+						);
+			}
+		});
+		table.set("set_start_here_preview_measures", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue value) {
+				BMSPlayer player = currentPlayer();
+				if (player == null || player.getLanerender() == null || !value.isnumber()) {
+					return LuaBoolean.FALSE;
+				}
+				int measures = MathUtils.clamp(
+						value.toint(),
+						bms.player.beatoraja.PlayConfig.START_HERE_PREVIEW_MEASURES_MIN,
+						bms.player.beatoraja.PlayConfig.START_HERE_PREVIEW_MEASURES_MAX
+				);
+				player.getLanerender()
+						.getPlayConfig()
+						.setStartHerePreviewMeasures(measures);
+				player.getLanerender().rebuildStartHerePreview();
+				return LuaBoolean.TRUE;
+			}
+		});
+		table.set("bmsir_judge_timing_restore_enabled", new ZeroArgFunction() {
+			@Override
+			public LuaValue call() {
+				return LuaBoolean.valueOf(
+						state.resource.getPlayerConfig()
+								.isBmsirJudgeTimingRestoreEnabled()
+				);
+			}
+		});
+		table.set("set_bmsir_judge_timing_restore_enabled", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue value) {
+				if (!(state instanceof MusicSelector) || !value.isboolean()) {
+					return LuaBoolean.FALSE;
+				}
+				state.resource.getPlayerConfig().setBmsirJudgeTimingRestoreEnabled(
+						value.toboolean()
+				);
+				state.main.saveConfig();
+				return LuaBoolean.TRUE;
+			}
+		});
+		table.set("play_key_fast", recentJudgeDirection(false, true));
+		table.set("play_key_slow", recentJudgeDirection(false, false));
+		table.set("play_scratch_fast", recentJudgeDirection(true, true));
+		table.set("play_scratch_slow", recentJudgeDirection(true, false));
 		table.set("audio_play", new TwoArgFunction() {
 			@Override
 			public LuaValue call(LuaValue path, LuaValue volume) {
@@ -162,6 +277,41 @@ public class MainStateAccessor {
 				return LuaBoolean.TRUE;
 			}
 		});
+	}
+
+	private BMSPlayer currentPlayer() {
+		return state instanceof BMSPlayer ? (BMSPlayer) state : null;
+	}
+
+	private VarArgFunction recentJudgeDirection(boolean scratch, boolean fast) {
+		return new VarArgFunction() {
+			@Override
+			public Varargs invoke(Varargs args) {
+				BMSPlayer player = currentPlayer();
+				if (
+						player == null
+								|| player.getJudgeManager() == null
+								|| !args.arg1().isnumber()
+				) {
+					return LuaBoolean.FALSE;
+				}
+				int side = args.arg1().toint();
+				int duration = args.narg() >= 2 && args.arg(2).isnumber()
+						? args.arg(2).toint()
+						: 500;
+				boolean recent;
+				if (scratch) {
+					recent = fast
+							? player.getJudgeManager().isRecentScratchFast(side, duration)
+							: player.getJudgeManager().isRecentScratchSlow(side, duration);
+				} else {
+					recent = fast
+							? player.getJudgeManager().isRecentKeyFast(side, duration)
+							: player.getJudgeManager().isRecentKeySlow(side, duration);
+				}
+				return LuaBoolean.valueOf(recent);
+			}
+		};
 	}
 
 	/**

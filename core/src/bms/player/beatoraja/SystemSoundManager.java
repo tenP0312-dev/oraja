@@ -111,18 +111,33 @@ public class SystemSoundManager {
 	}
 	
 	public String getSound(SoundType sound) {
-		return soundmap.get(sound);
+		String path = soundmap.get(sound);
+		if (path == null && sound.fallback != null) {
+			path = soundmap.get(sound.fallback);
+		}
+		return path;
 	}
 
 	public void play(SoundType sound, boolean loop) {
-		final String path = soundmap.get(sound);
+		play(sound, loop, 1.0f);
+	}
+
+	public void play(SoundType sound, boolean loop, float volumeScale) {
+		final String path = getSound(sound);
 		if (path != null) {
-			main.getAudioProcessor().play(path, main.getConfig().getAudioConfig().getSystemvolume(), loop);
+			float scale = Float.isFinite(volumeScale)
+					? Math.max(0.0f, Math.min(1.0f, volumeScale))
+					: 1.0f;
+			main.getAudioProcessor().play(
+					path,
+					main.getConfig().getAudioConfig().getSystemvolume() * scale,
+					loop
+			);
 		}
 	}
 
 	public void stop(SoundType sound) {
-		final String path = soundmap.get(sound);
+		final String path = getSound(sound);
 		if (path != null) {
 			main.getAudioProcessor().stop(path);
 		}
@@ -150,14 +165,26 @@ public class SystemSoundManager {
 		GUIDESE_PR("guide-pr.wav",false),
 		GUIDESE_MS("guide-ms.wav",false),
 		SELECT("select.wav",true), 
-		DECIDE("decide.wav",true);
+		DECIDE("decide.wav",true),
+		ARENA_MATCH_FOUND("arena-match-found.wav", false, DECIDE),
+		ARENA_PHASE_WARNING("arena-phase-warning.wav", false, OPTION_CHANGE),
+		ARENA_READY("arena-ready.wav", false, PLAY_READY),
+		ARENA_COUNTDOWN("arena-countdown.wav", false, OPTION_CHANGE),
+		ARENA_START("arena-start.wav", false, PLAY_READY),
+		ARENA_CANCELLED("arena-cancelled.wav", false, PLAY_STOP);
 		
 		public final boolean isBGM;
 		public final String path; 
+		public final SoundType fallback;
 		
 		private SoundType(String path, boolean isBGM) {
+			this(path, isBGM, null);
+		}
+
+		private SoundType(String path, boolean isBGM, SoundType fallback) {
 			this.path = path;
 			this.isBGM = isBGM;
+			this.fallback = fallback;
 		}
 	}	
 }

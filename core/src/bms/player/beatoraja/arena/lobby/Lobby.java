@@ -61,9 +61,9 @@ public class Lobby {
         ImGui.beginGroup();
         ImGui.beginChild("Main view", mainWindowWidth, mainWindowHeight);
         if (ImGui.button(FontAwesomeIcons.Link)) {
-            ImGui.setClipboardText("http://www.dream-pro.info/~lavalse/LR2IR/search.cgi?mode=ranking&bmsmd5=" + Client.state.getSelectedSongRemote().getMd5());
-            ImGuiNotify.info("Copied LR2IR link to clipboard!");
-            // TODO: gui::widgets::Tooltip("Copy LR2IR link to clipboard");
+            ImGui.setClipboardText("https://www.bms-ir.org/new/song?songmd5=" + Client.state.getSelectedSongRemote().getMd5());
+            ImGuiNotify.info("Copied BMS-IR link to clipboard!");
+            // TODO: gui::widgets::Tooltip("Copy BMS-IR link to clipboard");
         }
 
         float buttonWidth = ImGui.calcTextSize(FontAwesomeIcons.Link).x + ImGui.getStyle().getFramePaddingX() * 2;

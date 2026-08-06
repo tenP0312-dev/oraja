@@ -1,3 +1,127 @@
+# Arena oraja 0.4.13
+
+## Leaderboard, overlay, and play-setting refinements
+
+- Unified the two song leaderboard entries as `BMS-IR Leaderboard`. Rankings
+  and selectable ghost data now come directly from the BMS-IR HTTPS endpoint,
+  with gzip, bounded responses, longer reads, and a short ranking cache.
+- Restored a persistent Arena overlay checkbox to the F5 mod menu. Turning it
+  back on restores the last normal or compact display mode.
+- Expanded the START+6/7 cover step range to 1--1000 and added an independent,
+  default-OFF switch for recalculating HI-SPEED when a cover changes.
+- Added a default-OFF option that restores the pre-play judge timing after a
+  chart when automatic timing adjustment was enabled at play start. Lua skins
+  can read/write it or trigger the registered toggle event.
+- Added one switch for all transient INFO toasts. Warning and error notices
+  remain visible.
+- Removed duplicate startup login for the same IR/account and shortened the
+  displayed client identity to `Arena oraja 0.4.13`.
+
+# BMS-IR Arena oraja 0.4.12
+
+## Startup progress and configurable play controls
+
+- Replaced the post-FFmpeg black startup wait with an in-window progress log
+  covering the song database, IR login, rivals, audio, input, difficulty
+  tables, skins, and Arena connection.
+- Added three START+6/7 modes: existing oraja high-speed controls, LR2-style
+  SUD+ adjustment, and extended SUD+/HIDDEN/LIFT adjustment. Cover step size is
+  configurable, and each press changes it once without hold-repeat.
+- Added configurable actions for every physical NUMPAD 0--9 key. Music Select
+  and global shortcuts can be assigned independently, and the judge-timing
+  adjustment step is configurable.
+
+# BMS-IR Arena oraja 0.4.11
+
+## Arena target, graph, and four-player rated matches
+
+- Arena can now write the selected opponent's live EX SCORE directly into the
+  normal skin TARGET SCORE and target name. The setting is shared between the
+  startup BMS-IR settings and the Arena overlay.
+- Added fixed entry-order score graphs. In fixed mode, both graph columns and
+  player colors stay tied to the player instead of moving with the live rank.
+- Rated Arena now always resolves as a four-player BO2. Missing seats are
+  filled with EASY, NORMAL, and HARD server CPUs; private-room limits are
+  unchanged.
+- CPU final EX SCORE is fixed before the chart from EASY A--AA, NORMAL
+  A--AAA, and HARD A--the chart's BMS-IR all-time best, then only revealed
+  progressively during play.
+- Hidden seasonal CPU ratings now participate in the same four-player Elo
+  settlement as humans. BO2 rank is decided only by the two-song point total.
+- CPU rows are no longer shown as waiting users on the Arena status surfaces.
+
+# BMS-IR Arena oraja 0.4.10
+
+## End-of-chart live error handling
+
+- Repeated copies of the same Arena error are shown only once per match while
+  every received error remains in the diagnostic log.
+- This complements the server's bounded live-only chart-total correction;
+  final result validation remains strict.
+
+# BMS-IR Arena oraja 0.4.9
+
+## Live series reliability hotfix
+
+- Rated BO2 keeps its original participants in both rounds. A later waiter can
+  no longer enter round 2, and leaving after series creation is settled as a
+  rated walkover/forfeit instead of invalidating the whole series.
+- Live SP/DP score updates now run at 4 Hz and are capped to the server chart
+  total. Clear and FAILED results stay on the result screen until Arena accepts
+  the final packet.
+- Fixed 14KEY-only private rooms, room/password/chat keyboard leakage, plain-F5
+  recovery, the hidden 30-second fill countdown, persistent mouse cursor, and
+  the immovable MATCH FOUND/status window. DP options use compact three-line
+  labels.
+- Java-bundled launchers now load the packaged `ir` plugin directory explicitly;
+  the body also auto-discovers a local `ir` directory.
+
+# BMS-IR Arena oraja 0.4.8
+
+## Points-only BO2 and overlay hotkeys
+
+- Rated BO2 placement and rating now use only the two-round point total.
+  Equal points share placement and have no direct rating change; EX SCORE and
+  EX rate remain visible only as reference values.
+- Backspace and Delete can now be assigned as standalone Arena overlay
+  shortcuts or used in exact multi-key chords. Use the explicit `解除` button
+  to clear a shortcut.
+
+# BMS-IR Arena oraja 0.4.7
+
+## Continuous CPU waiting matches
+
+- CPU BO2 repeats after a five-second interval while one CPU-enabled player
+  remains in the rated queue. A waiting human opponent takes priority.
+- CPU charts are selected from all owned charts between the player's rated
+  ceiling and five bands below it, inclusive.
+- CPU final EX SCORE now ranges from A through MAX.
+
+# BMS-IR Arena oraja 0.4.6
+
+## BMS-IR Dan local sync
+
+- Added `BMS-IR段位をローカル同期する` to the startup `BMS-IR固有設定` tab.
+- Successful BMS-IR Primary IR table reads save only class/Dan courses to a
+  backup-safe per-player cache. Score Attack and ordinary course tables are not
+  imported.
+- The last good Dan cache remains available under the local `COURSE` root when
+  offline or when a later table request fails. Personal files in `course/` are
+  never replaced.
+
+# BMS-IR Arena oraja 0.4.5-dev
+
+## BMS-IR-specific startup settings
+
+- Added a `BMS-IR固有設定` launcher tab.
+- One-bass input and the first-timing note preview can be enabled or disabled
+  independently and are preserved in the backup-safe BMS-IR sidecar.
+- The first-timing preview now appears during chart loading as soon as the
+  resolved chart and active skin notes can be rendered, then remains through
+  READY and disappears when play starts.
+- The mandatory BMS-IR LONG NOTE compatibility rule is shown read-only with an
+  explanation that CN/HCN scores are not accepted.
+
 # Endless Dream 0.3.1
 ## New features
 - #### Context Menu

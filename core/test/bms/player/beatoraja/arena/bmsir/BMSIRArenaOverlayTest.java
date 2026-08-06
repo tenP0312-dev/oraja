@@ -1,6 +1,8 @@
 package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
+import bms.player.beatoraja.PlayerConfig;
+import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
@@ -99,12 +101,59 @@ class BMSIRArenaOverlayTest {
         assertEquals(200, BMSIRArenaOverlay.battleMaximum("exscore", player, 100));
         assertEquals(100, BMSIRArenaOverlay.battleMaximum("minbp", player, 100));
         assertEquals(0.95, BMSIRArenaOverlay.battleRate(95, 100));
-        assertEquals("BP 5", BMSIRArenaOverlay.ruleMetricLabel("minbp", player));
+        assertEquals("CB 5", BMSIRArenaOverlay.ruleMetricLabel("minbp", player));
         assertEquals(
                 "COMBO 80",
                 BMSIRArenaOverlay.ruleMetricLabel("max_combo", player)
         );
-        assertEquals("LOWEST BP WINS", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals(
+                "LOWEST COMBO BREAK WINS",
+                BMSIRArenaOverlay.ruleBattleTitle("minbp")
+        );
+    }
+
+    @Test
+    void scoreGraphCanKeepEntryOrderAndColorStableByPlayerId() throws Exception {
+        JsonNode match = JSON.readTree("""
+                {
+                  "players": [
+                    {"player_id": 1, "entry_order": 0, "exscore": 100},
+                    {"player_id": 2, "entry_order": 1, "exscore": 300},
+                    {"player_id": 3, "entry_order": 2, "exscore": 200}
+                  ],
+                  "rules": {"score_rule": "exscore"}
+                }
+                """);
+
+        assertEquals(
+                java.util.List.of(2, 3, 1),
+                BMSIRArenaOverlay.scoreGraphPlayers(
+                                match,
+                                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_RANK
+                        )
+                        .stream()
+                        .map(player -> player.path("player_id").asInt())
+                        .toList()
+        );
+        var entryPlayers = BMSIRArenaOverlay.scoreGraphPlayers(
+                match,
+                PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+        );
+        assertEquals(
+                java.util.List.of(1, 2, 3),
+                entryPlayers.stream()
+                        .map(player -> player.path("player_id").asInt())
+                        .toList()
+        );
+        assertEquals(
+                1,
+                BMSIRArenaOverlay.scoreGraphColorIndex(
+                        match,
+                        entryPlayers.get(1),
+                        0,
+                        PlayerConfig.BMSIR_ARENA_GRAPH_ORDER_ENTRY
+                )
+        );
     }
 
     @Test
@@ -113,6 +162,22 @@ class BMSIRArenaOverlayTest {
         assertEquals(1, BMSIRArenaOverlay.restoredVisibleMode(1));
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(2));
         assertEquals(0, BMSIRArenaOverlay.restoredVisibleMode(-1));
+    }
+
+    @Test
+    void configurableOverlayHotkeyHasAReadableLabel() {
+        assertEquals(
+                "Ctrl+Shift+F5",
+                BMSIRArenaHotkey.label(
+                        new int[]{Keys.CONTROL_LEFT, Keys.SHIFT_RIGHT, Keys.F5}
+                )
+        );
+        assertEquals(
+                "Z+X",
+                BMSIRArenaHotkey.label(new int[]{Keys.Z, Keys.X})
+        );
+        assertEquals("Space", BMSIRArenaHotkey.label(new int[]{Keys.SPACE}));
+        assertEquals("未設定", BMSIRArenaHotkey.label(new int[0]));
     }
 
     @Test
@@ -137,15 +202,40 @@ class BMSIRArenaOverlayTest {
         assertEquals("残り 00秒", BMSIRArenaOverlay.phaseCountdownText(-1));
         assertEquals(
                 ImColor.rgb(106, 169, 255),
-                BMSIRArenaOverlay.phaseCountdownColor(6)
+                BMSIRArenaOverlay.phaseCountdownColor(11)
         );
         assertEquals(
                 ImColor.rgb(255, 211, 106),
-                BMSIRArenaOverlay.phaseCountdownColor(5)
+                BMSIRArenaOverlay.phaseCountdownColor(10)
+        );
+        assertEquals(
+                ImColor.rgb(255, 211, 106),
+                BMSIRArenaOverlay.phaseCountdownColor(6)
         );
         assertEquals(
                 ImColor.rgb(255, 115, 115),
-                BMSIRArenaOverlay.phaseCountdownColor(3)
+                BMSIRArenaOverlay.phaseCountdownColor(5)
         );
+    }
+
+    @Test
+    void completedRatedResultUsesOneLargeReadableDeltaLine() {
+        assertEquals(
+                "レート 1000 → 1001 (+1.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 1001, 1)
+        );
+        assertEquals(
+                "レート 1000 → 999 (-1.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 999, -1)
+        );
+        assertEquals(
+                "レート 1000 → 1000 (+0.0)",
+                BMSIRArenaOverlay.ratingChangeText(1000, 1000, 0)
+        );
+    }
+
+    @Test
+    void ratedBo2HasAnUnambiguousSeriesLabel() {
+        assertEquals("BO2（2曲総合）", BMSIRArenaOverlay.seriesFormatLabel("bo2", 2));
     }
 }

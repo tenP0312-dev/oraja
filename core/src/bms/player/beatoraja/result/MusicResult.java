@@ -21,6 +21,7 @@ import bms.player.beatoraja.MainController.IRStatus;
 import bms.player.beatoraja.MainController.IRSendStatus;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.skin.SkinType;
@@ -41,6 +42,7 @@ public class MusicResult extends AbstractResult {
 	}
 
 	public void create() {
+		BMSIROrajaHelperBridge.publishScene("result");
 		for(int i = 0;i < REPLAY_SIZE;i++) {
 			saveReplay[i] = main.getPlayDataAccessor().existsReplayData(resource.getBMSModel(),
 					resource.getPlayerConfig().getLnmode(), i) ? ReplayStatus.EXIST : ReplayStatus.NOT_EXIST ;			
@@ -171,6 +173,15 @@ public class MusicResult extends AbstractResult {
 		stop(RESULT_CLOSE);
 	}
 
+	private void startResultFadeout() {
+		timer.switchTimer(TIMER_FADEOUT, true);
+		if (getSound(RESULT_CLOSE) != null) {
+			stop(RESULT_CLEAR);
+			stop(RESULT_FAIL);
+			play(RESULT_CLOSE);
+		}
+	}
+
 	public void render() {
 		long time = timer.getNowTime();
 		timer.switchTimer(TIMER_RESULTGRAPH_BEGIN, true);
@@ -181,6 +192,10 @@ public class MusicResult extends AbstractResult {
 		}
 		if (time > getSkin().getInput()) {
 			timer.switchTimer(TIMER_STARTINPUT, true);
+		}
+		if (!timer.isTimerOn(TIMER_FADEOUT)
+				&& BMSIRArenaClient.consumeInterRoundResultExitDeadline()) {
+			startResultFadeout();
 		}
 
 		if (timer.isTimerOn(TIMER_FADEOUT)) {
@@ -261,13 +276,10 @@ public class MusicResult extends AbstractResult {
 				}
 			}
 		} else {
-			if (time > getSkin().getScene() && !BMSIRArenaClient.isAwaitingNormalResult()) {
-				timer.switchTimer(TIMER_FADEOUT, true);
-				if (getSound(RESULT_CLOSE) != null) {
-					stop(RESULT_CLEAR);
-					stop(RESULT_FAIL);
-					play(RESULT_CLOSE);
-				}
+			if (time > getSkin().getScene()
+					&& !BMSIRArenaClient.isAwaitingNormalResult()
+					&& !BMSIRArenaClient.isAwaitingArenaResult()) {
+				startResultFadeout();
 			}
 		}
 
@@ -302,14 +314,10 @@ public class MusicResult extends AbstractResult {
 							&& !timer.isTimerOn(TIMER_RESULT_UPDATESCORE)) {
 						timer.switchTimer(TIMER_RESULT_UPDATESCORE, true);
 					} else if (!BMSIRArenaClient.isAwaitingNormalResult()
+							&& !BMSIRArenaClient.isAwaitingArenaResult()
 							&& (state == STATE_OFFLINE || state == STATE_IR_FINISHED
 							|| time - timer.getTimer(TIMER_IR_CONNECT_BEGIN) >= 1000)) {
-						timer.switchTimer(TIMER_FADEOUT, true);
-						if (getSound(RESULT_CLOSE) != null) {
-							stop(RESULT_CLEAR);
-							stop(RESULT_FAIL);
-							play(RESULT_CLOSE);
-						}
+						startResultFadeout();
 					}
 				}
 

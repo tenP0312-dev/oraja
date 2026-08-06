@@ -7,17 +7,22 @@ import java.nio.file.*;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.modmenu.ImGuiNotify;
+import bms.player.beatoraja.modmenu.SongManagerMenu;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.*;
 
 import bms.model.Mode;
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.Config.SongPreview;
 import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
@@ -139,6 +144,26 @@ public final class MusicSelector extends MainState {
 			main.updateSong(null);
 		}
 	}
+
+	public void initializeLocalTables() {
+		manager.initLocalTables();
+	}
+
+	public void initializeIrTables() {
+		manager.initIrTables();
+	}
+
+	public void initializeCourses() {
+		manager.initCourses();
+	}
+
+	public void initializeFavoritesAndCommands() {
+		manager.initFavoritesAndCommands();
+	}
+
+	public void initializeAllBars() {
+		manager.init();
+	}
 	
 	public void setRival(PlayerInformation rival) {
 		final RivalDataAccessor rivals = main.getRivalDataAccessor();
@@ -162,6 +187,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void create() {
+		BMSIROrajaHelperBridge.publishScene("select");
 		main.getSoundManager().shuffle();
 
 		play = null;
@@ -633,6 +659,77 @@ public final class MusicSelector extends MainState {
 
 	public Bar getSelectedBar() {
 		return manager.getSelected();
+	}
+
+	public void executeNumpadAction(BMSIRNumpadAction action) {
+		Bar current = manager.getSelected();
+		switch (action) {
+		case BMS_SEARCH:
+			Gdx.input.getTextInput(new Input.TextInputListener() {
+				@Override
+				public void input(String text) {
+					if (text.length() > 1) {
+						manager.addSearch(new SearchWordBar(MusicSelector.this, text));
+						manager.updateBar(null);
+					}
+				}
+
+				@Override
+				public void canceled() {
+				}
+			}, "Search", "", "Search bms title");
+			break;
+		case MODE_FILTER:
+			executeEvent(EventType.mode);
+			break;
+		case SORT:
+			SongManagerMenu.forceDisableLastPlayedSort();
+			executeEvent(EventType.sort);
+			break;
+		case REPLAY:
+			execute(MusicSelectCommand.NEXT_REPLAY);
+			break;
+		case RIVAL:
+			executeEvent(EventType.rival);
+			break;
+		case SAME_FOLDER:
+			execute(MusicSelectCommand.SHOW_SONGS_ON_SAME_FOLDER);
+			break;
+		case OPEN_DOCUMENT:
+			executeEvent(EventType.open_document);
+			break;
+		case OPEN_IR:
+			executeEvent(EventType.open_ir);
+			break;
+		case FAVORITE_SONG:
+			executeEvent(EventType.favorite_song);
+			break;
+		case FAVORITE_CHART:
+			executeEvent(EventType.favorite_chart);
+			break;
+		case UPDATE_FOLDER:
+			executeEvent(EventType.update_folder);
+			break;
+		case OPEN_FOLDER:
+			executeEvent(EventType.open_with_explorer);
+			break;
+		case PRACTICE:
+			if (current instanceof SelectableBar) {
+				selectSong(config.isEventMode()
+						? BMSPlayerMode.PLAY
+						: BMSPlayerMode.PRACTICE);
+			}
+			break;
+		case AUTOPLAY:
+			if (current instanceof SelectableBar) {
+				selectSong(config.isEventMode()
+						? BMSPlayerMode.PLAY
+						: BMSPlayerMode.AUTOPLAY);
+			}
+			break;
+		default:
+			break;
+		}
 	}
 
 	public BarRenderer getBarRender() {
