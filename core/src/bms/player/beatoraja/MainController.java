@@ -72,6 +72,7 @@ public class MainController {
 	private final long boottime = System.currentTimeMillis();
 	private final Calendar cl = Calendar.getInstance();
 	private long mouseMovedTime;
+	private Config.DisplayMode lastWindowedDisplayMode;
 
 	private MusicDecide decide;
 	private MusicSelector selector;
@@ -172,6 +173,7 @@ public class MainController {
             }
         }
 		this.player = player;
+		this.lastWindowedDisplayMode = rememberedWindowedMode(config.getDisplaymode());
 		BMSPlayerRule.setConfiguredRuleProfile(player.getBmsirRulesetProfile());
 		ImGuiNotify.setInfoEnabled(player.isBmsirInfoNotificationsEnabled());
 
@@ -627,11 +629,6 @@ public class MainController {
 				player.setNotesDisplayTimingAutoAdjust(
 						!player.isNotesDisplayTimingAutoAdjust()
 				);
-				ImGuiNotify.info(
-						"JUDGE TIMING AUTO: "
-								+ (player.isNotesDisplayTimingAutoAdjust() ? "ON" : "OFF"),
-						2000
-				);
 			}
 			break;
 		case JUDGE_PLUS:
@@ -696,38 +693,69 @@ public class MainController {
 				PlayerConfig.JUDGETIMING_MIN,
 				Math.min(PlayerConfig.JUDGETIMING_MAX, player.getJudgetiming() + delta)
 		));
-		ImGuiNotify.info("JUDGE TIMING: " + player.getJudgetiming() + " ms", 2000);
 	}
 
 	private void toggleScreenMode() {
 		boolean fullscreen = Gdx.graphics.isFullscreen();
 		if (fullscreen) {
 			Lwjgl3Graphics graphics = (Lwjgl3Graphics) Gdx.graphics;
-			Gdx.graphics.setUndecorated(false);
+			Config.DisplayMode returnMode = rememberedWindowedMode(lastWindowedDisplayMode);
+			Gdx.graphics.setUndecorated(returnMode == Config.DisplayMode.BORDERLESS);
 			Gdx.graphics.setWindowedMode(config.getWindowWidth(), config.getWindowHeight());
 
-			Graphics.DisplayMode maxResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
+			Graphics.Monitor monitor = configuredMonitor();
+			Graphics.DisplayMode maxResOrCurrent = Arrays.stream(
+					monitor == null ? Gdx.graphics.getDisplayModes() : Gdx.graphics.getDisplayModes(monitor)
+			)
 					.max(Comparator.comparingInt((Graphics.DisplayMode mode) -> mode.width)
 							.thenComparingInt(mode -> mode.height)
 							.thenComparingInt(mode -> mode.refreshRate))
-					.orElse(Gdx.graphics.getDisplayMode());
-			int windowX = (maxResOrCurrent.width / 2) - (config.getWindowWidth() / 2);
-			int windowY = (maxResOrCurrent.height / 2) - (config.getWindowHeight() / 2);
-			if (windowY == 0) {
+					.orElse(monitor == null ? Gdx.graphics.getDisplayMode() : Gdx.graphics.getDisplayMode(monitor));
+			int originX = monitor == null ? 0 : monitor.virtualX;
+			int originY = monitor == null ? 0 : monitor.virtualY;
+			int windowX = returnMode == Config.DisplayMode.BORDERLESS
+					? originX
+					: originX + (maxResOrCurrent.width / 2) - (config.getWindowWidth() / 2);
+			int windowY = returnMode == Config.DisplayMode.BORDERLESS
+					? originY
+					: originY + (maxResOrCurrent.height / 2) - (config.getWindowHeight() / 2);
+			if (returnMode == Config.DisplayMode.WINDOW && windowY == originY) {
 				windowY += 32;
 			}
 			graphics.getWindow().setPosition(windowX, windowY);
+			config.setDisplaymode(returnMode);
 		} else {
+			lastWindowedDisplayMode = rememberedWindowedMode(config.getDisplaymode());
 			Graphics.DisplayMode windowResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
 					.filter(mode -> mode.width == config.getWindowWidth()
 							&& mode.height == config.getWindowHeight())
 					.max(Comparator.comparingInt(mode -> mode.refreshRate))
 					.orElse(Gdx.graphics.getDisplayMode());
 			Gdx.graphics.setFullscreenMode(windowResOrCurrent);
+			config.setDisplaymode(Config.DisplayMode.FULLSCREEN);
 		}
-		config.setDisplaymode(fullscreen
-				? Config.DisplayMode.WINDOW
-				: Config.DisplayMode.FULLSCREEN);
+	}
+
+	static Config.DisplayMode rememberedWindowedMode(Config.DisplayMode mode) {
+		return mode == Config.DisplayMode.BORDERLESS
+				? Config.DisplayMode.BORDERLESS
+				: Config.DisplayMode.WINDOW;
+	}
+
+	private Graphics.Monitor configuredMonitor() {
+		String configured = config.getMonitorName();
+		if (configured == null || configured.isBlank()) {
+			return null;
+		}
+		return Arrays.stream(Gdx.graphics.getMonitors())
+				.filter(monitor -> String.format(
+						"%s [%s, %s]",
+						monitor.name,
+						monitor.virtualX,
+						monitor.virtualY
+				).equals(configured))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private void saveScreenshot() {

@@ -389,13 +389,21 @@ public final class BMSIRManiacApiClient {
     }
 
     private static URI endpoint(MainController main, String path) {
-        URI arena = URI.create(main.getPlayerConfig().getBmsirArenaServer());
-        String scheme = switch (arena.getScheme().toLowerCase(Locale.ROOT)) {
-            case "ws" -> "http";
-            case "wss" -> "https";
-            default -> arena.getScheme();
-        };
-        return URI.create(scheme + "://" + arena.getAuthority() + path);
+        return endpoint(main.getPlayerConfig().getBmsirArenaServer(), path);
+    }
+
+    static URI endpoint(String arenaServer, String path) {
+        URI arena = URI.create(arenaServer);
+        String scheme = arena.getScheme() == null
+                ? ""
+                : arena.getScheme().toLowerCase(Locale.ROOT);
+        if (!List.of("ws", "wss", "http", "https").contains(scheme)
+                || arena.getAuthority() == null
+                || arena.getAuthority().isBlank()
+                || arena.getUserInfo() != null) {
+            throw new IllegalArgumentException("invalid BMS-IR Arena server URL");
+        }
+        return URI.create("https://" + arena.getAuthority() + path);
     }
 
     private static Auth auth(MainController main) {

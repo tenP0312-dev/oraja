@@ -107,4 +107,12 @@ class LaneRendererStartHerePreviewTest {
                 false, 0f, false, 0f
         ));
     }
+
+	@Test
+	void computesGreenNumberBeforeStaticPreviewReturns() {
+		assertEquals(800, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, 0.0f));
+		assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, 0.5f));
+		assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 2.0, 2.0f, 0.0f));
+		assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, 0.0f));
+	}
 }

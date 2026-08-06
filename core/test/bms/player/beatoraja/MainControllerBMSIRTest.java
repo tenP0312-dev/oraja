@@ -3,6 +3,7 @@ package bms.player.beatoraja;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MainControllerBMSIRTest {
 
@@ -19,6 +20,22 @@ class MainControllerBMSIRTest {
                 )
         );
     }
+
+	@Test
+	void fullscreenReturnsToThePreviousWindowedMode() {
+		assertEquals(
+				Config.DisplayMode.WINDOW,
+				MainController.rememberedWindowedMode(Config.DisplayMode.WINDOW)
+		);
+		assertEquals(
+				Config.DisplayMode.BORDERLESS,
+				MainController.rememberedWindowedMode(Config.DisplayMode.BORDERLESS)
+		);
+		assertEquals(
+				Config.DisplayMode.WINDOW,
+				MainController.rememberedWindowedMode(Config.DisplayMode.FULLSCREEN)
+		);
+	}
 
     private static IRConfig ir(String name, String userId) {
         IRConfig config = new IRConfig();

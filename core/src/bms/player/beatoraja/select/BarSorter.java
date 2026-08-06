@@ -112,13 +112,35 @@ public enum BarSorter {
 			return -1;
 		}
 
-		//levelが同じ場合はDifficultyでソート
+		// Keep equal levels predictable across folders and refreshes.
 		final int levelSort = ((SongBar) o1).getSongData().getLevel() - ((SongBar) o2).getSongData().getLevel();
 		if(levelSort == 0){
-			return ((SongBar)o1).getSongData().getDifficulty() - ((SongBar)o2).getSongData().getDifficulty();
+			return TITLE.sorter.compare(o1, o2);
 		}else{
 			return levelSort;
 		}
+	}),
+	/**
+	 * 判定難易度ソート
+	 */
+	JUDGE((o1, o2) -> {
+		if (!(o1 instanceof SongBar) || !(o2 instanceof SongBar)) {
+			return TITLE.sorter.compare(o1, o2);
+		}
+		if (!((SongBar)o1).existsSong() && !((SongBar)o2).existsSong()) {
+			return 0;
+		}
+		if (!((SongBar)o1).existsSong()) {
+			return 1;
+		}
+		if (!((SongBar)o2).existsSong()) {
+			return -1;
+		}
+		int judgeSort = Integer.compare(
+				((SongBar)o1).getSongData().getJudge(),
+				((SongBar)o2).getSongData().getJudge()
+		);
+		return judgeSort == 0 ? TITLE.sorter.compare(o1, o2) : judgeSort;
 	}),
 	/**
 	 * クリアランプソート
@@ -257,7 +279,7 @@ public enum BarSorter {
 	}),
 	;
 	
-	public static final BarSorter[] defaultSorter = {TITLE, ARTIST, BPM, LENGTH, LEVEL, CLEAR, SCORE, MISSCOUNT};
+	public static final BarSorter[] defaultSorter = {TITLE, ARTIST, BPM, LENGTH, LEVEL, CLEAR, SCORE, MISSCOUNT, JUDGE};
 
 	public static final BarSorter[] allSorter = BarSorter.values();
 

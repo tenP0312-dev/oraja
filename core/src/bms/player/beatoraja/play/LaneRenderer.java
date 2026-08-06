@@ -163,6 +163,7 @@ public class LaneRenderer {
 		}
 		this.hispeedmargin = playconfig.getHispeedMargin();
 		this.startHerePreview = StartHerePreviewData.build(model);
+		updateStartHerePreviewMetrics();
 	}
 
 	public float getHispeed() {
@@ -192,6 +193,7 @@ public class LaneRenderer {
 
 	public void rebuildStartHerePreview() {
 		this.startHerePreview = StartHerePreviewData.build(model);
+		updateStartHerePreviewMetrics();
 	}
 
 	public boolean isEnableLift() {
@@ -223,6 +225,7 @@ public class LaneRenderer {
 
 	public void setEnableLanecover(boolean b) {
 		playconfig.setEnablelanecover(b);
+		updateStartHerePreviewMetrics();
 	}
 
 	public boolean isEnableLanecover() {
@@ -254,6 +257,7 @@ public class LaneRenderer {
 		}
 		if (playconfig.getHispeed() + f > 0 && playconfig.getHispeed() + f < 20) {
 			playconfig.setHispeed(playconfig.getHispeed() + f);
+			updateStartHerePreviewMetrics();
 		}
 	}
 	
@@ -276,6 +280,7 @@ public class LaneRenderer {
 				main.getState(),
 				playconfig.isStartHerePreviewEnabled()
 		)) {
+			updateStartHerePreviewMetrics();
 			updatePlayCoverOffsets(lanes);
 			if (drawStartHerePreview(
 					sprite,
@@ -729,6 +734,35 @@ public class LaneRenderer {
 				}
 			}
 		}
+	}
+
+	private void updateStartHerePreviewMetrics() {
+		if (startHerePreview == null || !startHerePreview.isValid()) {
+			return;
+		}
+		nowbpm = startHerePreview.anchorBpm();
+		currentduration = startHerePreviewDuration(
+				nowbpm,
+				startHerePreview.anchorScroll(),
+				playconfig.getHispeed(),
+				playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0f
+		);
+	}
+
+	static int startHerePreviewDuration(
+			double bpm,
+			double scroll,
+			float hispeed,
+			float laneCover
+	) {
+		if (!Double.isFinite(bpm) || bpm <= 0.0
+				|| !Double.isFinite(scroll) || scroll <= 0.0
+				|| !Float.isFinite(hispeed) || hispeed <= 0f) {
+			return 1;
+		}
+		double visible = Math.max(0.0, Math.min(1.0, 1.0 - laneCover));
+		double duration = 240000.0 / bpm / hispeed / scroll * visible;
+		return Double.isFinite(duration) ? Math.max(1, (int) Math.round(duration)) : 1;
 	}
 
 	private boolean drawStartHerePreview(
