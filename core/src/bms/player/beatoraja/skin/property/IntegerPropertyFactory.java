@@ -261,6 +261,36 @@ public class IntegerPropertyFactory {
 				}
 				return Integer.MIN_VALUE;
 			};
+		case NUMBER_RADAR_NOTES:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().notes : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_PEAK:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().peak : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_SCRATCH:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().scratch : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_SOFLAN:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().soflan : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_CHARGE:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().charge : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_CHORD:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().chord : Integer.MIN_VALUE;
+			};
 		case NUMBER_FOLDER_TOTALSONGS:
 			return new FolderTotalClearCountProperty(new int[]{0,1,2,3,4,5,6,7,8,9,10});
 		case NUMBER_LANECOVER1:

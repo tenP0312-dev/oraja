@@ -117,6 +117,7 @@ public class SongData implements Validatable, IpfsInformation {
 	private BMSModel model;
 	private TimeLine[] timelines;
 	private SongInformation info;
+	private NotesRadar notesRadar;
 
 	private String charthash;
 	private List<String> org_md5;
@@ -163,6 +164,7 @@ public class SongData implements Validatable, IpfsInformation {
 		judge = model.getJudgerank();
 		minbpm = (int) model.getMinBPM();
 		maxbpm = (int) model.getMaxBPM();
+		notesRadar = new NotesRadar(model);
 		feature = 0;
 		final int keys = model.getMode().key;
 		for (TimeLine tl : model.getAllTimeLines()) {
@@ -215,6 +217,14 @@ public class SongData implements Validatable, IpfsInformation {
 
 	public BMSModel getBMSModel() {
 		return model;
+	}
+
+	/**
+	 * 譜面傾向(NOTES/PEAK/SCRATCH/SOFLAN/CHARGE/CHORD)を返す。
+	 * setBMSModel()前はnull。
+	 */
+	public NotesRadar getNotesRadar() {
+		return notesRadar;
 	}
 
 	public int getFavorite() {

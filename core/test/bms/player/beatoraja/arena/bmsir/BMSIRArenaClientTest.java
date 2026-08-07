@@ -28,12 +28,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.14.21", Version.getArenaClientVersion());
+        assertEquals("0.4.14.22", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertEquals("Arena oraja 0.4.14.21", Version.getArenaDisplayName());
+        assertEquals("Arena oraja 0.4.14.22", Version.getArenaDisplayName());
     }
 
     @Test

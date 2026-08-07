@@ -36,6 +36,7 @@ public class JsonSkin {
 		public GaugeGraph[] gaugegraph = new GaugeGraph[0];
 		public JudgeGraph[] judgegraph = new JudgeGraph[0];
 		public BPMGraph[] bpmgraph = new BPMGraph[0];
+		public RadarGraph[] radargraph = new RadarGraph[0];
 		public HitErrorVisualizer[] hiterrorvisualizer = new HitErrorVisualizer[0];
 		public TimingVisualizer[] timingvisualizer = new TimingVisualizer[0];
 		public TimingDistributionGraph[] timingdistributiongraph = new TimingDistributionGraph[0];
@@ -270,6 +271,11 @@ public class JsonSkin {
 		public String otherBPMColor = "ffff00";
 		public String stopLineColor = "ff00ff";
 		public String transitionLineColor = "7f7f7f";
+	}
+
+	public static class RadarGraph {
+		public String id;
+		public String color = "ff0000";
 	}
 
 	public static class HitErrorVisualizer {
