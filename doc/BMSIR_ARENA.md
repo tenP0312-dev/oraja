@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.20`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.21`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,10 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.21` fixes MANIAC Double Battle plays showing the ordinary
+(non-MANIAC) lamp immediately on returning to select instead of the correct
+MANIAC lamp, caused by the play session's mode doubling (BEAT_7K ->
+BEAT_14K) leaking into the select-screen SongData.
 Version `0.4.14.20` removes the on-screen "Next play will not be submitted
 to IR" popup for MANIAC/freq-trainer plays; the underlying no-submit
 behavior is unchanged, only the notice is gone since the player already
