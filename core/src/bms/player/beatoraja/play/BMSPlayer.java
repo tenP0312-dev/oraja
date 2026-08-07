@@ -678,6 +678,20 @@ public class BMSPlayer extends MainState {
 		final int difficulty = resource.getSongdata() != null ? resource.getSongdata().getDifficulty() : 0;
 		resource.getSongdata().setBMSModel(model);
 		resource.getSongdata().setDifficulty(difficulty);
+		if (resource.getOriginalMode() != null) {
+			// setBMSModel() above just copied model.getMode() into the
+			// SongData, which is normally correct, but MANIAC Double
+			// Battle intentionally rewrites the in-memory model's mode
+			// (e.g. BEAT_7K -> BEAT_14K) for the play session only. Left
+			// uncorrected, the select-screen SongData for this song keeps
+			// reporting the doubled mode until it is independently
+			// reloaded, which made BMSIRManiacApiClient.effectiveSettings()
+			// see a native-DP mode immediately after returning from play
+			// and incorrectly disable Double Battle (its mode.player == 2
+			// guard), collapsing MANIAC settings to inactive and showing
+			// the ordinary, non-MANIAC lamp until the song was reselected.
+			resource.getSongdata().setMode(resource.getOriginalMode().id);
+		}
 	}
 
 	public SkinType getSkinType() {
@@ -882,6 +896,14 @@ public class BMSPlayer extends MainState {
 					resource.reloadBMSFile();
 					model = resource.getBMSModel();
 					resource.getSongdata().setBMSModel(model);
+					if (resource.getOriginalMode() != null) {
+						// See the comment where the play-start reattachment
+						// does the same restoration: setBMSModel() above
+						// would otherwise leave a MANIAC Double Battle
+						// mode change (e.g. BEAT_7K -> BEAT_14K) on the
+						// select-screen SongData past this practice reload.
+						resource.getSongdata().setMode(resource.getOriginalMode().id);
+					}
 					lanerender.init(model);
 					keyinput.setKeyBeamStop(false);
 					timer.setTimerOff(TIMER_PLAY);
