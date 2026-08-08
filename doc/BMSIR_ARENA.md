@@ -148,7 +148,7 @@ adds Arena target and graph-order switches, and 0.4.13 upgrades the sidecar to
 schema 7 for cover HI-SPEED recalculation, judge restoration, INFO toasts, and
 the last visible overlay mode. Version 0.4.14 upgrades it to schema 10 for
 MANIAC, Double Battle AUTO SCRATCH, Arena language, graph presentation, and
-detailed logs.
+detailed logs. SP TO DP upgrades the sidecar to schema 11.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -183,10 +183,24 @@ therefore cannot overlap and render inside an old long-note body.
 
 Any MANIAC option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
-temporarily disable these modes. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
+temporarily disable these modes, except that SP TO DP by itself remains
+available in Arena on supported SP charts. Combining it with any other MANIAC
+effect restores the ordinary Arena block. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
 and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
 ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
+
+SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to
+DP 10KEY and 14KEY. It moves the existing note objects without changing their
+timing, keysound, long-note pairing, or playable-note count. Assignment keeps
+the same keysound on one side within a measure where possible, uses the
+immediately preceding measure as a stability hint, and penalizes key density
+on the same side as a scratch within 200 ms before or after it. Higher levels
+shorten the side-movement threshold and permit more temporary left/right bias.
+The conversion is deterministic, rebuilds the final DP mode and scratch lanes,
+and uses its own canonical identity and local score/lamp key. It never submits
+to the ordinary chart ranking. SP TO DP and Double Battle are mutually
+exclusive.
 
 Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
 native-DP warning can all be configured in MANIAC OPTIONS. Existing Music

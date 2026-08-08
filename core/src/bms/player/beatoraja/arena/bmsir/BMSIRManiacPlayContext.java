@@ -70,11 +70,22 @@ public final class BMSIRManiacPlayContext {
     ) {
         if (persisted == null || mode == null) return null;
         BMSIRManiacSettings applied = new BMSIRManiacSettings(persisted);
+        if (applied.getSpToDpDifficulty() > 0
+                && mode != Mode.BEAT_5K
+                && mode != Mode.BEAT_7K) {
+            applied.setSpToDpDifficulty(0);
+        }
         if (applied.isDoubleBattle()
                 && (mode.player == 2 || !supportsDoubleBattle(mode))) {
             applied.setDoubleBattle(false);
         }
         return applied.isActive() ? applied : null;
+    }
+
+    public static boolean allowsDuringArena(BMSIRManiacSettings settings, Mode mode) {
+        return settings != null
+                && settings.isSpToDpOnly()
+                && (mode == Mode.BEAT_5K || mode == Mode.BEAT_7K);
     }
 
     private void apply(BMSModel model) {

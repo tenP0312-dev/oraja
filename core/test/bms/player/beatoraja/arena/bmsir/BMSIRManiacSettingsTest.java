@@ -136,4 +136,36 @@ public class BMSIRManiacSettingsTest {
         assertEquals(0, settings.getAddLongNotes());
         assertEquals(BMSIRManiacSettings.RankingClass.DOUBLE_BATTLE, settings.rankingClass());
     }
+
+    @Test
+    public void spToDpHasCanonicalAndStorageIdentityWithoutChangingLegacyIdentity() {
+        BMSIRManiacSettings legacy = new BMSIRManiacSettings();
+        legacy.setTornado(30);
+        assertFalse(legacy.canonicalOptions().contains("sp2dp"));
+
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setSpToDpDifficulty(2);
+        BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(
+                settings.canonicalOptions()
+        );
+
+        assertEquals(2, restored.getSpToDpDifficulty());
+        assertEquals(BMSIRManiacSettings.RankingClass.SP_TO_DP, restored.rankingClass());
+        assertFalse(BMSIRManiacApiClient.canSubmit(restored));
+        assertNotEquals(settings.storageChartId("chart"), legacy.storageChartId("chart"));
+        assertNotEquals(settings.virtualChartId("chart"), null);
+    }
+
+    @Test
+    public void spToDpAndDoubleBattleAreMutuallyExclusive() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+        settings.setSpToDpDifficulty(3);
+        assertFalse(settings.isDoubleBattle());
+        assertEquals(3, settings.getSpToDpDifficulty());
+
+        settings.selectDoubleBattle(true, false);
+        assertEquals(0, settings.getSpToDpDifficulty());
+        assertTrue(settings.isDoubleBattle());
+    }
 }

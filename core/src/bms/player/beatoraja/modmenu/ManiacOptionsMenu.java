@@ -17,6 +17,7 @@ import static bms.player.beatoraja.modmenu.ImGuiRenderer.windowWidth;
 /** One-column LR2-compatible MANIAC OPTIONS editor. */
 public final class ManiacOptionsMenu {
     private static final String[] LABELS = {
+            "SP TO DP",
             "DOUBLE BATTLE",
             "AUTO SCRATCH",
             "RANDOM LINK",
@@ -123,30 +124,33 @@ public final class ManiacOptionsMenu {
             return;
         }
         switch (selectedIndex) {
-            case 0 -> setDoubleBattle(!draft.isDoubleBattle());
-            case 1 -> setAutoScratch(!draft.isAutoScratch());
-            case 2 -> setRandomLink((randomLinkIndex() + 1) % RANDOM_LINK.length);
-            case 3 -> draft.setWarnDoubleBattleOnDp(!draft.isWarnDoubleBattleOnDp());
-            case 4 -> setExtraMode((draft.getExtraMode() + 1) % LEVEL_1_3.length);
-            case 5 -> setAddNotes(nextPercent(draft.getAddNotes()));
-            case 6 -> setAddLongNotes(nextPercent(draft.getAddLongNotes()));
-            case 7 -> draft.setAddMines(nextPercent(draft.getAddMines()));
-            case 8 -> draft.setHiddenSudden1P((draft.getHiddenSudden1P() + 1) % HIDDEN_SUDDEN.length);
-            case 9 -> draft.setHiddenSudden2P((draft.getHiddenSudden2P() + 1) % HIDDEN_SUDDEN.length);
-            case 10 -> draft.setAcceleration((draft.getAcceleration() + 1) % ACCELERATION.length);
-            case 11 -> draft.setSoftLanding((draft.getSoftLanding() + 1) % LEVEL_1_2.length);
-            case 12 -> draft.setEarthquake(nextPercent(draft.getEarthquake()));
-            case 13 -> draft.setTornado(nextPercent(draft.getTornado()));
-            case 14 -> draft.setSuperLoop(nextPercent(draft.getSuperLoop()));
-            case 15 -> draft.setGambol((draft.getGambol() + 1) % LEVEL_1_2.length);
-            case 16 -> draft.setCharacter(nextPercent(draft.getCharacter()));
-            case 17 -> draft.setHeartbeat(nextPercent(draft.getHeartbeat()));
-            case 18 -> draft.setLoudness(nextPercent(draft.getLoudness()));
-            case 19 -> draft.setNabeatsu(nextPercent(draft.getNabeatsu()));
-            case 20 -> draft.setSinCurve(nextPercent(draft.getSinCurve()));
-            case 21 -> draft.setWave(nextPercent(draft.getWave()));
-            case 22 -> draft.setSpiral(nextPercent(draft.getSpiral()));
-            case 23 -> draft.setSideJump(nextPercent(draft.getSideJump()));
+            case 0 -> draft.setSpToDpDifficulty(
+                    (draft.getSpToDpDifficulty() + 1) % LEVEL_1_3.length
+            );
+            case 1 -> setDoubleBattle(!draft.isDoubleBattle());
+            case 2 -> setAutoScratch(!draft.isAutoScratch());
+            case 3 -> setRandomLink((randomLinkIndex() + 1) % RANDOM_LINK.length);
+            case 4 -> draft.setWarnDoubleBattleOnDp(!draft.isWarnDoubleBattleOnDp());
+            case 5 -> setExtraMode((draft.getExtraMode() + 1) % LEVEL_1_3.length);
+            case 6 -> setAddNotes(nextPercent(draft.getAddNotes()));
+            case 7 -> setAddLongNotes(nextPercent(draft.getAddLongNotes()));
+            case 8 -> draft.setAddMines(nextPercent(draft.getAddMines()));
+            case 9 -> draft.setHiddenSudden1P((draft.getHiddenSudden1P() + 1) % HIDDEN_SUDDEN.length);
+            case 10 -> draft.setHiddenSudden2P((draft.getHiddenSudden2P() + 1) % HIDDEN_SUDDEN.length);
+            case 11 -> draft.setAcceleration((draft.getAcceleration() + 1) % ACCELERATION.length);
+            case 12 -> draft.setSoftLanding((draft.getSoftLanding() + 1) % LEVEL_1_2.length);
+            case 13 -> draft.setEarthquake(nextPercent(draft.getEarthquake()));
+            case 14 -> draft.setTornado(nextPercent(draft.getTornado()));
+            case 15 -> draft.setSuperLoop(nextPercent(draft.getSuperLoop()));
+            case 16 -> draft.setGambol((draft.getGambol() + 1) % LEVEL_1_2.length);
+            case 17 -> draft.setCharacter(nextPercent(draft.getCharacter()));
+            case 18 -> draft.setHeartbeat(nextPercent(draft.getHeartbeat()));
+            case 19 -> draft.setLoudness(nextPercent(draft.getLoudness()));
+            case 20 -> draft.setNabeatsu(nextPercent(draft.getNabeatsu()));
+            case 21 -> draft.setSinCurve(nextPercent(draft.getSinCurve()));
+            case 22 -> draft.setWave(nextPercent(draft.getWave()));
+            case 23 -> draft.setSpiral(nextPercent(draft.getSpiral()));
+            case 24 -> draft.setSideJump(nextPercent(draft.getSideJump()));
             default -> {
             }
         }
@@ -285,60 +289,62 @@ public final class ManiacOptionsMenu {
 
     private static String value(int index) {
         return switch (index) {
-            case 0 -> draft.isDoubleBattle() ? "ON" : "OFF";
-            case 1 -> draft.isAutoScratch() ? "ON" : "OFF";
-            case 2 -> RANDOM_LINK[randomLinkIndex()];
-            case 3 -> draft.isWarnDoubleBattleOnDp() ? "ON" : "OFF";
-            case 4 -> LEVEL_1_3[draft.getExtraMode()];
-            case 5 -> percentValue(draft.getAddNotes());
-            case 6 -> percentValue(draft.getAddLongNotes());
-            case 7 -> percentValue(draft.getAddMines());
-            case 8 -> HIDDEN_SUDDEN[draft.getHiddenSudden1P()];
-            case 9 -> HIDDEN_SUDDEN[draft.getHiddenSudden2P()];
-            case 10 -> ACCELERATION[draft.getAcceleration()];
-            case 11 -> LEVEL_1_2[draft.getSoftLanding()];
-            case 12 -> percentValue(draft.getEarthquake());
-            case 13 -> percentValue(draft.getTornado());
-            case 14 -> percentValue(draft.getSuperLoop());
-            case 15 -> LEVEL_1_2[draft.getGambol()];
-            case 16 -> percentValue(draft.getCharacter());
-            case 17 -> percentValue(draft.getHeartbeat());
-            case 18 -> percentValue(draft.getLoudness());
-            case 19 -> percentValue(draft.getNabeatsu());
-            case 20 -> percentValue(draft.getSinCurve());
-            case 21 -> percentValue(draft.getWave());
-            case 22 -> percentValue(draft.getSpiral());
-            case 23 -> percentValue(draft.getSideJump());
+            case 0 -> LEVEL_1_3[draft.getSpToDpDifficulty()];
+            case 1 -> draft.isDoubleBattle() ? "ON" : "OFF";
+            case 2 -> draft.isAutoScratch() ? "ON" : "OFF";
+            case 3 -> RANDOM_LINK[randomLinkIndex()];
+            case 4 -> draft.isWarnDoubleBattleOnDp() ? "ON" : "OFF";
+            case 5 -> LEVEL_1_3[draft.getExtraMode()];
+            case 6 -> percentValue(draft.getAddNotes());
+            case 7 -> percentValue(draft.getAddLongNotes());
+            case 8 -> percentValue(draft.getAddMines());
+            case 9 -> HIDDEN_SUDDEN[draft.getHiddenSudden1P()];
+            case 10 -> HIDDEN_SUDDEN[draft.getHiddenSudden2P()];
+            case 11 -> ACCELERATION[draft.getAcceleration()];
+            case 12 -> LEVEL_1_2[draft.getSoftLanding()];
+            case 13 -> percentValue(draft.getEarthquake());
+            case 14 -> percentValue(draft.getTornado());
+            case 15 -> percentValue(draft.getSuperLoop());
+            case 16 -> LEVEL_1_2[draft.getGambol()];
+            case 17 -> percentValue(draft.getCharacter());
+            case 18 -> percentValue(draft.getHeartbeat());
+            case 19 -> percentValue(draft.getLoudness());
+            case 20 -> percentValue(draft.getNabeatsu());
+            case 21 -> percentValue(draft.getSinCurve());
+            case 22 -> percentValue(draft.getWave());
+            case 23 -> percentValue(draft.getSpiral());
+            case 24 -> percentValue(draft.getSideJump());
             default -> "OFF";
         };
     }
 
     private static String description(int index) {
         return switch (index) {
-            case 0 -> t("SP譜面を1P・2Pの両側へ複製します。", "Duplicates an SP chart across both sides.");
-            case 1 -> t("DOUBLE BATTLEの両側の皿を自動演奏します。", "Autoplays both scratch lanes in Double Battle.");
-            case 2 -> t("OFFは左右独立、SYNCは同じ配置、SYMMETRYは2P側を左右反転します。", "OFF uses independent sides, SYNC uses the same placement, and SYMMETRY mirrors side 2.");
-            case 3 -> t("DP譜面でDOUBLE BATTLEが適用されない時に警告します。", "Warns when Double Battle is suspended on a native DP chart.");
-            case 4 -> t("LR2互換のEXTRA MODEで譜面を生成します。", "Generates an LR2-compatible EXTRA MODE chart.");
-            case 5 -> t("通常ノーツを指定割合で追加します。", "Adds normal notes at the selected percentage.");
-            case 6 -> t("ロングノーツを指定割合で追加します。", "Adds long notes at the selected percentage.");
-            case 7 -> t("地雷ノーツを指定割合で追加します。", "Adds mines at the selected percentage.");
-            case 8 -> t("1P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 1.");
-            case 9 -> t("2P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 2.");
-            case 10 -> t("ノーツの移動速度を加速・減速・ランダム化します。", "Accelerates, decelerates, or randomizes note speed.");
-            case 11 -> t("スクロール変化を滑らかにします。", "Softens scroll-speed changes.");
-            case 12 -> t("レーン全体を揺らします。", "Shakes the lane display.");
-            case 13 -> t("ノーツ表示を旋回させます。", "Rotates the note display.");
-            case 14 -> t("ノーツ表示を繰り返しループさせます。", "Loops the note display repeatedly.");
-            case 15 -> t("判定窓をLR2 GAMBOL仕様で厳しくします。", "Tightens the judgment window using LR2 GAMBOL rules.");
-            case 16 -> t("ノーツを文字表示に変化させます。", "Replaces notes with character-style rendering.");
-            case 17 -> t("ノーツを鼓動するように表示します。", "Pulses notes like a heartbeat.");
-            case 18 -> t("キー音の音量に応じて表示を変化させます。", "Changes rendering according to keysound loudness.");
-            case 19 -> t("小節番号に応じて表示を変化させます。", "Changes rendering according to the measure number.");
-            case 20 -> t("ノーツを正弦波状に揺らします。", "Moves notes along a sine curve.");
-            case 21 -> t("ノーツを上下に波打たせます。", "Moves notes in a vertical wave.");
-            case 22 -> t("ノーツを螺旋状に移動させます。", "Moves notes in a spiral.");
-            case 23 -> t("ノーツを左右に跳ねさせます。", "Makes notes jump sideways.");
+            case 0 -> t("SP 5KEY/7KEYを左右へ決定的に分配します。LEVELが高いほど左右移動と偏りを許容します。", "Deterministically distributes SP 5KEY/7KEY across both sides. Higher levels allow faster side changes and more bias.");
+            case 1 -> t("SP譜面を1P・2Pの両側へ複製します。", "Duplicates an SP chart across both sides.");
+            case 2 -> t("DOUBLE BATTLEの両側の皿を自動演奏します。", "Autoplays both scratch lanes in Double Battle.");
+            case 3 -> t("OFFは左右独立、SYNCは同じ配置、SYMMETRYは2P側を左右反転します。", "OFF uses independent sides, SYNC uses the same placement, and SYMMETRY mirrors side 2.");
+            case 4 -> t("DP譜面でDOUBLE BATTLEが適用されない時に警告します。", "Warns when Double Battle is suspended on a native DP chart.");
+            case 5 -> t("LR2互換のEXTRA MODEで譜面を生成します。", "Generates an LR2-compatible EXTRA MODE chart.");
+            case 6 -> t("通常ノーツを指定割合で追加します。", "Adds normal notes at the selected percentage.");
+            case 7 -> t("ロングノーツを指定割合で追加します。", "Adds long notes at the selected percentage.");
+            case 8 -> t("地雷ノーツを指定割合で追加します。", "Adds mines at the selected percentage.");
+            case 9 -> t("1P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 1.");
+            case 10 -> t("2P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 2.");
+            case 11 -> t("ノーツの移動速度を加速・減速・ランダム化します。", "Accelerates, decelerates, or randomizes note speed.");
+            case 12 -> t("スクロール変化を滑らかにします。", "Softens scroll-speed changes.");
+            case 13 -> t("レーン全体を揺らします。", "Shakes the lane display.");
+            case 14 -> t("ノーツ表示を旋回させます。", "Rotates the note display.");
+            case 15 -> t("ノーツ表示を繰り返しループさせます。", "Loops the note display repeatedly.");
+            case 16 -> t("判定窓をLR2 GAMBOL仕様で厳しくします。", "Tightens the judgment window using LR2 GAMBOL rules.");
+            case 17 -> t("ノーツを文字表示に変化させます。", "Replaces notes with character-style rendering.");
+            case 18 -> t("ノーツを鼓動するように表示します。", "Pulses notes like a heartbeat.");
+            case 19 -> t("キー音の音量に応じて表示を変化させます。", "Changes rendering according to keysound loudness.");
+            case 20 -> t("小節番号に応じて表示を変化させます。", "Changes rendering according to the measure number.");
+            case 21 -> t("ノーツを正弦波状に揺らします。", "Moves notes along a sine curve.");
+            case 22 -> t("ノーツを上下に波打たせます。", "Moves notes in a vertical wave.");
+            case 23 -> t("ノーツを螺旋状に移動させます。", "Moves notes in a spiral.");
+            case 24 -> t("ノーツを左右に跳ねさせます。", "Makes notes jump sideways.");
             default -> "";
         };
     }

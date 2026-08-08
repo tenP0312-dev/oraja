@@ -65,6 +65,9 @@ public final class BMSIRManiacModifier extends PatternModifier {
         if (settings.getSoftLanding() > 0) {
             applySoftLanding(model, settings.getSoftLanding(), random);
         }
+        if (settings.getSpToDpDifficulty() > 0) {
+            BMSIRSpToDpModifier.apply(model, settings.getSpToDpDifficulty());
+        }
         placementHash = placementHash(model);
     }
 

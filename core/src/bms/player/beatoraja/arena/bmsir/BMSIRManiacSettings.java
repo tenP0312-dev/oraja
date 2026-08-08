@@ -28,6 +28,7 @@ public final class BMSIRManiacSettings {
         EXTRA,
         ADD_NOTES,
         ADD_LONGNOTES,
+        SP_TO_DP,
         DOUBLE_BATTLE,
         LOCAL_ONLY
     }
@@ -52,6 +53,7 @@ public final class BMSIRManiacSettings {
     private int wave;
     private int spiral;
     private int sideJump;
+    private int spToDpDifficulty;
     private boolean doubleBattle;
     private boolean autoScratch;
     private String randomLink = RANDOM_LINK_OFF;
@@ -85,6 +87,7 @@ public final class BMSIRManiacSettings {
         wave = source.wave;
         spiral = source.spiral;
         sideJump = source.sideJump;
+        spToDpDifficulty = source.spToDpDifficulty;
         doubleBattle = source.doubleBattle;
         autoScratch = source.autoScratch;
         randomLink = source.randomLink;
@@ -114,6 +117,10 @@ public final class BMSIRManiacSettings {
         wave = percent(wave);
         spiral = percent(spiral);
         sideJump = percent(sideJump);
+        spToDpDifficulty = clamp(spToDpDifficulty, 0, 3);
+        if (doubleBattle) {
+            spToDpDifficulty = 0;
+        }
         if (!doubleBattle) {
             autoScratch = false;
         }
@@ -152,6 +159,7 @@ public final class BMSIRManiacSettings {
         settings.setWave(integer(values, "wave"));
         settings.setSpiral(integer(values, "spiral"));
         settings.setSideJump(integer(values, "sidejump"));
+        settings.setSpToDpDifficulty(integer(values, "sp2dp"));
         settings.setDoubleBattle(Boolean.parseBoolean(values.getOrDefault("db", "false")));
         settings.setAutoScratch(Boolean.parseBoolean(values.getOrDefault("autoscratch", "false")));
         settings.setRandomLink(values.get("link"));
@@ -195,6 +203,7 @@ public final class BMSIRManiacSettings {
         if (extraMode > 0) count++;
         if (addNotes > 0) count++;
         if (addLongNotes > 0) count++;
+        if (spToDpDifficulty > 0) count++;
         return count;
     }
 
@@ -215,7 +224,19 @@ public final class BMSIRManiacSettings {
         if (extraMode > 0) return RankingClass.EXTRA;
         if (addNotes > 0) return RankingClass.ADD_NOTES;
         if (addLongNotes > 0) return RankingClass.ADD_LONGNOTES;
+        if (spToDpDifficulty > 0) return RankingClass.SP_TO_DP;
         return RankingClass.MANIAC_STANDARD;
+    }
+
+    /** Arena may opt into SP-to-DP without accidentally enabling other MANIAC effects. */
+    public boolean isSpToDpOnly() {
+        return spToDpDifficulty > 0
+                && extraMode == 0
+                && addNotes == 0
+                && addLongNotes == 0
+                && !hasStandardEffect()
+                && !doubleBattle
+                && generationSeedOverride == null;
     }
 
     public String virtualChartId(String baseSha256) {
@@ -262,6 +283,9 @@ public final class BMSIRManiacSettings {
                 "db=" + doubleBattle,
                 "link=" + randomLink
         );
+        if (spToDpDifficulty > 0) {
+            base += ",sp2dp=" + spToDpDifficulty;
+        }
         if (autoScratch) {
             base += ",autoscratch=true";
         }
@@ -287,6 +311,7 @@ public final class BMSIRManiacSettings {
             case EXTRA -> "extra-" + extraMode;
             case ADD_NOTES -> "add-notes-" + addNotes;
             case ADD_LONGNOTES -> "add-longnotes-" + addLongNotes;
+            case SP_TO_DP -> "sp-to-dp-" + spToDpDifficulty;
             case DOUBLE_BATTLE -> autoScratch
                     ? "double-battle-autoscratch"
                     : "double-battle";
@@ -298,6 +323,7 @@ public final class BMSIRManiacSettings {
         List<String> values = new ArrayList<>();
         if (doubleBattle) values.add("DB" + randomLinkSuffix()
                 + (autoScratch ? " AUTO SCRATCH" : ""));
+        if (spToDpDifficulty > 0) values.add("SP TO DP Lv" + spToDpDifficulty);
         if (extraMode > 0) values.add("EXTRA Lv" + extraMode);
         if (addNotes > 0) values.add("ADD " + addNotes + "%");
         if (addLongNotes > 0) values.add("LN " + addLongNotes + "%");
@@ -333,6 +359,7 @@ public final class BMSIRManiacSettings {
         // Temporarily collect without the compact threshold.
         if (doubleBattle) values.add("DB" + randomLinkSuffix()
                 + (autoScratch ? " AUTO SCRATCH" : ""));
+        if (spToDpDifficulty > 0) values.add("SP TO DP Lv" + spToDpDifficulty);
         if (extraMode > 0) values.add("EXTRA Lv" + extraMode);
         if (addNotes > 0) values.add("ADD NOTES " + addNotes + "%");
         if (addLongNotes > 0) values.add("ADD LONGNOTES " + addLongNotes + "%");
@@ -444,6 +471,16 @@ public final class BMSIRManiacSettings {
     public void setSpiral(int value) { spiral = value; validate(); }
     public int getSideJump() { return sideJump; }
     public void setSideJump(int value) { sideJump = value; validate(); }
+    public int getSpToDpDifficulty() { return spToDpDifficulty; }
+    public void setSpToDpDifficulty(int value) {
+        spToDpDifficulty = clamp(value, 0, 3);
+        if (spToDpDifficulty > 0) {
+            doubleBattle = false;
+            autoScratch = false;
+            randomLink = RANDOM_LINK_OFF;
+        }
+        validate();
+    }
     public boolean isDoubleBattle() { return doubleBattle; }
     public void selectDoubleBattle(boolean enabled, boolean withAutoScratch) {
         doubleBattle = enabled;
@@ -452,6 +489,7 @@ public final class BMSIRManiacSettings {
             extraMode = 0;
             addNotes = 0;
             addLongNotes = 0;
+            spToDpDifficulty = 0;
         }
         validate();
     }

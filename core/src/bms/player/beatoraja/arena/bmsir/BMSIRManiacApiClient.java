@@ -341,7 +341,8 @@ public final class BMSIRManiacApiClient {
     private static boolean onlineRanking(BMSIRManiacSettings settings) {
         BMSIRManiacSettings.RankingClass type = settings.rankingClass();
         return type != BMSIRManiacSettings.RankingClass.NORMAL
-                && type != BMSIRManiacSettings.RankingClass.LOCAL_ONLY;
+                && type != BMSIRManiacSettings.RankingClass.LOCAL_ONLY
+                && type != BMSIRManiacSettings.RankingClass.SP_TO_DP;
     }
 
     private static ObjectNode identityPayload(Identity identity, Auth auth) {

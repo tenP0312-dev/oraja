@@ -83,7 +83,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 10"));
+        assertTrue(serialized.contains("\"schemaVersion\": 11"));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -93,6 +93,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"infoNotificationsEnabled\": false"));
         assertTrue(serialized.contains("\"doubleBattle\": true"));
         assertTrue(serialized.contains("\"autoScratch\": true"));
+        assertTrue(serialized.contains("\"spToDpDifficulty\": 0"));
         assertTrue(serialized.contains("\"detailedLogEnabled\": true"));
         assertTrue(serialized.contains("\"language\": \"en\""));
         assertTrue(serialized.contains("\"bms_search\""));

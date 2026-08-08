@@ -110,6 +110,31 @@ class BMSIRManiacPlayContextTest {
         assertEquals(Mode.BEAT_7K, model.getMode());
     }
 
+    @Test
+    void spToDpAppliesOnlyToSupportedSingleBeatCharts() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setSpToDpDifficulty(2);
+
+        BMSModel single = model(Mode.BEAT_7K);
+        BMSIRManiacPlayContext context = BMSIRManiacPlayContext.prepare(
+                settings,
+                single,
+                false
+        );
+        assertNotNull(context);
+        assertEquals(Mode.BEAT_14K, single.getMode());
+        assertEquals(BMSIRManiacSettings.RankingClass.SP_TO_DP,
+                context.settings().rankingClass());
+
+        assertNull(BMSIRManiacPlayContext.effectiveSettings(settings, Mode.BEAT_14K));
+        assertNull(BMSIRManiacPlayContext.effectiveSettings(settings, Mode.POPN_9K));
+        assertTrue(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_7K));
+        assertFalse(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_14K));
+
+        settings.setTornado(20);
+        assertFalse(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_7K));
+    }
+
     private static BMSModel model(Mode mode) {
         BMSModel model = new BMSModel();
         model.setMode(mode);

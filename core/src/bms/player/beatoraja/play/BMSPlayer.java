@@ -348,13 +348,20 @@ public class BMSPlayer extends MainState {
 			ReplayData maniacReplay = replay != null
 					? replay
 					: resource.getChartOption();
-			maniacContext = BMSIRManiacPlayContext.prepare(
-					maniacReplay != null && maniacReplay.bmsirManiacSettings != null
+			BMSIRManiacSettings requestedManiac = maniacReplay != null
+					&& maniacReplay.bmsirManiacSettings != null
 							? maniacReplay.bmsirManiacSettings
-							: config.getBmsirManiacSettings(),
+							: config.getBmsirManiacSettings();
+			boolean arenaBlocksManiac = BMSIRArenaClient.blocksLocalOneBass()
+					&& !BMSIRManiacPlayContext.allowsDuringArena(
+							requestedManiac,
+							model.getMode()
+					);
+			maniacContext = BMSIRManiacPlayContext.prepare(
+					requestedManiac,
 					model,
 					resource.getCourseBMSModels() != null
-							|| BMSIRArenaClient.blocksLocalOneBass()
+							|| arenaBlocksManiac
 			);
 			resource.setManiacPlayContext(maniacContext);
 			if (maniacContext != null) {
