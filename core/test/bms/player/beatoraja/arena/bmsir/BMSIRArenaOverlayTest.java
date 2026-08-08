@@ -258,6 +258,26 @@ class BMSIRArenaOverlayTest {
     }
 
     @Test
+    void fillWaitingShowsHumanNamesRoundedRatingsRanksAndStatesOnly() throws Exception {
+        BMSIRArenaI18n.setLanguage("en");
+        JsonNode match = JSON.readTree("""
+                {"players": [
+                  {"name": "Alice", "rating_exact": 1000.6, "dan": "SP 八段", "status": "waiting"},
+                  {"name": "CPU", "rating_exact": 9999.0, "is_cpu": true, "status": "waiting"},
+                  {"name": "Bob", "rating": 900.4, "rank": "A", "queue_status": "ready"}
+                ]}
+                """);
+
+        assertEquals(
+                java.util.List.of(
+                        "Alice / R 1001 / SP 八段 / waiting",
+                        "Bob / R 900 / A / ready"
+                ),
+                BMSIRArenaOverlay.fillWaitingPlayerLabels(match)
+        );
+    }
+
+    @Test
     void ratedBo2HasAnUnambiguousSeriesLabel() {
         assertEquals("BO2（2曲総合）", BMSIRArenaOverlay.seriesFormatLabel("bo2", 2));
     }

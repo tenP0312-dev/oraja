@@ -134,6 +134,7 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode nominationView = JSON.createObjectNode();
     private static volatile JsonNode rulesView = JSON.createObjectNode();
     private static volatile JsonNode queueView = JSON.createObjectNode();
+    private static volatile JsonNode waitingPlayersView = JSON.createObjectNode();
     private static volatile JsonNode roomView = JSON.createObjectNode();
     private static volatile JsonNode publicRoomsView = JSON.createArrayNode();
     private static volatile JsonNode customCatalogView = JSON.createObjectNode();
@@ -401,6 +402,7 @@ public final class BMSIRArenaClient {
         rankingView = JSON.createObjectNode();
         rulesView = JSON.createObjectNode();
         queueView = JSON.createObjectNode();
+        waitingPlayersView = JSON.createObjectNode();
         roomView = JSON.createObjectNode();
         publicRoomsView = JSON.createArrayNode();
         roomReady = false;
@@ -672,6 +674,13 @@ public final class BMSIRArenaClient {
 
     static JsonNode queueView() {
         return queueView;
+    }
+
+    /** Human waiting participants supplied by arena_status. */
+    static JsonNode waitingPlayersView() {
+        return waitingPlayersView.isArray()
+                ? waitingPlayersView
+                : currentMatchView().path("players");
     }
 
     static JsonNode roomView() {
@@ -3380,6 +3389,7 @@ public final class BMSIRArenaClient {
         );
         arenaMatchesPlayed = player.path("matches_played").asInt(0);
         queueView = player.path("queue");
+        waitingPlayersView = message.path("waiting_players");
         queueStatus = queueView.path("status").asText("idle");
         rankingView = message.path("ranking");
         publicRoomsView = message.path("public_rooms");

@@ -1406,6 +1406,11 @@ public final class BMSIRArenaOverlay {
                 BMSIRArenaClient.fillPlayerCount(),
                 BMSIRArenaClient.fillMaxPlayers()
         ));
+        for (String player : fillWaitingPlayerLabels(
+                BMSIRArenaClient.waitingPlayersView()
+        )) {
+            ImGui.bulletText(player);
+        }
         ImGui.textWrapped(
                 t(
                         "この待機中はマッチから抜けても、レート・戦績に影響しません。",
@@ -1413,6 +1418,61 @@ public final class BMSIRArenaOverlay {
                 )
         );
         return true;
+    }
+
+    /** Human participants shown while a reserved match is still filling. */
+    static List<String> fillWaitingPlayerLabels(JsonNode match) {
+        List<String> labels = new ArrayList<>();
+        JsonNode players = match != null && match.isArray()
+                ? match
+                : match == null ? null : match.path("players");
+        if (players == null || !players.isArray()) {
+            return labels;
+        }
+        for (JsonNode player : players) {
+            if (player.path("cpu").asBoolean(false)
+                    || player.path("is_cpu").asBoolean(false)) {
+                continue;
+            }
+            String name = player.path("name").asText("").trim();
+            if (name.isEmpty()) {
+                name = Integer.toString(player.path("player_id").asInt());
+            }
+            long rating = Math.round(player.path("rating_exact").asDouble(
+                    player.path("rating").asDouble(0.0)
+            ));
+            String rank = firstText(player, "dan", "rank", "dan_label", "rank_label");
+            String state = firstText(player, "waiting_status", "queue_status", "status");
+            if (state.isEmpty()) {
+                state = t("待機中", "waiting");
+            } else {
+                state = waitingStateLabel(state);
+            }
+            labels.add(name + " / R " + rating
+                    + (rank.isEmpty() ? "" : " / " + rank)
+                    + " / " + state);
+        }
+        return labels;
+    }
+
+    private static String waitingStateLabel(String state) {
+        return switch (state) {
+            case "waiting", "queued" -> t("待機中", "waiting");
+            case "ready" -> t("準備完了", "ready");
+            case "disconnected" -> t("切断中", "disconnected");
+            case "arena_off" -> t("Arena無効", "Arena disabled");
+            default -> state;
+        };
+    }
+
+    private static String firstText(JsonNode node, String... names) {
+        for (String name : names) {
+            String value = node.path(name).asText("").trim();
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private static boolean renderNomination() {
