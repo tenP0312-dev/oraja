@@ -555,7 +555,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.22-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -576,7 +576,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.22-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -592,7 +592,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.18-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.22-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

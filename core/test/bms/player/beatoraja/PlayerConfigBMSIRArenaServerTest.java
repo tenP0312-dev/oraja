@@ -45,7 +45,15 @@ class PlayerConfigBMSIRArenaServerTest {
 
         config.setBmsirArenaServer("http://www.bms-ir.org/new/arena/ws/client");
 
-        assertEquals("https://www.bms-ir.org/new/arena/ws/client", config.getBmsirArenaServer());
+        assertEquals("wss://www.bms-ir.org/new/arena/ws/client", config.getBmsirArenaServer());
+    }
+
+    @Test
+    void getterUpgradesLegacyPlainHttpSchemeRestoredFromDisk() throws Exception {
+        PlayerConfig config = new PlayerConfig();
+        setArenaServerFieldDirectly(config, "http://www.bms-ir.org/new/arena/ws/client");
+
+        assertEquals("wss://www.bms-ir.org/new/arena/ws/client", config.getBmsirArenaServer());
     }
 
     @Test

@@ -727,15 +727,16 @@ public final class PlayerConfig {
 
 	/**
 	 * Older releases stored the Arena server as plain {@code ws://}/{@code http://}.
-	 * Silently upgrade those saved values to their TLS equivalent so stale local
-	 * configuration cannot fall back to an unencrypted connection.
+	 * Silently upgrade those saved values to the TLS WebSocket scheme so stale
+	 * local configuration cannot fall back to an unencrypted connection or pass
+	 * an HTTP URL to the Arena WebSocket client.
 	 */
 	private static String upgradeToSecureArenaServerScheme(String value) {
 		if (value.regionMatches(true, 0, "ws://", 0, 5)) {
 			return "wss://" + value.substring(5);
 		}
 		if (value.regionMatches(true, 0, "http://", 0, 7)) {
-			return "https://" + value.substring(7);
+			return "wss://" + value.substring(7);
 		}
 		return value;
 	}
