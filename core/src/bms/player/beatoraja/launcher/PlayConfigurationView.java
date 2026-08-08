@@ -27,6 +27,7 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRScoreDatabaseExport;
 import bms.player.beatoraja.song.*;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -119,6 +120,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirLongNoteFixed;
 	@FXML
+	private ComboBox<String> bmsirArenaLanguage;
+	@FXML
 	private ComboBox<String> bmsirArenaTargetMode;
 	@FXML
 	private ComboBox<String> bmsirArenaGraphOrder;
@@ -154,6 +157,8 @@ public class PlayConfigurationView implements Initializable {
 	private CheckBox bmsirJudgeTimingRestoreEnabled;
 	@FXML
 	private CheckBox bmsirInfoNotificationsEnabled;
+	@FXML
+	private Button bmsirExportVanillaScoreDb;
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
 
@@ -414,20 +419,27 @@ public class PlayConfigurationView implements Initializable {
 
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
+		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
 		arenaIdentity.setText(Version.getArenaDisplayName());
+		bmsirArenaLanguage.getItems().setAll("日本語", "English");
 		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
-		bmsirArenaTargetMode.getItems().setAll(
-				"OFF",
-				"1位の対戦相手",
-				"自分の直上",
-				"指定プレイヤー"
-		);
-		bmsirArenaGraphOrder.getItems().setAll("順位順", "入室順固定");
-		bmsirCoverControlMode.getItems().setAll(
-				"oraja標準（START+1～7: ハイスピード）",
-				"LR2式（SUD+表示中のみ6/7: SUD+）",
-				"拡張（6/7: SUD+/HIDDEN/LIFT）"
-		);
+		bmsirArenaTargetMode.getItems().setAll(english
+				? List.of("OFF", "1st-place opponent", "Opponent directly above", "Specified player")
+				: List.of("OFF", "1位の対戦相手", "自分の直上", "指定プレイヤー"));
+		bmsirArenaGraphOrder.getItems().setAll(english
+				? List.of("Rank order", "Fixed entry order")
+				: List.of("順位順", "入室順固定"));
+		bmsirCoverControlMode.getItems().setAll(english
+				? List.of(
+						"oraja default (START + keys 1-7: HI-SPEED)",
+						"LR2 style (keys 6/7: SUD+ while visible)",
+						"Extended (keys 6/7: SUD+/HIDDEN/LIFT)"
+				)
+				: List.of(
+						"oraja標準（START+1～7: ハイスピード）",
+						"LR2式（SUD+表示中のみ6/7: SUD+）",
+						"拡張（6/7: SUD+/HIDDEN/LIFT）"
+				));
 		bmsirCoverChangeStep.setValueFactory(
 				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
@@ -444,7 +456,7 @@ public class PlayConfigurationView implements Initializable {
 				bmsirNumpad9
 		);
 		List<String> numpadLabels = Arrays.stream(BMSIRNumpadAction.values())
-				.map(BMSIRNumpadAction::label)
+				.map(action -> action.label(english))
 				.toList();
 		bmsirNumpadCombos.forEach(combo -> combo.getItems().setAll(numpadLabels));
 		bmsirNumpadJudgeTimingStep.setValueFactory(
@@ -460,7 +472,7 @@ public class PlayConfigurationView implements Initializable {
 				"ALL-SCR", "RANDOM-EX", "S-RANDOM-EX" };
 		initComboBox(scoreop, scoreOptions);
 		initComboBox(scoreop2, scoreOptions);
-		initComboBox(doubleop, new String[] { "OFF", "FLIP", "BATTLE", "BATTLE AS" });
+		initComboBox(doubleop, new String[] { "OFF", "FLIP" });
 		initComboBox(seventoninepattern, new String[] { "OFF", "SC1KEY2~8", "SC1KEY3~9", "SC2KEY3~9", "SC8KEY1~7", "SC9KEY1~7", "SC9KEY2~8" });
 		String[] seventoninestring = new String[]{arg1.getString("SEVEN_TO_NINE_OFF"),arg1.getString("SEVEN_TO_NINE_NO_MASHING"),arg1.getString("SEVEN_TO_NINE_ALTERNATION")};
 		initComboBox(seventoninetype, seventoninestring);
@@ -678,6 +690,9 @@ public class PlayConfigurationView implements Initializable {
 		);
 		bmsirLongNoteFixed.setSelected(true);
 		bmsirLongNoteFixed.setDisable(true);
+		bmsirArenaLanguage.getSelectionModel().select(
+				"en".equals(player.getBmsirArenaLanguage()) ? 1 : 0
+		);
 		bmsirRulesetProfile.getSelectionModel().select(
 				"oraja".equals(player.getBmsirRulesetProfile()) ? 1 : 0
 		);
@@ -749,7 +764,7 @@ public class PlayConfigurationView implements Initializable {
 		hranthresholdbpm.getValueFactory().setValue(player.getHranThresholdBPM());
 		judgeregion.setSelected(player.isShowjudgearea());
 		markprocessednote.setSelected(player.isMarkprocessednote());
-		extranotedepth.getValueFactory().setValue(player.getExtranoteDepth());
+		extranotedepth.getValueFactory().setValue(player.getBmsirExtraMode());
 
 		autosavereplay1.getSelectionModel().select(player.getAutoSaveReplay()[0]);
 		autosavereplay2.getSelectionModel().select(player.getAutoSaveReplay()[1]);
@@ -838,6 +853,11 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirDanLocalSyncEnabled(
 				bmsirDanLocalSyncEnabled.isSelected()
 		);
+		player.setBmsirArenaLanguage(
+				bmsirArenaLanguage.getSelectionModel().getSelectedIndex() == 1
+						? "en"
+						: "ja"
+		);
 		player.setBmsirArenaTargetMode(
 				bmsirArenaTargetModeValue(
 						bmsirArenaTargetMode.getSelectionModel()
@@ -913,7 +933,7 @@ public class PlayConfigurationView implements Initializable {
 		player.setLongnoteRate(longnoterate.getValue());
 		player.setHranThresholdBPM(getValue(hranthresholdbpm));
 		player.setMarkprocessednote(markprocessednote.isSelected());
-		player.setExtranoteDepth(extranotedepth.getValue());
+		player.setBmsirExtraMode(extranotedepth.getValue());
 
 		player.setAutoSaveReplay( new int[]{autosavereplay1.getValue(),autosavereplay2.getValue(),
 				autosavereplay3.getValue(),autosavereplay4.getValue()});
@@ -1185,6 +1205,42 @@ public class PlayConfigurationView implements Initializable {
 		} catch (ClassNotFoundException e1) {
 		}
 
+	}
+
+	@FXML
+	public void exportBmsirVanillaScoreDatabase() {
+		if (config == null || players.getValue() == null) return;
+		bmsirExportVanillaScoreDb.setDisable(true);
+		Path playerDirectory = Paths.get(config.getPlayerpath(), players.getValue());
+		Thread worker = new Thread(() -> {
+			try {
+				BMSIRScoreDatabaseExport.ExportResult result =
+						BMSIRScoreDatabaseExport.export(playerDirectory);
+				Platform.runLater(() -> {
+					bmsirExportVanillaScoreDb.setDisable(false);
+					Alert alert = new Alert(Alert.AlertType.INFORMATION);
+					alert.setTitle("BMS-IR Arena");
+					alert.setHeaderText("Vanilla score database created");
+					alert.setContentText(
+							result.path() + "\n\nNormal scores: " + result.normalScores()
+							+ "\nExcluded MANIAC scores: " + result.excludedManiacScores()
+					);
+					alert.showAndWait();
+				});
+			} catch (Exception error) {
+				logger.warn("Vanilla score database export failed: {}", error.getMessage());
+				Platform.runLater(() -> {
+					bmsirExportVanillaScoreDb.setDisable(false);
+					Alert alert = new Alert(Alert.AlertType.ERROR);
+					alert.setTitle("BMS-IR Arena");
+					alert.setHeaderText("Score database export failed");
+					alert.setContentText(error.getMessage());
+					alert.showAndWait();
+				});
+			}
+		}, "bmsir-score-db-export");
+		worker.setDaemon(true);
+		worker.start();
 	}
 
 	@FXML

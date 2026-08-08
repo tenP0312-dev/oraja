@@ -1,5 +1,6 @@
 package bms.player.beatoraja.modmenu;
 
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.skin.Skin;
 import bms.player.beatoraja.skin.SkinObject;
 import com.badlogic.gdx.Gdx;
@@ -38,7 +39,7 @@ public class SkinWidgetManager {
         WIDGET_TABLE_COLUMNS.add(new WidgetTableColumn("y", new ImBoolean(true), false, SkinWidgetDestination::getDstY, Event.EventType.CHANGE_Y));
         WIDGET_TABLE_COLUMNS.add(new WidgetTableColumn("w", new ImBoolean(true), false, SkinWidgetDestination::getDstW, Event.EventType.CHANGE_W));
         WIDGET_TABLE_COLUMNS.add(new WidgetTableColumn("h", new ImBoolean(true), false, SkinWidgetDestination::getDstH, Event.EventType.CHANGE_H));
-        WIDGET_TABLE_COLUMNS.add(new WidgetTableColumn("Operation", new ImBoolean(true), true, null, null));
+        WIDGET_TABLE_COLUMNS.add(new WidgetTableColumn("operation", new ImBoolean(true), true, null, null));
     }
 
     private static final ImFloat editingWidgetX = new ImFloat(0);
@@ -51,6 +52,10 @@ public class SkinWidgetManager {
     private static boolean reset_move_overlay = false;
 
     public static boolean focus = false;
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     public static void changeSkin(Skin skin) {
         synchronized (LOCK) {
@@ -67,11 +72,15 @@ public class SkinWidgetManager {
                 SkinObject.SkinObjectDestination[] dsts = skinObject.getAllDestination();
                 List<SkinWidgetDestination> destinations = new ArrayList<>();
                 for (int i = 0; i < dsts.length; ++i) {
-                    String dstBaseName = skinObjectName == null ? "Unnamed Destination" : skinObjectName;
+                    String dstBaseName = skinObjectName == null
+                            ? t("名前なしの表示先", "Unnamed Destination")
+                            : skinObjectName;
                     String combinedName = dsts.length == 1 ? dstBaseName : String.format("%s(%d)", dstBaseName, i);
                     destinations.add(new SkinWidgetDestination(combinedName, dsts[i]));
                 }
-                String widgetBaseName = skinObjectName == null ? "Unnamed Widget" : skinObjectName;
+                String widgetBaseName = skinObjectName == null
+                        ? t("名前なしのウィジェット", "Unnamed Widget")
+                        : skinObjectName;
                 Integer count = duplicatedSkinObjectNameCount.getOrDefault(widgetBaseName, 0);
                 duplicatedSkinObjectNameCount.compute(widgetBaseName, (pk, pv) -> pv == null ? 1 : pv + 1);
                 String widgetName = count == 0 ? widgetBaseName : String.format("%s(%d)", widgetBaseName, count);
@@ -82,21 +91,22 @@ public class SkinWidgetManager {
 
     public static void show(ImBoolean showSkinWidgetManagerMenu) {
         synchronized (LOCK) {
-            if (ImGui.begin("Skin Widgets", showSkinWidgetManagerMenu, ImGuiWindowFlags.AlwaysAutoResize)) {
+            if (ImGui.begin(t("スキンウィジェット", "Skin Widgets") + "###skin-widgets",
+                    showSkinWidgetManagerMenu, ImGuiWindowFlags.AlwaysAutoResize)) {
                 if (widgets.isEmpty()) {
-                    ImGui.text("No skin is loaded");
+                    ImGui.text(t("スキンが読み込まれていません", "No skin is loaded"));
                 } else {
                     if (ImGui.beginTabBar("SkinWidgetsTabBar")) {
-                        if (ImGui.beginTabItem("SkinWidgets")) {
-                            if (ImGui.button("undo")) {
+                        if (ImGui.beginTabItem(t("ウィジェット", "Widgets") + "###widgets")) {
+                            if (ImGui.button(t("元に戻す", "Undo"))) {
                                 eventHistory.undo();
                             }
                             ImGui.sameLine();
                             renderPreferColumnSetting();
                             ImGui.sameLine();
-                            ImGui.checkbox("Show Position", SHOW_CURSOR_POSITION);
+                            ImGui.checkbox(t("座標を表示", "Show Position"), SHOW_CURSOR_POSITION);
                             ImGui.sameLine();
-                            if (ImGui.button("export")) {
+                            if (ImGui.button(t("書き出す", "Export"))) {
                                 exportChanges();
                             }
 
@@ -104,7 +114,7 @@ public class SkinWidgetManager {
                             renderSkinWidgetsTable();
                             ImGui.endTabItem();
                         }
-                        if (ImGui.beginTabItem("History")) {
+                        if (ImGui.beginTabItem(t("履歴", "History") + "###history")) {
                             renderHistoryTable();
                             ImGui.endTabItem();
                         }
@@ -127,7 +137,7 @@ public class SkinWidgetManager {
     }
 
     private static void renderPreferColumnSetting() {
-        if (ImGui.button("Columns")) {
+        if (ImGui.button(t("列", "Columns"))) {
             ImGui.openPopup("PreferColumnSetting");
         }
 
@@ -136,7 +146,7 @@ public class SkinWidgetManager {
                 if (column.persistent) {
                     continue;
                 }
-                ImGui.checkbox(column.name, column.show);
+                ImGui.checkbox(columnDisplayName(column), column.show);
             }
             ImGui.endPopup();
         }
@@ -151,7 +161,7 @@ public class SkinWidgetManager {
         int colSize = showingColumns.size();
         if (ImGui.beginTable("Skin Widgets", colSize, ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY, 0, ImGui.getTextLineHeight() * 20)) {
             ImGui.tableSetupScrollFreeze(0, 1);
-            showingColumns.forEach(column -> ImGui.tableSetupColumn(column.name));
+            showingColumns.forEach(column -> ImGui.tableSetupColumn(columnDisplayName(column)));
             ImGui.tableHeadersRow();
             for (SkinWidget widget : widgets) {
                 ImGui.tableNextRow();
@@ -173,7 +183,7 @@ public class SkinWidgetManager {
                 }
 
                 ImGui.tableSetColumnIndex(colSize - 1);
-                if (ImGui.button("Toggle")) {
+                if (ImGui.button(t("表示切替", "Toggle"))) {
                     widget.toggleVisible();
                 }
 
@@ -201,7 +211,7 @@ public class SkinWidgetManager {
                         }
 
                         ImGui.tableSetColumnIndex(colSize - 1);
-                        if (ImGui.button("Edit")) {
+                        if (ImGui.button(t("編集", "Edit"))) {
                             editingWidgetX.set(dst.getDstX());
                             editingWidgetY.set(dst.getDstY());
                             editingWidgetW.set(dst.getDstW());
@@ -214,7 +224,7 @@ public class SkinWidgetManager {
                             ImGui.inputFloat("y", editingWidgetY);
                             ImGui.inputFloat("w", editingWidgetW);
                             ImGui.inputFloat("h", editingWidgetH);
-                            if (ImGui.button("Submit")) {
+                            if (ImGui.button(t("反映", "Apply"))) {
                                 dst.setDstX(editingWidgetX.get());
                                 dst.setDstY(editingWidgetY.get());
                                 dst.setDstW(editingWidgetW.get());
@@ -222,7 +232,7 @@ public class SkinWidgetManager {
                                 ImGui.closeCurrentPopup();
                             }
 
-                            if ((ImGui.checkbox("Move", move_overlay_enabled)
+                            if ((ImGui.checkbox(t("移動", "Move"), move_overlay_enabled)
                                  && move_overlay_enabled.get())
                                 || reset_move_overlay) {
                                 float w = dst.getDstW();
@@ -310,7 +320,7 @@ public class SkinWidgetManager {
     private static void renderHistoryTable() {
         if (ImGui.beginTable("History", 1, ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY, 0, ImGui.getTextLineHeight() * 20)) {
             ImGui.tableSetupScrollFreeze(0, 1);
-            ImGui.tableSetupColumn("Description");
+            ImGui.tableSetupColumn(t("内容", "Description"));
             ImGui.tableHeadersRow();
             List<Event<?>> events = eventHistory.getEvents();
             ImGuiListClipper.forEach(events.size(), new ImListClipperCallback() {
@@ -386,7 +396,7 @@ public class SkinWidgetManager {
         String changeLogs = String.join("\n", changes);
         Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
         clipboard.setContents(changeLogs);
-        ImGuiNotify.info("Copied changes to clipboard");
+        ImGuiNotify.info(t("変更内容をクリップボードへコピーしました", "Copied changes to clipboard"));
     }
 
     /**
@@ -395,6 +405,12 @@ public class SkinWidgetManager {
     private static String normalizeFloat(float value) {
         DecimalFormat df = new DecimalFormat("#.####");
         return df.format(value);
+    }
+
+    private static String columnDisplayName(WidgetTableColumn column) {
+        return "operation".equals(column.name)
+                ? t("操作", "Operation")
+                : column.name;
     }
 
     /**
@@ -530,7 +546,10 @@ public class SkinWidgetManager {
          */
         public void submitMovement() {
             if (beforeMove == null) {
-                ImGuiNotify.error("Cannot submit the move result because there's no original position");
+                ImGuiNotify.error(t(
+                        "移動前の座標がないため変更を反映できません",
+                        "Cannot apply the move because the original position is unavailable"
+                ));
                 return ;
             }
             float nextX = getDstX();

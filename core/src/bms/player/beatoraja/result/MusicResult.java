@@ -21,6 +21,8 @@ import bms.player.beatoraja.MainController.IRStatus;
 import bms.player.beatoraja.MainController.IRSendStatus;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
@@ -86,9 +88,22 @@ public class MusicResult extends AbstractResult {
 		rankingOffset = 0;
 		// TODO スコアハッシュがあり、有効期限が切れていないものを送信する？
 		final IRStatus[] ir = main.getIRStatus();
-		if (ir.length > 0 && resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !resource.isFreqOn()) {
+		final BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
+		final FloatArray activeGauge = resource.getGauge()[resource.getGrooveGauge().getType()];
+		final boolean sendManiac = maniacContext != null
+				&& BMSIRManiacApiClient.canSubmit(maniacContext.settings())
+				&& resource.isUpdateScore()
+				&& BMSIRManiacApiClient.shouldSubmit(
+						main,
+						newscore,
+						oldscore,
+						activeGauge.get(activeGauge.size - 1) > 0.0
+				);
+		if ((ir.length > 0 || sendManiac)
+				&& resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
+				&& !resource.isFreqOn()) {
 			state = STATE_IR_PROCESSING;
-			
+			List<IRSendStatus> currentScores = new ArrayList<>();
         	for(IRStatus irc : ir) {
     			boolean send = resource.isUpdateScore() && !resource.isForceNoIRSend();
     			switch(irc.config.getIrsend()) {
@@ -105,7 +120,9 @@ public class MusicResult extends AbstractResult {
     			}
     			
     			if(send) {
-    				main.irSendStatus.add(new IRSendStatus(irc.connection, resource.getSongdata(), newscore));
+					IRSendStatus queued = new IRSendStatus(irc.connection, resource.getSongdata(), newscore);
+					main.irSendStatus.add(queued);
+					currentScores.add(queued);
     			}
         	}
 			
@@ -113,12 +130,7 @@ public class MusicResult extends AbstractResult {
 				int irsend = 0;
 				boolean succeed = true;
 				List<IRSendStatus> removeIrSendStatus = new ArrayList<IRSendStatus>();
-				List<IRSendStatus> scores = new ArrayList<IRSendStatus>();
-				if (!main.irSendStatus.isEmpty()) {
-					scores = main.irSendStatus.subList(main.irSendStatus.size() - ir.length, main.irSendStatus.size());
-				}
-
-				for (IRSendStatus irc : scores) {
+				for (IRSendStatus irc : currentScores) {
 					try {
 						if (irsend == 0) {
 							timer.switchTimer(TIMER_IR_CONNECT_BEGIN, true);
@@ -136,21 +148,34 @@ public class MusicResult extends AbstractResult {
 					}
 				}
 				main.irSendStatus.removeAll(removeIrSendStatus);
+				if (sendManiac) {
+					if (irsend == 0) timer.switchTimer(TIMER_IR_CONNECT_BEGIN, true);
+					irsend++;
+					ranking.beginAccess();
+					succeed &= BMSIRManiacApiClient.submitScore(
+							main,
+							maniacContext,
+							newscore,
+							ranking
+					);
+				}
 
 				if(irsend > 0) {
 					timer.switchTimer(succeed ? TIMER_IR_CONNECT_SUCCESS : TIMER_IR_CONNECT_FAIL, true);
-					try {
-						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, new IRChartData(resource.getSongdata()));
-						if(response.isSucceeded()) {
-							ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
-							rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
-							logger.info("IRからのスコア取得成功 : {}", response.getMessage());
-						} else {
-							logger.warn("IRからのスコア取得失敗 : {}", response.getMessage());
+					if (!sendManiac) {
+						try {
+							IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, new IRChartData(resource.getSongdata()));
+							if(response.isSucceeded()) {
+								ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
+								rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
+								logger.info("IRからのスコア取得成功 : {}", response.getMessage());
+							} else {
+								logger.warn("IRからのスコア取得失敗 : {}", response.getMessage());
+							}
+						} catch (Exception e) {
+							logger.warn("IRからのスコア取得時例外: {}", e.getMessage());
+							e.printStackTrace();
 						}
-					} catch (Exception e) {
-						logger.warn("IRからのスコア取得時例外: {}", e.getMessage());
-						e.printStackTrace();
 					}
 				}
 				state = STATE_IR_FINISHED;

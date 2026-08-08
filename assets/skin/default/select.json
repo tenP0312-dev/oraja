@@ -208,7 +208,7 @@
 		{"id":"course3", "font":0, "size":24, "ref":152},
 		{"id":"course4", "font":0, "size":24, "ref":153},
 
-		{"id":"bartext", "font":0, "size":24}
+		{"id":"bartext", "font":0, "size":24},
 		{"id":"search", "font":0, "size":24, "ref":30},
 	],
 	"graph":[
@@ -523,6 +523,9 @@
 	],
 	"bpmgraph": [
 		{"id":"bpmgraph"}
+	],
+	"radargraph": [
+		{"id":"radar1", "color":"ff0000"}
 	],
 
 	"destination":[
@@ -873,5 +876,9 @@
 		{"id":"time_hour", "dst":[{"x":1178, "y":2, "w":12, "h":12}]},
 		{"id":"time_minute", "dst":[{"x":1214, "y":2, "w":12, "h":12}]},
 		{"id":"time_second", "dst":[{"x":1250, "y":2, "w":12, "h":12}]},
+
+		{"id":"radar1", "dst":[
+			{"x":900, "y":30, "w":180, "h":180}
+		]},
 	]
 }

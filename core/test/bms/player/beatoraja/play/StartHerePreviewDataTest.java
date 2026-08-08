@@ -19,6 +19,8 @@ class StartHerePreviewDataTest {
         model.setMode(Mode.BEAT_7K);
 
         TimeLine first = new TimeLine(0.0, 0, Mode.BEAT_7K.key);
+		first.setBPM(150);
+		first.setScroll(1.5);
         first.setNote(0, new NormalNote(1));
         first.setNote(3, new NormalNote(2));
 
@@ -42,6 +44,8 @@ class StartHerePreviewDataTest {
         assertEquals(2, preview.notes().size());
         assertEquals(0, preview.notes().get(0).lane());
         assertEquals(3, preview.notes().get(1).lane());
+		assertEquals(150.0, preview.anchorBpm());
+		assertEquals(1.5, preview.anchorScroll());
     }
 
     @Test
@@ -105,4 +109,19 @@ class StartHerePreviewDataTest {
         empty.setAllTimeLine(new TimeLine[0]);
         assertFalse(StartHerePreviewData.build(empty).isValid());
     }
+
+	@Test
+	void invalidAnchorBpmUsesTheNearestPositiveChartBpm() {
+		BMSModel model = new BMSModel();
+		model.setMode(Mode.BEAT_7K);
+		model.setBpm(0.0);
+		TimeLine anchor = new TimeLine(0.0, 0, Mode.BEAT_7K.key);
+		anchor.setBPM(0.0);
+		anchor.setNote(0, new NormalNote(1));
+		TimeLine later = new TimeLine(1.0, 1_000_000, Mode.BEAT_7K.key);
+		later.setBPM(180.0);
+		model.setAllTimeLine(new TimeLine[]{anchor, later});
+
+		assertEquals(180.0, StartHerePreviewData.build(model).anchorBpm());
+	}
 }

@@ -6,11 +6,20 @@ import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import imgui.ImColor;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// Shares BMSIRArenaI18n's static language field with BMSIRArenaI18nTest and
+// ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
+@ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaOverlayTest {
+    @AfterEach
+    void resetLanguage() {
+        BMSIRArenaI18n.setLanguage("ja");
+    }
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Test
@@ -69,7 +78,7 @@ class BMSIRArenaOverlayTest {
 
     @Test
     void scoreGraphStaysInsideTheActualPlotBounds() {
-        assertEquals(110.0f, BMSIRArenaOverlay.scorePlotHeight(210.0f));
+        assertEquals(92.0f, BMSIRArenaOverlay.scorePlotHeight(210.0f));
         assertEquals(10.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 1.0));
         assertEquals(10.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 1.1));
         assertEquals(120.0f, BMSIRArenaOverlay.scoreBarTop(10.0f, 120.0f, 0.0));
@@ -88,6 +97,7 @@ class BMSIRArenaOverlayTest {
 
     @Test
     void battleGraphsAlwaysGrowTowardTheWinningDirection() throws Exception {
+        BMSIRArenaI18n.setLanguage("en");
         JsonNode player = JSON.readTree("""
                 {
                   "exscore": 180,
@@ -110,6 +120,19 @@ class BMSIRArenaOverlayTest {
                 "LOWEST COMBO BREAK WINS",
                 BMSIRArenaOverlay.ruleBattleTitle("minbp")
         );
+    }
+
+    @Test
+    void ruleBattleTitleFollowsTheSelectedLanguage() {
+        BMSIRArenaI18n.setLanguage("ja");
+        assertEquals("コンボ切れ最少勝負", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals("最大コンボ対決", BMSIRArenaOverlay.ruleBattleTitle("max_combo"));
+        assertEquals("EXスコア対決", BMSIRArenaOverlay.ruleBattleTitle("exscore"));
+
+        BMSIRArenaI18n.setLanguage("en");
+        assertEquals("LOWEST COMBO BREAK WINS", BMSIRArenaOverlay.ruleBattleTitle("minbp"));
+        assertEquals("MAX COMBO BATTLE", BMSIRArenaOverlay.ruleBattleTitle("max_combo"));
+        assertEquals("EX SCORE BATTLE", BMSIRArenaOverlay.ruleBattleTitle("exscore"));
     }
 
     @Test
@@ -231,6 +254,26 @@ class BMSIRArenaOverlayTest {
         assertEquals(
                 "レート 1000 → 1000 (+0.0)",
                 BMSIRArenaOverlay.ratingChangeText(1000, 1000, 0)
+        );
+    }
+
+    @Test
+    void fillWaitingShowsHumanNamesRoundedRatingsRanksAndStatesOnly() throws Exception {
+        BMSIRArenaI18n.setLanguage("en");
+        JsonNode match = JSON.readTree("""
+                {"players": [
+                  {"name": "Alice", "rating_exact": 1000.6, "dan": "SP 八段", "status": "waiting"},
+                  {"name": "CPU", "rating_exact": 9999.0, "is_cpu": true, "status": "waiting"},
+                  {"name": "Bob", "rating": 900.4, "rank": "A", "queue_status": "ready"}
+                ]}
+                """);
+
+        assertEquals(
+                java.util.List.of(
+                        "Alice / R 1001 / SP 八段 / waiting",
+                        "Bob / R 900 / A / ready"
+                ),
+                BMSIRArenaOverlay.fillWaitingPlayerLabels(match)
         );
     }
 

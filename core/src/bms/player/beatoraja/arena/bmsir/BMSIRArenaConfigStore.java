@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 7;
+        private int schemaVersion = 11;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -178,6 +178,9 @@ public final class BMSIRArenaConfigStore {
         private int nominationSeconds = 60;
         private int optionSeconds = 10;
         private int intermissionSeconds = 0;
+        private BMSIRManiacSettings maniacSettings = new BMSIRManiacSettings();
+        private boolean detailedLogEnabled = false;
+        private String language = "ja";
 
         static Settings from(PlayerConfig player) {
             Settings settings = new Settings();
@@ -231,6 +234,11 @@ public final class BMSIRArenaConfigStore {
             settings.nominationSeconds = player.getBmsirArenaNominationSeconds();
             settings.optionSeconds = player.getBmsirArenaOptionSeconds();
             settings.intermissionSeconds = player.getBmsirArenaIntermissionSeconds();
+            settings.maniacSettings = new BMSIRManiacSettings(
+                    player.getBmsirManiacSettings()
+            );
+            settings.detailedLogEnabled = player.isBmsirArenaDetailedLogEnabled();
+            settings.language = player.getBmsirArenaLanguage();
             return settings;
         }
 
@@ -307,6 +315,9 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirArenaNominationSeconds(nominationSeconds);
             player.setBmsirArenaOptionSeconds(optionSeconds);
             player.setBmsirArenaIntermissionSeconds(intermissionSeconds);
+            player.setBmsirManiacSettings(maniacSettings);
+            player.setBmsirArenaDetailedLogEnabled(detailedLogEnabled);
+            player.setBmsirArenaLanguage(language);
         }
     }
 }

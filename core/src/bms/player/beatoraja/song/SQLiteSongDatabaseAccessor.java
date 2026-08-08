@@ -25,6 +25,7 @@ import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.handlers.BeanListHandler;
 import org.apache.commons.dbutils.handlers.MapListHandler;
 import org.sqlite.SQLiteConfig;
+import org.sqlite.SQLiteConfig.JournalMode;
 import org.sqlite.SQLiteConfig.SynchronousMode;
 import org.sqlite.SQLiteDataSource;
 
@@ -102,9 +103,12 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 		
 		Class.forName("org.sqlite.JDBC");
 		SQLiteConfig conf = new SQLiteConfig();
-		conf.setSharedCache(true);
+		// Folder refreshes run in the background. Keep the last committed song
+		// snapshot readable instead of turning SQLITE_BUSY into an empty bar list.
+		conf.setSharedCache(false);
+		conf.setJournalMode(JournalMode.WAL);
+		conf.setBusyTimeout(5_000);
 		conf.setSynchronous(SynchronousMode.OFF);
-		// conf.setJournalMode(JournalMode.MEMORY);
 		ds = new SQLiteDataSource(conf);
 		ds.setUrl("jdbc:sqlite:" + filepath);
 		qr = new QueryRunner(ds);

@@ -1,6 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.song.SongData;
@@ -23,26 +24,31 @@ public class SongManagerMenu {
     private static ImBoolean LAST_PLAYED_SORT = new ImBoolean(false);
     private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
+
     public static void show(ImBoolean showSongManager) {
         Optional<SongData> currentSongData = getCurrentSongData();
         Optional<ScoreData> currentScoreData = getCurrentScoreData();
-        if (ImGui.begin("Song Manager", showSongManager, ImGuiWindowFlags.AlwaysAutoResize)) {
+        if (ImGui.begin(t("楽曲管理", "Song Manager") + "###song-manager",
+                showSongManager, ImGuiWindowFlags.AlwaysAutoResize)) {
             String songName = currentSongData.map(SongData::getTitle).orElse("");
             String lastPlayRecordTime = currentScoreData.map(scoreData -> {
                 Date date = new Date(scoreData.getDate() * 1000L);
                 return simpleDateFormat.format(date);
-            }).orElse("Not played");
-            ImGui.text("current picking: " + songName);
+            }).orElse(t("未プレイ", "Not played"));
+            ImGui.text(t("選択中: ", "Selected: ") + songName);
 
-            ImGui.text("Last played: " + lastPlayRecordTime);
-            if (ImGui.checkbox("Sort by last played", LAST_PLAYED_SORT)) {
+            ImGui.text(t("最終プレイ: ", "Last played: ") + lastPlayRecordTime);
+            if (ImGui.checkbox(t("最終プレイ順に並べる", "Sort by last played"), LAST_PLAYED_SORT)) {
                 selector.getBarManager().updateBar();
             }
 
             if (songName.isEmpty()) {
-                ImGui.text("Not a selectable song");
+                ImGui.text(t("選択可能な楽曲ではありません", "Not a selectable song"));
             } else {
-                if (ImGui.button("Show Reverse Lookup")) {
+                if (ImGui.button(t("所属フォルダを表示", "Show Reverse Lookup"))) {
                     updateReverseLookupData(currentSongData);
                     ImGui.openPopup("Reverse Lookup");
                 }

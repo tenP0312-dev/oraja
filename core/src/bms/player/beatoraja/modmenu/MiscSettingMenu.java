@@ -5,6 +5,7 @@ import bms.player.beatoraja.Config;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.PlayConfig;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.select.MusicSelector;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
@@ -48,6 +49,10 @@ public class MiscSettingMenu {
 
     private static String[] players = PlayerConfig.readAllPlayerID("player");
 
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
+
 
     public static void show(ImBoolean showMiscSetting) {
         // TODO: We can setup preferred game mode here in future
@@ -59,53 +64,55 @@ public class MiscSettingMenu {
         float relativeY = windowHeight * 0.04f;
         ImGui.setNextWindowPos(relativeX, relativeY, ImGuiCond.FirstUseEver);
 
-        if (ImGui.begin("Misc Settings", showMiscSetting, ImGuiWindowFlags.AlwaysAutoResize)) {
-            if (ImGui.combo("Notification Positions", NOTIFICATION_POSITION, ImGuiNotify.NOTIFICATION_POSITIONS)) {
+        if (ImGui.begin(t("その他設定", "Misc Settings") + "###misc-settings",
+                showMiscSetting, ImGuiWindowFlags.AlwaysAutoResize)) {
+            if (ImGui.combo(t("通知位置", "Notification Position"),
+                    NOTIFICATION_POSITION, ImGuiNotify.notificationPositions())) {
                 ImGuiNotify.setNotificationPosition(NOTIFICATION_POSITION.get());
             }
 
             // Below settings are depending on different play mode
-            if (ImGui.combo("Play Mode", PLAY_MODE_VALUE, PLAY_MODE_OPTIONS)) {
+            if (ImGui.combo(t("プレイモード", "Play Mode"), PLAY_MODE_VALUE, PLAY_MODE_OPTIONS)) {
                 changePlayMode(Mode.getMode(PLAY_MODE_OPTIONS[PLAY_MODE_VALUE.get()]));
             }
 
-            if (ImGui.checkbox("Enable Lift", ENABLE_LIFT)) {
+            if (ImGui.checkbox(t("LIFTを有効にする", "Enable LIFT"), ENABLE_LIFT)) {
                 getPlayConfig().setEnablelift(ENABLE_LIFT.get());
             }
             ImGui.sameLine();
-            if (ImGui.inputInt("Lift Value", LIFT_VALUE)) {
+            if (ImGui.inputInt(t("LIFT値", "LIFT Value"), LIFT_VALUE)) {
                 getPlayConfig().setLift(LIFT_VALUE.get() / 1000f);
             }
 
-            if (ImGui.checkbox("Enable Hidden", ENABLE_HIDDEN)) {
+            if (ImGui.checkbox(t("HIDDENを有効にする", "Enable HIDDEN"), ENABLE_HIDDEN)) {
                 getPlayConfig().setEnablehidden(ENABLE_HIDDEN.get());
             }
             ImGui.sameLine();
-			if (ImGui.inputInt("Hidden Value", HIDDEN_VALUE)) {
+			if (ImGui.inputInt(t("HIDDEN値", "HIDDEN Value"), HIDDEN_VALUE)) {
 				getPlayConfig().setHidden(HIDDEN_VALUE.get() / 1000f);
 			}
 
-			if (ImGui.checkbox("Enable LaneCover", ENABLE_LANECOVER)) {
+			if (ImGui.checkbox(t("レーンカバーを有効にする", "Enable Lane Cover"), ENABLE_LANECOVER)) {
 				getPlayConfig().setEnablelanecover(ENABLE_LANECOVER.get());
 			}
-            if (ImGui.inputInt("Lane Cover Value", LANECOVER_VALUE)) {
+            if (ImGui.inputInt(t("レーンカバー値", "Lane Cover Value"), LANECOVER_VALUE)) {
                 getPlayConfig().setLanecover(LANECOVER_VALUE.get() / 1000f);
             }
-            if (ImGui.inputFloat("Lane Cover Margin(low)", LANE_COVER_MARGIN_LOW)) {
+            if (ImGui.inputFloat(t("レーンカバー下限", "Lane Cover Margin (low)"), LANE_COVER_MARGIN_LOW)) {
                 getPlayConfig().setLanecovermarginlow(LANE_COVER_MARGIN_LOW.get());
             }
-            if (ImGui.inputFloat("Lane Cover Margin(high)", LANE_COVER_MARGIN_HIGH)) {
+            if (ImGui.inputFloat(t("レーンカバー上限", "Lane Cover Margin (high)"), LANE_COVER_MARGIN_HIGH)) {
                 getPlayConfig().setLanecovermarginhigh(LANE_COVER_MARGIN_HIGH.get());
             }
-            if (ImGui.inputInt("Lane Cover Switch Duration", LANE_COVER_SWITCH_DURATION)) {
+            if (ImGui.inputInt(t("レーンカバー切替時間", "Lane Cover Switch Duration"), LANE_COVER_SWITCH_DURATION)) {
                 getPlayConfig().setLanecoverswitchduration(LANE_COVER_SWITCH_DURATION.get());
             }
 
-            if (ImGui.checkbox("Enable Constant", ENABLE_CONSTANT)) {
+            if (ImGui.checkbox(t("CONSTANTを有効にする", "Enable CONSTANT"), ENABLE_CONSTANT)) {
                 getPlayConfig().setEnableConstant(ENABLE_CONSTANT.get());
             }
             ImGui.sameLine();
-            if (ImGui.inputInt("Constant Fade-in", CONSTANT_VALUE)) {
+            if (ImGui.inputInt(t("CONSTANTフェードイン", "CONSTANT Fade-in"), CONSTANT_VALUE)) {
                 getPlayConfig().setConstantFadeinTime(CONSTANT_VALUE.get());
             }
         }
@@ -162,12 +169,12 @@ public class MiscSettingMenu {
           && !config.getPlayername().equals(players[SELECTED_PLAYER.get()]);
 
         ImGui.beginDisabled(!canClick);
-        boolean switchClicked = ImGui.button("Switch");
+        boolean switchClicked = ImGui.button(t("切り替え", "Switch"));
         ImGui.endDisabled();
         ImGui.sameLine();
-        boolean reloadClicked = ImGui.button("Reload list");
+        boolean reloadClicked = ImGui.button(t("一覧を再読込", "Reload list"));
         ImGui.sameLine();
-        ImGui.text("Player Profile");
+        ImGui.text(t("プレイヤープロファイル", "Player Profile"));
         if (switchClicked) {
             String[] oldPlayers = players;
             loadPlayers();

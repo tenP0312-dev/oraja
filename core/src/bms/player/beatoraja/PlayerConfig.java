@@ -10,6 +10,7 @@ import java.text.ParseException;
 
 import bms.player.beatoraja.system.RobustFile;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
@@ -334,6 +335,9 @@ public final class PlayerConfig {
 	private int bmsirArenaNominationSeconds = 60;
 	private int bmsirArenaOptionSeconds = 10;
 	private int bmsirArenaIntermissionSeconds = 0;
+	private BMSIRManiacSettings bmsirManiacSettings = new BMSIRManiacSettings();
+	private boolean bmsirArenaDetailedLogEnabled = false;
+	private String bmsirArenaLanguage = "ja";
 	
 	private String twitterConsumerKey;
 
@@ -437,7 +441,7 @@ public final class PlayerConfig {
 	}
 
 	public void setDoubleoption(int doubleoption) {
-		this.doubleoption = doubleoption;
+		this.doubleoption = doubleoption == 1 ? 1 : 0;
 	}
 
 	public int getExtranoteDepth() {
@@ -709,6 +713,8 @@ public final class PlayerConfig {
 	public String getBmsirArenaServer() {
 		if (bmsirArenaServer == null || bmsirArenaServer.isBlank()) {
 			bmsirArenaServer = "wss://www.bms-ir.org/new/arena/ws/client";
+		} else {
+			bmsirArenaServer = upgradeToSecureArenaServerScheme(bmsirArenaServer);
 		}
 		return bmsirArenaServer;
 	}
@@ -716,7 +722,23 @@ public final class PlayerConfig {
 	public void setBmsirArenaServer(String bmsirArenaServer) {
 		this.bmsirArenaServer = bmsirArenaServer == null || bmsirArenaServer.isBlank()
 				? "wss://www.bms-ir.org/new/arena/ws/client"
-				: bmsirArenaServer.trim();
+				: upgradeToSecureArenaServerScheme(bmsirArenaServer.trim());
+	}
+
+	/**
+	 * Older releases stored the Arena server as plain {@code ws://}/{@code http://}.
+	 * Silently upgrade those saved values to the TLS WebSocket scheme so stale
+	 * local configuration cannot fall back to an unencrypted connection or pass
+	 * an HTTP URL to the Arena WebSocket client.
+	 */
+	private static String upgradeToSecureArenaServerScheme(String value) {
+		if (value.regionMatches(true, 0, "ws://", 0, 5)) {
+			return "wss://" + value.substring(5);
+		}
+		if (value.regionMatches(true, 0, "http://", 0, 7)) {
+			return "wss://" + value.substring(7);
+		}
+		return value;
 	}
 
 	public boolean isBmsirArenaUnrestrictedRating() {
@@ -1139,6 +1161,76 @@ public final class PlayerConfig {
 		this.bmsirArenaIntermissionSeconds = Math.max(0, Math.min(60, bmsirArenaIntermissionSeconds));
 	}
 
+	public BMSIRManiacSettings getBmsirManiacSettings() {
+		if (bmsirManiacSettings == null) {
+			bmsirManiacSettings = new BMSIRManiacSettings();
+		}
+		return bmsirManiacSettings.validate();
+	}
+
+	public int getBmsirExtraMode() {
+		return getBmsirManiacSettings().getExtraMode();
+	}
+
+	public void setBmsirExtraMode(int value) {
+		getBmsirManiacSettings().selectExtraMode(value);
+		extranoteDepth = 0;
+	}
+
+	public int getBmsirDoubleOption() {
+		BMSIRManiacSettings settings = getBmsirManiacSettings();
+		if (settings.isDoubleBattle()) {
+			return settings.isAutoScratch() ? 3 : 2;
+		}
+		return doubleoption == 1 ? 1 : 0;
+	}
+
+	public void setBmsirDoubleOption(int value) {
+		switch (MathUtils.clamp(value, 0, 3)) {
+		case 1:
+			doubleoption = 1;
+			getBmsirManiacSettings().selectDoubleBattle(false, false);
+			break;
+		case 2:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(true, false);
+			break;
+		case 3:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(true, true);
+			break;
+		default:
+			doubleoption = 0;
+			getBmsirManiacSettings().selectDoubleBattle(false, false);
+			break;
+		}
+	}
+
+	public void setBmsirManiacSettings(BMSIRManiacSettings settings) {
+		bmsirManiacSettings = settings == null
+				? new BMSIRManiacSettings()
+				: new BMSIRManiacSettings(settings);
+	}
+
+	public boolean isBmsirArenaDetailedLogEnabled() {
+		return bmsirArenaDetailedLogEnabled;
+	}
+
+	public void setBmsirArenaDetailedLogEnabled(boolean enabled) {
+		bmsirArenaDetailedLogEnabled = enabled;
+	}
+
+	public String getBmsirArenaLanguage() {
+		bmsirArenaLanguage = "en".equalsIgnoreCase(bmsirArenaLanguage)
+				? "en"
+				: "ja";
+		return bmsirArenaLanguage;
+	}
+
+	public void setBmsirArenaLanguage(String language) {
+		bmsirArenaLanguage = "en".equalsIgnoreCase(language) ? "en" : "ja";
+	}
+
 	public String getTargetid() {
 		return targetid;
 	}
@@ -1452,7 +1544,7 @@ public final class PlayerConfig {
 		gauge = MathUtils.clamp(gauge, 0, 5);
 		random = MathUtils.clamp(random, 0, 9);
 		random2 = MathUtils.clamp(random2, 0, 9);
-		doubleoption = MathUtils.clamp(doubleoption, 0, 3);
+		doubleoption = doubleoption == 1 ? 1 : 0;
 		chartReplicationMode = chartReplicationMode != null ? chartReplicationMode : "NONE";
 		targetid = targetid!= null ? targetid : "MAX";
 		targetlist = targetlist != null ? targetlist : new String[0];
@@ -1484,7 +1576,8 @@ public final class PlayerConfig {
 		longnoteMode = MathUtils.clamp(longnoteMode, 0, LongNoteModifier.Mode.values().length);
 		longnoteRate = MathUtils.clamp(longnoteRate, 0.0, 1.0);
 		mineMode = MathUtils.clamp(mineMode, 0, MineNoteModifier.Mode.values().length);
-		extranoteDepth = MathUtils.clamp(extranoteDepth, 0, 100);
+		// Arena oraja uses the LR2-compatible MANIAC EXTRA MODE instead.
+		extranoteDepth = 0;
 
 		if(irconfig == null || irconfig.length == 0) {
 			String[] irnames = IRConnectionManager.getAllAvailableIRConnectionName();

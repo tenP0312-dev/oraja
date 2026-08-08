@@ -269,6 +269,13 @@ public class SkinProperty {
 	public static final int NUMBER_MAXBPM_DURATION_GREEN_LANECOVER_ON = 1325;
 	public static final int NUMBER_MAXBPM_DURATION_LANECOVER_OFF = 1326;
 	public static final int NUMBER_MAXBPM_DURATION_GREEN_LANECOVER_OFF = 1327;
+	// 譜面傾向レーダー(NotesRadar)
+	public static final int NUMBER_RADAR_NOTES = 1330;
+	public static final int NUMBER_RADAR_PEAK = 1331;
+	public static final int NUMBER_RADAR_SCRATCH = 1332;
+	public static final int NUMBER_RADAR_SOFLAN = 1333;
+	public static final int NUMBER_RADAR_CHARGE = 1334;
+	public static final int NUMBER_RADAR_CHORD = 1335;
 	public static final int NUMBER_JUDGETIMING = 12;
 	public static final int NUMBER_LANECOVER1 = 14;
 	public static final int NUMBER_LIFT1 = 314;

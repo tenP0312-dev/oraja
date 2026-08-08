@@ -26,8 +26,13 @@ final class BMSIRArenaLog {
             .normalize();
     private static final long MAX_BYTES = 2L * 1024L * 1024L;
     private static final int MAX_BACKUPS = 5;
+    private static volatile boolean detailedEnabled;
 
     private BMSIRArenaLog() {
+    }
+
+    static void setDetailedEnabled(boolean enabled) {
+        detailedEnabled = enabled;
     }
 
     static synchronized void event(String event, Object... details) {
@@ -56,6 +61,9 @@ final class BMSIRArenaLog {
     }
 
     static void message(String direction, JsonNode message) {
+        if (!detailedEnabled) {
+            return;
+        }
         if (message == null) {
             event(direction + "_message", "type", "null");
             return;

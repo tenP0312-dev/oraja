@@ -1,5 +1,6 @@
 package bms.player.beatoraja.modmenu;
 
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 import javafx.util.Pair;
@@ -29,6 +30,12 @@ public class ImGuiNotify {
     public static final String[] NOTIFICATION_POSITIONS = new String[] {
         "TopLeft", "TopCenter", "TopRight", "BottomLeft", "BottomCenter", "BottomRight", "Center"
     };
+
+    public static String[] notificationPositions() {
+        return BMSIRArenaI18n.isEnglish()
+                ? NOTIFICATION_POSITIONS
+                : new String[] {"左上", "上中央", "右上", "左下", "下中央", "右下", "中央"};
+    }
 
     private static ToastPos DEFAULT_TOAST_POS = ToastPos.TopLeft;
 

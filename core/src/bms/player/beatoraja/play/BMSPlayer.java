@@ -10,12 +10,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
+import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.OneBassLaneRandomShuffleModifier;
 import bms.player.beatoraja.pattern.OneBassPattern;
@@ -47,6 +50,10 @@ import bms.player.beatoraja.skin.SkinType;
  */
 public class BMSPlayer extends MainState {
 	private static final Logger logger = LoggerFactory.getLogger(BMSPlayer.class);
+
+	static int normalDoubleOption(int option) {
+		return option == 1 ? 1 : 0;
+	}
 
 	private BMSModel model;
 
@@ -120,10 +127,11 @@ public class BMSPlayer extends MainState {
 		BMSIRArenaClient.tracePlayPhase("constructor_begin", this);
 		BMSPlayerMode autoplay = resource.getPlayMode();
 		PlayerConfig config = resource.getPlayerConfig();
+		BMSIRManiacPlayContext maniacContext = null;
 
 		playinfo.randomoption = config.getRandom();
 		playinfo.randomoption2 = config.getRandom2();
-		playinfo.doubleoption = config.getDoubleoption();
+		playinfo.doubleoption = normalDoubleOption(config.getDoubleoption());
 
 		RandomTrainer randomtrainer = new RandomTrainer();
         Optional<GhostBattlePlay.Settings> ghostBattle = GhostBattlePlay.consume();
@@ -157,7 +165,7 @@ public class BMSPlayer extends MainState {
 			playinfo.randomoptionseed = chartOption.randomoptionseed;
 			playinfo.randomoption2 = chartOption.randomoption2;
 			playinfo.randomoption2seed = chartOption.randomoption2seed;
-			playinfo.doubleoption = chartOption.doubleoption;
+			playinfo.doubleoption = normalDoubleOption(chartOption.doubleoption);
 			playinfo.rand = chartOption.rand;
 		}
 		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
@@ -197,7 +205,7 @@ public class BMSPlayer extends MainState {
 						playinfo.randomoptionseed = replay.randomoptionseed;
 						playinfo.randomoption2 = replay.randomoption2;
 						playinfo.randomoption2seed = replay.randomoption2seed;
-						playinfo.doubleoption = replay.doubleoption;
+						playinfo.doubleoption = normalDoubleOption(replay.doubleoption);
 						playinfo.rand = replay.rand;
 						isReplayPatternPlay = true;
 					} else if(main.getInputProcessor().getKeyState(2)) {
@@ -205,7 +213,7 @@ public class BMSPlayer extends MainState {
 						logger.info("リプレイ再現モード : オプション");
 						playinfo.randomoption = replay.randomoption;
 						playinfo.randomoption2 = replay.randomoption2;
-						playinfo.doubleoption = replay.doubleoption;
+						playinfo.doubleoption = normalDoubleOption(replay.doubleoption);
 						isReplayPatternPlay = true;
 					}
 					if(main.getInputProcessor().getKeyState(4)) {
@@ -324,10 +332,6 @@ public class BMSPlayer extends MainState {
 			if(config.getMineMode() > 0) {
 				mods.add(new MineNoteModifier(config.getMineMode() - 1));
 			}
-			if(config.getExtranoteDepth() > 0) {
-				mods.add(new ExtraNoteModifier(config.getExtranoteType(), config.getExtranoteDepth(), config.isExtranoteScratch()));
-			}
-
             // maybe we skip all that for gbattle
             if (ghostBattle.isPresent()){
                 mods = new Array<PatternModifier>();
@@ -341,27 +345,32 @@ public class BMSPlayer extends MainState {
 				}
 			}
 
-			if (playinfo.doubleoption >= 2) {
-				if(model.getMode() == Mode.BEAT_5K || model.getMode() == Mode.BEAT_7K || model.getMode() == Mode.KEYBOARD_24K) {
-					switch (model.getMode()) {
-						case BEAT_5K -> model.setMode(Mode.BEAT_10K);
-						case BEAT_7K -> model.setMode(Mode.BEAT_14K);
-						case KEYBOARD_24K -> model.setMode(Mode.KEYBOARD_24K_DOUBLE);
-					}
-					LaneShuffleModifier mod = new PlayerBattleModifier();
-					mod.modify(model);
-					if(playinfo.doubleoption == 3) {
-						PatternModifier as = new AutoplayModifier(model.getMode().scratchKey);
-						as.modify(model);
-					}
-					assist = Math.max(assist, 1);
-					score = false;
-					logger.info("譜面オプション : BATTLE (L-ASSIST)");
-				} else {
-					// SPでなければBATTLEは未適用
-					playinfo.doubleoption = 0;
-				}
+			ReplayData maniacReplay = replay != null
+					? replay
+					: resource.getChartOption();
+			BMSIRManiacSettings requestedManiac = maniacReplay != null
+					&& maniacReplay.bmsirManiacSettings != null
+							? maniacReplay.bmsirManiacSettings
+							: config.getBmsirManiacSettings();
+			boolean arenaBlocksManiac = BMSIRArenaClient.blocksLocalOneBass()
+					&& !BMSIRManiacPlayContext.allowsDuringArena(
+							requestedManiac,
+							model.getMode()
+					);
+			maniacContext = BMSIRManiacPlayContext.prepare(
+					requestedManiac,
+					model,
+					resource.getCourseBMSModels() != null
+							|| arenaBlocksManiac
+			);
+			resource.setManiacPlayContext(maniacContext);
+			if (maniacContext != null) {
+				// Dedicated submission is performed separately after the result.
+				// Never let a transformed play enter the ordinary chart endpoint.
+				forceNoIRSend = true;
+				playtime = model.getLastNoteTime() + TIME_MARGIN;
 			}
+
 		}
 
 		logger.info("譜面オプション設定");
@@ -391,11 +400,14 @@ public class BMSPlayer extends MainState {
 				playinfo.randomoptionseed = rd.randomoptionseed;
 				playinfo.randomoption2 = rd.randomoption2;
 				playinfo.randomoption2seed = rd.randomoption2seed;
-				playinfo.doubleoption = rd.doubleoption;
+				playinfo.doubleoption = normalDoubleOption(rd.doubleoption);
 				playinfo.oneBassTarget = rd.oneBassTarget;
 				playinfo.oneBassTarget2 = rd.oneBassTarget2;
 			}
 			BMSIRArenaClient.applySynchronizedRandomSeed(playinfo);
+			boolean doubleBattleLinked = maniacContext != null
+					&& maniacContext.isDoubleBattleApplied()
+					&& !BMSIRManiacSettings.RANDOM_LINK_OFF.equals(maniacContext.randomLink());
 
 			boolean oneBassAllowed =
 					rd == null
@@ -461,7 +473,7 @@ public class BMSPlayer extends MainState {
 
 			Array<PatternModifier> mods = new Array<PatternModifier>();
 			// DP譜面オプション
-			if(model.getMode().player == 2) {
+			if(model.getMode().player == 2 && !doubleBattleLinked) {
 				if (playinfo.doubleoption == 1) {
 					mods.add(new PlayerFlipModifier());
 				}
@@ -478,6 +490,17 @@ public class BMSPlayer extends MainState {
 								model.getMode(),
 								config
 						);
+				if (playinfo.randomoption2seed == -1
+						&& RandomTrainer.isActive()
+						&& model.getMode() == Mode.BEAT_14K
+						&& playinfo.randomoption2
+						== bms.player.beatoraja.pattern.Random.RANDOM.ordinal()
+						&& RandomTrainer.getRandomSeedMap() != null) {
+					Long trainerSeed = RandomTrainer.getRandomSeedMap().get(
+							Integer.parseInt(RandomTrainer.getLaneOrder2P())
+					);
+					if (trainerSeed != null) pm.setSeed(trainerSeed);
+				}
 				if(playinfo.randomoption2seed != -1) {
 					pm.setSeed(playinfo.randomoption2seed);
 				} else {
@@ -526,7 +549,11 @@ public class BMSPlayer extends MainState {
 					logger.info("Ghost battle - fixing lane pattern to {}", pattern);
 					pm.setSeed(seedmap.get(pattern));
 				} else {
-					if (RandomTrainer.isActive() && model.getMode() == Mode.BEAT_7K && RandomTrainer.getRandomSeedMap() != null) {
+					if (RandomTrainer.isActive()
+							&& (model.getMode() == Mode.BEAT_7K
+							|| maniacContext != null && maniacContext.isDoubleBattleApplied()
+							&& model.getMode() == Mode.BEAT_14K)
+							&& RandomTrainer.getRandomSeedMap() != null) {
 						HashMap<Integer, Long> seedmap = RandomTrainer.getRandomSeedMap();
 						logger.info("RandomTrainer: Enabled, modifying random seed");
 						pm.setSeed(seedmap.get(Integer.parseInt(RandomTrainer.getLaneOrder())));
@@ -536,6 +563,15 @@ public class BMSPlayer extends MainState {
 			}
 			mods.add(pm);
 			logger.info("譜面オプション(1P) :  {}, Seed : {}", playinfo.randomoption, playinfo.randomoptionseed);
+			if (doubleBattleLinked) {
+				boolean symmetry = BMSIRManiacSettings.RANDOM_LINK_SYMMETRY.equals(
+						maniacContext.randomLink()
+				);
+				mods.add(new DoubleBattleLinkModifier(symmetry));
+				playinfo.randomoption2 = playinfo.randomoption;
+				playinfo.randomoption2seed = playinfo.randomoptionseed;
+				logger.info("DOUBLE BATTLE RANDOM LINK : {}", maniacContext.randomLink());
+			}
 
 			if (config.getSevenToNinePattern() >= 1 && model.getMode() == Mode.BEAT_7K) {
 				//7to9
@@ -559,9 +595,47 @@ public class BMSPlayer extends MainState {
 					}
 				}
 			}
+			if (doubleBattleLinked && patternArray.length == 2 && patternArray[0] != null) {
+				int sideWidth = model.getMode().key / 2;
+				int[] linkedPattern = new int[patternArray[0].length];
+				boolean symmetry = BMSIRManiacSettings.RANDOM_LINK_SYMMETRY.equals(
+						maniacContext.randomLink()
+				);
+				int[] playableLanes = IntStream.range(0, sideWidth)
+						.filter(lane -> !model.getMode().isScratchKey(lane))
+						.toArray();
+				for (int local = 0; local < sideWidth; local++) {
+					int rightLane = sideWidth + local;
+					if (model.getMode().isScratchKey(rightLane)) {
+						linkedPattern[local] = rightLane;
+						continue;
+					}
+					int position = 0;
+					while (position < playableLanes.length && playableLanes[position] != local) {
+						position++;
+					}
+					int sourceLocal = playableLanes[
+							symmetry ? playableLanes.length - 1 - position : position
+					];
+					linkedPattern[local] = sideWidth + patternArray[0][sourceLocal];
+				}
+				patternArray[1] = linkedPattern;
+			}
 //			playinfo.pattern = pattern.toArray(new PatternModifyLog[pattern.size()]);
 			playinfo.laneShufflePattern = patternArray;
-			BMSIROrajaHelperBridge.publishPlacement(model, playinfo);
+				BMSIROrajaHelperBridge.publishPlacement(model, playinfo);
+				if (resource.getManiacPlayContext() != null) {
+					resource.getManiacPlayContext().updatePlacement(model);
+				}
+				if (resource.getChartOption() != null
+						&& resource.getChartOption().bmsirManiacPlacementHash != null
+						&& !resource.getChartOption().bmsirManiacPlacementHash.isBlank()
+						&& resource.getManiacPlayContext() != null
+						&& !resource.getChartOption().bmsirManiacPlacementHash.equals(
+						resource.getManiacPlayContext().placementHash())) {
+					resource.setRivalScoreData(null);
+					ImGuiNotify.error("MANIAC ghost placement did not match this client build.");
+				}
 
 		}
 
@@ -599,9 +673,10 @@ public class BMSPlayer extends MainState {
 		if (!score) {
 			ImGuiNotify.warning("Score nullifying options enabled. Next play will not be saved");
 		}
-		if (forceNoIRSend) {
-			ImGuiNotify.error("Special mod options enabled. Next play will not be submitted to IR");
-		}
+		// No on-screen notice here: forceNoIRSend already follows directly from
+		// options the player themselves turned on (freq trainer, MANIAC), so
+		// the outcome is not a surprise. IR submission behavior is unchanged;
+		// only this popup is removed.
 		logger.info("アシストレベル : {} - スコア保存 : {} - no IR submit : {}", assist, score, forceNoIRSend);
 
 		resource.setUpdateScore(score);
@@ -610,6 +685,20 @@ public class BMSPlayer extends MainState {
 		final int difficulty = resource.getSongdata() != null ? resource.getSongdata().getDifficulty() : 0;
 		resource.getSongdata().setBMSModel(model);
 		resource.getSongdata().setDifficulty(difficulty);
+		if (resource.getOriginalMode() != null) {
+			// setBMSModel() above just copied model.getMode() into the
+			// SongData, which is normally correct, but MANIAC Double
+			// Battle intentionally rewrites the in-memory model's mode
+			// (e.g. BEAT_7K -> BEAT_14K) for the play session only. Left
+			// uncorrected, the select-screen SongData for this song keeps
+			// reporting the doubled mode until it is independently
+			// reloaded, which made BMSIRManiacApiClient.effectiveSettings()
+			// see a native-DP mode immediately after returning from play
+			// and incorrectly disable Double Battle (its mode.player == 2
+			// guard), collapsing MANIAC settings to inactive and showing
+			// the ordinary, non-MANIAC lamp until the song was reselected.
+			resource.getSongdata().setMode(resource.getOriginalMode().id);
+		}
 	}
 
 	public SkinType getSkinType() {
@@ -814,6 +903,14 @@ public class BMSPlayer extends MainState {
 					resource.reloadBMSFile();
 					model = resource.getBMSModel();
 					resource.getSongdata().setBMSModel(model);
+					if (resource.getOriginalMode() != null) {
+						// See the comment where the play-start reattachment
+						// does the same restoration: setBMSModel() above
+						// would otherwise leave a MANIAC Double Battle
+						// mode change (e.g. BEAT_7K -> BEAT_14K) on the
+						// select-screen SongData past this practice reload.
+						resource.getSongdata().setMode(resource.getOriginalMode().id);
+					}
 					lanerender.init(model);
 					keyinput.setKeyBeamStop(false);
 					timer.setTimerOff(TIMER_PLAY);
@@ -1211,6 +1308,15 @@ public class BMSPlayer extends MainState {
 		replay.doubleoption = playinfo.doubleoption;
 		replay.oneBassTarget = playinfo.oneBassTarget;
 		replay.oneBassTarget2 = playinfo.oneBassTarget2;
+		BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
+		if (maniacContext != null) {
+			replay.bmsirManiacSettings = maniacContext.settings();
+			replay.bmsirManiacVirtualChartId = maniacContext.virtualHash();
+			replay.bmsirManiacGenerationSeed = maniacContext.generationSeed();
+			replay.bmsirManiacAlgorithmVersion =
+					bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings.ALGORITHM_VERSION;
+			replay.bmsirManiacPlacementHash = maniacContext.placementHash();
+		}
 		replay.config = replayConfig;
 
 		score.setPassnotes(judge.getPastNotes());

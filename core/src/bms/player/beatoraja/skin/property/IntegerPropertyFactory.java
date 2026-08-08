@@ -261,6 +261,36 @@ public class IntegerPropertyFactory {
 				}
 				return Integer.MIN_VALUE;
 			};
+		case NUMBER_RADAR_NOTES:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().notes : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_PEAK:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().peak : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_SCRATCH:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().scratch : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_SOFLAN:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().soflan : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_CHARGE:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().charge : Integer.MIN_VALUE;
+			};
+		case NUMBER_RADAR_CHORD:
+			return (state) -> {
+				SongData song = state.main.getPlayerResource().getSongdata();
+				return song != null && song.getNotesRadar() != null ? song.getNotesRadar().chord : Integer.MIN_VALUE;
+			};
 		case NUMBER_FOLDER_TOTALSONGS:
 			return new FolderTotalClearCountProperty(new int[]{0,1,2,3,4,5,6,7,8,9,10});
 		case NUMBER_LANECOVER1:
@@ -1048,11 +1078,20 @@ public class IntegerPropertyFactory {
 		}),
 		option_dp(54, (state) -> {
 			if(state instanceof BMSPlayer) {
+				var context = state.resource.getManiacPlayContext();
+				if (context != null && context.settings().isDoubleBattle()) {
+					return context.settings().isAutoScratch() ? 3 : 2;
+				}
 				return ((BMSPlayer)state).getOptionInformation().doubleoption;
 			} else if(state instanceof AbstractResult) {
-				return state.resource.getReplayData().doubleoption;
+				var replay = state.resource.getReplayData();
+				if (replay.bmsirManiacSettings != null
+						&& replay.bmsirManiacSettings.isDoubleBattle()) {
+					return replay.bmsirManiacSettings.isAutoScratch() ? 3 : 2;
+				}
+				return replay.doubleoption;
 			}
-			return state.resource.getPlayerConfig().getDoubleoption();
+			return state.resource.getPlayerConfig().getBmsirDoubleOption();
 		}),
 
 		hsfix(55, (state) -> {
@@ -1197,7 +1236,7 @@ public class IntegerPropertyFactory {
 		}),
 		guidese(343, (state) -> (state.resource.getPlayerConfig().isGuideSE() ? 1 : 0)),
 
-		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getExtranoteDepth())),
+		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getBmsirExtraMode())),
 		minemode(351, (state) -> (state.resource.getPlayerConfig().getMineMode())),
 		scrollmode(352, (state) -> (state.resource.getPlayerConfig().getScrollMode())),
 		longnotemode(353, (state) -> (state.resource.getPlayerConfig().getLongnoteMode())),
@@ -1271,7 +1310,16 @@ public class IntegerPropertyFactory {
 
 		
 		// 旧仕様
-		assist_constant(BUTTON_ASSIST_CONSTANT, (state) -> (state.resource.getPlayerConfig().getScrollMode() == 1 ? 1 : 0)),
+		assist_constant(BUTTON_ASSIST_CONSTANT, (state) -> {
+			if (state instanceof MusicSelector selector) {
+				final PlayConfig playConfig = selector.getSelectedBarPlayConfig();
+				return playConfig != null && playConfig.isEnableConstant() ? 1 : 0;
+			}
+			if (state instanceof BMSPlayer player) {
+				return player.getLanerender().getPlayConfig().isEnableConstant() ? 1 : 0;
+			}
+			return 0;
+		}),
 		assist_legacy(BUTTON_ASSIST_LEGACY, (state) -> (state.resource.getPlayerConfig().getLongnoteMode() == 1 ? 1 : 0)),
 		assist_nomine(BUTTON_ASSIST_NOMINE, (state) -> (state.resource.getPlayerConfig().getMineMode() == 1 ? 1 : 0)),
 		

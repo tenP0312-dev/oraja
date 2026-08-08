@@ -494,6 +494,12 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 				return st;
 			}
 		}
+		for (JsonSkin.RadarGraph rg : sk.radargraph) {
+			if (dst.id.equals(rg.id)) {
+				SkinRadarGraph st = new SkinRadarGraph(rg.color);
+				return st;
+			}
+		}
 		for (JsonSkin.HitErrorVisualizer hev : sk.hiterrorvisualizer) {
 			if (dst.id.equals(hev.id)) {
 				SkinHitErrorVisualizer st = new SkinHitErrorVisualizer(hev.width, hev.judgeWidthMillis, hev.lineWidth, hev.colorMode, hev.hiterrorMode, hev.emaMode, hev.lineColor, hev.centerColor, hev.PGColor, hev.GRColor, hev.GDColor, hev.BDColor, hev.PRColor, hev.emaColor, hev.alpha, hev.windowLength, hev.transparent, hev.drawDecay);

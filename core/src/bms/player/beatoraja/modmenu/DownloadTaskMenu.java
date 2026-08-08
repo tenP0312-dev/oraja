@@ -1,5 +1,6 @@
 package bms.player.beatoraja.modmenu;
 
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.tool.mdprocessor.DownloadTask;
 import bms.player.beatoraja.modmenu.DownloadTaskState;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
@@ -21,6 +22,10 @@ public class DownloadTaskMenu {
 
     private static HttpDownloadProcessor processor;
 
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
+
     public static void setProcessor(HttpDownloadProcessor processor) {
         DownloadTaskMenu.processor = processor;
     }
@@ -30,18 +35,20 @@ public class DownloadTaskMenu {
         float relativeY = windowHeight * 0.04f;
         ImGui.setNextWindowPos(relativeX, relativeY, ImGuiCond.FirstUseEver);
 
-        if (ImGui.begin("Download Tasks", showDownloadTasksWindow, ImGuiWindowFlags.AlwaysAutoResize)) {
+        if (ImGui.begin(t("ダウンロード状況", "Download Tasks") + "###download-tasks",
+                showDownloadTasksWindow, ImGuiWindowFlags.AlwaysAutoResize)) {
             Map<Integer, DownloadTask> running = DownloadTaskState.runningDownloadTasks;
             Map<Integer, DownloadTask> expired = DownloadTaskState.expiredTasks;
             if (running.isEmpty() && expired.isEmpty()) {
-                ImGui.text("No Download Task. Try selecting missing bms to submit new task!");
+                ImGui.text(t("ダウンロード中の譜面はありません。未所持譜面を選ぶと追加できます。",
+                        "No download task. Select a missing BMS to add one."));
             } else {
                 if (ImGui.beginTabBar("DownloadTasksTabBar")) {
-                    if (ImGui.beginTabItem("Running")) {
+                    if (ImGui.beginTabItem(t("実行中", "Running") + "###running")) {
                         renderTaskTable(running.values().stream().toList());
                         ImGui.endTabItem();
                     }
-                    if (ImGui.beginTabItem("Expired")) {
+                    if (ImGui.beginTabItem(t("終了", "Expired") + "###expired")) {
                         renderTaskTable(expired.values().stream().toList());
                         ImGui.endTabItem();
                     }
@@ -56,9 +63,9 @@ public class DownloadTaskMenu {
     private static void renderTaskTable(List<DownloadTask> tasks) {
         if (ImGui.beginTable("DownloadTaskTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY, 0, ImGui.getTextLineHeight() * 20)) {
             ImGui.tableSetupScrollFreeze(0, 1);
-            ImGui.tableSetupColumn("Task");
-            ImGui.tableSetupColumn("Progress");
-            ImGui.tableSetupColumn("Op");
+            ImGui.tableSetupColumn(t("タスク", "Task"));
+            ImGui.tableSetupColumn(t("進捗", "Progress"));
+            ImGui.tableSetupColumn(t("操作", "Action"));
             ImGui.tableHeadersRow();
             for (DownloadTask task : tasks) {
                 ImGui.tableNextRow();
@@ -78,7 +85,7 @@ public class DownloadTaskMenu {
 
                 ImGui.tableSetColumnIndex(2);
                 if (task.getDownloadTaskStatus() == DownloadTask.DownloadTaskStatus.Error) {
-                    if (ImGui.button("Retry")) {
+                    if (ImGui.button(t("再試行", "Retry"))) {
                         processor.retryDownloadTask(task);
                     }
                 }

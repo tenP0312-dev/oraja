@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.13**. Reviewed Windows and macOS
+The current client source version is **0.4.14.24**. Reviewed Windows and macOS
 packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -53,11 +53,12 @@ Build the client for the target platform:
 On Windows, use `gradlew.bat` instead of `./gradlew`. Generated jars are
 written under `dist/`.
 
-The desktop Arena launcher is in `arena-launcher/`. Its Rust tests can be run
-with:
+The desktop Arena launcher moved to its own repository,
+[`tenP0312-dev/oraja-Rancher`](https://github.com/tenP0312-dev/oraja-Rancher).
+Its Rust tests can be run there with:
 
 ```sh
-cd arena-launcher/src-tauri
+cd src-tauri
 cargo test --locked
 ```
 

@@ -8,6 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
+
+    @Test
+    void previewFadesOutAndBackInOverExactlyOneSecond() {
+        assertEquals(0.65f, LaneRenderer.startHerePreviewAlpha(0L), 0.0001f);
+        assertEquals(1.0f, LaneRenderer.startHerePreviewAlpha(500L), 0.0001f);
+        assertEquals(0.65f, LaneRenderer.startHerePreviewAlpha(1000L), 0.0001f);
+        assertEquals(0.825f, LaneRenderer.startHerePreviewAlpha(1250L), 0.0001f);
+    }
     @Test
     void showsFromPreloadThroughReadyAndStopsAtPlay() {
         assertTrue(LaneRenderer.showsStartHerePreview(
@@ -43,7 +51,7 @@ class LaneRendererStartHerePreviewTest {
         Rectangle lane = new Rectangle(10f, 20f, 30f, 100f);
 
         assertEquals(
-                80f,
+                88f,
                 LaneRenderer.startHerePreviewTop(lane, true, 0.2f, true, 0.5f)
         );
     }
@@ -98,5 +106,14 @@ class LaneRendererStartHerePreviewTest {
                 destination, lane, 4f, 0f, 0f, 0f, -4f,
                 false, 0f, false, 0f
         ));
+    }
+
+    @Test
+    void computesGreenNumberBeforeStaticPreviewReturns() {
+        assertEquals(800, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
+        assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, true, 0.5f, false, 0.0f));
+        assertEquals(480, LaneRenderer.startHerePreviewDuration(150.0, 1.0, 2.0f, true, 0.5f, true, 0.2f));
+        assertEquals(400, LaneRenderer.startHerePreviewDuration(150.0, 2.0, 2.0f, false, 0.0f, false, 0.0f));
+        assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
     }
 }

@@ -476,6 +476,10 @@
                     <padding>
                         <Insets bottom="18.0" left="18.0" right="18.0" top="18.0" />
                     </padding>
+                    <Label text="%BMSIR_ARENA_LANGUAGE" />
+                    <ComboBox fx:id="bmsirArenaLanguage" prefWidth="180.0" />
+                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ARENA_LANGUAGE_DESCRIPTION" wrapText="true" />
+                    <Separator />
                     <CheckBox fx:id="bmsirOneBassEnabled" mnemonicParsing="false" text="%BMSIR_ONE_BASS_ENABLED" />
                     <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_ONE_BASS_DESCRIPTION" wrapText="true" />
                     <CheckBox fx:id="bmsirStartHerePreviewEnabled" mnemonicParsing="false" text="%BMSIR_START_HERE_PREVIEW_ENABLED" />
@@ -530,6 +534,9 @@
 	                    </HBox>
 	                    <CheckBox fx:id="bmsirJudgeTimingRestoreEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_TIMING_RESTORE_ENABLED" />
 	                    <CheckBox fx:id="bmsirInfoNotificationsEnabled" mnemonicParsing="false" text="%BMSIR_INFO_NOTIFICATIONS_ENABLED" />
+	                    <Separator />
+	                    <Button fx:id="bmsirExportVanillaScoreDb" mnemonicParsing="false" onAction="#exportBmsirVanillaScoreDatabase" text="%BMSIR_EXPORT_VANILLA_SCORE_DB" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_EXPORT_VANILLA_SCORE_DB_DESCRIPTION" wrapText="true" />
 	                    <Separator />
 	                    <CheckBox fx:id="bmsirLongNoteFixed" disable="true" mnemonicParsing="false" selected="true" text="%BMSIR_LONG_NOTE_FIXED" />
                     <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LONG_NOTE_FIXED_DESCRIPTION" wrapText="true" />

@@ -16,6 +16,7 @@ import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.SkinConfig;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.BarRenderer;
@@ -31,6 +32,10 @@ import com.badlogic.gdx.Gdx;
 public class SkinMenu {
     private static MainController main = null;
     private static PlayerConfig playerConfig;
+
+    private static String t(String japanese, String english) {
+        return BMSIRArenaI18n.text(japanese, english);
+    }
 
     public static void init(MainController mainState, PlayerConfig config) {
         main = mainState;
@@ -76,7 +81,7 @@ public class SkinMenu {
         int windowHeight = Gdx.graphics.getHeight();
         ImGui.setNextWindowSize(0.f, windowHeight * 0.3f, ImGuiCond.FirstUseEver);
 
-        if (ImGui.begin("Skin", showSkinMenu)) {
+        if (ImGui.begin(t("スキン設定", "Skin Configuration") + "###skin-configuration", showSkinMenu)) {
             menuHeader();
             ImGui.separator();
             ImGui.pushID(currentSkin.getName());
@@ -112,7 +117,7 @@ public class SkinMenu {
             switchCurrentSceneSkin(skins.get(index));
         }
 
-        if (ImGui.button("Open##open-skin-location")) {
+        if (ImGui.button(t("フォルダを開く", "Open") + "##open-skin-location")) {
             if (Desktop.isDesktopSupported()) {
                 try {
                     Desktop.getDesktop().open(currentSkin.getPath().getParent().toFile());
@@ -128,33 +133,33 @@ public class SkinMenu {
 
         boolean saveAvailable = dirtyConfig && !liveEditing.get();
         ImGui.beginDisabled(!saveAvailable);
-        boolean saveRequested = ImGui.button(" Save ##reload-current-skin");
+        boolean saveRequested = ImGui.button(t(" 保存 ", " Save ") + "##reload-current-skin");
         ImGui.endDisabled();
         if (saveRequested || (dirtyConfig && liveEditing.get())) {
             switchCurrentSceneSkin(currentSkin);
         }
         ImGui.sameLine();
-        dirty(ImGui.checkbox("Live Editing###live-edit-mode", liveEditing));
+        dirty(ImGui.checkbox(t("即時反映", "Live Editing") + "###live-edit-mode", liveEditing));
 
-        if (ImGui.button(" Reset ##skin-setting-reset-request")) {
+        if (ImGui.button(t(" リセット ", " Reset ") + "##skin-setting-reset-request")) {
             ImGui.openPopup("skin-setting-reset-confirmation");
         }
         if (ImGui.beginPopup("skin-setting-reset-confirmation",
                              ImGuiWindowFlags.AlwaysAutoResize)) {
-            ImGui.text("Reset current skin's settings to default");
-            ImGui.text("ARE YOU SURE?");
+            ImGui.text(t("現在のスキン設定を既定値へ戻します", "Reset current skin settings to default"));
+            ImGui.text(t("実行しますか？", "Are you sure?"));
             ImGui.sameLine();
-            if (ImGui.button(" Confirm ##skin-setting-reset-execute")) {
+            if (ImGui.button(t(" 実行 ", " Confirm ") + "##skin-setting-reset-execute")) {
                 resetCurrentSkinConfig();
                 switchCurrentSceneSkin(currentSkin);
                 ImGui.closeCurrentPopup();
             }
-            ImGui.textDisabled("(click outside popup to close)");
+            ImGui.textDisabled(t("（外側をクリックすると閉じます）", "(click outside to close)"));
             ImGui.endPopup();
         }
 
         ImGui.sameLine();
-        if (ImGui.checkbox("Freeze timers###freeze-mode", freezeTimers)) {
+        if (ImGui.checkbox(t("タイマーを停止", "Freeze timers") + "###freeze-mode", freezeTimers)) {
             main.getTimer().setFrozen(freezeTimers.get());
         }
     }
@@ -187,7 +192,7 @@ public class SkinMenu {
             }
         }
 
-        boolean otherTab = tabbar && ImGui.beginTabItem("Other##category-tab");
+        boolean otherTab = tabbar && ImGui.beginTabItem(t("その他", "Other") + "##category-tab");
         if (!tabbar || otherTab) {
             if (!tabbar) ImGui.beginChild("skin-config", 0, 0, true);
             SkinHeader.CustomOption[] options = currentSkin.getCustomOptions();
@@ -225,7 +230,7 @@ public class SkinMenu {
 
         int value = getOptionSetting(option);
         int selected = optionIndex(option, value);
-        String chosen = selected == OPTION_RANDOM_VALUE ? "Random" : option.contents[selected];
+        String chosen = selected == OPTION_RANDOM_VALUE ? t("ランダム", "Random") : option.contents[selected];
 
         boolean arrowChangeSelection = false;
         if (ImGui.arrowButton("##option-left", 0)) {
@@ -242,7 +247,7 @@ public class SkinMenu {
                     dirty(true);
                 }
             }
-            if (ImGui.selectable("Random")) {
+            if (ImGui.selectable(t("ランダム", "Random"))) {
                 setOptions.put(option.name, OPTION_RANDOM_VALUE);
                 dirty(true);
             }
@@ -280,7 +285,7 @@ public class SkinMenu {
             ImGui.radioButton(option.contents[i], radio, option.option[i]);
             ImGui.sameLine();
         }
-        ImGui.radioButton("Random", radio, OPTION_RANDOM_VALUE);
+        ImGui.radioButton(t("ランダム", "Random"), radio, OPTION_RANDOM_VALUE);
 
         if (radio.get() != value) {
             setOptions.put(option.name, radio.get());
