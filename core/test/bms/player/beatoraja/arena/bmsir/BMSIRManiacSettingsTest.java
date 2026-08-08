@@ -151,7 +151,7 @@ public class BMSIRManiacSettingsTest {
 
         assertEquals(2, restored.getSpToDpDifficulty());
         assertEquals(BMSIRManiacSettings.RankingClass.SP_TO_DP, restored.rankingClass());
-        assertFalse(BMSIRManiacApiClient.canSubmit(restored));
+        assertTrue(BMSIRManiacApiClient.canSubmit(restored));
         assertNotEquals(settings.storageChartId("chart"), legacy.storageChartId("chart"));
         assertNotEquals(settings.virtualChartId("chart"), null);
     }

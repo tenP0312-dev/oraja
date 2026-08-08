@@ -186,7 +186,7 @@ Any MANIAC option or Double Battle play is written only to
 temporarily disable these modes, except that SP TO DP by itself remains
 available in Arena on supported SP charts. Combining it with any other MANIAC
 effect restores the ordinary Arena block. Ranked EXTRA MODE, ADD NOTES, ADD LONGNOTES,
-and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
+SP TO DP, and Double Battle use isolated BMS-IR leaderboards. Unsupported combinations,
 ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
 
@@ -198,9 +198,13 @@ immediately preceding measure as a stability hint, and penalizes key density
 on the same side as a scratch within 200 ms before or after it. Higher levels
 shorten the side-movement threshold and permit more temporary left/right bias.
 The conversion is deterministic, rebuilds the final DP mode and scratch lanes,
-and uses its own canonical identity and local score/lamp key. It never submits
-to the ordinary chart ranking. SP TO DP and Double Battle are mutually
-exclusive.
+and uses its own canonical identity and local score/lamp key. Its LEVEL 1--3
+records use the same dedicated MANIAC submit, ranking, ghost, and owner-sync
+paths as other ranked MANIAC transforms, and never submit to or fall back to
+the ordinary chart ranking. Owner sync accepts a record only when its ranking
+class, canonical options, algorithm version, virtual chart ID, deterministic
+generation seed, and placement hash are internally consistent. SP TO DP and
+Double Battle are mutually exclusive.
 
 Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
 native-DP warning can all be configured in MANIAC OPTIONS. Existing Music

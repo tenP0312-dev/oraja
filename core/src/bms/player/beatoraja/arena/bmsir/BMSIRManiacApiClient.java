@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -240,11 +241,10 @@ public final class BMSIRManiacApiClient {
                 int imported = 0;
                 if (items.isArray()) {
                     for (JsonNode item : items) {
-                        String base = item.path("base_sha256").asText("");
-                        BMSIRManiacSettings settings = BMSIRManiacSettings.fromCanonicalOptions(
-                                item.path("canonical_options").asText("")
-                        );
-                        if (settings == null || base.isBlank()) continue;
+                        String base = item.path("base_sha256").asText("")
+                                .trim().toLowerCase(Locale.ROOT);
+                        BMSIRManiacSettings settings = validatedSyncSettings(item);
+                        if (settings == null) continue;
                         ScoreData score = score(
                                 item,
                                 item.path("virtual_chart_id").asText(""),
@@ -341,8 +341,41 @@ public final class BMSIRManiacApiClient {
     private static boolean onlineRanking(BMSIRManiacSettings settings) {
         BMSIRManiacSettings.RankingClass type = settings.rankingClass();
         return type != BMSIRManiacSettings.RankingClass.NORMAL
-                && type != BMSIRManiacSettings.RankingClass.LOCAL_ONLY
-                && type != BMSIRManiacSettings.RankingClass.SP_TO_DP;
+                && type != BMSIRManiacSettings.RankingClass.LOCAL_ONLY;
+    }
+
+    static BMSIRManiacSettings validatedSyncSettings(JsonNode item) {
+        if (item == null || item.isNull()) return null;
+        String base = item.path("base_sha256").asText("")
+                .trim().toLowerCase(Locale.ROOT);
+        String canonical = item.path("canonical_options").asText("");
+        BMSIRManiacSettings settings = BMSIRManiacSettings.fromCanonicalOptions(canonical);
+        if (!isSha256(base) || settings == null || !onlineRanking(settings)
+                || !settings.canonicalOptions().equals(canonical)
+                || item.path("algorithm_version").asInt(0)
+                        != BMSIRManiacSettings.ALGORITHM_VERSION
+                || !settings.rankingClass().name().equals(
+                        item.path("ranking_class").asText("").trim().toUpperCase(Locale.ROOT)
+                )) {
+            return null;
+        }
+        String submittedVirtual = item.path("virtual_chart_id").asText("").trim();
+        if (submittedVirtual.isEmpty()) submittedVirtual = null;
+        if (!Objects.equals(settings.virtualChartId(base), submittedVirtual)) return null;
+        try {
+            long submittedSeed = Long.parseUnsignedLong(
+                    item.path("generation_seed").asText("").trim()
+            );
+            if (submittedSeed != settings.generationSeed(base)) return null;
+        } catch (NumberFormatException error) {
+            return null;
+        }
+        return isSha256(item.path("placement_hash").asText("").trim())
+                ? settings : null;
+    }
+
+    private static boolean isSha256(String value) {
+        return value != null && value.matches("(?i)[0-9a-f]{64}");
     }
 
     private static ObjectNode identityPayload(Identity identity, Auth auth) {
