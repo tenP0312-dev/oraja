@@ -30,21 +30,16 @@ class BMSIRSpToDpModifierTest {
         assertEquals(16, model.getAllTimeLines()[0].getLaneCount());
         assertEquals(notes, model.getTotalNotes());
         assertEquals(
-                "1b8e32a781f35e9d0ac24fe9f7a2ab127f7b415135b6588858e4eab53f67e283",
+                "e85f3b8c7fca4c1c4ca033cf5a2a8bd6930dfd1982bbb270199068a876b9044e",
                 modifier.getPlacementHash()
         );
 
-        // Repeated WAV 10 stays on one side within measure 0 and remains
-        // stable when it appears in the immediately following measure.
-        assertNotNull(model.getAllTimeLines()[0].getNote(0));
-        assertNotNull(model.getAllTimeLines()[1].getNote(1));
-        assertNotNull(model.getAllTimeLines()[5].getNote(4));
-
-        // The scratch is on 2P; nearby keys at both sides of its timing avoid
-        // that side even while the rest of the measure remains balanced.
-        assertNotNull(model.getAllTimeLines()[2].getNote(15));
-        assertNotNull(model.getAllTimeLines()[1].getNote(1));
-        assertNotNull(model.getAllTimeLines()[3].getNote(2));
+        // The first scratch phrase takes 1P. Every key in its full guard
+        // interval is forced to 2P instead of merely receiving a soft cost.
+        assertNotNull(model.getAllTimeLines()[2].getNote(7));
+        assertNotNull(model.getAllTimeLines()[0].getNote(8));
+        assertNotNull(model.getAllTimeLines()[1].getNote(9));
+        assertNotNull(model.getAllTimeLines()[3].getNote(10));
     }
 
     @Test
@@ -75,8 +70,8 @@ class BMSIRSpToDpModifierTest {
         assertEquals(Mode.BEAT_10K, model.getMode());
         assertEquals(12, model.getAllTimeLines()[0].getLaneCount());
         assertEquals(notes, model.getTotalNotes());
-        assertNotNull(model.getAllTimeLines()[2].getNote(11));
-        assertNull(model.getAllTimeLines()[2].getNote(5));
+        assertNotNull(model.getAllTimeLines()[2].getNote(5));
+        assertNull(model.getAllTimeLines()[2].getNote(11));
     }
 
     @Test
@@ -90,10 +85,14 @@ class BMSIRSpToDpModifierTest {
     }
 
     @Test
-    void difficultyProfileChangesDeterministicDensePlacement() {
-        BMSModel easy = denseFixture();
-        BMSModel normal = denseFixture();
-        BMSModel hard = denseFixture();
+    void difficultyChangesOnlyDeterministicScratchGuardWidth() {
+        assertEquals(240_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(1));
+        assertEquals(200_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(2));
+        assertEquals(160_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(3));
+
+        BMSModel easy = guardFixture();
+        BMSModel normal = guardFixture();
+        BMSModel hard = guardFixture();
 
         BMSIRSpToDpModifier.apply(easy, 1);
         BMSIRSpToDpModifier.apply(normal, 2);
@@ -104,6 +103,97 @@ class BMSIRSpToDpModifierTest {
         String hardHash = BMSIRManiacModifier.placementHash(hard);
         assertNotEquals(easyHash, normalHash);
         assertNotEquals(normalHash, hardHash);
+    }
+
+    @Test
+    void separatedThreeThreeFourScratchPhrasesAlternateSides() {
+        long[] times = {
+                0L, 100_000L, 200_000L,
+                900_000L, 1_000_000L, 1_100_000L,
+                1_800_000L, 1_900_000L, 2_000_000L, 2_100_000L
+        };
+        TimeLine[] lines = lines(times, Mode.BEAT_7K);
+        for (int index = 0; index < lines.length; index++) {
+            lines[index].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(100 + index));
+        }
+        BMSModel model = model("sp-to-dp-scratch-334", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 2);
+
+        for (int index = 0; index < 3; index++) {
+            assertNotNull(lines[index].getNote(Mode.BEAT_14K.scratchKey[0]));
+        }
+        for (int index = 3; index < 6; index++) {
+            assertNotNull(lines[index].getNote(Mode.BEAT_14K.scratchKey[1]));
+        }
+        for (int index = 6; index < lines.length; index++) {
+            assertNotNull(lines[index].getNote(Mode.BEAT_14K.scratchKey[0]));
+        }
+    }
+
+    @Test
+    void connectedScratchOnlyRollStaysOnOneSideAndWideChordUsesTheOther() {
+        TimeLine[] lines = lines(new long[]{0L, 300_000L}, Mode.BEAT_7K);
+        lines[0].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90));
+        lines[1].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(91));
+        lines[1].setNote(0, new NormalNote(10));
+        lines[1].setNote(6, new NormalNote(20));
+        BMSModel model = model("sp-to-dp-connected-scratch", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 2);
+
+        assertNotNull(lines[0].getNote(7));
+        assertNotNull(lines[1].getNote(7));
+        assertNotNull(lines[1].getNote(8));
+        assertNotNull(lines[1].getNote(14));
+        assertNull(lines[1].getNote(0));
+        assertNull(lines[1].getNote(6));
+    }
+
+    @Test
+    void longScratchReservesItsSideThroughThePairedEndAndGuard() {
+        TimeLine[] lines = lines(
+                new long[]{1_000_000L, 2_000_000L, 3_000_000L, 3_190_000L},
+                Mode.BEAT_7K
+        );
+        LongNote scratchStart = longNote(90);
+        LongNote scratchEnd = longNote(-1);
+        lines[0].setNote(Mode.BEAT_7K.scratchKey[0], scratchStart);
+        lines[2].setNote(Mode.BEAT_7K.scratchKey[0], scratchEnd);
+        scratchStart.setPair(scratchEnd);
+        lines[1].setNote(0, new NormalNote(10));
+        lines[3].setNote(6, new NormalNote(20));
+        BMSModel model = model("sp-to-dp-long-scratch", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 2);
+
+        assertEquals(7, laneOf(lines[0], scratchStart));
+        assertEquals(7, laneOf(lines[2], scratchEnd));
+        assertNotNull(lines[1].getNote(8));
+        assertNotNull(lines[3].getNote(14));
+    }
+
+    @Test
+    void keyLongNoteConnectingSeparateScratchPhrasesKeepsOneSafeSide() {
+        TimeLine[] lines = lines(
+                new long[]{500_000L, 1_000_000L, 3_000_000L, 3_500_000L},
+                Mode.BEAT_7K
+        );
+        LongNote keyStart = longNote(30);
+        LongNote keyEnd = longNote(-1);
+        lines[0].setNote(0, keyStart);
+        lines[1].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90));
+        lines[2].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(91));
+        lines[3].setNote(0, keyEnd);
+        keyStart.setPair(keyEnd);
+        BMSModel model = model("sp-to-dp-key-ln-scratch-bridge", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 2);
+
+        assertNotNull(lines[1].getNote(7));
+        assertNotNull(lines[2].getNote(7));
+        assertEquals(8, laneOf(lines[0], keyStart));
+        assertEquals(8, laneOf(lines[3], keyEnd));
     }
 
     private static BMSModel fixture(Mode mode) {
@@ -131,13 +221,7 @@ class BMSIRSpToDpModifierTest {
         start.setPair(end);
         lines[5].setNote(4, new NormalNote(10));
 
-        BMSModel model = new BMSModel();
-        model.setMode(mode);
-        model.setPlayer(mode.player == 2 ? 3 : 1);
-        model.setBpm(120);
-        model.setSHA256("sp-to-dp-fixed-fixture");
-        model.setAllTimeLine(lines);
-        return model;
+        return model("sp-to-dp-fixed-fixture", mode, lines);
     }
 
     private static TimeLine line(double section, long time, int lanes) {
@@ -146,21 +230,39 @@ class BMSIRSpToDpModifierTest {
         return line;
     }
 
-    private static BMSModel denseFixture() {
-        BMSModel model = new BMSModel();
-        model.setMode(Mode.BEAT_7K);
-        model.setBpm(150);
-        model.setSHA256("sp-to-dp-difficulty-fixture");
-        TimeLine[] lines = new TimeLine[24];
+    private static BMSModel guardFixture() {
+        TimeLine[] lines = lines(
+                new long[]{0L, 440_000L, 2_000_000L, 2_360_000L},
+                Mode.BEAT_7K
+        );
         for (int index = 0; index < lines.length; index++) {
-            lines[index] = line(index / 8.0, index * 300_000L, Mode.BEAT_7K.key);
-            lines[index].setNote(index % 4, new NormalNote(40 + index % 3));
-            if (index % 7 == 3) {
-                lines[index].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90 + index));
-            }
+            lines[index].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90 + index));
         }
+        return model("sp-to-dp-guard-fixture", Mode.BEAT_7K, lines);
+    }
+
+    private static TimeLine[] lines(long[] times, Mode mode) {
+        TimeLine[] lines = new TimeLine[times.length];
+        for (int index = 0; index < times.length; index++) {
+            lines[index] = line(times[index] / 1_000_000.0, times[index], mode.key);
+        }
+        return lines;
+    }
+
+    private static BMSModel model(String hash, Mode mode, TimeLine[] lines) {
+        BMSModel model = new BMSModel();
+        model.setMode(mode);
+        model.setPlayer(mode.player == 2 ? 3 : 1);
+        model.setBpm(120);
+        model.setSHA256(hash);
         model.setAllTimeLine(lines);
         return model;
+    }
+
+    private static LongNote longNote(int wav) {
+        LongNote note = new LongNote(wav, 0L, 0L);
+        note.setType(LongNote.TYPE_LONGNOTE);
+        return note;
     }
 
     private static int laneOf(TimeLine timeline, Object note) {

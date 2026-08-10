@@ -15,7 +15,11 @@ import java.util.Map;
 
 /** Deterministically distributes an SP 5KEY/7KEY chart across both DP sides. */
 final class BMSIRSpToDpModifier {
-    static final long SCRATCH_DENSITY_WINDOW_US = 200_000L;
+    private static final long MOVE_THRESHOLD_US = 400_000L;
+    private static final int BIAS_TOLERANCE = 1;
+    private static final int MOVE_PENALTY = 6;
+    private static final int BALANCE_PENALTY = 5;
+    private static final int REPEATED_SCRATCH_SIDE_PENALTY = 2;
 
     private BMSIRSpToDpModifier() {
     }
@@ -145,21 +149,59 @@ final class BMSIRSpToDpModifier {
     private record Unit(Note note, Slot slot, Slot pair, int measure, boolean scratch) {
     }
 
-    private record Scratch(long time, int side) {
+    private record Interval(long start, long end) {
+        private boolean overlaps(Interval other) {
+            return start <= other.end && other.start <= end;
+        }
     }
 
-    private record Profile(
-            long moveThresholdUs,
-            int biasTolerance,
-            int movePenalty,
-            int balancePenalty
-    ) {
+    private record ScratchWindow(Interval interval, int side) {
+    }
+
+    private record Profile(long scratchGuardUs) {
         private static Profile forDifficulty(int difficulty) {
             return switch (difficulty) {
-                case 1 -> new Profile(650_000L, 0, 8, 6);
-                case 2 -> new Profile(400_000L, 1, 6, 5);
-                default -> new Profile(220_000L, 2, 4, 4);
+                case 1 -> new Profile(240_000L);
+                case 2 -> new Profile(200_000L);
+                default -> new Profile(160_000L);
             };
+        }
+    }
+
+    static long scratchGuardUsForDifficulty(int requestedDifficulty) {
+        int difficulty = Math.max(1, Math.min(3, requestedDifficulty));
+        return Profile.forDifficulty(difficulty).scratchGuardUs();
+    }
+
+    private static final class ScratchPhrase {
+        private final List<Unit> units = new ArrayList<>();
+        private long start;
+        private long end;
+
+        private ScratchPhrase(Unit unit, Interval interval) {
+            units.add(unit);
+            start = interval.start();
+            end = interval.end();
+        }
+
+        private void add(Unit unit, Interval interval) {
+            units.add(unit);
+            start = Math.min(start, interval.start());
+            end = Math.max(end, interval.end());
+        }
+
+        private Interval interval() {
+            return new Interval(start, end);
+        }
+    }
+
+    private static final class ScratchGroup {
+        private final List<ScratchPhrase> phrases = new ArrayList<>();
+
+        private List<Unit> units() {
+            List<Unit> result = new ArrayList<>();
+            for (ScratchPhrase phrase : phrases) result.addAll(phrase.units);
+            return result;
         }
     }
 
@@ -168,9 +210,10 @@ final class BMSIRSpToDpModifier {
         private final List<Unit> units;
         private final Map<Integer, Map<Integer, Integer>> wavSides = new HashMap<>();
         private final Map<Integer, int[]> measureCounts = new HashMap<>();
-        private final List<Scratch> scratches = new ArrayList<>();
+        private final List<ScratchWindow> scratchWindows = new ArrayList<>();
         private final long[] lastLaneTime;
         private final int[] lastLaneSide;
+        private int lastScratchGroupSide = -1;
 
         private Assignment(Mode sourceMode, int difficulty, List<Unit> units) {
             this.profile = Profile.forDifficulty(difficulty);
@@ -183,14 +226,24 @@ final class BMSIRSpToDpModifier {
 
         private Map<Note, Integer> assign() {
             IdentityHashMap<Note, Integer> result = new IdentityHashMap<>();
+            for (ScratchGroup group : scratchGroups(scratchPhrases())) {
+                int side = chooseScratchGroup(group);
+                for (ScratchPhrase phrase : group.phrases) {
+                    scratchWindows.add(new ScratchWindow(phrase.interval(), side));
+                    for (Unit unit : phrase.units) {
+                        result.put(unit.note(), side);
+                        remember(unit, side);
+                    }
+                }
+                lastScratchGroupSide = side;
+            }
+
             for (Unit unit : units) {
-                if (!unit.scratch()) continue;
-                int side = chooseScratch(unit);
+                if (!unit.scratch() || !unit.slot().hidden()) continue;
+                int side = select(unit, baseCost(unit, 0), baseCost(unit, 1));
                 result.put(unit.note(), side);
                 remember(unit, side);
-                scratches.add(new Scratch(unit.slot().timeline().getMicroTime(), side));
             }
-            scratches.sort(Comparator.comparingLong(Scratch::time));
 
             for (Unit unit : units) {
                 if (unit.scratch()) continue;
@@ -198,26 +251,132 @@ final class BMSIRSpToDpModifier {
                 result.put(unit.note(), side);
                 remember(unit, side);
                 lastLaneSide[unit.slot().lane()] = side;
-                lastLaneTime[unit.slot().lane()] = unit.slot().timeline().getMicroTime();
+                lastLaneTime[unit.slot().lane()] = playableInterval(unit).end();
             }
             return result;
         }
 
-        private int chooseScratch(Unit unit) {
-            int left = baseCost(unit, 0);
-            int right = baseCost(unit, 1);
-            if (!scratches.isEmpty() && scratches.get(scratches.size() - 1).side() == 0) left += 2;
-            if (!scratches.isEmpty() && scratches.get(scratches.size() - 1).side() == 1) right += 2;
-            return select(unit, left, right);
+        private List<ScratchPhrase> scratchPhrases() {
+            List<ScratchPhrase> phrases = new ArrayList<>();
+            for (Unit unit : units) {
+                if (!unit.scratch() || unit.slot().hidden()) continue;
+                Interval playable = playableInterval(unit);
+                Interval reserved = new Interval(
+                        playable.start() - profile.scratchGuardUs(),
+                        playable.end() + profile.scratchGuardUs()
+                );
+                ScratchPhrase previous = phrases.isEmpty() ? null : phrases.get(phrases.size() - 1);
+                if (previous != null && previous.interval().overlaps(reserved)) {
+                    previous.add(unit, reserved);
+                } else {
+                    phrases.add(new ScratchPhrase(unit, reserved));
+                }
+            }
+            return phrases;
+        }
+
+        private List<ScratchGroup> scratchGroups(List<ScratchPhrase> phrases) {
+            List<ScratchGroup> groups = new ArrayList<>();
+            if (phrases.isEmpty()) return groups;
+
+            int[] connections = new int[phrases.size() + 1];
+            for (Unit unit : units) {
+                if (unit.scratch() || unit.slot().hidden()) continue;
+                Interval key = playableInterval(unit);
+                int first = firstPhraseEndingAtOrAfter(phrases, key.start());
+                int last = lastPhraseStartingAtOrBefore(phrases, key.end());
+                if (first >= 0 && last > first
+                        && phrases.get(first).interval().overlaps(key)
+                        && phrases.get(last).interval().overlaps(key)) {
+                    connections[first]++;
+                    connections[last]--;
+                }
+            }
+
+            ScratchGroup current = new ScratchGroup();
+            groups.add(current);
+            int activeConnections = 0;
+            for (int index = 0; index < phrases.size(); index++) {
+                current.phrases.add(phrases.get(index));
+                activeConnections += connections[index];
+                if (index + 1 < phrases.size() && activeConnections == 0) {
+                    current = new ScratchGroup();
+                    groups.add(current);
+                }
+            }
+            return groups;
+        }
+
+        private int firstPhraseEndingAtOrAfter(List<ScratchPhrase> phrases, long time) {
+            int low = 0;
+            int high = phrases.size();
+            while (low < high) {
+                int middle = (low + high) >>> 1;
+                if (phrases.get(middle).end < time) low = middle + 1;
+                else high = middle;
+            }
+            return low < phrases.size() ? low : -1;
+        }
+
+        private int lastPhraseStartingAtOrBefore(List<ScratchPhrase> phrases, long time) {
+            int low = 0;
+            int high = phrases.size();
+            while (low < high) {
+                int middle = (low + high) >>> 1;
+                if (phrases.get(middle).start <= time) low = middle + 1;
+                else high = middle;
+            }
+            return low == 0 ? -1 : low - 1;
+        }
+
+        private int chooseScratchGroup(ScratchGroup group) {
+            List<Unit> scratchUnits = group.units();
+            long left = scratchGroupCost(scratchUnits, 0);
+            long right = scratchGroupCost(scratchUnits, 1);
+            if (lastScratchGroupSide == 0) left += REPEATED_SCRATCH_SIDE_PENALTY;
+            if (lastScratchGroupSide == 1) right += REPEATED_SCRATCH_SIDE_PENALTY;
+            if (left != right) return left < right ? 0 : 1;
+            return lastScratchGroupSide < 0 ? 0 : 1 - lastScratchGroupSide;
+        }
+
+        private long scratchGroupCost(List<Unit> scratchUnits, int side) {
+            long cost = 0;
+            Map<Integer, int[]> projectedCounts = new HashMap<>();
+            for (Unit unit : scratchUnits) {
+                cost += wavCost(unit, side);
+                int[] counts = projectedCounts.computeIfAbsent(unit.measure(), measure -> {
+                    int[] existing = measureCounts.get(measure);
+                    return existing == null ? new int[2] : existing.clone();
+                });
+                int excess = counts[side] - counts[1 - side] - BIAS_TOLERANCE;
+                if (excess >= 0) cost += (excess + 1) * BALANCE_PENALTY;
+                counts[side]++;
+            }
+            return cost;
         }
 
         private int chooseKey(Unit unit) {
-            int left = baseCost(unit, 0) + scratchCost(unit, 0) + moveCost(unit, 0);
-            int right = baseCost(unit, 1) + scratchCost(unit, 1) + moveCost(unit, 1);
+            boolean leftReserved = !unit.slot().hidden() && scratchReserved(unit, 0);
+            boolean rightReserved = !unit.slot().hidden() && scratchReserved(unit, 1);
+            if (leftReserved && rightReserved) {
+                throw new IllegalStateException("SP-to-DP scratch reservations blocked both sides");
+            }
+            if (leftReserved) return 1;
+            if (rightReserved) return 0;
+            int left = baseCost(unit, 0) + moveCost(unit, 0);
+            int right = baseCost(unit, 1) + moveCost(unit, 1);
             return select(unit, left, right);
         }
 
         private int baseCost(Unit unit, int side) {
+            int cost = wavCost(unit, side);
+            int[] counts = measureCounts.computeIfAbsent(unit.measure(), ignored -> new int[2]);
+            int excess = counts[side] - counts[1 - side] - BIAS_TOLERANCE;
+            if (excess >= 0) cost += (excess + 1) * BALANCE_PENALTY;
+            return cost;
+        }
+
+        private int wavCost(Unit unit, int side) {
             int cost = 0;
             int wav = unit.note().getWav();
             if (wav >= 0) {
@@ -230,27 +389,34 @@ final class BMSIRSpToDpModifier {
                         .get(wav);
                 if (previous != null && previous != side) cost += 4;
             }
-            int[] counts = measureCounts.computeIfAbsent(unit.measure(), ignored -> new int[2]);
-            int excess = counts[side] - counts[1 - side] - profile.biasTolerance();
-            if (excess >= 0) cost += (excess + 1) * profile.balancePenalty();
             return cost;
         }
 
-        private int scratchCost(Unit unit, int side) {
-            long time = unit.slot().timeline().getMicroTime();
-            int nearby = 0;
-            for (Scratch scratch : scratches) {
-                long distance = Math.abs(scratch.time() - time);
-                if (distance <= SCRATCH_DENSITY_WINDOW_US && scratch.side() == side) nearby++;
+        private boolean scratchReserved(Unit unit, int side) {
+            Interval playable = playableInterval(unit);
+            int low = 0;
+            int high = scratchWindows.size();
+            while (low < high) {
+                int middle = (low + high) >>> 1;
+                if (scratchWindows.get(middle).interval().end() < playable.start()) {
+                    low = middle + 1;
+                } else {
+                    high = middle;
+                }
             }
-            return nearby * 12;
+            for (int index = low; index < scratchWindows.size(); index++) {
+                ScratchWindow scratch = scratchWindows.get(index);
+                if (scratch.interval().start() > playable.end()) break;
+                if (scratch.side() == side && scratch.interval().overlaps(playable)) return true;
+            }
+            return false;
         }
 
         private int moveCost(Unit unit, int side) {
             int lane = unit.slot().lane();
             if (lastLaneSide[lane] < 0 || lastLaneSide[lane] == side) return 0;
             long elapsed = unit.slot().timeline().getMicroTime() - lastLaneTime[lane];
-            return elapsed < profile.moveThresholdUs() ? profile.movePenalty() : 0;
+            return elapsed < MOVE_THRESHOLD_US ? MOVE_PENALTY : 0;
         }
 
         private int select(Unit unit, int left, int right) {
@@ -267,6 +433,14 @@ final class BMSIRSpToDpModifier {
                 wavSides.computeIfAbsent(unit.measure(), ignored -> new HashMap<>())
                         .putIfAbsent(unit.note().getWav(), side);
             }
+        }
+
+        private Interval playableInterval(Unit unit) {
+            long first = unit.slot().timeline().getMicroTime();
+            long second = unit.pair() == null
+                    ? first
+                    : unit.pair().timeline().getMicroTime();
+            return new Interval(Math.min(first, second), Math.max(first, second));
         }
     }
 }

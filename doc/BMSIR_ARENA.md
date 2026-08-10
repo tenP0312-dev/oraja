@@ -21,8 +21,10 @@ vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
 Version `0.4.14.25` adds MANIAC SP-to-DP levels 1--3 with isolated local and
 online records, deterministic ranking identities, ghosts, and owner-score
-sync. It also shows each waiting player's name, integer rating, grade, and
-waiting state in the existing Arena participant columns.
+sync. Scratch phrases reserve one DP side for their complete duration so keys
+cannot be generated beside an active scratch or long scratch. It also shows
+each waiting player's name, integer rating, grade, and waiting state in the
+existing Arena participant columns.
 Version `0.4.14.24` collects the completed client refinement batch: it keeps
 the built-in F5 and Ctrl+Shift+F5 Arena menus consistently localized, suppresses
 gameplay INFO popups for NUMPAD judge-auto and timing actions, preserves
@@ -198,9 +200,22 @@ SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to
 DP 10KEY and 14KEY. It moves the existing note objects without changing their
 timing, keysound, long-note pairing, or playable-note count. Assignment keeps
 the same keysound on one side within a measure where possible, uses the
-immediately preceding measure as a stability hint, and penalizes key density
-on the same side as a scratch within 200 ms before or after it. Higher levels
-shorten the side-movement threshold and permit more temporary left/right bias.
+immediately preceding measure as a stability hint, and groups overlapping
+normal-scratch guards plus connected long-scratch intervals into one scratch
+phrase. Every scratch in a phrase stays on one side; separated phrases prefer
+1P, 2P, 1P alternation. A connected scratch-only roll therefore stays on one
+side instead of changing hands inside the roll. LEVEL 1--3 use 240, 200, and
+160 ms before/after guards respectively; this guard width is their only
+assignment difference.
+
+A normal key is forbidden on the reserved side while its timing overlaps the
+scratch phrase. A key long note uses its complete start-to-end interval, so an
+LN that starts before the scratch also moves to the other side when its held
+body overlaps the reservation. When one key LN spans multiple separated
+scratch phrases, those phrases share one scratch side so the LN always retains
+one unreserved side. These are hard placement constraints rather than costs;
+the remaining keysound, measure-balance, and short side-movement costs apply
+only after a safe side remains available.
 The conversion is deterministic, rebuilds the final DP mode and scratch lanes,
 and uses its own canonical identity and local score/lamp key. Its LEVEL 1--3
 records use the same dedicated MANIAC submit, ranking, ghost, and owner-sync
