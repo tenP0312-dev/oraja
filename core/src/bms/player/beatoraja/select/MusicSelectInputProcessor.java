@@ -27,6 +27,7 @@ import static bms.player.beatoraja.select.MusicSelectKeyProperty.MusicSelectKey.
 public final class MusicSelectInputProcessor {
 
     static final long MANIAC_OPTIONS_HOLD_MILLIS = 1000L;
+    static final long SELECT_OPTIONS_HOLD_MILLIS = 350L;
     static final long MANIAC_MENU_REPEAT_DELAY_MILLIS = 350L;
     static final long MANIAC_MENU_REPEAT_INTERVAL_MILLIS = 90L;
     static final int MANIAC_KEY_1 = 0;
@@ -64,12 +65,14 @@ public final class MusicSelectInputProcessor {
     private final MusicSelector select;
 
     private final F2HoldDetector f2HoldDetector = new F2HoldDetector();
+    private final SelectHoldDetector selectHoldDetector = new SelectHoldDetector();
     private final ChordHoldDetector maniacChordDetector = new ChordHoldDetector();
     private final RepeatPressDetector maniacDownDetector = new RepeatPressDetector();
     private final RepeatPressDetector maniacUpDetector = new RepeatPressDetector();
     private final PressEdgeDetector maniacSelectDetector = new PressEdgeDetector();
     private final PressEdgeDetector maniacBackDetector = new PressEdgeDetector();
     private boolean suppressManiacControlsUntilChordRelease;
+    private boolean suppressSelectGestureUntilRelease;
 
     public MusicSelectInputProcessor(MusicSelector select) {
         this.select = select;
@@ -131,6 +134,37 @@ public final class MusicSelectInputProcessor {
         // }
 
         final MusicSelectKeyProperty property = MusicSelectKeyProperty.values()[config.getMusicselectinput()];
+
+        String selectAction = config.getBmsirSelectButtonAction();
+        boolean customSelectAction = !PlayerConfig.BMSIR_SELECT_ACTION_OPTION.equals(
+                selectAction
+        );
+        SelectHoldDetector.Action selectGesture = SelectHoldDetector.Action.NONE;
+        if (!input.isSelectPressed()) {
+            suppressSelectGestureUntilRelease = false;
+        } else if (input.startPressed()) {
+            // START+SELECT belongs exclusively to the detailed-option chord.
+            suppressSelectGestureUntilRelease = true;
+        }
+        if (!customSelectAction || suppressSelectGestureUntilRelease) {
+            selectHoldDetector.cancel();
+        } else {
+            selectGesture = selectHoldDetector.update(input.isSelectPressed(), now);
+        }
+        boolean selectLongPressActive = customSelectAction
+                && selectHoldDetector.isLongPressActive();
+        boolean selectShortPressHandled = false;
+        if (selectGesture == SelectHoldDetector.Action.SHORT_PRESS) {
+            boolean changed = PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY.equals(
+                    selectAction
+            )
+                    ? barManager.cycleSelectedDifficulty()
+                    : barManager.cycleBmsirSelectMode(1);
+            if (changed) {
+                select.play(OPTION_CHANGE);
+            }
+            selectShortPressHandled = true;
+        }
 
         if(!input.startPressed() && !input.isSelectPressed() && !input.getControlKeyState(ControlKeys.NUM5)){
             //オプションキー入力なし
@@ -237,7 +271,8 @@ public final class MusicSelectInputProcessor {
                 select.play(SCRATCH);
                 mov++;
             }
-        } else if (input.isSelectPressed() && !input.startPressed()) {
+        } else if (input.isSelectPressed() && !input.startPressed()
+                && (!customSelectAction || selectLongPressActive)) {
             bar.resetInput();
             // show assist option
             select.setPanelState(2);
@@ -274,6 +309,12 @@ public final class MusicSelectInputProcessor {
                 config.setMineMode(config.getMineMode() == 1 ? 0 : 1);
                 select.play(OPTION_CHANGE);
             }
+        } else if (customSelectAction
+                && input.isSelectPressed()
+                && !input.startPressed()) {
+            // Wait for release (short action) or the hold threshold (assist OP).
+            bar.resetInput();
+            select.setPanelState(0);
         } else if (input.getControlKeyState(ControlKeys.NUM5) || (input.startPressed() && input.isSelectPressed())) {
             bar.resetInput();
             // show detail option
@@ -322,6 +363,9 @@ public final class MusicSelectInputProcessor {
             if (property.isPressed(input, NOTESDISPLAYTIMING_AUTOADJUST, true)) {
                 select.executeEvent(EventType.notesdisplaytimingautoadjust);
             }
+        } else if (selectShortPressHandled) {
+            bar.resetInput();
+            select.setPanelState(0);
         } else {
             bar.input();
             select.setPanelState(0);
@@ -543,6 +587,43 @@ public final class MusicSelectInputProcessor {
                 return action;
             }
             return Action.NONE;
+        }
+    }
+
+    static final class SelectHoldDetector {
+        enum Action { NONE, SHORT_PRESS, LONG_PRESS }
+
+        private long pressedAt = -1L;
+        private boolean longPressActive;
+
+        Action update(boolean pressed, long now) {
+            if (pressed && pressedAt < 0L) {
+                pressedAt = now;
+                longPressActive = false;
+            }
+            if (pressed && !longPressActive
+                    && now - pressedAt >= SELECT_OPTIONS_HOLD_MILLIS) {
+                longPressActive = true;
+                return Action.LONG_PRESS;
+            }
+            if (!pressed && pressedAt >= 0L) {
+                Action action = longPressActive
+                        || now - pressedAt >= SELECT_OPTIONS_HOLD_MILLIS
+                        ? Action.NONE
+                        : Action.SHORT_PRESS;
+                cancel();
+                return action;
+            }
+            return Action.NONE;
+        }
+
+        boolean isLongPressActive() {
+            return longPressActive;
+        }
+
+        void cancel() {
+            pressedAt = -1L;
+            longPressActive = false;
         }
     }
 

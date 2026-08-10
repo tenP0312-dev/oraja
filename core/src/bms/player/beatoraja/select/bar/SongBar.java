@@ -17,9 +17,12 @@ import java.util.stream.Collectors;
  */
 public class SongBar extends SelectableBar {
     /**
-     * 楽曲データ
+     * Chart variants represented by this bar. Ordinary bars contain one chart;
+     * LR2-style difficulty bars contain the visible charts from one folder and
+     * key mode.
      */
-    private final SongData song;
+    private final SongData[] songs;
+    private int songIndex;
     /**
      * バナーデータ
      */
@@ -30,15 +33,88 @@ public class SongBar extends SelectableBar {
     private Pixmap stagefile;
 
     public SongBar(SongData song) {
-        this.song = song;
+        this(new SongData[]{song}, song != null ? song.getSha256() : null);
+    }
+
+    public SongBar(SongData[] songs, String preferredSha256) {
+        this.songs = Arrays.stream(songs)
+                .filter(java.util.Objects::nonNull)
+                .sorted(SongBar::compareDifficulty)
+                .toArray(SongData[]::new);
+        if (this.songs.length == 0) {
+            throw new IllegalArgumentException("SongBar requires at least one chart");
+        }
+        selectSha256(preferredSha256);
     }
 
     public final SongData getSongData() {
-        return song;
+        return songs[songIndex];
+    }
+
+    public final SongData[] getDifficultyVariants() {
+        return songs.clone();
+    }
+
+    public final int getDifficultyVariantCount() {
+        return songs.length;
+    }
+
+    public final boolean cycleDifficulty() {
+        if (songs.length < 2) {
+            return false;
+        }
+        songIndex = (songIndex + 1) % songs.length;
+        clearLoadedContents();
+        return true;
+    }
+
+    private void selectSha256(String preferredSha256) {
+        songIndex = 0;
+        if (preferredSha256 == null || preferredSha256.isBlank()) {
+            return;
+        }
+        for (int index = 0; index < songs.length; index++) {
+            if (preferredSha256.equals(songs[index].getSha256())) {
+                songIndex = index;
+                return;
+            }
+        }
+    }
+
+    private void clearLoadedContents() {
+        setScore(null);
+        setRivalScore(null);
+        banner = null;
+        stagefile = null;
+        for (int index = 0; index < bms.player.beatoraja.select.MusicSelector.REPLAY; index++) {
+            setExistsReplay(index, false);
+        }
+    }
+
+    private static int compareDifficulty(SongData left, SongData right) {
+        int compared = Integer.compare(difficultyOrder(left), difficultyOrder(right));
+        if (compared != 0) {
+            return compared;
+        }
+        compared = Integer.compare(left.getLevel(), right.getLevel());
+        if (compared != 0) {
+            return compared;
+        }
+        compared = left.getFullTitle().compareToIgnoreCase(right.getFullTitle());
+        if (compared != 0) {
+            return compared;
+        }
+        return java.util.Objects.toString(left.getSha256(), "")
+                .compareTo(java.util.Objects.toString(right.getSha256(), ""));
+    }
+
+    private static int difficultyOrder(SongData song) {
+        int difficulty = song.getDifficulty();
+        return difficulty >= 1 && difficulty <= 5 ? difficulty : 100 + difficulty;
     }
 
     public final boolean existsSong() {
-    	return song.getPath() != null;
+		return getSongData().getPath() != null;
     }
 
     public Pixmap getBanner() {
@@ -59,7 +135,7 @@ public class SongBar extends SelectableBar {
 
     @Override
     public final String getTitle() {
-        return song.getFullTitle();
+        return getSongData().getFullTitle();
     }
 
     public int getLamp(boolean isPlayer) {

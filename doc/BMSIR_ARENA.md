@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.29`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.30`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,13 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.30` makes Music Select's SELECT-only action configurable. The
+legacy option panel remains the default; the alternatives use a release before
+350 ms to cycle either LR2-style grouped difficulties or an allow-listed key
+mode, while a 350 ms hold opens the existing option panel. START+SELECT still
+opens detailed options. Difficulty groups are limited to charts visible in the
+current folder/table/search result and require the same song folder and key
+mode. Key-mode cycling skips unchecked modes and modes absent from that list.
 Version `0.4.14.29` stops repeated scratch keysounds from pinning separated
 SP-to-DP scratch phrases to one side. Same-keysound stability remains for
 normal keys; connected scratch phrases, long-scratch reservations, and key-LN
@@ -516,6 +523,14 @@ LONG NOTEとして扱う` is shown as an always-ON compatibility rule rather tha
 an editable switch: BMS-IR rejects CN/HCN results, so disabling the rule would
 make chart note counts and submitted scores disagree.
 
+- Music Select SELECT behavior can remain `OP変更（従来）`, or use short
+  SELECT for `難易度` / `鍵盤数` and a 350 ms hold for the same assist-option
+  panel. START+SELECT keeps the detailed-option panel. Difficulty mode combines
+  only the currently visible charts with the same folder identity and key mode,
+  then cycles difficulty and displayed level order without leaving the current
+  table/search scope. Key-mode mode cycles only checked ALL/5K/7K/9K/10K/14K/
+  24K/24K DP entries and skips modes that have no chart in the current list. An
+  empty allow-list is normalized to 7K.
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
   playable key through the DECIDE-to-READY transition to place the first source
   key on that destination. Once READY is visible the input has been captured
@@ -615,7 +630,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.29-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.30-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -636,7 +651,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.29-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.30-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -652,7 +667,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.29-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.30-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

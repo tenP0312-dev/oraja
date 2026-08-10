@@ -871,6 +871,12 @@ public final class MusicSelector extends MainState {
 		}
 	}
 
+	/** Refreshes preview, image, score, replay, and ranking state for one grouped bar. */
+	public void selectedSongVariantChanged() {
+		preview.start(null);
+		selectedBarMoved();
+	}
+
 	public void loadSelectedSongImages() {
 		// banner
 		// stagefile

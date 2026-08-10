@@ -21,6 +21,7 @@
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.RowConstraints?>
@@ -486,6 +487,22 @@
                     <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_START_HERE_PREVIEW_DESCRIPTION" wrapText="true" />
 	                    <CheckBox fx:id="bmsirDanLocalSyncEnabled" mnemonicParsing="false" text="%BMSIR_DAN_LOCAL_SYNC_ENABLED" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_DAN_LOCAL_SYNC_DESCRIPTION" wrapText="true" />
+	                    <Separator />
+	                    <Label text="%BMSIR_SELECT_BUTTON_ACTION" />
+	                    <ComboBox fx:id="bmsirSelectButtonAction" prefWidth="360.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_BUTTON_ACTION_DESCRIPTION" wrapText="true" />
+	                    <Label text="%BMSIR_SELECT_KEY_MODES" />
+	                    <FlowPane alignment="CENTER_LEFT" hgap="10.0" vgap="6.0">
+	                        <CheckBox fx:id="bmsirSelectModeAll" mnemonicParsing="false" text="ALL" />
+	                        <CheckBox fx:id="bmsirSelectMode7k" mnemonicParsing="false" text="7K" />
+	                        <CheckBox fx:id="bmsirSelectMode14k" mnemonicParsing="false" text="14K" />
+	                        <CheckBox fx:id="bmsirSelectMode9k" mnemonicParsing="false" text="9K" />
+	                        <CheckBox fx:id="bmsirSelectMode5k" mnemonicParsing="false" text="5K" />
+	                        <CheckBox fx:id="bmsirSelectMode10k" mnemonicParsing="false" text="10K" />
+	                        <CheckBox fx:id="bmsirSelectMode24k" mnemonicParsing="false" text="24K" />
+	                        <CheckBox fx:id="bmsirSelectMode24kDp" mnemonicParsing="false" text="24K DP" />
+	                    </FlowPane>
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_KEY_MODES_DESCRIPTION" wrapText="true" />
 	                    <Separator />
 	                    <Label text="%BMSIR_ARENA_TARGET_MODE" />
 	                    <ComboBox fx:id="bmsirArenaTargetMode" prefWidth="180.0" />

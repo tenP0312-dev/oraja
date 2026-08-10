@@ -13,6 +13,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.pattern.*;
@@ -43,6 +44,9 @@ public final class PlayerConfig {
 	public static final String BMSIR_COVER_CONTROL_ORAJA = "oraja";
 	public static final String BMSIR_COVER_CONTROL_LR2 = "lr2";
 	public static final String BMSIR_COVER_CONTROL_EXTENDED = "extended";
+	public static final String BMSIR_SELECT_ACTION_OPTION = "option";
+	public static final String BMSIR_SELECT_ACTION_DIFFICULTY = "difficulty";
+	public static final String BMSIR_SELECT_ACTION_KEY_MODE = "key_mode";
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -249,6 +253,10 @@ public final class PlayerConfig {
 	 * 選曲時でのキー入力方式
 	 */
 	private int musicselectinput = 0;
+	/** SELECT alone: legacy option panel, difficulty cycle, or key-mode cycle. */
+	private String bmsirSelectButtonAction = BMSIR_SELECT_ACTION_OPTION;
+	/** Ordered allow-list used by the SELECT key-mode cycle. */
+	private String[] bmsirSelectKeyModes = BMSIRSelectKeyMode.defaultIds();
 
 	private IRConfig[] irconfig;
 
@@ -669,6 +677,30 @@ public final class PlayerConfig {
 
 	public void setBmsirDanLocalSyncEnabled(boolean enabled) {
 		this.bmsirDanLocalSyncEnabled = enabled;
+	}
+
+	public String getBmsirSelectButtonAction() {
+		if (!BMSIR_SELECT_ACTION_DIFFICULTY.equals(bmsirSelectButtonAction)
+				&& !BMSIR_SELECT_ACTION_KEY_MODE.equals(bmsirSelectButtonAction)) {
+			bmsirSelectButtonAction = BMSIR_SELECT_ACTION_OPTION;
+		}
+		return bmsirSelectButtonAction;
+	}
+
+	public void setBmsirSelectButtonAction(String action) {
+		bmsirSelectButtonAction = BMSIR_SELECT_ACTION_DIFFICULTY.equals(action)
+				|| BMSIR_SELECT_ACTION_KEY_MODE.equals(action)
+				? action
+				: BMSIR_SELECT_ACTION_OPTION;
+	}
+
+	public String[] getBmsirSelectKeyModes() {
+		bmsirSelectKeyModes = BMSIRSelectKeyMode.normalizeIds(bmsirSelectKeyModes);
+		return bmsirSelectKeyModes.clone();
+	}
+
+	public void setBmsirSelectKeyModes(String[] modes) {
+		bmsirSelectKeyModes = BMSIRSelectKeyMode.normalizeIds(modes);
 	}
 
 	/**
@@ -1476,6 +1508,8 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		setBmsirSelectButtonAction(bmsirSelectButtonAction);
+		setBmsirSelectKeyModes(bmsirSelectKeyModes);
 		setBmsirCoverControlMode(bmsirCoverControlMode);
 		setBmsirCoverChangeStep(bmsirCoverChangeStep);
 		setBmsirCoverHispeedAutoAdjustEnabled(

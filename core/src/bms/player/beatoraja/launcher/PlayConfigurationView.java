@@ -27,6 +27,7 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.arena.bmsir.BMSIRScoreDatabaseExport;
 import bms.player.beatoraja.song.*;
 import javafx.application.Platform;
@@ -118,6 +119,24 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirDanLocalSyncEnabled;
 	@FXML
+	private ComboBox<String> bmsirSelectButtonAction;
+	@FXML
+	private CheckBox bmsirSelectModeAll;
+	@FXML
+	private CheckBox bmsirSelectMode7k;
+	@FXML
+	private CheckBox bmsirSelectMode14k;
+	@FXML
+	private CheckBox bmsirSelectMode9k;
+	@FXML
+	private CheckBox bmsirSelectMode5k;
+	@FXML
+	private CheckBox bmsirSelectMode10k;
+	@FXML
+	private CheckBox bmsirSelectMode24k;
+	@FXML
+	private CheckBox bmsirSelectMode24kDp;
+	@FXML
 	private CheckBox bmsirLongNoteFixed;
 	@FXML
 	private ComboBox<String> bmsirArenaLanguage;
@@ -161,6 +180,7 @@ public class PlayConfigurationView implements Initializable {
 	private Button bmsirExportVanillaScoreDb;
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
+	private List<CheckBox> bmsirSelectModeChecks;
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -417,11 +437,48 @@ public class PlayConfigurationView implements Initializable {
 		};
 	}
 
+	private static int bmsirSelectButtonActionIndex(String action) {
+		return switch (action) {
+			case PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY -> 1;
+			case PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE -> 2;
+			default -> 0;
+		};
+	}
+
+	private static String bmsirSelectButtonActionValue(int index) {
+		return switch (index) {
+			case 1 -> PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY;
+			case 2 -> PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE;
+			default -> PlayerConfig.BMSIR_SELECT_ACTION_OPTION;
+		};
+	}
+
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
+		bmsirSelectButtonAction.getItems().setAll(english
+				? List.of(
+						"Option panel (legacy)",
+						"Short: difficulty / Hold: options",
+						"Short: key mode / Hold: options"
+				)
+				: List.of(
+						"OP変更（従来）",
+						"短押し: 難易度 / 長押し: OP",
+						"短押し: 鍵盤数 / 長押し: OP"
+				));
+		bmsirSelectModeChecks = List.of(
+				bmsirSelectModeAll,
+				bmsirSelectMode7k,
+				bmsirSelectMode14k,
+				bmsirSelectMode9k,
+				bmsirSelectMode5k,
+				bmsirSelectMode10k,
+				bmsirSelectMode24k,
+				bmsirSelectMode24kDp
+		);
 		bmsirRulesetProfile.getItems().setAll("LR2", "oraja");
 		bmsirArenaTargetMode.getItems().setAll(english
 				? List.of("OFF", "1st-place opponent", "Opponent directly above", "Specified player")
@@ -688,6 +745,18 @@ public class PlayConfigurationView implements Initializable {
 		bmsirDanLocalSyncEnabled.setSelected(
 				player.isBmsirDanLocalSyncEnabled()
 		);
+		bmsirSelectButtonAction.getSelectionModel().select(
+				bmsirSelectButtonActionIndex(player.getBmsirSelectButtonAction())
+		);
+		Set<String> selectModes = new HashSet<>(
+				Arrays.asList(player.getBmsirSelectKeyModes())
+		);
+		BMSIRSelectKeyMode[] selectableModes = BMSIRSelectKeyMode.values();
+		for (int index = 0; index < selectableModes.length; index++) {
+			bmsirSelectModeChecks.get(index).setSelected(
+					selectModes.contains(selectableModes[index].id())
+			);
+		}
 		bmsirLongNoteFixed.setSelected(true);
 		bmsirLongNoteFixed.setDisable(true);
 		bmsirArenaLanguage.getSelectionModel().select(
@@ -853,6 +922,19 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirDanLocalSyncEnabled(
 				bmsirDanLocalSyncEnabled.isSelected()
 		);
+		player.setBmsirSelectButtonAction(
+				bmsirSelectButtonActionValue(
+						bmsirSelectButtonAction.getSelectionModel().getSelectedIndex()
+				)
+		);
+		List<String> selectModes = new ArrayList<>();
+		BMSIRSelectKeyMode[] selectableModes = BMSIRSelectKeyMode.values();
+		for (int index = 0; index < selectableModes.length; index++) {
+			if (bmsirSelectModeChecks.get(index).isSelected()) {
+				selectModes.add(selectableModes[index].id());
+			}
+		}
+		player.setBmsirSelectKeyModes(selectModes.toArray(String[]::new));
 		player.setBmsirArenaLanguage(
 				bmsirArenaLanguage.getSelectionModel().getSelectedIndex() == 1
 						? "en"
