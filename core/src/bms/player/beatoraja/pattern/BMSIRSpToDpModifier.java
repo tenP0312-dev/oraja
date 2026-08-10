@@ -161,9 +161,9 @@ final class BMSIRSpToDpModifier {
     private record Profile(long scratchGuardUs) {
         private static Profile forDifficulty(int difficulty) {
             return switch (difficulty) {
-                case 1 -> new Profile(240_000L);
-                case 2 -> new Profile(200_000L);
-                default -> new Profile(160_000L);
+                case 1 -> new Profile(160_000L);
+                case 2 -> new Profile(120_000L);
+                default -> new Profile(80_000L);
             };
         }
     }
@@ -171,6 +171,10 @@ final class BMSIRSpToDpModifier {
     static long scratchGuardUsForDifficulty(int requestedDifficulty) {
         int difficulty = Math.max(1, Math.min(3, requestedDifficulty));
         return Profile.forDifficulty(difficulty).scratchGuardUs();
+    }
+
+    static long scratchMergeGapUsForDifficulty(int requestedDifficulty) {
+        return scratchGuardUsForDifficulty(requestedDifficulty) * 2L;
     }
 
     private static final class ScratchPhrase {

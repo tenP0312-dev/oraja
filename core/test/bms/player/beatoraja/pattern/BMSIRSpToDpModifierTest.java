@@ -30,7 +30,7 @@ class BMSIRSpToDpModifierTest {
         assertEquals(16, model.getAllTimeLines()[0].getLaneCount());
         assertEquals(notes, model.getTotalNotes());
         assertEquals(
-                "e85f3b8c7fca4c1c4ca033cf5a2a8bd6930dfd1982bbb270199068a876b9044e",
+                "3d4cf719b457ec6805fd6601d217719a117d2c0f2a03bcb2df5a31fa367317dc",
                 modifier.getPlacementHash()
         );
 
@@ -86,9 +86,12 @@ class BMSIRSpToDpModifierTest {
 
     @Test
     void difficultyChangesOnlyDeterministicScratchGuardWidth() {
-        assertEquals(240_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(1));
-        assertEquals(200_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(2));
-        assertEquals(160_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(3));
+        assertEquals(160_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(1));
+        assertEquals(120_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(2));
+        assertEquals(80_000L, BMSIRSpToDpModifier.scratchGuardUsForDifficulty(3));
+        assertEquals(320_000L, BMSIRSpToDpModifier.scratchMergeGapUsForDifficulty(1));
+        assertEquals(240_000L, BMSIRSpToDpModifier.scratchMergeGapUsForDifficulty(2));
+        assertEquals(160_000L, BMSIRSpToDpModifier.scratchMergeGapUsForDifficulty(3));
 
         BMSModel easy = guardFixture();
         BMSModel normal = guardFixture();
@@ -103,6 +106,38 @@ class BMSIRSpToDpModifierTest {
         String hardHash = BMSIRManiacModifier.placementHash(hard);
         assertNotEquals(easyHash, normalHash);
         assertNotEquals(normalHash, hardHash);
+    }
+
+    @Test
+    void adjacentScratchMergeThresholdsAreInclusive() {
+        assertScratchPairPlacement(1, 320_000L, true);
+        assertScratchPairPlacement(1, 320_001L, false);
+        assertScratchPairPlacement(2, 240_000L, true);
+        assertScratchPairPlacement(2, 240_001L, false);
+        assertScratchPairPlacement(3, 160_000L, true);
+        assertScratchPairPlacement(3, 160_001L, false);
+    }
+
+    @Test
+    void scratchPhraseKeepsChainingWithoutDurationOrCountLimit() {
+        long gap = 320_000L;
+        TimeLine[] lines = lines(
+                new long[]{0L, gap, gap * 2, gap * 3, gap * 4, gap * 5},
+                Mode.BEAT_7K
+        );
+        NormalNote[] scratches = new NormalNote[lines.length];
+        for (int index = 0; index < lines.length; index++) {
+            scratches[index] = new NormalNote(100 + index);
+            lines[index].setNote(Mode.BEAT_7K.scratchKey[0], scratches[index]);
+        }
+        BMSModel model = model("sp-to-dp-unbounded-scratch-chain", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 1);
+
+        int sideLane = laneOf(lines[0], scratches[0]);
+        for (int index = 1; index < lines.length; index++) {
+            assertEquals(sideLane, laneOf(lines[index], scratches[index]));
+        }
     }
 
     @Test
@@ -133,7 +168,7 @@ class BMSIRSpToDpModifierTest {
 
     @Test
     void connectedScratchOnlyRollStaysOnOneSideAndWideChordUsesTheOther() {
-        TimeLine[] lines = lines(new long[]{0L, 300_000L}, Mode.BEAT_7K);
+        TimeLine[] lines = lines(new long[]{0L, 240_000L}, Mode.BEAT_7K);
         lines[0].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90));
         lines[1].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(91));
         lines[1].setNote(0, new NormalNote(10));
@@ -232,13 +267,30 @@ class BMSIRSpToDpModifierTest {
 
     private static BMSModel guardFixture() {
         TimeLine[] lines = lines(
-                new long[]{0L, 440_000L, 2_000_000L, 2_360_000L},
+                new long[]{0L, 300_000L, 2_000_000L, 2_200_000L},
                 Mode.BEAT_7K
         );
         for (int index = 0; index < lines.length; index++) {
             lines[index].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90 + index));
         }
         return model("sp-to-dp-guard-fixture", Mode.BEAT_7K, lines);
+    }
+
+    private static void assertScratchPairPlacement(int level, long gap, boolean sameSide) {
+        TimeLine[] lines = lines(new long[]{0L, gap}, Mode.BEAT_7K);
+        NormalNote first = new NormalNote(90);
+        NormalNote second = new NormalNote(91);
+        lines[0].setNote(Mode.BEAT_7K.scratchKey[0], first);
+        lines[1].setNote(Mode.BEAT_7K.scratchKey[0], second);
+        BMSModel model = model("sp-to-dp-threshold-" + level + "-" + gap, Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, level);
+
+        if (sameSide) {
+            assertEquals(laneOf(lines[0], first), laneOf(lines[1], second));
+        } else {
+            assertNotEquals(laneOf(lines[0], first), laneOf(lines[1], second));
+        }
     }
 
     private static TimeLine[] lines(long[] times, Mode mode) {

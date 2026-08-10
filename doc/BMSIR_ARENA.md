@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.27`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.28`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,10 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.28` narrows the adjacent-scratch merge thresholds for SP-to-DP
+LEVEL 1--3 to 320, 240, and 160 ms respectively. Transitive chaining remains
+unbounded: a connected phrase stays on one side regardless of its total
+duration or scratch count.
 Version `0.4.14.27` makes SP-to-DP scratch phrases reserve one DP side for
 their complete duration, including long-scratch bodies and guard time. Normal
 keys and key-long-note holds that overlap the reservation are forced to the
@@ -206,9 +210,11 @@ immediately preceding measure as a stability hint, and groups overlapping
 normal-scratch guards plus connected long-scratch intervals into one scratch
 phrase. Every scratch in a phrase stays on one side; separated phrases prefer
 1P, 2P, 1P alternation. A connected scratch-only roll therefore stays on one
-side instead of changing hands inside the roll. LEVEL 1--3 use 240, 200, and
-160 ms before/after guards respectively; this guard width is their only
-assignment difference.
+side instead of changing hands inside the roll. LEVEL 1--3 merge adjacent
+scratches at inclusive gaps of 320, 240, and 160 ms respectively, implemented
+as symmetric 160, 120, and 80 ms before/after guards. A phrase has no maximum
+duration or scratch count while each adjacent gap remains connected. This
+guard width is the levels' only assignment difference.
 
 A normal key is forbidden on the reserved side while its timing overlaps the
 scratch phrase. A key long note uses its complete start-to-end interval, so an
@@ -603,7 +609,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.27-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.28-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -624,7 +630,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.27-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.28-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -640,7 +646,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.27-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.28-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
