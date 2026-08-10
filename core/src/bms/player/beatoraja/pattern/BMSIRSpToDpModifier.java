@@ -347,7 +347,7 @@ final class BMSIRSpToDpModifier {
             long cost = 0;
             Map<Integer, int[]> projectedCounts = new HashMap<>();
             for (Unit unit : scratchUnits) {
-                cost += wavCost(unit, side);
+                // Scratch sample identity must not pin separated phrases to one side.
                 int[] counts = projectedCounts.computeIfAbsent(unit.measure(), measure -> {
                     int[] existing = measureCounts.get(measure);
                     return existing == null ? new int[2] : existing.clone();
