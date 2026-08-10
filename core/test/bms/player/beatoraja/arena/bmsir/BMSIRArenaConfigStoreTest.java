@@ -30,6 +30,10 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirOneBassEnabled(false);
         player.setBmsirStartHerePreviewEnabled(false);
         player.setBmsirDanLocalSyncEnabled(false);
+        player.setBmsirSelectButtonAction(
+                PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE
+        );
+        player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -83,7 +87,9 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 11"));
+        assertTrue(serialized.contains("\"schemaVersion\": 12"));
+        assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
+        assertTrue(serialized.contains("\"selectKeyModes\": ["));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -111,6 +117,10 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirOneBassEnabled(false);
         arenaBody.setBmsirStartHerePreviewEnabled(false);
         arenaBody.setBmsirDanLocalSyncEnabled(false);
+        arenaBody.setBmsirSelectButtonAction(
+                PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY
+        );
+        arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -155,6 +165,14 @@ class BMSIRArenaConfigStoreTest {
         assertFalse(restored.isBmsirOneBassEnabled());
         assertFalse(restored.isBmsirStartHerePreviewEnabled());
         assertFalse(restored.isBmsirDanLocalSyncEnabled());
+        assertEquals(
+                PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY,
+                restored.getBmsirSelectButtonAction()
+        );
+        assertEquals(
+                java.util.List.of("5k", "7k"),
+                java.util.Arrays.asList(restored.getBmsirSelectKeyModes())
+        );
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,
@@ -298,6 +316,16 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(restored.isBmsirOneBassEnabled());
         assertTrue(restored.isBmsirStartHerePreviewEnabled());
         assertTrue(restored.isBmsirDanLocalSyncEnabled());
+        assertEquals(
+                PlayerConfig.BMSIR_SELECT_ACTION_OPTION,
+                restored.getBmsirSelectButtonAction()
+        );
+        assertEquals(
+                java.util.List.of(
+                        "all", "7k", "14k", "9k", "5k", "10k", "24k", "24k_dp"
+                ),
+                java.util.Arrays.asList(restored.getBmsirSelectKeyModes())
+        );
         assertEquals(
                 PlayerConfig.BMSIR_COVER_CONTROL_ORAJA,
                 restored.getBmsirCoverControlMode()
