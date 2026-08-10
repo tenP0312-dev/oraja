@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.28`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.29`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,10 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.29` stops repeated scratch keysounds from pinning separated
+SP-to-DP scratch phrases to one side. Same-keysound stability remains for
+normal keys; connected scratch phrases, long-scratch reservations, and key-LN
+safety are unchanged.
 Version `0.4.14.28` narrows the adjacent-scratch merge thresholds for SP-to-DP
 LEVEL 1--3 to 320, 240, and 160 ms respectively. Transitive chaining remains
 unbounded: a connected phrase stays on one side regardless of its total
@@ -204,9 +208,11 @@ falling back to the normal leaderboard.
 
 SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to
 DP 10KEY and 14KEY. It moves the existing note objects without changing their
-timing, keysound, long-note pairing, or playable-note count. Assignment keeps
-the same keysound on one side within a measure where possible, uses the
-immediately preceding measure as a stability hint, and groups overlapping
+timing, keysound, long-note pairing, or playable-note count. Normal-key
+assignment keeps the same keysound on one side within a measure where possible
+and uses the immediately preceding measure as a stability hint. Scratch-phrase
+assignment ignores keysound identity so repeated scratch samples cannot pin
+separated phrases to one side. The converter groups overlapping
 normal-scratch guards plus connected long-scratch intervals into one scratch
 phrase. Every scratch in a phrase stays on one side; separated phrases prefer
 1P, 2P, 1P alternation. A connected scratch-only roll therefore stays on one
@@ -609,7 +615,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.28-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.29-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -630,7 +636,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.28-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.29-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -646,7 +652,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.28-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.29-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

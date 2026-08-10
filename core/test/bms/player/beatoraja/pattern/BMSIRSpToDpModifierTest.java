@@ -167,6 +167,23 @@ class BMSIRSpToDpModifierTest {
     }
 
     @Test
+    void repeatedWavDoesNotPinSeparatedScratchPhrasesToOneSide() {
+        long[] times = {0L, 900_000L, 1_800_000L, 2_700_000L};
+        TimeLine[] lines = lines(times, Mode.BEAT_7K);
+        for (TimeLine line : lines) {
+            line.setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90));
+        }
+        BMSModel model = model("sp-to-dp-repeated-scratch-wav", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 1);
+
+        assertNotNull(lines[0].getNote(Mode.BEAT_14K.scratchKey[0]));
+        assertNotNull(lines[1].getNote(Mode.BEAT_14K.scratchKey[1]));
+        assertNotNull(lines[2].getNote(Mode.BEAT_14K.scratchKey[0]));
+        assertNotNull(lines[3].getNote(Mode.BEAT_14K.scratchKey[1]));
+    }
+
+    @Test
     void connectedScratchOnlyRollStaysOnOneSideAndWideChordUsesTheOther() {
         TimeLine[] lines = lines(new long[]{0L, 240_000L}, Mode.BEAT_7K);
         lines[0].setNote(Mode.BEAT_7K.scratchKey[0], new NormalNote(90));
