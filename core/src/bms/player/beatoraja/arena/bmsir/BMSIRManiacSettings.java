@@ -17,6 +17,7 @@ import java.util.Map;
  */
 public final class BMSIRManiacSettings {
     public static final int ALGORITHM_VERSION = 1;
+    public static final int SP_TO_DP_PLACEMENT_VERSION = 2;
 
     public static final String RANDOM_LINK_OFF = "off";
     public static final String RANDOM_LINK_SYNC = "sync";
@@ -54,6 +55,7 @@ public final class BMSIRManiacSettings {
     private int spiral;
     private int sideJump;
     private int spToDpDifficulty;
+    private transient int spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
     private boolean doubleBattle;
     private boolean autoScratch;
     private String randomLink = RANDOM_LINK_OFF;
@@ -88,6 +90,7 @@ public final class BMSIRManiacSettings {
         spiral = source.spiral;
         sideJump = source.sideJump;
         spToDpDifficulty = source.spToDpDifficulty;
+        spToDpPlacementVersion = source.spToDpPlacementVersion;
         doubleBattle = source.doubleBattle;
         autoScratch = source.autoScratch;
         randomLink = source.randomLink;
@@ -118,6 +121,12 @@ public final class BMSIRManiacSettings {
         spiral = percent(spiral);
         sideJump = percent(sideJump);
         spToDpDifficulty = clamp(spToDpDifficulty, 0, 3);
+        if (spToDpDifficulty == 0) {
+            spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
+        } else if (spToDpPlacementVersion != 1
+                && spToDpPlacementVersion != SP_TO_DP_PLACEMENT_VERSION) {
+            spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
+        }
         if (doubleBattle) {
             spToDpDifficulty = 0;
         }
@@ -160,6 +169,14 @@ public final class BMSIRManiacSettings {
         settings.setSpiral(integer(values, "spiral"));
         settings.setSideJump(integer(values, "sidejump"));
         settings.setSpToDpDifficulty(integer(values, "sp2dp"));
+        if (settings.spToDpDifficulty > 0) {
+            int placementVersion = integer(values, "sp2dp_version");
+            settings.spToDpPlacementVersion = placementVersion == 0 ? 1 : placementVersion;
+            if (settings.spToDpPlacementVersion != 1
+                    && settings.spToDpPlacementVersion != SP_TO_DP_PLACEMENT_VERSION) {
+                return null;
+            }
+        }
         settings.setDoubleBattle(Boolean.parseBoolean(values.getOrDefault("db", "false")));
         settings.setAutoScratch(Boolean.parseBoolean(values.getOrDefault("autoscratch", "false")));
         settings.setRandomLink(values.get("link"));
@@ -285,6 +302,9 @@ public final class BMSIRManiacSettings {
         );
         if (spToDpDifficulty > 0) {
             base += ",sp2dp=" + spToDpDifficulty;
+            if (spToDpPlacementVersion > 1) {
+                base += ",sp2dp_version=" + spToDpPlacementVersion;
+            }
         }
         if (autoScratch) {
             base += ",autoscratch=true";
@@ -311,7 +331,10 @@ public final class BMSIRManiacSettings {
             case EXTRA -> "extra-" + extraMode;
             case ADD_NOTES -> "add-notes-" + addNotes;
             case ADD_LONGNOTES -> "add-longnotes-" + addLongNotes;
-            case SP_TO_DP -> "sp-to-dp-" + spToDpDifficulty;
+            case SP_TO_DP -> "sp-to-dp-" + spToDpDifficulty
+                    + (spToDpPlacementVersion > 1
+                    ? "-p" + spToDpPlacementVersion
+                    : "");
             case DOUBLE_BATTLE -> autoScratch
                     ? "double-battle-autoscratch"
                     : "double-battle";
@@ -475,6 +498,7 @@ public final class BMSIRManiacSettings {
     public void setSpToDpDifficulty(int value) {
         spToDpDifficulty = clamp(value, 0, 3);
         if (spToDpDifficulty > 0) {
+            spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
             doubleBattle = false;
             autoScratch = false;
             randomLink = RANDOM_LINK_OFF;

@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.33`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.34`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,15 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.34` recognizes monotonic adjacent-key SP-to-DP stair phrases
+of at least three notes and alternates their DP sides. The inclusive per-step
+limits are 333,334 microseconds for LEVEL 1, 111,112 for LEVEL 2, and 83,334
+for LEVEL 3. Simultaneous adjacent normal keys are evaluated as one chord and
+split across opposite sides whenever the existing scratch and key-LN safety
+reservations allow it. Stair and chord structure now takes priority over
+same-keysound and measure-balance preferences; scratch phrase gaps and hard
+reservations are unchanged. The revised placement uses a dedicated SP-to-DP
+placement identity so older internal-test scores and ghosts remain isolated.
 Version `0.4.14.33` removes the 350 ms wait when a Music Select START or
 SELECT short press is configured as none. The corresponding option panel opens
 on the first pressed frame because there is no short action to distinguish;
@@ -235,9 +244,15 @@ falling back to the normal leaderboard.
 
 SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to
 DP 10KEY and 14KEY. It moves the existing note objects without changing their
-timing, keysound, long-note pairing, or playable-note count. Normal-key
-assignment keeps the same keysound on one side within a measure where possible
-and uses the immediately preceding measure as a stability hint. Scratch-phrase
+timing, keysound, long-note pairing, or playable-note count. A monotonic
+adjacent-key stair of at least three visible notes alternates DP sides when
+every step is at most 333,334 / 111,112 / 83,334 microseconds for LEVEL 1 / 2 /
+3. Simultaneous visible normal keys are assigned as one chord; every feasible
+adjacent-key pair is split across opposite sides. Both structures choose the
+lower-load parity and use odd source keys on 1P as the deterministic tie-break.
+Outside those structures, normal-key assignment keeps the same keysound on one
+side within a measure where possible and uses the immediately preceding
+measure as a stability hint. Scratch-phrase
 assignment ignores keysound identity so repeated scratch samples cannot pin
 separated phrases to one side. The converter groups overlapping
 normal-scratch guards plus connected long-scratch intervals into one scratch
@@ -246,8 +261,7 @@ phrase. Every scratch in a phrase stays on one side; separated phrases prefer
 side instead of changing hands inside the roll. LEVEL 1--3 merge adjacent
 scratches at inclusive gaps of 320, 240, and 160 ms respectively, implemented
 as symmetric 160, 120, and 80 ms before/after guards. A phrase has no maximum
-duration or scratch count while each adjacent gap remains connected. This
-guard width is the levels' only assignment difference.
+duration or scratch count while each adjacent gap remains connected.
 
 A normal key is forbidden on the reserved side while its timing overlaps the
 scratch phrase. A key long note uses its complete start-to-end interval, so an
@@ -263,7 +277,10 @@ records use the same dedicated MANIAC submit, ranking, ghost, and owner-sync
 paths as other ranked MANIAC transforms, and never submit to or fall back to
 the ordinary chart ranking. Owner sync accepts a record only when its ranking
 class, canonical options, algorithm version, virtual chart ID, deterministic
-generation seed, and placement hash are internally consistent. SP TO DP and
+generation seed, SP-to-DP placement version, and placement hash are internally
+consistent. Placement version 2 keeps the 0.4.14.34 stair/chord layout separate
+from the earlier internal-test layout without changing unrelated MANIAC
+identities. SP TO DP and
 Double Battle are mutually exclusive.
 
 Double Battle, its two-scratch AUTO SCRATCH setting, RANDOM LINK, and the
@@ -658,7 +675,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.33-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.34-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -679,7 +696,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.33-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.34-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -695,7 +712,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.33-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.34-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

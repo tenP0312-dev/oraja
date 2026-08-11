@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -145,6 +146,7 @@ public class BMSIRManiacSettingsTest {
 
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setSpToDpDifficulty(2);
+        assertTrue(settings.canonicalOptions().contains("sp2dp_version=2"));
         BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(
                 settings.canonicalOptions()
         );
@@ -154,6 +156,21 @@ public class BMSIRManiacSettingsTest {
         assertTrue(BMSIRManiacApiClient.canSubmit(restored));
         assertNotEquals(settings.storageChartId("chart"), legacy.storageChartId("chart"));
         assertNotEquals(settings.virtualChartId("chart"), null);
+
+        String legacyCanonical = settings.canonicalOptions()
+                .replace(",sp2dp_version=2", "");
+        BMSIRManiacSettings legacySpToDp = BMSIRManiacSettings.fromCanonicalOptions(
+                legacyCanonical
+        );
+        assertNotNull(legacySpToDp);
+        assertEquals(legacyCanonical, legacySpToDp.canonicalOptions());
+        assertNotEquals(
+                settings.virtualChartId("chart"),
+                legacySpToDp.virtualChartId("chart")
+        );
+        assertNull(BMSIRManiacSettings.fromCanonicalOptions(
+                settings.canonicalOptions().replace("sp2dp_version=2", "sp2dp_version=3")
+        ));
     }
 
     @Test
