@@ -15,9 +15,9 @@ class MusicSelectSelectHoldDetectorTest {
         MusicSelectInputProcessor.SelectHoldDetector detector =
                 new MusicSelectInputProcessor.SelectHoldDetector();
 
-        assertEquals(NONE, detector.update(true, 1_000L));
-        assertEquals(NONE, detector.update(true, 1_349L));
-        assertEquals(SHORT_PRESS, detector.update(false, 1_349L));
+        assertEquals(NONE, detector.update(true, 1_000L, false));
+        assertEquals(NONE, detector.update(true, 1_349L, false));
+        assertEquals(SHORT_PRESS, detector.update(false, 1_349L, false));
         assertFalse(detector.isLongPressActive());
     }
 
@@ -26,11 +26,23 @@ class MusicSelectSelectHoldDetectorTest {
         MusicSelectInputProcessor.SelectHoldDetector detector =
                 new MusicSelectInputProcessor.SelectHoldDetector();
 
-        assertEquals(NONE, detector.update(true, 1_000L));
-        assertEquals(LONG_PRESS, detector.update(true, 1_350L));
+        assertEquals(NONE, detector.update(true, 1_000L, false));
+        assertEquals(LONG_PRESS, detector.update(true, 1_350L, false));
         assertTrue(detector.isLongPressActive());
-        assertEquals(NONE, detector.update(true, 2_000L));
-        assertEquals(NONE, detector.update(false, 2_001L));
+        assertEquals(NONE, detector.update(true, 2_000L, false));
+        assertEquals(NONE, detector.update(false, 2_001L, false));
+        assertFalse(detector.isLongPressActive());
+    }
+
+    @Test
+    void noShortActionOpensOptionsOnTheFirstPressedFrame() {
+        MusicSelectInputProcessor.SelectHoldDetector detector =
+                new MusicSelectInputProcessor.SelectHoldDetector();
+
+        assertEquals(LONG_PRESS, detector.update(true, 1_000L, true));
+        assertTrue(detector.isLongPressActive());
+        assertEquals(NONE, detector.update(true, 1_001L, true));
+        assertEquals(NONE, detector.update(false, 1_002L, true));
         assertFalse(detector.isLongPressActive());
     }
 
@@ -39,9 +51,9 @@ class MusicSelectSelectHoldDetectorTest {
         MusicSelectInputProcessor.SelectHoldDetector detector =
                 new MusicSelectInputProcessor.SelectHoldDetector();
 
-        assertEquals(NONE, detector.update(true, 1_000L));
+        assertEquals(NONE, detector.update(true, 1_000L, false));
         detector.cancel();
-        assertEquals(NONE, detector.update(false, 1_100L));
+        assertEquals(NONE, detector.update(false, 1_100L, true));
     }
 
     @Test
@@ -49,7 +61,7 @@ class MusicSelectSelectHoldDetectorTest {
         MusicSelectInputProcessor.SelectHoldDetector detector =
                 new MusicSelectInputProcessor.SelectHoldDetector();
 
-        assertEquals(NONE, detector.update(true, 1_000L));
-        assertEquals(NONE, detector.update(false, 1_350L));
+        assertEquals(NONE, detector.update(true, 1_000L, false));
+        assertEquals(NONE, detector.update(false, 1_350L, false));
     }
 }
