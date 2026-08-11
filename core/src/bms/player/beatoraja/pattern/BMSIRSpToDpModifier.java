@@ -9,9 +9,12 @@ import bms.model.TimeLine;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Deterministically distributes an SP 5KEY/7KEY chart across both DP sides. */
 final class BMSIRSpToDpModifier {
@@ -158,12 +161,12 @@ final class BMSIRSpToDpModifier {
     private record ScratchWindow(Interval interval, int side) {
     }
 
-    private record Profile(long scratchGuardUs) {
+    private record Profile(long scratchGuardUs, long stairGapUs) {
         private static Profile forDifficulty(int difficulty) {
             return switch (difficulty) {
-                case 1 -> new Profile(160_000L);
-                case 2 -> new Profile(120_000L);
-                default -> new Profile(80_000L);
+                case 1 -> new Profile(160_000L, 333_334L);
+                case 2 -> new Profile(120_000L, 111_112L);
+                default -> new Profile(80_000L, 83_334L);
             };
         }
     }
@@ -175,6 +178,11 @@ final class BMSIRSpToDpModifier {
 
     static long scratchMergeGapUsForDifficulty(int requestedDifficulty) {
         return scratchGuardUsForDifficulty(requestedDifficulty) * 2L;
+    }
+
+    static long stairGapUsForDifficulty(int requestedDifficulty) {
+        int difficulty = Math.max(1, Math.min(3, requestedDifficulty));
+        return Profile.forDifficulty(difficulty).stairGapUs();
     }
 
     private static final class ScratchPhrase {
@@ -209,12 +217,32 @@ final class BMSIRSpToDpModifier {
         }
     }
 
+    private static final class StairPhrase {
+        private final List<Unit> units;
+        private int oddKeySide = Integer.MIN_VALUE;
+
+        private StairPhrase(List<Unit> units) {
+            this.units = List.copyOf(units);
+        }
+    }
+
+    private record FrameChoice(
+            int adjacentViolations,
+            long cost,
+            int imbalance,
+            int parityMismatches,
+            int mask
+    ) {
+    }
+
     private static final class Assignment {
         private final Profile profile;
         private final List<Unit> units;
         private final Map<Integer, Map<Integer, Integer>> wavSides = new HashMap<>();
         private final Map<Integer, int[]> measureCounts = new HashMap<>();
         private final List<ScratchWindow> scratchWindows = new ArrayList<>();
+        private final Map<Long, List<Unit>> visibleKeyFrames;
+        private final Map<Note, StairPhrase> stairPhraseByNote = new IdentityHashMap<>();
         private final long[] lastLaneTime;
         private final int[] lastLaneSide;
         private int lastScratchGroupSide = -1;
@@ -222,10 +250,12 @@ final class BMSIRSpToDpModifier {
         private Assignment(Mode sourceMode, int difficulty, List<Unit> units) {
             this.profile = Profile.forDifficulty(difficulty);
             this.units = units;
+            this.visibleKeyFrames = visibleKeyFrames(units);
             this.lastLaneTime = new long[sourceMode.key];
             this.lastLaneSide = new int[sourceMode.key];
             java.util.Arrays.fill(lastLaneTime, Long.MIN_VALUE / 4);
             java.util.Arrays.fill(lastLaneSide, -1);
+            indexStairPhrases();
         }
 
         private Map<Note, Integer> assign() {
@@ -249,15 +279,86 @@ final class BMSIRSpToDpModifier {
                 remember(unit, side);
             }
 
+            Set<Long> assignedFrames = new HashSet<>();
             for (Unit unit : units) {
                 if (unit.scratch()) continue;
-                int side = chooseKey(unit);
-                result.put(unit.note(), side);
-                remember(unit, side);
-                lastLaneSide[unit.slot().lane()] = side;
-                lastLaneTime[unit.slot().lane()] = playableInterval(unit).end();
+                if (unit.slot().hidden()) {
+                    assignKey(result, unit, chooseKey(unit));
+                    continue;
+                }
+                long time = unit.slot().timeline().getMicroTime();
+                if (!assignedFrames.add(time)) continue;
+                List<Unit> frame = visibleKeyFrames.getOrDefault(time, List.of(unit));
+                if (frame.size() == 1) {
+                    assignKey(result, unit, chooseVisibleKey(unit));
+                    continue;
+                }
+                int mask = chooseVisibleKeyFrame(frame);
+                for (int index = 0; index < frame.size(); index++) {
+                    assignKey(result, frame.get(index), (mask >>> index) & 1);
+                }
             }
             return result;
+        }
+
+        private void assignKey(Map<Note, Integer> result, Unit unit, int side) {
+            result.put(unit.note(), side);
+            remember(unit, side);
+            lastLaneSide[unit.slot().lane()] = side;
+            lastLaneTime[unit.slot().lane()] = playableInterval(unit).end();
+        }
+
+        private Map<Long, List<Unit>> visibleKeyFrames(List<Unit> allUnits) {
+            Map<Long, List<Unit>> frames = new LinkedHashMap<>();
+            for (Unit unit : allUnits) {
+                if (unit.scratch() || unit.slot().hidden()) continue;
+                frames.computeIfAbsent(
+                        unit.slot().timeline().getMicroTime(),
+                        ignored -> new ArrayList<>()
+                ).add(unit);
+            }
+            return frames;
+        }
+
+        private void indexStairPhrases() {
+            List<Unit> run = new ArrayList<>();
+            int direction = 0;
+            for (List<Unit> frame : visibleKeyFrames.values()) {
+                if (frame.size() != 1) {
+                    rememberStairPhrase(run);
+                    run = new ArrayList<>();
+                    direction = 0;
+                    continue;
+                }
+                Unit current = frame.get(0);
+                if (run.isEmpty()) {
+                    run.add(current);
+                    continue;
+                }
+                Unit previous = run.get(run.size() - 1);
+                long gap = current.slot().timeline().getMicroTime()
+                        - previous.slot().timeline().getMicroTime();
+                int laneStep = current.slot().lane() - previous.slot().lane();
+                int nextDirection = Integer.signum(laneStep);
+                if (gap > 0 && gap <= profile.stairGapUs()
+                        && Math.abs(laneStep) == 1
+                        && (direction == 0 || direction == nextDirection)) {
+                    run.add(current);
+                    direction = nextDirection;
+                    continue;
+                }
+                rememberStairPhrase(run);
+                run = new ArrayList<>();
+                run.add(current);
+                direction = 0;
+            }
+            rememberStairPhrase(run);
+        }
+
+        private void rememberStairPhrase(List<Unit> run) {
+            if (run.size() < 3) return;
+            StairPhrase phrase = new StairPhrase(run);
+            for (Unit unit : run) stairPhraseByNote.put(unit.note(), phrase);
         }
 
         private List<ScratchPhrase> scratchPhrases() {
@@ -370,6 +471,136 @@ final class BMSIRSpToDpModifier {
             int left = baseCost(unit, 0) + moveCost(unit, 0);
             int right = baseCost(unit, 1) + moveCost(unit, 1);
             return select(unit, left, right);
+        }
+
+        private int chooseVisibleKey(Unit unit) {
+            StairPhrase phrase = stairPhraseByNote.get(unit.note());
+            if (phrase == null) return chooseKey(unit);
+            if (phrase.oddKeySide == Integer.MIN_VALUE) {
+                phrase.oddKeySide = chooseStairOddKeySide(phrase);
+            }
+            if (phrase.oddKeySide < 0) return chooseKey(unit);
+            return sideForKeyParity(unit, phrase.oddKeySide);
+        }
+
+        private int chooseStairOddKeySide(StairPhrase phrase) {
+            long oddLeft = stairOrientationCost(phrase, 0);
+            long oddRight = stairOrientationCost(phrase, 1);
+            if (oddLeft == Long.MAX_VALUE && oddRight == Long.MAX_VALUE) return -1;
+            return oddLeft <= oddRight ? 0 : 1;
+        }
+
+        private long stairOrientationCost(StairPhrase phrase, int oddKeySide) {
+            long cost = 0;
+            Map<Integer, int[]> projectedCounts = new HashMap<>();
+            for (Unit unit : phrase.units) {
+                int side = sideForKeyParity(unit, oddKeySide);
+                if (scratchReserved(unit, side)) return Long.MAX_VALUE;
+                int[] counts = projectedCounts.computeIfAbsent(unit.measure(), measure -> {
+                    int[] existing = measureCounts.get(measure);
+                    return existing == null ? new int[2] : existing.clone();
+                });
+                int excess = counts[side] - counts[1 - side] - BIAS_TOLERANCE;
+                if (excess >= 0) cost += (long) (excess + 1) * BALANCE_PENALTY;
+                counts[side]++;
+            }
+            return cost;
+        }
+
+        private int sideForKeyParity(Unit unit, int oddKeySide) {
+            return (unit.slot().lane() & 1) == 0 ? oddKeySide : 1 - oddKeySide;
+        }
+
+        private int chooseVisibleKeyFrame(List<Unit> frame) {
+            FrameChoice best = null;
+            int candidateCount = 1 << frame.size();
+            for (int mask = 0; mask < candidateCount; mask++) {
+                FrameChoice candidate = scoreVisibleKeyFrame(frame, mask);
+                if (candidate != null && betterFrameChoice(candidate, best)) best = candidate;
+            }
+            if (best == null) {
+                throw new IllegalStateException("SP-to-DP scratch reservations blocked both sides");
+            }
+            return best.mask();
+        }
+
+        private FrameChoice scoreVisibleKeyFrame(List<Unit> frame, int mask) {
+            int adjacentViolations = 0;
+            long cost = 0;
+            int parityMismatches = 0;
+            Map<Integer, int[]> projectedCounts = new HashMap<>();
+            Map<Integer, Map<Integer, Integer>> projectedWavSides = new HashMap<>();
+            for (int index = 0; index < frame.size(); index++) {
+                Unit unit = frame.get(index);
+                int side = (mask >>> index) & 1;
+                if (scratchReserved(unit, side)) return null;
+                if (side != sideForKeyParity(unit, 0)) parityMismatches++;
+                cost += projectedBaseCost(unit, side, projectedCounts, projectedWavSides);
+                cost += moveCost(unit, side);
+                for (int previous = 0; previous < index; previous++) {
+                    if (Math.abs(unit.slot().lane() - frame.get(previous).slot().lane()) == 1
+                            && side == ((mask >>> previous) & 1)) {
+                        adjacentViolations++;
+                    }
+                }
+            }
+            int imbalance = 0;
+            for (int[] counts : projectedCounts.values()) {
+                imbalance += Math.abs(counts[0] - counts[1]);
+            }
+            return new FrameChoice(
+                    adjacentViolations,
+                    cost,
+                    imbalance,
+                    parityMismatches,
+                    mask
+            );
+        }
+
+        private long projectedBaseCost(
+                Unit unit,
+                int side,
+                Map<Integer, int[]> projectedCounts,
+                Map<Integer, Map<Integer, Integer>> projectedWavSides
+        ) {
+            long cost = 0;
+            int[] counts = projectedCounts.computeIfAbsent(unit.measure(), measure -> {
+                int[] existing = measureCounts.get(measure);
+                return existing == null ? new int[2] : existing.clone();
+            });
+            int excess = counts[side] - counts[1 - side] - BIAS_TOLERANCE;
+            if (excess >= 0) cost += (long) (excess + 1) * BALANCE_PENALTY;
+            int wav = unit.note().getWav();
+            if (wav >= 0) {
+                Map<Integer, Integer> currentMeasure = projectedWavSides.computeIfAbsent(
+                        unit.measure(),
+                        measure -> new HashMap<>(wavSides.getOrDefault(measure, Map.of()))
+                );
+                Integer current = currentMeasure.get(wav);
+                if (current != null && current != side) cost += 10;
+                Integer previous = wavSides
+                        .getOrDefault(unit.measure() - 1, Map.of())
+                        .get(wav);
+                if (previous != null && previous != side) cost += 4;
+                currentMeasure.putIfAbsent(wav, side);
+            }
+            counts[side]++;
+            return cost;
+        }
+
+        private boolean betterFrameChoice(FrameChoice candidate, FrameChoice current) {
+            if (current == null) return true;
+            if (candidate.adjacentViolations() != current.adjacentViolations()) {
+                return candidate.adjacentViolations() < current.adjacentViolations();
+            }
+            if (candidate.cost() != current.cost()) return candidate.cost() < current.cost();
+            if (candidate.imbalance() != current.imbalance()) {
+                return candidate.imbalance() < current.imbalance();
+            }
+            if (candidate.parityMismatches() != current.parityMismatches()) {
+                return candidate.parityMismatches() < current.parityMismatches();
+            }
+            return candidate.mask() < current.mask();
         }
 
         private int baseCost(Unit unit, int side) {

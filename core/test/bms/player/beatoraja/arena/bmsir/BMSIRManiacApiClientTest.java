@@ -56,11 +56,11 @@ class BMSIRManiacApiClientTest {
 		assertNotNull(restored);
 		assertEquals(BMSIRManiacSettings.RankingClass.SP_TO_DP, restored.rankingClass());
 		assertEquals(
-				"bmsir-maniac-v1-9f5d5eac2efbbe6785ea67262974cc79"
-						+ "dcb263b36ff263cdabcbf1ed87c4dd33",
+				"bmsir-maniac-v1-3fd08e14c037c00f44b89ac523cbccc2"
+						+ "a22e2be0ff64e3488bb2a7175e194cc6",
 				settings.virtualChartId(base)
 		);
-		assertEquals("11483438718480268903",
+		assertEquals("4598331439320645647",
 				Long.toUnsignedString(settings.generationSeed(base)));
 
 		ObjectNode mismatch = item.deepCopy();

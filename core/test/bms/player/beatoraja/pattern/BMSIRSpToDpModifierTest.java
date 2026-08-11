@@ -109,6 +109,115 @@ class BMSIRSpToDpModifierTest {
     }
 
     @Test
+    void stairThresholdsMatchTheAgreedLevelDensities() {
+        assertEquals(333_334L, BMSIRSpToDpModifier.stairGapUsForDifficulty(1));
+        assertEquals(111_112L, BMSIRSpToDpModifier.stairGapUsForDifficulty(2));
+        assertEquals(83_334L, BMSIRSpToDpModifier.stairGapUsForDifficulty(3));
+    }
+
+    @Test
+    void monotonicSevenKeyStairsAlternateDpSidesAtEveryLevelBoundary() {
+        long[] thresholds = {333_334L, 111_112L, 83_334L};
+        for (int level = 1; level <= 3; level++) {
+            TimeLine[] lines = new TimeLine[7];
+            NormalNote[] notes = new NormalNote[7];
+            for (int index = 0; index < lines.length; index++) {
+                lines[index] = line(
+                        index * thresholds[level - 1] / 1_000_000.0,
+                        index * thresholds[level - 1],
+                        Mode.BEAT_7K.key
+                );
+                notes[index] = new NormalNote(40);
+                lines[index].setNote(index, notes[index]);
+            }
+            BMSModel model = model("sp-to-dp-stair-level-" + level, Mode.BEAT_7K, lines);
+
+            BMSIRSpToDpModifier.apply(model, level);
+
+            for (int index = 0; index < notes.length; index++) {
+                int expectedLane = (index & 1) == 0 ? index : Mode.BEAT_7K.key + index;
+                assertEquals(expectedLane, laneOf(lines[index], notes[index]));
+            }
+        }
+    }
+
+    @Test
+    void threeNoteSequenceAboveTheLevelOneThresholdKeepsLegacyAssignment() {
+        long gap = BMSIRSpToDpModifier.stairGapUsForDifficulty(1) + 1L;
+        TimeLine[] lines = lines(new long[]{0L, gap, gap * 2L}, Mode.BEAT_7K);
+        NormalNote first = new NormalNote(40);
+        NormalNote second = new NormalNote(40);
+        NormalNote third = new NormalNote(40);
+        lines[0].setNote(0, first);
+        lines[1].setNote(1, second);
+        lines[2].setNote(2, third);
+        BMSModel model = model("sp-to-dp-slow-step", Mode.BEAT_7K, lines);
+
+        BMSIRSpToDpModifier.apply(model, 1);
+
+        assertEquals(0, laneOf(lines[0], first));
+        assertEquals(1, laneOf(lines[1], second));
+        assertEquals(Mode.BEAT_7K.key + 2, laneOf(lines[2], third));
+    }
+
+    @Test
+    void adjacentSimultaneousKeysSplitAcrossSidesForEveryPairAndLevel() {
+        for (int level = 1; level <= 3; level++) {
+            TimeLine[] lines = new TimeLine[6];
+            NormalNote[][] notes = new NormalNote[6][2];
+            for (int index = 0; index < lines.length; index++) {
+                lines[index] = line(index, index * 1_000_000L, Mode.BEAT_7K.key);
+                notes[index][0] = new NormalNote(50);
+                notes[index][1] = new NormalNote(50);
+                lines[index].setNote(index, notes[index][0]);
+                lines[index].setNote(index + 1, notes[index][1]);
+            }
+            BMSModel model = model(
+                    "sp-to-dp-adjacent-pairs-level-" + level,
+                    Mode.BEAT_7K,
+                    lines
+            );
+
+            BMSIRSpToDpModifier.apply(model, level);
+
+            for (int index = 0; index < lines.length; index++) {
+                int firstLane = laneOf(lines[index], notes[index][0]);
+                int secondLane = laneOf(lines[index], notes[index][1]);
+                assertNotEquals(
+                        firstLane < Mode.BEAT_7K.key,
+                        secondLane < Mode.BEAT_7K.key
+                );
+                assertEquals(
+                        (index & 1) == 0 ? index : Mode.BEAT_7K.key + index,
+                        firstLane
+                );
+            }
+        }
+    }
+
+    @Test
+    void fullSevenKeyChordUsesOddEvenSideColoring() {
+        TimeLine timeline = line(0.0, 0L, Mode.BEAT_7K.key);
+        NormalNote[] notes = new NormalNote[7];
+        for (int lane = 0; lane < notes.length; lane++) {
+            notes[lane] = new NormalNote(60);
+            timeline.setNote(lane, notes[lane]);
+        }
+        BMSModel model = model(
+                "sp-to-dp-seven-key-chord",
+                Mode.BEAT_7K,
+                new TimeLine[]{timeline}
+        );
+
+        BMSIRSpToDpModifier.apply(model, 1);
+
+        for (int lane = 0; lane < notes.length; lane++) {
+            int expectedLane = (lane & 1) == 0 ? lane : Mode.BEAT_7K.key + lane;
+            assertEquals(expectedLane, laneOf(timeline, notes[lane]));
+        }
+    }
+
+    @Test
     void adjacentScratchMergeThresholdsAreInclusive() {
         assertScratchPairPlacement(1, 320_000L, true);
         assertScratchPairPlacement(1, 320_001L, false);
