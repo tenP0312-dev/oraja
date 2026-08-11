@@ -121,6 +121,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private ComboBox<String> bmsirSelectButtonAction;
 	@FXML
+	private ComboBox<String> bmsirSelectDifficultyDisplay;
+	@FXML
 	private CheckBox bmsirSelectModeAll;
 	@FXML
 	private CheckBox bmsirSelectMode7k;
@@ -453,6 +455,18 @@ public class PlayConfigurationView implements Initializable {
 		};
 	}
 
+	private static int bmsirSelectDifficultyDisplayIndex(String display) {
+		return PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(display)
+				? 1
+				: 0;
+	}
+
+	private static String bmsirSelectDifficultyDisplayValue(int index) {
+		return index == 1
+				? PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
+				: PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
+	}
+
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
@@ -468,6 +482,15 @@ public class PlayConfigurationView implements Initializable {
 						"OP変更（従来）",
 						"短押し: 難易度 / 長押し: OP",
 						"短押し: 鍵盤数 / 長押し: OP"
+					));
+		bmsirSelectDifficultyDisplay.getItems().setAll(english
+				? List.of(
+						"Separate rows; move the cursor",
+						"One grouped row (LR2 style)"
+				)
+				: List.of(
+						"個別表示（カーソルを移動）",
+						"1曲にまとめる（LR2式）"
 				));
 		bmsirSelectModeChecks = List.of(
 				bmsirSelectModeAll,
@@ -748,6 +771,11 @@ public class PlayConfigurationView implements Initializable {
 		bmsirSelectButtonAction.getSelectionModel().select(
 				bmsirSelectButtonActionIndex(player.getBmsirSelectButtonAction())
 		);
+		bmsirSelectDifficultyDisplay.getSelectionModel().select(
+				bmsirSelectDifficultyDisplayIndex(
+						player.getBmsirSelectDifficultyDisplay()
+				)
+		);
 		Set<String> selectModes = new HashSet<>(
 				Arrays.asList(player.getBmsirSelectKeyModes())
 		);
@@ -925,6 +953,12 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirSelectButtonAction(
 				bmsirSelectButtonActionValue(
 						bmsirSelectButtonAction.getSelectionModel().getSelectedIndex()
+				)
+		);
+		player.setBmsirSelectDifficultyDisplay(
+				bmsirSelectDifficultyDisplayValue(
+						bmsirSelectDifficultyDisplay.getSelectionModel()
+								.getSelectedIndex()
 				)
 		);
 		List<String> selectModes = new ArrayList<>();

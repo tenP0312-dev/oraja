@@ -3,11 +3,8 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.Mode;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class BMSIRSelectKeyModeTest {
     @Test
@@ -19,59 +16,62 @@ class BMSIRSelectKeyModeTest {
     }
 
     @Test
-    void skipsUnavailableConfiguredModesInCycleOrder() {
+    void cyclesConfiguredModesWithoutDependingOnTheCurrentList() {
         assertEquals(
                 BMSIRSelectKeyMode.BEAT_14K,
-                BMSIRSelectKeyMode.nextAvailable(
+                BMSIRSelectKeyMode.nextConfigured(
                         new String[]{"all", "7k", "14k", "9k"},
                         Mode.BEAT_7K,
-                        Set.of(Mode.BEAT_14K.id, Mode.POPN_9K.id),
-                        true,
-                        false,
                         1
                 )
         );
         assertEquals(
                 BMSIRSelectKeyMode.POPN_9K,
-                BMSIRSelectKeyMode.nextAvailable(
+                BMSIRSelectKeyMode.nextConfigured(
                         new String[]{"all", "7k", "14k", "9k"},
                         Mode.BEAT_14K,
-                        Set.of(Mode.BEAT_14K.id, Mode.POPN_9K.id),
-                        true,
-                        false,
                         1
                 )
         );
         assertEquals(
                 BMSIRSelectKeyMode.ALL,
-                BMSIRSelectKeyMode.nextAvailable(
+                BMSIRSelectKeyMode.nextConfigured(
                         new String[]{"all", "7k", "14k", "9k"},
                         Mode.POPN_9K,
-                        Set.of(Mode.BEAT_14K.id, Mode.POPN_9K.id),
-                        true,
-                        false,
                         1
                 )
         );
     }
 
     @Test
-    void returnsNothingWhenTheCurrentListHasNoConfiguredMode() {
-        assertNull(BMSIRSelectKeyMode.nextAvailable(
-                new String[]{"7k", "14k"},
-                Mode.BEAT_7K,
-                Set.of(Mode.POPN_9K.id),
-                true,
-                false,
-                1
-        ));
-        assertNull(BMSIRSelectKeyMode.nextAvailable(
-                new String[]{"all", "7k"},
-                Mode.BEAT_7K,
-                Set.of(Mode.BEAT_7K.id),
-                false,
-                false,
-                1
-        ));
+    void startsAtTheConfiguredEdgeWhenTheCurrentModeIsNotSelected() {
+        assertEquals(
+                BMSIRSelectKeyMode.ALL,
+                BMSIRSelectKeyMode.nextConfigured(
+                        new String[]{"all", "7k", "14k"},
+                        Mode.BEAT_5K,
+                        1
+                )
+        );
+        assertEquals(
+                BMSIRSelectKeyMode.BEAT_14K,
+                BMSIRSelectKeyMode.nextConfigured(
+                        new String[]{"all", "7k", "14k"},
+                        Mode.BEAT_5K,
+                        -1
+                )
+        );
+    }
+
+    @Test
+    void aSingleConfiguredModeRemainsTheOnlyCandidate() {
+        assertEquals(
+                BMSIRSelectKeyMode.BEAT_7K,
+                BMSIRSelectKeyMode.nextConfigured(
+                        new String[]{"7k"},
+                        Mode.BEAT_14K,
+                        1
+                )
+        );
     }
 }

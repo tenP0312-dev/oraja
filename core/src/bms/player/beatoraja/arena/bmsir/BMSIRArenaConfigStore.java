@@ -134,11 +134,12 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 12;
+        private int schemaVersion = 13;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
         private String selectButtonAction;
+        private String selectDifficultyDisplay;
         private String[] selectKeyModes;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
@@ -191,6 +192,8 @@ public final class BMSIRArenaConfigStore {
                     player.isBmsirStartHerePreviewEnabled();
             settings.danLocalSyncEnabled = player.isBmsirDanLocalSyncEnabled();
             settings.selectButtonAction = player.getBmsirSelectButtonAction();
+            settings.selectDifficultyDisplay =
+                    player.getBmsirSelectDifficultyDisplay();
             settings.selectKeyModes = player.getBmsirSelectKeyModes();
             settings.enabled = player.isBmsirArenaEnabled();
             settings.server = player.getBmsirArenaServer();
@@ -260,6 +263,9 @@ public final class BMSIRArenaConfigStore {
             }
             if (selectButtonAction != null) {
                 player.setBmsirSelectButtonAction(selectButtonAction);
+            }
+            if (selectDifficultyDisplay != null) {
+                player.setBmsirSelectDifficultyDisplay(selectDifficultyDisplay);
             }
             if (selectKeyModes != null) {
                 player.setBmsirSelectKeyModes(selectKeyModes);

@@ -94,9 +94,6 @@ public class BarManager {
 	private final Array<RandomCourseResult> randomCourseResult = new Array<>();
 
 	BarContentsLoaderThread loader;
-	private final Set<Integer> availableSongModes = new HashSet<>();
-	private boolean hasVisibleSongs;
-	private boolean hasUnknownSongMode;
 	private TableDataAccessor startupTableDataAccessor;
 	private BMSSearchAccessor startupSearchAccessor;
 	private Array<TableBar> startupTables;
@@ -347,7 +344,8 @@ public class BarManager {
 		}
 		return Stream.of(currentsongs)
 				.filter(bar -> bar instanceof SongBar && ((SongBar) bar).existsSong())
-				.map(bar -> ((SongBar) bar).getSongData())
+				.flatMap(bar -> Stream.of(((SongBar) bar).getDifficultyVariants()))
+				.filter(song -> song.getPath() != null)
 				.toArray(SongData[]::new);
 	}
 
@@ -433,7 +431,6 @@ public class BarManager {
 
 		if (l.size > 0) {
 			final PlayerConfig config = select.resource.getPlayerConfig();
-			rememberAvailableSongModes(l, showInvisibleCharts);
 			int modeIndex = 0;
 			for(;modeIndex < MusicSelector.MODE.length && MusicSelector.MODE[modeIndex] != config.getMode();modeIndex++);
 			for(int trialCount = 0; trialCount < MusicSelector.MODE.length; trialCount++, modeIndex++) {
@@ -465,6 +462,8 @@ public class BarManager {
 			Bar[] newcurrentsongs = l.toArray(Bar.class);
 			if (PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY.equals(
 					config.getBmsirSelectButtonAction()
+			) && PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+					config.getBmsirSelectDifficultyDisplay()
 			)) {
 				String preferredSha256 = prevbar instanceof SongBar
 						? ((SongBar) prevbar).getSongData().getSha256()
@@ -496,9 +495,13 @@ public class BarManager {
 				&& !(bar instanceof ContextMenuBar)) {
 				try {
 					for (RandomFolder randomFolder : randomFolderList) {
-						SongData[] randomTargets = Stream.of(newcurrentsongs).filter(
-								songBar -> songBar instanceof SongBar && ((SongBar) songBar).getSongData().getPath() != null)
-								.map(songBar -> ((SongBar) songBar).getSongData()).toArray(SongData[]::new);
+						SongData[] randomTargets = Stream.of(newcurrentsongs)
+								.filter(songBar -> songBar instanceof SongBar)
+								.flatMap(songBar -> Stream.of(
+										((SongBar) songBar).getDifficultyVariants()
+								))
+								.filter(song -> song.getPath() != null)
+								.toArray(SongData[]::new);
 						if (randomFolder.getFilter() != null) {
 							Set<String> filterKey = randomFolder.getFilter().keySet();
 							randomTargets = Stream.of(randomTargets).filter(r -> {
@@ -642,8 +645,26 @@ public class BarManager {
 				currentsongs[selectedindex].getRivalScore());
 	}
 
-	/** Cycles the active chart inside one LR2-style folder/mode difficulty bar. */
+	/** Changes to the next same-folder/mode difficulty using the configured display. */
 	public boolean cycleSelectedDifficulty() {
+		PlayerConfig config = select.resource.getPlayerConfig();
+		if (PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE.equals(
+				config.getBmsirSelectDifficultyDisplay()
+		)) {
+			int nextIndex = nextDifficultyBarIndex(currentsongs, selectedindex);
+			if (nextIndex < 0) {
+				return false;
+			}
+			selectedindex = nextIndex;
+			select.getScoreDataProperty().update(
+					currentsongs[selectedindex].getScore(),
+					currentsongs[selectedindex].getRivalScore()
+			);
+			select.getBarRender().updateBarText();
+			select.selectedSongVariantChanged();
+			return true;
+		}
+
 		Bar current = getSelected();
 		if (!(current instanceof SongBar songBar) || !songBar.cycleDifficulty()) {
 			return false;
@@ -652,7 +673,6 @@ public class BarManager {
 			loader.stopRunning();
 		}
 		SongData song = songBar.getSongData();
-		PlayerConfig config = select.resource.getPlayerConfig();
 		if (select.getScoreDataCache().existsScoreDataCache(song, config.getLnmode())) {
 			songBar.setScore(
 					select.getScoreDataCache().readScoreData(song, config.getLnmode())
@@ -666,16 +686,40 @@ public class BarManager {
 		return true;
 	}
 
-	/** Cycles only configured key modes that have a chart in the current list. */
+	static int nextDifficultyBarIndex(Bar[] bars, int currentIndex) {
+		if (bars == null
+				|| currentIndex < 0
+				|| currentIndex >= bars.length
+				|| !(bars[currentIndex] instanceof SongBar selected)) {
+			return -1;
+		}
+		String groupKey = difficultyGroupKey(selected.getSongData());
+		List<Integer> candidates = IntStream.range(0, bars.length)
+				.filter(index -> bars[index] instanceof SongBar songBar
+						&& groupKey.equals(difficultyGroupKey(songBar.getSongData())))
+				.boxed()
+				.sorted((left, right) -> {
+					int compared = SongBar.compareDifficulty(
+							((SongBar) bars[left]).getSongData(),
+							((SongBar) bars[right]).getSongData()
+					);
+					return compared != 0 ? compared : Integer.compare(left, right);
+				})
+				.toList();
+		if (candidates.size() < 2) {
+			return -1;
+		}
+		int position = candidates.indexOf(currentIndex);
+		return candidates.get((position + 1) % candidates.size());
+	}
+
+	/** Cycles configured key modes independently of the current bar/list shape. */
 	public boolean cycleBmsirSelectMode(int direction) {
 		PlayerConfig config = select.resource.getPlayerConfig();
 		Mode current = config.getMode();
-		BMSIRSelectKeyMode candidate = BMSIRSelectKeyMode.nextAvailable(
+		BMSIRSelectKeyMode candidate = BMSIRSelectKeyMode.nextConfigured(
 				config.getBmsirSelectKeyModes(),
 				current,
-				availableSongModes,
-				hasVisibleSongs,
-				hasUnknownSongMode,
 				direction
 		);
 		if (candidate == null || candidate.mode() == current) {
@@ -684,30 +728,6 @@ public class BarManager {
 		config.setMode(candidate.mode());
 		updateBar();
 		return true;
-	}
-
-	private void rememberAvailableSongModes(Array<Bar> bars, boolean showInvisibleCharts) {
-		availableSongModes.clear();
-		hasVisibleSongs = false;
-		hasUnknownSongMode = false;
-		for (Bar candidate : bars) {
-			if (!(candidate instanceof SongBar songBar)) {
-				continue;
-			}
-			SongData song = songBar.getSongData();
-			if (song == null
-					|| (!showInvisibleCharts
-					&& (song.getFavorite()
-					& (SongData.INVISIBLE_SONG | SongData.INVISIBLE_CHART)) != 0)) {
-				continue;
-			}
-			hasVisibleSongs = true;
-			if (song.getMode() == 0) {
-				hasUnknownSongMode = true;
-			} else {
-				availableSongModes.add(song.getMode());
-			}
-		}
 	}
 
 	static Bar[] groupDifficultyBars(Bar[] bars, String preferredSha256) {

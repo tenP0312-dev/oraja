@@ -91,7 +91,7 @@ public class SongBar extends SelectableBar {
         }
     }
 
-    private static int compareDifficulty(SongData left, SongData right) {
+    public static int compareDifficulty(SongData left, SongData right) {
         int compared = Integer.compare(difficultyOrder(left), difficultyOrder(right));
         if (compared != 0) {
             return compared;

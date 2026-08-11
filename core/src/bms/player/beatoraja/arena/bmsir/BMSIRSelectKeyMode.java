@@ -83,12 +83,9 @@ public enum BMSIRSelectKeyMode {
         return List.copyOf(selected);
     }
 
-    public static BMSIRSelectKeyMode nextAvailable(
+    public static BMSIRSelectKeyMode nextConfigured(
             String[] values,
             Mode current,
-            Set<Integer> availableModeIds,
-            boolean hasVisibleSongs,
-            boolean hasUnknownMode,
             int direction
     ) {
         List<BMSIRSelectKeyMode> configured = selected(values);
@@ -101,17 +98,6 @@ public enum BMSIRSelectKeyMode {
         }
         int step = direction >= 0 ? 1 : -1;
         int base = currentIndex >= 0 ? currentIndex : (step > 0 ? -1 : 0);
-        for (int offset = 1; offset <= configured.size(); offset++) {
-            BMSIRSelectKeyMode candidate = configured.get(
-                    Math.floorMod(base + step * offset, configured.size())
-            );
-            if (hasVisibleSongs
-                    && (candidate.mode == null
-                    || hasUnknownMode
-                    || availableModeIds.contains(candidate.mode.id))) {
-                return candidate;
-            }
-        }
-        return null;
+        return configured.get(Math.floorMod(base + step, configured.size()));
     }
 }

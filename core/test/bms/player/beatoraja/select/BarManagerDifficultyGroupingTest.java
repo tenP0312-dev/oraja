@@ -72,6 +72,25 @@ class BarManagerDifficultyGroupingTest {
         );
     }
 
+    @Test
+    void separateDisplayMovesByDifficultyOrderInsteadOfVisualOrder() {
+        SongData hyper = song("hyper", "same-folder", Mode.BEAT_7K.id, 3, 9);
+        SongData unrelated = song("unrelated", "other-folder", Mode.BEAT_7K.id, 1, 1);
+        SongData normal = song("normal", "same-folder", Mode.BEAT_7K.id, 2, 5);
+        SongData easierHyper = song("easy-hyper", "same-folder", Mode.BEAT_7K.id, 3, 8);
+        Bar[] bars = {
+                new SongBar(hyper),
+                new SongBar(unrelated),
+                new SongBar(normal),
+                new SongBar(easierHyper)
+        };
+
+        assertEquals(3, BarManager.nextDifficultyBarIndex(bars, 2));
+        assertEquals(0, BarManager.nextDifficultyBarIndex(bars, 3));
+        assertEquals(2, BarManager.nextDifficultyBarIndex(bars, 0));
+        assertEquals(-1, BarManager.nextDifficultyBarIndex(bars, 1));
+    }
+
     private static SongData song(
             String hash,
             String folder,

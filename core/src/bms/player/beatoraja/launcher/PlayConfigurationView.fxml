@@ -491,6 +491,9 @@
 	                    <Label text="%BMSIR_SELECT_BUTTON_ACTION" />
 	                    <ComboBox fx:id="bmsirSelectButtonAction" prefWidth="360.0" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_BUTTON_ACTION_DESCRIPTION" wrapText="true" />
+	                    <Label text="%BMSIR_SELECT_DIFFICULTY_DISPLAY" />
+	                    <ComboBox fx:id="bmsirSelectDifficultyDisplay" prefWidth="360.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_DIFFICULTY_DISPLAY_DESCRIPTION" wrapText="true" />
 	                    <Label text="%BMSIR_SELECT_KEY_MODES" />
 	                    <FlowPane alignment="CENTER_LEFT" hgap="10.0" vgap="6.0">
 	                        <CheckBox fx:id="bmsirSelectModeAll" mnemonicParsing="false" text="ALL" />
