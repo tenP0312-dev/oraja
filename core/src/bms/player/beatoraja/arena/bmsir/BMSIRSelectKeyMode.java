@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** Key-mode filters that may be cycled by a short SELECT press. */
+/** Key-mode display filters that may also be cycled by a short button press. */
 public enum BMSIRSelectKeyMode {
     ALL("all", null, "ALL"),
     BEAT_7K("7k", Mode.BEAT_7K, "7K"),
@@ -71,8 +71,38 @@ public enum BMSIRSelectKeyMode {
         }
         if (normalized.isEmpty()) {
             normalized.add(BEAT_7K.id);
+        } else if (normalized.contains(ALL.id)
+                && normalized.stream().noneMatch(id -> !ALL.id.equals(id))) {
+            // A legacy ALL-only configuration meant "show everything". Keep it
+            // useful now that concrete checks also control global visibility.
+            Arrays.stream(BMSIRSelectKeyMode.values())
+                    .filter(mode -> mode != ALL)
+                    .map(BMSIRSelectKeyMode::id)
+                    .forEach(normalized::add);
         }
         return normalized.toArray(String[]::new);
+    }
+
+    /** Unknown/non-song modes remain visible; known modes require their check. */
+    public static boolean isSongModeVisible(String[] values, int songMode) {
+        BMSIRSelectKeyMode known = fromModeId(songMode);
+        if (known == null || known == ALL) {
+            return true;
+        }
+        return Arrays.asList(normalizeIds(values)).contains(known.id);
+    }
+
+    public static boolean isModeVisible(String[] values, Mode mode) {
+        return mode == null || isSongModeVisible(values, mode.id);
+    }
+
+    private static BMSIRSelectKeyMode fromModeId(int modeId) {
+        for (BMSIRSelectKeyMode candidate : values()) {
+            if (candidate.mode != null && candidate.mode.id == modeId) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     public static List<BMSIRSelectKeyMode> selected(String[] values) {

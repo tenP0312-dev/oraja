@@ -368,6 +368,7 @@ public class BarManager {
 		Array<Bar> l = new Array<Bar>();
 		boolean showInvisibleCharts = false;
 		boolean isSortable = true;
+		boolean removedExistingDirectory = false;
 
 		if (MainLoader.getIllegalSongCount() > 0) {
 			l.addAll(SongBar.toSongBarArray(select.getSongDatabase().getSongDatas(MainLoader.getIllegalSongs())));
@@ -399,6 +400,7 @@ public class BarManager {
 					sourcebar = sourcebars.removeLast();
 				}
 				dir.removeLast();
+				removedExistingDirectory = true;
 			}
 			l.addAll(((DirectoryBar) bar).getChildren());
 			isSortable = ((DirectoryBar) bar).isSortable();
@@ -431,25 +433,35 @@ public class BarManager {
 
 		if (l.size > 0) {
 			final PlayerConfig config = select.resource.getPlayerConfig();
-			int modeIndex = 0;
-			for(;modeIndex < MusicSelector.MODE.length && MusicSelector.MODE[modeIndex] != config.getMode();modeIndex++);
-			for(int trialCount = 0; trialCount < MusicSelector.MODE.length; trialCount++, modeIndex++) {
-				final Mode mode = MusicSelector.MODE[modeIndex % MusicSelector.MODE.length];
-				config.setMode(mode);
-				Array<Bar> remove = new Array<Bar>();
-				for (Bar b : l) {
-					if(b instanceof SongBar && ((SongBar) b).getSongData() != null) {
-						final SongData song = ((SongBar) b).getSongData();
-						if((!showInvisibleCharts && (song.getFavorite() & (SongData.INVISIBLE_SONG | SongData.INVISIBLE_CHART)) != 0)
-								|| (mode != null && song.getMode() != 0 && song.getMode() != mode.id)) {
-							remove.add(b);
-						}
+			final String[] visibleModes = config.getBmsirSelectKeyModes();
+			Mode mode = config.getMode();
+			if (!BMSIRSelectKeyMode.isModeVisible(visibleModes, mode)) {
+				mode = null;
+				config.setMode(null);
+			}
+			Array<Bar> remove = new Array<>();
+			for (Bar b : l) {
+				if (b instanceof SongBar songBar && songBar.getSongData() != null) {
+					final SongData song = songBar.getSongData();
+					if ((!showInvisibleCharts && (song.getFavorite()
+							& (SongData.INVISIBLE_SONG | SongData.INVISIBLE_CHART)) != 0)
+							|| !BMSIRSelectKeyMode.isSongModeVisible(
+									visibleModes,
+									song.getMode()
+							)
+							|| (mode != null && song.getMode() != 0
+									&& song.getMode() != mode.id)) {
+						remove.add(b);
 					}
 				}
-				if(l.size != remove.size) {
-					l.removeAll(remove, true);
-					break;
+			}
+			l.removeAll(remove, true);
+			if (l.size == 0) {
+				if (removedExistingDirectory) {
+					dir.addLast((DirectoryBar) bar);
 				}
+				logger.warn("表示対象の楽曲がありません");
+				return false;
 			}
 
 			if (bar != null) {
@@ -460,9 +472,7 @@ public class BarManager {
 			}
 
 			Bar[] newcurrentsongs = l.toArray(Bar.class);
-			if (PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY.equals(
-					config.getBmsirSelectButtonAction()
-			) && PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+			if (PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
 					config.getBmsirSelectDifficultyDisplay()
 			)) {
 				String preferredSha256 = prevbar instanceof SongBar
@@ -470,7 +480,8 @@ public class BarManager {
 						: null;
 				newcurrentsongs = groupDifficultyBars(
 						newcurrentsongs,
-						preferredSha256
+						preferredSha256,
+						config.getBmsirSelectDifficultyStage()
 				);
 			}
 			for (Bar b : newcurrentsongs) {
@@ -669,19 +680,11 @@ public class BarManager {
 		if (!(current instanceof SongBar songBar) || !songBar.cycleDifficulty()) {
 			return false;
 		}
-		if (loader != null) {
-			loader.stopRunning();
-		}
 		SongData song = songBar.getSongData();
-		if (select.getScoreDataCache().existsScoreDataCache(song, config.getLnmode())) {
-			songBar.setScore(
-					select.getScoreDataCache().readScoreData(song, config.getLnmode())
-			);
+		if (song.getDifficulty() >= 1 && song.getDifficulty() <= 5) {
+			config.setBmsirSelectDifficultyStage(song.getDifficulty());
 		}
-		loader = new BarContentsLoaderThread(select, currentsongs);
-		loader.start();
-		select.getBarRender().updateBarText();
-		select.getScoreDataProperty().update(songBar.getScore(), songBar.getRivalScore());
+		updateBar();
 		select.selectedSongVariantChanged();
 		return true;
 	}
@@ -716,21 +719,36 @@ public class BarManager {
 	/** Cycles configured key modes independently of the current bar/list shape. */
 	public boolean cycleBmsirSelectMode(int direction) {
 		PlayerConfig config = select.resource.getPlayerConfig();
-		Mode current = config.getMode();
-		BMSIRSelectKeyMode candidate = BMSIRSelectKeyMode.nextConfigured(
-				config.getBmsirSelectKeyModes(),
-				current,
-				direction
-		);
-		if (candidate == null || candidate.mode() == current) {
-			return false;
+		Mode original = config.getMode();
+		Mode cursor = original;
+		int candidateCount = BMSIRSelectKeyMode.selected(
+				config.getBmsirSelectKeyModes()
+		).size();
+		for (int attempt = 0; attempt < candidateCount; attempt++) {
+			BMSIRSelectKeyMode candidate = BMSIRSelectKeyMode.nextConfigured(
+					config.getBmsirSelectKeyModes(),
+					cursor,
+					direction
+			);
+			if (candidate == null || candidate.mode() == original) {
+				break;
+			}
+			config.setMode(candidate.mode());
+			if (updateBar()) {
+				return true;
+			}
+			cursor = candidate.mode();
 		}
-		config.setMode(candidate.mode());
+		config.setMode(original);
 		updateBar();
-		return true;
+		return false;
 	}
 
-	static Bar[] groupDifficultyBars(Bar[] bars, String preferredSha256) {
+	static Bar[] groupDifficultyBars(
+			Bar[] bars,
+			String preferredSha256,
+			int difficultyStage
+	) {
 		Map<String, List<SongData>> groups = new LinkedHashMap<>();
 		for (Bar bar : bars) {
 			if (bar instanceof SongBar songBar) {
@@ -758,7 +776,8 @@ public class BarManager {
 			} else {
 				grouped.add(new SongBar(
 						variants.toArray(SongData[]::new),
-						preferredSha256
+						preferredSha256,
+						difficultyStage
 				));
 			}
 		}
