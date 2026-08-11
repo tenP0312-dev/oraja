@@ -255,11 +255,15 @@ public final class PlayerConfig {
 	 * 選曲時でのキー入力方式
 	 */
 	private int musicselectinput = 0;
-	/** SELECT alone: legacy option panel, difficulty cycle, or key-mode cycle. */
+	/** START short-press action. Holding START still opens the play-option panel. */
+	private String bmsirStartButtonAction = BMSIR_SELECT_ACTION_OPTION;
+	/** SELECT short-press action. Holding SELECT still opens the assist-option panel. */
 	private String bmsirSelectButtonAction = BMSIR_SELECT_ACTION_OPTION;
 	/** Keep separate chart rows or collapse same-folder difficulties LR2-style. */
 	private String bmsirSelectDifficultyDisplay = BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
-	/** Ordered allow-list used by the SELECT key-mode cycle. */
+	/** Shared LR2-style difficulty stage (BEGINNER=1 through INSANE=5). */
+	private int bmsirSelectDifficultyStage = 1;
+	/** Ordered key-mode display allow-list and short-press cycle. */
 	private String[] bmsirSelectKeyModes = BMSIRSelectKeyMode.defaultIds();
 
 	private IRConfig[] irconfig;
@@ -691,6 +695,21 @@ public final class PlayerConfig {
 		return bmsirSelectButtonAction;
 	}
 
+	public String getBmsirStartButtonAction() {
+		if (!BMSIR_SELECT_ACTION_DIFFICULTY.equals(bmsirStartButtonAction)
+				&& !BMSIR_SELECT_ACTION_KEY_MODE.equals(bmsirStartButtonAction)) {
+			bmsirStartButtonAction = BMSIR_SELECT_ACTION_OPTION;
+		}
+		return bmsirStartButtonAction;
+	}
+
+	public void setBmsirStartButtonAction(String action) {
+		bmsirStartButtonAction = BMSIR_SELECT_ACTION_DIFFICULTY.equals(action)
+				|| BMSIR_SELECT_ACTION_KEY_MODE.equals(action)
+				? action
+				: BMSIR_SELECT_ACTION_OPTION;
+	}
+
 	public void setBmsirSelectButtonAction(String action) {
 		bmsirSelectButtonAction = BMSIR_SELECT_ACTION_DIFFICULTY.equals(action)
 				|| BMSIR_SELECT_ACTION_KEY_MODE.equals(action)
@@ -711,6 +730,14 @@ public final class PlayerConfig {
 		bmsirSelectDifficultyDisplay = BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(display)
 				? BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
 				: BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
+	}
+
+	public int getBmsirSelectDifficultyStage() {
+		return bmsirSelectDifficultyStage;
+	}
+
+	public void setBmsirSelectDifficultyStage(int stage) {
+		bmsirSelectDifficultyStage = MathUtils.clamp(stage, 1, 5);
 	}
 
 	public String[] getBmsirSelectKeyModes() {
@@ -1527,8 +1554,10 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		setBmsirStartButtonAction(bmsirStartButtonAction);
 		setBmsirSelectButtonAction(bmsirSelectButtonAction);
 		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);
+		setBmsirSelectDifficultyStage(bmsirSelectDifficultyStage);
 		setBmsirSelectKeyModes(bmsirSelectKeyModes);
 		setBmsirCoverControlMode(bmsirCoverControlMode);
 		setBmsirCoverChangeStep(bmsirCoverChangeStep);

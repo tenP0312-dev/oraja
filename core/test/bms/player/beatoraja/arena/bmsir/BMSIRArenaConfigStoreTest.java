@@ -30,12 +30,16 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirOneBassEnabled(false);
         player.setBmsirStartHerePreviewEnabled(false);
         player.setBmsirDanLocalSyncEnabled(false);
+        player.setBmsirStartButtonAction(
+                PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY
+        );
         player.setBmsirSelectButtonAction(
                 PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE
         );
         player.setBmsirSelectDifficultyDisplay(
                 PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
         );
+        player.setBmsirSelectDifficultyStage(4);
         player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
@@ -90,9 +94,11 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 13"));
+        assertTrue(serialized.contains("\"schemaVersion\": 14"));
+        assertTrue(serialized.contains("\"startButtonAction\": \"difficulty\""));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
         assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
+        assertTrue(serialized.contains("\"selectDifficultyStage\": 4"));
         assertTrue(serialized.contains("\"selectKeyModes\": ["));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
@@ -121,12 +127,16 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirOneBassEnabled(false);
         arenaBody.setBmsirStartHerePreviewEnabled(false);
         arenaBody.setBmsirDanLocalSyncEnabled(false);
+        arenaBody.setBmsirStartButtonAction(
+                PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE
+        );
         arenaBody.setBmsirSelectButtonAction(
                 PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY
         );
         arenaBody.setBmsirSelectDifficultyDisplay(
                 PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
         );
+        arenaBody.setBmsirSelectDifficultyStage(5);
         arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
@@ -173,6 +183,10 @@ class BMSIRArenaConfigStoreTest {
         assertFalse(restored.isBmsirStartHerePreviewEnabled());
         assertFalse(restored.isBmsirDanLocalSyncEnabled());
         assertEquals(
+                PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE,
+                restored.getBmsirStartButtonAction()
+        );
+        assertEquals(
                 PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY,
                 restored.getBmsirSelectButtonAction()
         );
@@ -180,6 +194,7 @@ class BMSIRArenaConfigStoreTest {
                 PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2,
                 restored.getBmsirSelectDifficultyDisplay()
         );
+        assertEquals(5, restored.getBmsirSelectDifficultyStage());
         assertEquals(
                 java.util.List.of("5k", "7k"),
                 java.util.Arrays.asList(restored.getBmsirSelectKeyModes())

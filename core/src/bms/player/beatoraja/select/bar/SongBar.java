@@ -37,6 +37,14 @@ public class SongBar extends SelectableBar {
     }
 
     public SongBar(SongData[] songs, String preferredSha256) {
+        this(songs, preferredSha256, 0);
+    }
+
+    public SongBar(
+            SongData[] songs,
+            String preferredSha256,
+            int difficultyStage
+    ) {
         this.songs = Arrays.stream(songs)
                 .filter(java.util.Objects::nonNull)
                 .sorted(SongBar::compareDifficulty)
@@ -44,6 +52,7 @@ public class SongBar extends SelectableBar {
         if (this.songs.length == 0) {
             throw new IllegalArgumentException("SongBar requires at least one chart");
         }
+        selectDifficultyStage(difficultyStage);
         selectSha256(preferredSha256);
     }
 
@@ -68,8 +77,28 @@ public class SongBar extends SelectableBar {
         return true;
     }
 
-    private void selectSha256(String preferredSha256) {
+    private void selectDifficultyStage(int difficultyStage) {
         songIndex = 0;
+        if (difficultyStage < 1 || difficultyStage > 5) {
+            return;
+        }
+        int fallback = -1;
+        for (int index = 0; index < songs.length; index++) {
+            int difficulty = songs[index].getDifficulty();
+            if (difficulty == difficultyStage) {
+                songIndex = index;
+                return;
+            }
+            if (difficulty >= 1 && difficulty < difficultyStage) {
+                fallback = index;
+            }
+        }
+        if (fallback >= 0) {
+            songIndex = fallback;
+        }
+    }
+
+    private void selectSha256(String preferredSha256) {
         if (preferredSha256 == null || preferredSha256.isBlank()) {
             return;
         }

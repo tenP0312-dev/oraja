@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRSelectKeyModeTest {
     @Test
@@ -73,5 +75,24 @@ class BMSIRSelectKeyModeTest {
                         1
                 )
         );
+    }
+
+    @Test
+    void concreteChecksAreGlobalVisibilityFilters() {
+        String[] visible = {"7k", "14k"};
+
+        assertTrue(BMSIRSelectKeyMode.isSongModeVisible(visible, Mode.BEAT_7K.id));
+        assertTrue(BMSIRSelectKeyMode.isSongModeVisible(visible, Mode.BEAT_14K.id));
+        assertFalse(BMSIRSelectKeyMode.isSongModeVisible(visible, Mode.BEAT_5K.id));
+        assertTrue(BMSIRSelectKeyMode.isSongModeVisible(visible, 0));
+    }
+
+    @Test
+    void legacyAllOnlySelectionKeepsEveryConcreteModeVisible() {
+        String[] normalized = BMSIRSelectKeyMode.normalizeIds(new String[]{"all"});
+
+        assertEquals(BMSIRSelectKeyMode.values().length, normalized.length);
+        assertTrue(BMSIRSelectKeyMode.isSongModeVisible(normalized, Mode.BEAT_5K.id));
+        assertTrue(BMSIRSelectKeyMode.isSongModeVisible(normalized, Mode.KEYBOARD_24K.id));
     }
 }

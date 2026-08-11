@@ -119,6 +119,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirDanLocalSyncEnabled;
 	@FXML
+	private ComboBox<String> bmsirStartButtonAction;
+	@FXML
 	private ComboBox<String> bmsirSelectButtonAction;
 	@FXML
 	private ComboBox<String> bmsirSelectDifficultyDisplay;
@@ -472,17 +474,19 @@ public class PlayConfigurationView implements Initializable {
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
-		bmsirSelectButtonAction.getItems().setAll(english
+		List<String> shortButtonActions = english
 				? List.of(
-						"Option panel (legacy)",
-						"Short: difficulty / Hold: options",
-						"Short: key mode / Hold: options"
+						"None",
+						"Change difficulty",
+						"Change key mode"
 				)
 				: List.of(
-						"OP変更（従来）",
-						"短押し: 難易度 / 長押し: OP",
-						"短押し: 鍵盤数 / 長押し: OP"
-					));
+						"なし",
+						"難易度変更",
+						"鍵盤数変更"
+				);
+		bmsirStartButtonAction.getItems().setAll(shortButtonActions);
+		bmsirSelectButtonAction.getItems().setAll(shortButtonActions);
 		bmsirSelectDifficultyDisplay.getItems().setAll(english
 				? List.of(
 						"Separate rows; move the cursor",
@@ -768,6 +772,9 @@ public class PlayConfigurationView implements Initializable {
 		bmsirDanLocalSyncEnabled.setSelected(
 				player.isBmsirDanLocalSyncEnabled()
 		);
+		bmsirStartButtonAction.getSelectionModel().select(
+				bmsirSelectButtonActionIndex(player.getBmsirStartButtonAction())
+		);
 		bmsirSelectButtonAction.getSelectionModel().select(
 				bmsirSelectButtonActionIndex(player.getBmsirSelectButtonAction())
 		);
@@ -949,6 +956,11 @@ public class PlayConfigurationView implements Initializable {
 		);
 		player.setBmsirDanLocalSyncEnabled(
 				bmsirDanLocalSyncEnabled.isSelected()
+		);
+		player.setBmsirStartButtonAction(
+				bmsirSelectButtonActionValue(
+						bmsirStartButtonAction.getSelectionModel().getSelectedIndex()
+				)
 		);
 		player.setBmsirSelectButtonAction(
 				bmsirSelectButtonActionValue(

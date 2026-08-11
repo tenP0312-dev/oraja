@@ -24,7 +24,7 @@ class BarManagerDifficultyGroupingTest {
                 new SongBar(doubleChart),
                 new SongBar(normal),
                 new SongBar(unrelated)
-        }, normal.getSha256());
+        }, normal.getSha256(), 3);
 
         assertEquals(3, grouped.length);
         SongBar sameSong = (SongBar) grouped[0];
@@ -60,7 +60,8 @@ class BarManagerDifficultyGroupingTest {
 
         Bar[] grouped = BarManager.groupDifficultyBars(
                 new Bar[]{new SongBar(first), new SongBar(second)},
-                null
+                null,
+                3
         );
 
         assertEquals(2, grouped.length);
@@ -89,6 +90,44 @@ class BarManagerDifficultyGroupingTest {
         assertEquals(0, BarManager.nextDifficultyBarIndex(bars, 3));
         assertEquals(2, BarManager.nextDifficultyBarIndex(bars, 0));
         assertEquals(-1, BarManager.nextDifficultyBarIndex(bars, 1));
+    }
+
+    @Test
+    void lr2DifficultyStageAppliesToEveryGroupedSong() {
+        SongData firstNormal = song("first-normal", "first", Mode.BEAT_7K.id, 2, 5);
+        SongData firstHyper = song("first-hyper", "first", Mode.BEAT_7K.id, 3, 9);
+        SongData secondBeginner = song("second-beginner", "second", Mode.BEAT_7K.id, 1, 2);
+        SongData secondHyper = song("second-hyper", "second", Mode.BEAT_7K.id, 3, 8);
+
+        Bar[] grouped = BarManager.groupDifficultyBars(new Bar[]{
+                new SongBar(firstNormal),
+                new SongBar(firstHyper),
+                new SongBar(secondBeginner),
+                new SongBar(secondHyper)
+        }, null, 3);
+
+        assertSame(firstHyper, ((SongBar) grouped[0]).getSongData());
+        assertSame(secondHyper, ((SongBar) grouped[1]).getSongData());
+    }
+
+    @Test
+    void lr2StageUsesTheNearestLowerDifficultyThenTheLowestAvailable() {
+        SongData normal = song("normal", "first", Mode.BEAT_7K.id, 2, 5);
+        SongData another = song("another", "first", Mode.BEAT_7K.id, 4, 11);
+
+        Bar[] stageThree = BarManager.groupDifficultyBars(
+                new Bar[]{new SongBar(normal), new SongBar(another)},
+                null,
+                3
+        );
+        Bar[] stageOne = BarManager.groupDifficultyBars(
+                new Bar[]{new SongBar(normal), new SongBar(another)},
+                null,
+                1
+        );
+
+        assertSame(normal, ((SongBar) stageThree[0]).getSongData());
+        assertSame(normal, ((SongBar) stageOne[0]).getSongData());
     }
 
     private static SongData song(

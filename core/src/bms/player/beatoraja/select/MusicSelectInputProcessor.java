@@ -65,6 +65,7 @@ public final class MusicSelectInputProcessor {
     private final MusicSelector select;
 
     private final F2HoldDetector f2HoldDetector = new F2HoldDetector();
+    private final SelectHoldDetector startHoldDetector = new SelectHoldDetector();
     private final SelectHoldDetector selectHoldDetector = new SelectHoldDetector();
     private final ChordHoldDetector maniacChordDetector = new ChordHoldDetector();
     private final RepeatPressDetector maniacDownDetector = new RepeatPressDetector();
@@ -72,7 +73,9 @@ public final class MusicSelectInputProcessor {
     private final PressEdgeDetector maniacSelectDetector = new PressEdgeDetector();
     private final PressEdgeDetector maniacBackDetector = new PressEdgeDetector();
     private boolean suppressManiacControlsUntilChordRelease;
+    private boolean suppressStartGestureUntilRelease;
     private boolean suppressSelectGestureUntilRelease;
+    private boolean startOptionKeyActiveUntilRelease;
 
     public MusicSelectInputProcessor(MusicSelector select) {
         this.select = select;
@@ -135,34 +138,50 @@ public final class MusicSelectInputProcessor {
 
         final MusicSelectKeyProperty property = MusicSelectKeyProperty.values()[config.getMusicselectinput()];
 
+        String startAction = config.getBmsirStartButtonAction();
         String selectAction = config.getBmsirSelectButtonAction();
-        boolean customSelectAction = !PlayerConfig.BMSIR_SELECT_ACTION_OPTION.equals(
-                selectAction
-        );
-        SelectHoldDetector.Action selectGesture = SelectHoldDetector.Action.NONE;
-        if (!input.isSelectPressed()) {
-            suppressSelectGestureUntilRelease = false;
-        } else if (input.startPressed()) {
-            // START+SELECT belongs exclusively to the detailed-option chord.
-            suppressSelectGestureUntilRelease = true;
+        boolean startPressed = input.startPressed();
+        boolean selectPressed = input.isSelectPressed();
+        boolean detailChordPressed = startPressed && selectPressed;
+        if (!startPressed) {
+            suppressStartGestureUntilRelease = false;
+            startOptionKeyActiveUntilRelease = false;
         }
-        if (!customSelectAction || suppressSelectGestureUntilRelease) {
+        if (!selectPressed) {
+            suppressSelectGestureUntilRelease = false;
+        }
+        if (detailChordPressed) {
+            suppressStartGestureUntilRelease = true;
+            suppressSelectGestureUntilRelease = true;
+            startHoldDetector.cancel();
+            selectHoldDetector.cancel();
+        }
+        if (startPressed && !selectPressed && property.hasAnyKeyPressed(input)) {
+            // START + playable key keeps the legacy option chord immediate.
+            startOptionKeyActiveUntilRelease = true;
+            suppressStartGestureUntilRelease = true;
+            startHoldDetector.cancel();
+        }
+
+        SelectHoldDetector.Action startGesture = suppressStartGestureUntilRelease
+                ? SelectHoldDetector.Action.NONE
+                : startHoldDetector.update(startPressed, now);
+        SelectHoldDetector.Action selectGesture = SelectHoldDetector.Action.NONE;
+        if (suppressSelectGestureUntilRelease) {
             selectHoldDetector.cancel();
         } else {
-            selectGesture = selectHoldDetector.update(input.isSelectPressed(), now);
+            selectGesture = selectHoldDetector.update(selectPressed, now);
         }
-        boolean selectLongPressActive = customSelectAction
-                && selectHoldDetector.isLongPressActive();
+        boolean startLongPressActive = startHoldDetector.isLongPressActive();
+        boolean selectLongPressActive = selectHoldDetector.isLongPressActive();
+        boolean startShortPressHandled = false;
         boolean selectShortPressHandled = false;
+        if (startGesture == SelectHoldDetector.Action.SHORT_PRESS) {
+            runShortButtonAction(startAction, barManager);
+            startShortPressHandled = true;
+        }
         if (selectGesture == SelectHoldDetector.Action.SHORT_PRESS) {
-            boolean changed = PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY.equals(
-                    selectAction
-            )
-                    ? barManager.cycleSelectedDifficulty()
-                    : barManager.cycleBmsirSelectMode(1);
-            if (changed) {
-                select.play(OPTION_CHANGE);
-            }
+            runShortButtonAction(selectAction, barManager);
             selectShortPressHandled = true;
         }
 
@@ -179,7 +198,8 @@ public final class MusicSelectInputProcessor {
             // change replay
             select.execute(MusicSelectCommand.NEXT_REPLAY);
         }
-        if (input.startPressed() && !input.isSelectPressed()) {
+        if (startPressed && !selectPressed
+                && (startLongPressActive || startOptionKeyActiveUntilRelease)) {
             bar.resetInput();
             // show play option
             select.setPanelState(1);
@@ -271,8 +291,7 @@ public final class MusicSelectInputProcessor {
                 select.play(SCRATCH);
                 mov++;
             }
-        } else if (input.isSelectPressed() && !input.startPressed()
-                && (!customSelectAction || selectLongPressActive)) {
+        } else if (selectPressed && !startPressed && selectLongPressActive) {
             bar.resetInput();
             // show assist option
             select.setPanelState(2);
@@ -309,13 +328,7 @@ public final class MusicSelectInputProcessor {
                 config.setMineMode(config.getMineMode() == 1 ? 0 : 1);
                 select.play(OPTION_CHANGE);
             }
-        } else if (customSelectAction
-                && input.isSelectPressed()
-                && !input.startPressed()) {
-            // Wait for release (short action) or the hold threshold (assist OP).
-            bar.resetInput();
-            select.setPanelState(0);
-        } else if (input.getControlKeyState(ControlKeys.NUM5) || (input.startPressed() && input.isSelectPressed())) {
+        } else if (input.getControlKeyState(ControlKeys.NUM5) || detailChordPressed) {
             bar.resetInput();
             // show detail option
             select.setPanelState(3);
@@ -363,7 +376,12 @@ public final class MusicSelectInputProcessor {
             if (property.isPressed(input, NOTESDISPLAYTIMING_AUTOADJUST, true)) {
                 select.executeEvent(EventType.notesdisplaytimingautoadjust);
             }
-        } else if (selectShortPressHandled) {
+        } else if ((startPressed && !selectPressed)
+                || (selectPressed && !startPressed)) {
+            // Wait for release (short action) or the hold threshold (OP panel).
+            bar.resetInput();
+            select.setPanelState(0);
+        } else if (startShortPressHandled || selectShortPressHandled) {
             bar.resetInput();
             select.setPanelState(0);
         } else {
@@ -469,6 +487,16 @@ public final class MusicSelectInputProcessor {
             boolean isTopLevel = select.getBarManager().getDirectory().isEmpty();
             if (isTopLevel) { select.main.exit(); }
             else { select.getBarManager().close(); }
+        }
+    }
+
+    private void runShortButtonAction(String action, BarManager barManager) {
+        boolean changed = PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY.equals(action)
+                ? barManager.cycleSelectedDifficulty()
+                : PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE.equals(action)
+                        && barManager.cycleBmsirSelectMode(1);
+        if (changed) {
+            select.play(OPTION_CHANGE);
         }
     }
 

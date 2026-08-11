@@ -86,6 +86,16 @@ public enum MusicSelectKeyProperty {
         return false;
     }
 
+    /** True while any playable key assigned to this select layout is held. */
+    public boolean hasAnyKeyPressed(BMSPlayerInputProcessor input) {
+        for (int index = 0; index < assign.length; index++) {
+            if (input.getKeyState(index)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 	public boolean isPressed(BMSPlayerInputProcessor input, MusicSelectKey code, boolean resetState) {
 		for (int i = 0; i < assign.length; i++) {
 			for (MusicSelectKey index : assign[i]) {

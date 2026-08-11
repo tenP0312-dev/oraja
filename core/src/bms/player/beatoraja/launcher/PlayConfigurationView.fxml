@@ -488,6 +488,9 @@
 	                    <CheckBox fx:id="bmsirDanLocalSyncEnabled" mnemonicParsing="false" text="%BMSIR_DAN_LOCAL_SYNC_ENABLED" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_DAN_LOCAL_SYNC_DESCRIPTION" wrapText="true" />
 	                    <Separator />
+	                    <Label text="%BMSIR_START_BUTTON_ACTION" />
+	                    <ComboBox fx:id="bmsirStartButtonAction" prefWidth="360.0" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_START_BUTTON_ACTION_DESCRIPTION" wrapText="true" />
 	                    <Label text="%BMSIR_SELECT_BUTTON_ACTION" />
 	                    <ComboBox fx:id="bmsirSelectButtonAction" prefWidth="360.0" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_BUTTON_ACTION_DESCRIPTION" wrapText="true" />
