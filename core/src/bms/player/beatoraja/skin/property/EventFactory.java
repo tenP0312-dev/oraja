@@ -10,6 +10,7 @@ import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.result.*;
 import bms.player.beatoraja.select.BarSorter;
+import bms.player.beatoraja.select.BMSIRSelectOptionCompatibility;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.*;
 import bms.player.beatoraja.skin.SkinProperty;
@@ -101,8 +102,17 @@ public class EventFactory {
 		 */
 		sort(12, (state, arg1) -> {
 			if(state instanceof MusicSelector selector) {
-				selector.setSort((selector.getSort() + (arg1 >= 0 ? 1 : BarSorter.defaultSorter.length - 1)) % BarSorter.defaultSorter.length);
+				int sort = BMSIRSelectOptionCompatibility.cycleSort(
+						selector.resource.getPlayerConfig(),
+						arg1
+				);
+				selector.setSort(sort);
 				selector.getBarManager().updateBar();
+				if (BarSorter.defaultSorter[sort] == BarSorter.JUDGE) {
+					BMSIRSelectOptionCompatibility.notifyJudgeRankSortIfEnabled(
+							selector.resource.getPlayerConfig()
+					);
+				}
 				selector.play(OPTION_CHANGE);
 			}
 		}),
@@ -223,7 +233,16 @@ public class EventFactory {
 			if(state instanceof MusicSelector selector) {
 	            PlayConfig pc = selector.getSelectedBarPlayConfig();
 	            if (pc != null) {
-	                pc.setFixhispeed((pc.getFixhispeed() + (arg1 >= 0 ? 1 : 4)) % 5);
+	                int fix = BMSIRSelectOptionCompatibility.cycleHsFix(
+						pc,
+						selector.resource.getPlayerConfig(),
+						arg1
+	                );
+	                if (fix == PlayConfig.FIX_HISPEED_IIDX_FHS) {
+						BMSIRSelectOptionCompatibility.notifyIidxFhsIfEnabled(
+								selector.resource.getPlayerConfig()
+						);
+	                }
 	                state.play(OPTION_CHANGE);
 	            }				
 			}

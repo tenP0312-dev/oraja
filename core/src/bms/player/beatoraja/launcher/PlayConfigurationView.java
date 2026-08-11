@@ -155,6 +155,14 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirCoverHispeedAutoAdjustEnabled;
 	@FXML
+	private CheckBox bmsirIidxFhsEnabled;
+	@FXML
+	private CheckBox bmsirIidxFhsSkinNoticeEnabled;
+	@FXML
+	private CheckBox bmsirJudgeRankSortEnabled;
+	@FXML
+	private CheckBox bmsirJudgeRankSortSkinNoticeEnabled;
+	@FXML
 	private ComboBox<String> bmsirNumpad0;
 	@FXML
 	private ComboBox<String> bmsirNumpad1;
@@ -527,6 +535,12 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverChangeStep.setValueFactory(
 				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
+		bmsirIidxFhsSkinNoticeEnabled.disableProperty().bind(
+				bmsirIidxFhsEnabled.selectedProperty().not()
+		);
+		bmsirJudgeRankSortSkinNoticeEnabled.disableProperty().bind(
+				bmsirJudgeRankSortEnabled.selectedProperty().not()
+		);
 		bmsirNumpadCombos = List.of(
 				bmsirNumpad0,
 				bmsirNumpad1,
@@ -815,6 +829,16 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverHispeedAutoAdjustEnabled.setSelected(
 				player.isBmsirCoverHispeedAutoAdjustEnabled()
 		);
+		bmsirIidxFhsEnabled.setSelected(player.isBmsirIidxFhsEnabled());
+		bmsirIidxFhsSkinNoticeEnabled.setSelected(
+				player.isBmsirIidxFhsSkinNoticeEnabled()
+		);
+		bmsirJudgeRankSortEnabled.setSelected(
+				player.isBmsirJudgeRankSortEnabled()
+		);
+		bmsirJudgeRankSortSkinNoticeEnabled.setSelected(
+				player.isBmsirJudgeRankSortSkinNoticeEnabled()
+		);
 		String[] numpadActions = player.getBmsirNumpadActions();
 		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
 			bmsirNumpadCombos.get(index).getSelectionModel().select(
@@ -1007,6 +1031,16 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirCoverHispeedAutoAdjustEnabled(
 				bmsirCoverHispeedAutoAdjustEnabled.isSelected()
 		);
+		player.setBmsirIidxFhsEnabled(bmsirIidxFhsEnabled.isSelected());
+		player.setBmsirIidxFhsSkinNoticeEnabled(
+				bmsirIidxFhsSkinNoticeEnabled.isSelected()
+		);
+		player.setBmsirJudgeRankSortEnabled(
+				bmsirJudgeRankSortEnabled.isSelected()
+		);
+		player.setBmsirJudgeRankSortSkinNoticeEnabled(
+				bmsirJudgeRankSortSkinNoticeEnabled.isSelected()
+		);
 		String[] numpadActions = new String[BMSIRNumpadAction.KEY_COUNT];
 		for (int index = 0; index < bmsirNumpadCombos.size(); index++) {
 			int selected = bmsirNumpadCombos.get(index)
@@ -1123,7 +1157,10 @@ public class PlayConfigurationView implements Initializable {
 			conf.setEnableConstant(enableConstant.isSelected());
 			conf.setConstantFadeinTime(getValue(constFadeinTime));
 			conf.setHispeedMargin(getValue(hispeedmargin).floatValue());
-			conf.setFixhispeed(fixhispeed.getValue());
+			Integer selectedFixHispeed = fixhispeed.getValue();
+			if (selectedFixHispeed != null) {
+				conf.setFixhispeed(selectedFixHispeed);
+			}
 			conf.setEnablelanecover(enableLanecover.isSelected());
 			conf.setLanecover(getValue(lanecover) / 1000f);
 			conf.setLanecovermarginlow(getValue(lanecovermarginlow) / 1000f);
@@ -1143,7 +1180,14 @@ public class PlayConfigurationView implements Initializable {
 		enableConstant.setSelected(conf.isEnableConstant());
 		constFadeinTime.getValueFactory().setValue(conf.getConstantFadeinTime());
 		hispeedmargin.getValueFactory().setValue((double) conf.getHispeedMargin());
-		fixhispeed.setValue(conf.getFixhispeed());
+		if (conf.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
+			fixhispeed.getSelectionModel().clearSelection();
+			fixhispeed.setValue(null);
+			fixhispeed.setPromptText("IIDX FHS (Music Select OP)");
+		} else {
+			fixhispeed.setPromptText("");
+			fixhispeed.setValue(conf.getFixhispeed());
+		}
 		enableLanecover.setSelected(conf.isEnablelanecover());
 		lanecover.getValueFactory().setValue((int) (conf.getLanecover() * 1000));
 		lanecovermarginlow.getValueFactory().setValue((int) (conf.getLanecovermarginlow() * 1000));

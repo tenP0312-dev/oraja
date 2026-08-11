@@ -200,7 +200,9 @@ the last visible overlay mode. Version 0.4.14 upgrades it to schema 10 for
 MANIAC, Double Battle AUTO SCRATCH, Arena language, graph presentation, and
 detailed logs. SP TO DP upgrades the sidecar to schema 11, SELECT actions to
 schema 12, the difficulty display choice to schema 13, and independent
-START/SELECT actions plus the shared difficulty stage to schema 14.
+START/SELECT actions plus the shared difficulty stage to schema 14. The
+optional IIDX FHS and judge-rank sort cycles plus their two independent skin
+notices upgrade it to schema 15.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -325,6 +327,29 @@ It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
 controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
 is independent and OFF by default, so START+6/7 does not activate FHS-style
 scratch recalculation unless explicitly enabled.
+
+`選曲OPにIIDX FHSを追加する` is OFF by default. When enabled, Music Select
+cycles `OFF / START / MAX / MAIN / MIN / IIDX FHS`; the ordinary pre-launch
+HI-SPEED FIX combo still offers only the five legacy choices. In IIDX FHS,
+START plus a HI-SPEED key changes the current multiplier by exactly 0.50.
+Changing SUD+ reloads the saved green number at the current BPM and includes
+LIFT in the cover calculation. Without LIFT, an SUD+ off/on cycle reloads when
+SUD+ is enabled. With LIFT, later cycles reload when SUD+ is disabled; the
+first in-play SUD+ activation also reloads and starts at white number 125. That
+first-activation state is retained between charts in one course and reset on
+returning to Music Select.
+
+`選曲ソートに判定難易度を追加する` remains ON by default to preserve the
+existing judge-rank sorter. Turning it OFF restores the original eight-value
+sort cycle. IIDX FHS uses skin index 5 after the five legacy HS-FIX images;
+judge-rank sort uses index 8 after the eight legacy sort images. A skin without
+those images safely falls back to `OFF` or `TITLE`. Their compatibility notices
+have separate switches, `IIDX FHS選択時に未対応スキン向け通知を表示する` and
+`判定難易度ソート選択時に未対応スキン向け通知を表示する`, both ON by
+default. Each notice appears when its value is selected and once when Music
+Select restores that value. The global INFO-notification switch must also be
+ON. Disabling an extension while it is active normalizes IIDX FHS to START BPM
+or judge-rank sort to TITLE.
 
 The song context menu contains one `BMS-IR Leaderboard` entry. It reads the
 LR2-compatible ranking and selectable ghost directly from BMS-IR over HTTPS;

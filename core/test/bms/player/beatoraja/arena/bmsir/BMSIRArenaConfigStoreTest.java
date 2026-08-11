@@ -55,6 +55,10 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED);
         player.setBmsirCoverChangeStep(12);
         player.setBmsirCoverHispeedAutoAdjustEnabled(true);
+        player.setBmsirIidxFhsEnabled(true);
+        player.setBmsirIidxFhsSkinNoticeEnabled(false);
+        player.setBmsirJudgeRankSortEnabled(true);
+        player.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         player.setBmsirNumpadActions(new String[]{
                 BMSIRNumpadAction.NONE.id(),
                 BMSIRNumpadAction.BMS_SEARCH.id(),
@@ -94,7 +98,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 14"));
+        assertTrue(serialized.contains("\"schemaVersion\": 15"));
         assertTrue(serialized.contains("\"startButtonAction\": \"difficulty\""));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
         assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
@@ -104,6 +108,10 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
         assertTrue(serialized.contains("\"coverHispeedAutoAdjustEnabled\": true"));
+        assertTrue(serialized.contains("\"iidxFhsEnabled\": true"));
+        assertTrue(serialized.contains("\"iidxFhsSkinNoticeEnabled\": false"));
+        assertTrue(serialized.contains("\"judgeRankSortEnabled\": true"));
+        assertTrue(serialized.contains("\"judgeRankSortSkinNoticeEnabled\": false"));
         assertTrue(serialized.contains("\"numpadJudgeTimingStep\": 7"));
         assertTrue(serialized.contains("\"judgeTimingRestoreEnabled\": true"));
         assertTrue(serialized.contains("\"infoNotificationsEnabled\": false"));
@@ -152,6 +160,10 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_LR2);
         arenaBody.setBmsirCoverChangeStep(15);
         arenaBody.setBmsirCoverHispeedAutoAdjustEnabled(true);
+        arenaBody.setBmsirIidxFhsEnabled(true);
+        arenaBody.setBmsirIidxFhsSkinNoticeEnabled(false);
+        arenaBody.setBmsirJudgeRankSortEnabled(false);
+        arenaBody.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         String[] numpadActions = BMSIRNumpadAction.defaultIds();
         numpadActions[1] = BMSIRNumpadAction.FPS.id();
         arenaBody.setBmsirNumpadActions(numpadActions);
@@ -225,6 +237,10 @@ class BMSIRArenaConfigStoreTest {
         );
         assertEquals(15, restored.getBmsirCoverChangeStep());
         assertTrue(restored.isBmsirCoverHispeedAutoAdjustEnabled());
+        assertTrue(restored.isBmsirIidxFhsEnabled());
+        assertFalse(restored.isBmsirIidxFhsSkinNoticeEnabled());
+        assertFalse(restored.isBmsirJudgeRankSortEnabled());
+        assertFalse(restored.isBmsirJudgeRankSortSkinNoticeEnabled());
         assertEquals(
                 BMSIRNumpadAction.FPS.id(),
                 restored.getBmsirNumpadActions()[1]
@@ -362,6 +378,10 @@ class BMSIRArenaConfigStoreTest {
         );
         assertEquals(10, restored.getBmsirCoverChangeStep());
         assertFalse(restored.isBmsirCoverHispeedAutoAdjustEnabled());
+        assertFalse(restored.isBmsirIidxFhsEnabled());
+        assertTrue(restored.isBmsirIidxFhsSkinNoticeEnabled());
+        assertTrue(restored.isBmsirJudgeRankSortEnabled());
+        assertTrue(restored.isBmsirJudgeRankSortSkinNoticeEnabled());
         assertEquals(
                 java.util.List.of(
                         "judge_auto",
