@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.32`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.33`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -19,6 +19,12 @@ Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
 vanilla DB export, split Arena graph/status presentation, private-room records,
 Japanese/English built-in UI, and the portable signed-update launcher.
+Version `0.4.14.33` removes the 350 ms wait when a Music Select START or
+SELECT short press is configured as none. The corresponding option panel opens
+on the first pressed frame because there is no short action to distinguish;
+the same-frame START+SELECT detail chord and START plus a playable key remain
+higher priority. Difficulty and key-mode short actions keep the existing
+350 ms release/hold split.
 Version `0.4.14.32` makes the configured key-mode checks global Music Select
 visibility filters as well as cycle choices. START and SELECT each have an
 independent short-press choice (none, difficulty, or key mode); holding START
@@ -538,9 +544,12 @@ an editable switch: BMS-IR rejects CN/HCN results, so disabling the rule would
 make chart note counts and submitted scores disagree.
 
 - Music Select START and SELECT independently assign their short press to
-  `なし` / `難易度変更` / `鍵盤数変更`. A 350 ms START hold opens play options;
-  a 350 ms SELECT hold opens assist options. START plus a playable key remains
-  immediate, and START+SELECT keeps the detailed-option panel. Difficulty mode
+  `なし` / `難易度変更` / `鍵盤数変更`. With `なし`, the corresponding option
+  panel opens on the first pressed frame. Difficulty and key-mode actions use a
+  release before 350 ms for the short action; holding START opens play options
+  and holding SELECT opens assist options. START plus a playable key remains
+  immediate, and same-frame START+SELECT keeps the detailed-option panel.
+  Difficulty mode
   can keep every chart as a separate row and move the cursor only within the
   selected same-song set, or combine currently visible charts with the same
   folder identity and key mode into one LR2-style row. The grouped display
@@ -649,7 +658,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.32-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.33-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -670,7 +679,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.32-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.33-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -686,7 +695,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.32-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.33-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

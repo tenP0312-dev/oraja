@@ -165,12 +165,20 @@ public final class MusicSelectInputProcessor {
 
         SelectHoldDetector.Action startGesture = suppressStartGestureUntilRelease
                 ? SelectHoldDetector.Action.NONE
-                : startHoldDetector.update(startPressed, now);
+                : startHoldDetector.update(
+                        startPressed,
+                        now,
+                        PlayerConfig.BMSIR_SELECT_ACTION_OPTION.equals(startAction)
+                );
         SelectHoldDetector.Action selectGesture = SelectHoldDetector.Action.NONE;
         if (suppressSelectGestureUntilRelease) {
             selectHoldDetector.cancel();
         } else {
-            selectGesture = selectHoldDetector.update(selectPressed, now);
+            selectGesture = selectHoldDetector.update(
+                    selectPressed,
+                    now,
+                    PlayerConfig.BMSIR_SELECT_ACTION_OPTION.equals(selectAction)
+            );
         }
         boolean startLongPressActive = startHoldDetector.isLongPressActive();
         boolean selectLongPressActive = selectHoldDetector.isLongPressActive();
@@ -624,13 +632,14 @@ public final class MusicSelectInputProcessor {
         private long pressedAt = -1L;
         private boolean longPressActive;
 
-        Action update(boolean pressed, long now) {
+        Action update(boolean pressed, long now, boolean openOptionsImmediately) {
             if (pressed && pressedAt < 0L) {
                 pressedAt = now;
                 longPressActive = false;
             }
             if (pressed && !longPressActive
-                    && now - pressedAt >= SELECT_OPTIONS_HOLD_MILLIS) {
+                    && (openOptionsImmediately
+                            || now - pressedAt >= SELECT_OPTIONS_HOLD_MILLIS)) {
                 longPressActive = true;
                 return Action.LONG_PRESS;
             }
