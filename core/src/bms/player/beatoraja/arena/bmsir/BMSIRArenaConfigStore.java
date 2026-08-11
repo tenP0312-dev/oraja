@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 14;
+        private int schemaVersion = 15;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -167,6 +167,10 @@ public final class BMSIRArenaConfigStore {
         private String coverControlMode;
         private Integer coverChangeStep;
         private boolean coverHispeedAutoAdjustEnabled = false;
+        private Boolean iidxFhsEnabled;
+        private Boolean iidxFhsSkinNoticeEnabled;
+        private Boolean judgeRankSortEnabled;
+        private Boolean judgeRankSortSkinNoticeEnabled;
         private String[] numpadActions;
         private Integer numpadJudgeTimingStep;
         private boolean judgeTimingRestoreEnabled = false;
@@ -226,6 +230,13 @@ public final class BMSIRArenaConfigStore {
             settings.coverChangeStep = player.getBmsirCoverChangeStep();
             settings.coverHispeedAutoAdjustEnabled =
                     player.isBmsirCoverHispeedAutoAdjustEnabled();
+            settings.iidxFhsEnabled = player.isBmsirIidxFhsEnabled();
+            settings.iidxFhsSkinNoticeEnabled =
+                    player.isBmsirIidxFhsSkinNoticeEnabled();
+            settings.judgeRankSortEnabled =
+                    player.isBmsirJudgeRankSortEnabled();
+            settings.judgeRankSortSkinNoticeEnabled =
+                    player.isBmsirJudgeRankSortSkinNoticeEnabled();
             settings.numpadActions = player.getBmsirNumpadActions();
             settings.numpadJudgeTimingStep =
                     player.getBmsirNumpadJudgeTimingStep();
@@ -318,6 +329,22 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirCoverHispeedAutoAdjustEnabled(
                     coverHispeedAutoAdjustEnabled
             );
+            if (iidxFhsEnabled != null) {
+                player.setBmsirIidxFhsEnabled(iidxFhsEnabled);
+            }
+            if (iidxFhsSkinNoticeEnabled != null) {
+                player.setBmsirIidxFhsSkinNoticeEnabled(
+                        iidxFhsSkinNoticeEnabled
+                );
+            }
+            if (judgeRankSortEnabled != null) {
+                player.setBmsirJudgeRankSortEnabled(judgeRankSortEnabled);
+            }
+            if (judgeRankSortSkinNoticeEnabled != null) {
+                player.setBmsirJudgeRankSortSkinNoticeEnabled(
+                        judgeRankSortSkinNoticeEnabled
+                );
+            }
             if (numpadActions != null) {
                 player.setBmsirNumpadActions(numpadActions);
             }

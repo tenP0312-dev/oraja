@@ -119,6 +119,8 @@ public final class MusicSelector extends MainState {
 	private PixmapResourcePool banners;
 
 	private PixmapResourcePool stagefiles;
+	private boolean iidxFhsRestoredNoticeShown;
+	private boolean judgeRankSortRestoredNoticeShown;
 
 	public MusicSelector(MainController main, boolean songUpdated) {
 		super(main);
@@ -237,6 +239,7 @@ public final class MusicSelector extends MainState {
 	public void create() {
 		BMSIROrajaHelperBridge.publishScene("select");
 		main.getSoundManager().shuffle();
+		config.resetBmsirIidxFhsRuntimeState();
 
 		play = null;
 		showNoteGraph = false;
@@ -267,6 +270,7 @@ public final class MusicSelector extends MainState {
 		manager.updateBar();
 
         loadSkin(SkinType.MUSIC_SELECT);
+		showRestoredSkinCompatibilityNotices();
 
 		// search text field
 		Rectangle searchRegion = ((MusicSelectSkin) getSkin()).getSearchTextRegion();
@@ -277,6 +281,21 @@ public final class MusicSelector extends MainState {
 			}
 			search = new SearchTextField(this, resource.getConfig().getResolution());
 			setStage(search);
+		}
+	}
+
+	private void showRestoredSkinCompatibilityNotices() {
+		PlayConfig playConfig = getSelectedBarPlayConfig();
+		if (!iidxFhsRestoredNoticeShown
+				&& playConfig != null
+				&& playConfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
+			iidxFhsRestoredNoticeShown =
+					BMSIRSelectOptionCompatibility.notifyIidxFhsIfEnabled(config);
+		}
+		if (!judgeRankSortRestoredNoticeShown
+				&& BarSorter.JUDGE.name().equals(config.getSortid())) {
+			judgeRankSortRestoredNoticeShown =
+					BMSIRSelectOptionCompatibility.notifyJudgeRankSortIfEnabled(config);
 		}
 	}
 
