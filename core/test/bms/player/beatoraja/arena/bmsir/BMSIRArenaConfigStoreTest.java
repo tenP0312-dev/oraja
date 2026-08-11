@@ -33,6 +33,9 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirSelectButtonAction(
                 PlayerConfig.BMSIR_SELECT_ACTION_KEY_MODE
         );
+        player.setBmsirSelectDifficultyDisplay(
+                PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
+        );
         player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
@@ -87,8 +90,9 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 12"));
+        assertTrue(serialized.contains("\"schemaVersion\": 13"));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
+        assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
         assertTrue(serialized.contains("\"selectKeyModes\": ["));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
@@ -119,6 +123,9 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirDanLocalSyncEnabled(false);
         arenaBody.setBmsirSelectButtonAction(
                 PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY
+        );
+        arenaBody.setBmsirSelectDifficultyDisplay(
+                PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
         );
         arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
@@ -168,6 +175,10 @@ class BMSIRArenaConfigStoreTest {
         assertEquals(
                 PlayerConfig.BMSIR_SELECT_ACTION_DIFFICULTY,
                 restored.getBmsirSelectButtonAction()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2,
+                restored.getBmsirSelectDifficultyDisplay()
         );
         assertEquals(
                 java.util.List.of("5k", "7k"),
@@ -319,6 +330,10 @@ class BMSIRArenaConfigStoreTest {
         assertEquals(
                 PlayerConfig.BMSIR_SELECT_ACTION_OPTION,
                 restored.getBmsirSelectButtonAction()
+        );
+        assertEquals(
+                PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE,
+                restored.getBmsirSelectDifficultyDisplay()
         );
         assertEquals(
                 java.util.List.of(

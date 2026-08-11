@@ -47,6 +47,8 @@ public final class PlayerConfig {
 	public static final String BMSIR_SELECT_ACTION_OPTION = "option";
 	public static final String BMSIR_SELECT_ACTION_DIFFICULTY = "difficulty";
 	public static final String BMSIR_SELECT_ACTION_KEY_MODE = "key_mode";
+	public static final String BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE = "separate";
+	public static final String BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2 = "lr2";
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -255,6 +257,8 @@ public final class PlayerConfig {
 	private int musicselectinput = 0;
 	/** SELECT alone: legacy option panel, difficulty cycle, or key-mode cycle. */
 	private String bmsirSelectButtonAction = BMSIR_SELECT_ACTION_OPTION;
+	/** Keep separate chart rows or collapse same-folder difficulties LR2-style. */
+	private String bmsirSelectDifficultyDisplay = BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
 	/** Ordered allow-list used by the SELECT key-mode cycle. */
 	private String[] bmsirSelectKeyModes = BMSIRSelectKeyMode.defaultIds();
 
@@ -692,6 +696,21 @@ public final class PlayerConfig {
 				|| BMSIR_SELECT_ACTION_KEY_MODE.equals(action)
 				? action
 				: BMSIR_SELECT_ACTION_OPTION;
+	}
+
+	public String getBmsirSelectDifficultyDisplay() {
+		if (!BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+				bmsirSelectDifficultyDisplay
+		)) {
+			bmsirSelectDifficultyDisplay = BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
+		}
+		return bmsirSelectDifficultyDisplay;
+	}
+
+	public void setBmsirSelectDifficultyDisplay(String display) {
+		bmsirSelectDifficultyDisplay = BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(display)
+				? BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2
+				: BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE;
 	}
 
 	public String[] getBmsirSelectKeyModes() {
@@ -1509,6 +1528,7 @@ public final class PlayerConfig {
 
 	public void validate() {
 		setBmsirSelectButtonAction(bmsirSelectButtonAction);
+		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);
 		setBmsirSelectKeyModes(bmsirSelectKeyModes);
 		setBmsirCoverControlMode(bmsirCoverControlMode);
 		setBmsirCoverChangeStep(bmsirCoverChangeStep);
