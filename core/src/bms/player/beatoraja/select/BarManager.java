@@ -48,7 +48,9 @@ public class BarManager {
 	/**
 	 * 難易度表バー一覧
 	 */
-	private TableBar[] tables = new TableBar[0];
+	private volatile TableBar[] tables = new TableBar[0];
+	private static final String BMSIR_MY_DIFFICULTY_TABLE_URL =
+			"bmsir://my-difficulty-table";
 
 	private Bar[] commands;
 	
@@ -636,6 +638,42 @@ public class BarManager {
 	}
 
     public TableBar[] getTables() { return tables.clone(); }
+
+	/** Replaces the server-backed owner table after returning to a safe root. */
+	public synchronized void replaceBmsirMyDifficultyTable(TableData data) {
+		// A directory keeps child bar instances from the TableBar that opened it.
+		// Clear that stack before replacing the root object so no stale children
+		// survive an in-game save/reload.
+		updateBar(null);
+		List<TableBar> next = new ArrayList<>();
+		int insertionIndex = -1;
+		for (TableBar table : tables) {
+			if (BMSIR_MY_DIFFICULTY_TABLE_URL.equals(table.getUrl())) {
+				if (insertionIndex < 0) {
+					insertionIndex = next.size();
+				}
+				continue;
+			}
+			next.add(table);
+		}
+		if (data != null && data.getFolder() != null && data.getFolder().length > 0) {
+			TableDataAccessor.TableAccessor accessor =
+					new TableDataAccessor.TableAccessor(BMSIR_MY_DIFFICULTY_TABLE_URL) {
+						@Override
+						public TableData read() {
+							return data;
+						}
+
+						@Override
+						public void write(TableData ignored) {
+						}
+					};
+			TableBar replacement = new TableBar(select, data, accessor);
+			next.add(insertionIndex < 0 ? next.size() : insertionIndex, replacement);
+		}
+		tables = next.toArray(TableBar[]::new);
+		updateBar(null);
+	}
 
 	public void setSelectedPosition(float value) {
 		if (value >= 0 && value < 1) {

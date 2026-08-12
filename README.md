@@ -10,8 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.35**. Reviewed Windows and macOS
-packages are distributed from the
+The current client source version is **0.4.14.36**. This source adds an
+owner-only My Difficulty Table editor to the Arena overlay and hot-reloads its
+server-confirmed table bar in Music Select without restarting the game.
+Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
 GitHub pushes do not publish official binaries automatically. Public packages
