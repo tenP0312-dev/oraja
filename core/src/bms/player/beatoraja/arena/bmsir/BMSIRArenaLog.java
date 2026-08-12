@@ -1,5 +1,6 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.player.beatoraja.system.ClientLogDirectory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -8,7 +9,6 @@ import java.awt.Desktop;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
@@ -21,9 +21,9 @@ import java.time.Instant;
  */
 final class BMSIRArenaLog {
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final Path LOG_PATH = Paths.get("bmsir-arena.log")
-            .toAbsolutePath()
-            .normalize();
+    private static final Path LOG_PATH = ClientLogDirectory.resolve(
+            "bmsir-arena.log"
+    );
     private static final long MAX_BYTES = 2L * 1024L * 1024L;
     private static final int MAX_BACKUPS = 5;
     private static volatile boolean detailedEnabled;
@@ -37,6 +37,7 @@ final class BMSIRArenaLog {
 
     static synchronized void event(String event, Object... details) {
         try {
+            ClientLogDirectory.create();
             rotateIfNeeded();
             ObjectNode line = JSON.createObjectNode();
             line.put("at", Instant.now().toString());

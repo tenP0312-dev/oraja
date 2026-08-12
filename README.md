@@ -55,6 +55,14 @@ Build the client for the target platform:
 On Windows, use `gradlew.bat` instead of `./gradlew`. Generated jars are
 written under `dist/`.
 
+## Diagnostic logs
+
+The client creates its Java/JUL log as `logs/beatoraja_log.xml` and its
+bounded Arena diagnostic log as `logs/bmsir-arena.log`. The `logs/` directory
+is created automatically beside the client data directories when either the
+configuration UI or gameplay starts. Existing logs from older releases are
+left in place and are not migrated automatically.
+
 The desktop Arena launcher moved to its own repository,
 [`tenP0312-dev/oraja-Rancher`](https://github.com/tenP0312-dev/oraja-Rancher).
 Its Rust tests can be run there with:
