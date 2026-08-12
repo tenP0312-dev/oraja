@@ -9,15 +9,15 @@ import bms.model.Mode;
  * @author exch
  */
 public enum BMSPlayerRule {
-	Beatoraja_5(GaugeProperty.FIVEKEYS, JudgeProperty.FIVEKEYS, Mode.BEAT_5K, Mode.BEAT_10K),
-	Beatoraja_7(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, Mode.BEAT_7K, Mode.BEAT_14K),
-	Beatoraja_9(GaugeProperty.PMS, JudgeProperty.PMS, Mode.POPN_5K, Mode.POPN_9K),
-	Beatoraja_24(GaugeProperty.KEYBOARD, JudgeProperty.KEYBOARD, Mode.KEYBOARD_24K, Mode.KEYBOARD_24K_DOUBLE),
-	Beatoraja_Other(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS),
+	Beatoraja_5(GaugeProperty.FIVEKEYS, JudgeProperty.FIVEKEYS, NoteJudgementBehavior.BEATORAJA, Mode.BEAT_5K, Mode.BEAT_10K),
+	Beatoraja_7(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, NoteJudgementBehavior.BEATORAJA, Mode.BEAT_7K, Mode.BEAT_14K),
+	Beatoraja_9(GaugeProperty.PMS, JudgeProperty.PMS, NoteJudgementBehavior.BEATORAJA, Mode.POPN_5K, Mode.POPN_9K),
+	Beatoraja_24(GaugeProperty.KEYBOARD, JudgeProperty.KEYBOARD, NoteJudgementBehavior.BEATORAJA, Mode.KEYBOARD_24K, Mode.KEYBOARD_24K_DOUBLE),
+	Beatoraja_Other(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, NoteJudgementBehavior.BEATORAJA),
 
-	LR2(GaugeProperty.LR2, JudgeProperty.LR2),
+	LR2(GaugeProperty.LR2, JudgeProperty.LR2, NoteJudgementBehavior.LR2ORAJA),
 
-	Default(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS),
+	Default(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, NoteJudgementBehavior.BEATORAJA),
 ;
 
 	public static final String PROFILE_LR2 = "lr2";
@@ -35,15 +35,42 @@ public enum BMSPlayerRule {
 	 */
     public final JudgeProperty judge;
 	/**
+	 * Note-selection behavior which is not represented by the judge windows.
+	 */
+	public final NoteJudgementBehavior noteJudgement;
+	/**
 	 * 対象モード。全モード対象の場合は空列
 	 */
 	public final Mode[] mode;
 
-    private BMSPlayerRule(GaugeProperty gauge, JudgeProperty judge, Mode... mode) {
+    private BMSPlayerRule(GaugeProperty gauge, JudgeProperty judge, NoteJudgementBehavior noteJudgement, Mode... mode) {
         this.gauge = gauge;
         this.judge = judge;
+		this.noteJudgement = noteJudgement;
         this.mode = mode;
     }
+
+	public enum NoteJudgementBehavior {
+		BEATORAJA(false, false),
+		LR2ORAJA(true, true),
+		;
+
+		private final boolean multipleBadNotesPerPress;
+		private final boolean suppressLongNoteLateBad;
+
+		NoteJudgementBehavior(boolean multipleBadNotesPerPress, boolean suppressLongNoteLateBad) {
+			this.multipleBadNotesPerPress = multipleBadNotesPerPress;
+			this.suppressLongNoteLateBad = suppressLongNoteLateBad;
+		}
+
+		public boolean allowsMultipleBadNotesPerPress() {
+			return multipleBadNotesPerPress;
+		}
+
+		public boolean suppressesLongNoteLateBad() {
+			return suppressLongNoteLateBad;
+		}
+	}
 
 	public static String normalizeRuleProfile(String profile) {
 		return PROFILE_ORAJA.equalsIgnoreCase(profile) ? PROFILE_ORAJA : PROFILE_LR2;

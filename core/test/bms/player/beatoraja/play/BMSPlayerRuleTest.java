@@ -20,6 +20,10 @@ class BMSPlayerRuleTest {
                 BMSPlayerRule.LR2,
                 BMSPlayerRule.getBMSPlayerRule(Mode.BEAT_7K)
         );
+		assertEquals(
+				BMSPlayerRule.NoteJudgementBehavior.LR2ORAJA,
+				BMSPlayerRule.getBMSPlayerRule(Mode.BEAT_7K).noteJudgement
+		);
 
         BMSPlayerRule.setConfiguredRuleProfile("oraja");
         assertEquals(
@@ -30,6 +34,10 @@ class BMSPlayerRuleTest {
                 BMSPlayerRule.Beatoraja_9,
                 BMSPlayerRule.getBMSPlayerRule(Mode.POPN_9K)
         );
+		assertEquals(
+				BMSPlayerRule.NoteJudgementBehavior.BEATORAJA,
+				BMSPlayerRule.getBMSPlayerRule(Mode.BEAT_7K).noteJudgement
+		);
     }
 
     @Test

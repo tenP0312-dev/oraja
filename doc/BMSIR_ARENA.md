@@ -156,8 +156,10 @@ disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
 The launcher setting `判定・ゲージ` selects the rule profile used for ordinary
 play and for creating managed rooms:
 
-- `LR2`: LR2 judge windows, gauge behavior, and default TOTAL.
-- `oraja`: the original beatoraja rule set for each key mode.
+- `LR2`: LR2 judge windows, gauge behavior, default TOTAL, multi-BAD note
+  selection, and LR2oraja long-note late-BAD handling.
+- `oraja`: the original beatoraja rule set for each key mode, including
+  single-target BAD selection and the original long-note late-BAD handling.
 
 Rated Arena is always LR2. Managed rooms use the host's selected profile.
 Every participant must use

@@ -17,6 +17,7 @@ import bms.model.*;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
+import bms.player.beatoraja.play.BMSPlayerRule.NoteJudgementBehavior;
 import bms.player.beatoraja.play.JudgeProperty.MissCondition;
 import bms.player.beatoraja.play.JudgeProperty.NoteType;
 import bms.player.beatoraja.skin.SkinPropertyMapper;
@@ -143,7 +144,9 @@ public class JudgeManager {
 
     private int pressesSinceLastAutoadjust = 0;
 
-    private MultiBadCollector multiBadCollector = new MultiBadCollector();
+    private MultiBadCollector multiBadCollector;
+
+    private NoteJudgementBehavior noteJudgementBehavior;
 
     public JudgeManager(BMSPlayer main) {
         this.main = main;
@@ -170,9 +173,11 @@ public class JudgeManager {
         Lane[] lanes = model.getLanes();
 
         algorithm = JudgeAlgorithm.valueOf(resource.getPlayerConfig().getPlayConfig(orgmode).getPlayconfig().getJudgetype());
-        JudgeProperty rule = BMSPlayerRule.getBMSPlayerRule(orgmode).judge;
+        BMSPlayerRule playerRule = BMSPlayerRule.getBMSPlayerRule(orgmode);
+        JudgeProperty rule = playerRule.judge;
         score.setJudgeAlgorithm(algorithm);
-        score.setRule(BMSPlayerRule.getBMSPlayerRule(orgmode));
+        score.setRule(playerRule);
+        noteJudgementBehavior = playerRule.noteJudgement;
         
         combocond = rule.combo;
         miss = rule.miss;
@@ -240,7 +245,7 @@ public class JudgeManager {
 
         Arrays.fill(recentJudges, Long.MIN_VALUE);
         this.recentJudgesIndex = 0;
-        multiBadCollector = new MultiBadCollector();
+        multiBadCollector = createMultiBadCollector(playerRule);
     }
     
     private float getKeyVolume() {
@@ -453,14 +458,13 @@ public class JudgeManager {
                                             && (dmtime > mjudge[2][1] || dmtime < mjudge[2][0]))))) {
                                 if (judgenote.getState() != 0) {
                                     judge = (dmtime >= mjudge[4][0] && dmtime <= mjudge[4][1]) ? 5 : 6;
-                                } else if (judgenote instanceof LongNote && dmtime < mjudge[2][0]) {
-                                    //LR2oraja: Remove late bad for LN
-                                    judge = 6;
                                 } else {
-                                    for (judge = 0; judge < mjudge.length
-                                            && !(dmtime >= mjudge[judge][0] && dmtime <= mjudge[judge][1]); judge++) {
-                                    }
-                                    judge = (judge >= 4 ? judge + 1 : judge);
+                                    judge = resolveUnjudgedPressJudge(
+                                            noteJudgementBehavior,
+                                            judgenote,
+                                            dmtime,
+                                            mjudge
+                                    );
                                 }
                                 
                                 if(judge < 6) {
@@ -1065,9 +1069,32 @@ public class JudgeManager {
         }
     }
 
-    private final class MultiBadCollector {
+    static int resolveUnjudgedPressJudge(
+            NoteJudgementBehavior behavior,
+            Note note,
+            long dmtime,
+            long[][] mjudge
+    ) {
+        if (behavior.suppressesLongNoteLateBad()
+                && note instanceof LongNote
+                && dmtime < mjudge[2][0]) {
+            return 6;
+        }
+
+        int judge = 0;
+        for (; judge < mjudge.length
+                && !(dmtime >= mjudge[judge][0] && dmtime <= mjudge[judge][1]); judge++) {
+        }
+        return judge >= 4 ? judge + 1 : judge;
+    }
+
+    static MultiBadCollector createMultiBadCollector(BMSPlayerRule rule) {
+        return new MultiBadCollector(rule.noteJudgement.allowsMultipleBadNotesPerPress());
+    }
+
+    static final class MultiBadCollector {
         private long[][] mjudge;
-        private boolean enabled;
+        private final boolean enabled;
 
         public Note[] noteList;
         public long[] timeList;
@@ -1075,19 +1102,12 @@ public class JudgeManager {
         public int arrayStart;
 
 
-        public MultiBadCollector() {
+        MultiBadCollector(boolean enabled) {
             noteList = new Note[256];
             timeList = new long[256];
             size = 0;
             arrayStart = 0;
-            enabled = true;
-        }
-
-        public void setEnabled(boolean enabled) {
             this.enabled = enabled;
-            if (!this.enabled) {
-                clear();
-            }
         }
 
         public void clear() {
