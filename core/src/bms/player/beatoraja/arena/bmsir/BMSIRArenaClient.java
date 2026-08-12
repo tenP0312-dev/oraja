@@ -257,6 +257,7 @@ public final class BMSIRArenaClient {
                 controller.getPlayerConfig().isBmsirArenaDetailedLogEnabled()
         );
         BMSIRManiacApiClient.syncOwnScoresAsync(controller);
+        BMSIRMyTableClient.initialize(controller);
         BMSIRArenaLog.event(
                 "initialize",
                 "client_version", CLIENT_VERSION,
@@ -360,6 +361,7 @@ public final class BMSIRArenaClient {
     }
 
     public static synchronized void shutdown() {
+        BMSIRMyTableClient.shutdown();
         BMSIRArenaLog.event(
                 "shutdown",
                 "match_id", currentMatchId,

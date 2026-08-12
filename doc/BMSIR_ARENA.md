@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.35`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.36`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -13,6 +13,16 @@ the lowest disabled player's peak remains the guard. It also includes named
 public/code-only rooms, explicit between-game READY, custom-table rooms,
 server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
+
+Version `0.4.14.36` adds a native `難易度表編集` overlay tab. It loads only
+the signed-in player's active BMS-IR My Difficulty Table, can create or rename
+it, and can add/update/remove the chart currently selected in Music Select with
+a level and comment. Each save includes the last server revision; a concurrent
+Web/client edit reloads the authoritative table instead of being overwritten.
+Successful responses replace one stable in-memory table bar from the selector
+root on the render thread, so the game does not need to restart and stale
+folder objects are not retained. Empty tables appear after their first chart is
+added. Bulk entry/order and My Dan/course editing remain on the Web editor.
 
 Version `0.4.14.35` optionally adds IIDX FHS after the five legacy Music
 Select HS-FIX values, lets players remove judge-rank sorting from the normal
@@ -704,7 +714,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.35-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.36-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -725,7 +735,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.35-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.36-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -741,7 +751,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.35-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.36-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
