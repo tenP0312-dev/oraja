@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.36`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.37`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -25,12 +25,22 @@ player's table cannot be targeted and a concurrent Web/client edit reloads the
 authoritative selected table instead of being overwritten. Child-table levels
 managed by a cross-game master are shown read-only and continue to come from
 the master.
+Version `0.4.14.37` lets an existing table hold metadata and up to 64
+selected-chart add/update/remove changes as an in-memory draft. The overlay
+shows the pending count and
+list, supports per-change undo and discard-all, then saves the complete draft
+atomically. A revision conflict keeps the draft, loads the latest server state,
+and requires an explicit review/rebase before retry. Reload and table switching
+cannot silently discard pending work; drafts are lost when the client exits.
+New-table creation remains immediate so the server can assign its ID.
 Successful responses replace one stable in-memory table bar from the selector
-root on the render thread, so the game does not need to restart and stale
-folder objects are not retained. Empty tables appear after their first chart is
-added. Bulk entry/order and My Dan/course editing remain on the Web editor.
+root on the render thread, so one batch causes one hot reload without a game
+restart or stale folder objects. Empty tables appear after their first saved
+chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
+Web editor.
 
-Clicking an Arena room-name, chat, or My Difficulty Table text field places an
+In the same version, clicking an Arena room-name, chat, or My Difficulty Table
+text field places an
 IME-capable OS text control directly over the same field. Japanese conversion
 text is therefore visible in its normal input position before it is committed,
 without a separate dialog. These fields reserve UTF-8 capacity by the
@@ -732,7 +742,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.36-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.37-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -753,7 +763,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.36-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.37-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -769,7 +779,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.36-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.37-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

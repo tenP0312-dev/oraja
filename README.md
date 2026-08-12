@@ -10,11 +10,13 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.36**. This source adds an
+The current client source version is **0.4.14.37**. This source adds an
 owner-only My Difficulty Table editor to the Arena overlay and hot-reloads its
 server-confirmed table bar in Music Select without restarting the game. When
 the authenticated BMS-IR system owner has multiple tables, the overlay lists
-them and requires an explicit edit target before any mutation.
+them and requires an explicit edit target before any mutation. Existing-table
+metadata and up to 64 selected-chart changes can be staged, reviewed, undone,
+and saved together for one authoritative in-game refresh.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
