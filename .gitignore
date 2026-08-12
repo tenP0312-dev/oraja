@@ -18,6 +18,7 @@ config.json
 config_sys.json
 beatoraja.jar
 beatoraja_log.*
+/logs/
 /bin/
 b.bat
 /*.dll

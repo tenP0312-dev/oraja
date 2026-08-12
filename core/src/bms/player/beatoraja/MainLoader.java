@@ -40,6 +40,7 @@ import bms.player.beatoraja.launcher.PlayConfigurationView;
 import bms.player.beatoraja.play.bga.FFmpegNativeLoader;
 import bms.player.beatoraja.song.SQLiteSongDatabaseAccessor;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
+import bms.player.beatoraja.system.ClientLogDirectory;
 import org.slf4j.jul.JULServiceProvider;
 
 /**
@@ -69,7 +70,10 @@ public class MainLoader extends Application {
 
 		java.util.logging.Logger rootLogger = LogManager.getLogManager().getLogger("");
 		try {
-			rootLogger.addHandler(new FileHandler("beatoraja_log.xml"));
+			ClientLogDirectory.create();
+			rootLogger.addHandler(new FileHandler(
+					ClientLogDirectory.resolve("beatoraja_log.xml").toString()
+			));
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
