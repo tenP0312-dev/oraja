@@ -563,6 +563,19 @@ public class BMSPlayerInputProcessor {
 		scrollX = scrollY = 0;
 	}
 
+	public void suppressCapturedUiInput(boolean keyboardCaptured, boolean mouseCaptured) {
+		long now = System.nanoTime() / 1000 - starttime;
+		if (keyboardCaptured) {
+			kbinput.beginCapturedKeyboardInput(now);
+		}
+		if (mouseCaptured) {
+			kbinput.releaseCapturedMouseInput(now);
+			mousepressed = false;
+			mousedragged = false;
+			resetScroll();
+		}
+	}
+
 	public void poll() {
 		final long now = System.nanoTime() / 1000 - starttime;
 		kbinput.poll(now);

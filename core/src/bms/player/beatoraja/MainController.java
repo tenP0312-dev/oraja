@@ -1149,6 +1149,10 @@ public class MainController {
 		imGui.start();
 		imGui.render();
 		imGui.end();
+		input.suppressCapturedUiInput(
+				ImGuiInputCapture.isKeyboardCaptured(),
+				ImGuiInputCapture.isMouseCaptured()
+		);
 
 		// TODO renderループに入れるのではなく、MusicDownloadProcessorのListenerとして実装したほうがいいのでは
 		if(download != null && download.isDownload()){

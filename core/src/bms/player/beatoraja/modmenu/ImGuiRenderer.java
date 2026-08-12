@@ -38,6 +38,8 @@ public class ImGuiRenderer {
 
     public static int windowWidth;
     public static int windowHeight;
+    private static volatile int windowScreenX;
+    private static volatile int windowScreenY;
 
     private static ImGuiImplGlfw imGuiGlfw;
     private static ImGuiImplGl3 imGuiGl3;
@@ -118,6 +120,13 @@ public class ImGuiRenderer {
            Gdx.input.setInputProcessor(tmpProcessor);
             tmpProcessor = null;
         }
+        int[] x = new int[1];
+        int[] y = new int[1];
+        GLFW.glfwGetWindowPos(windowHandle, x, y);
+        windowScreenX = x[0];
+        windowScreenY = y[0];
+        windowWidth = Gdx.graphics.getWidth();
+        windowHeight = Gdx.graphics.getHeight();
         imGuiGl3.newFrame();
         imGuiGlfw.newFrame();
         ImGui.newFrame();
@@ -227,14 +236,18 @@ public class ImGuiRenderer {
 
 
     public static void end() {
-        BMSIRArenaOverlay.updateKeyboardInputCapture(
-                ImGui.getIO().getWantCaptureKeyboard()
-                        || ImGui.getIO().getWantTextInput()
+        ImGuiIO io = ImGui.getIO();
+        ImGuiInputCapture.updateFromImGui(
+                io.getWantCaptureKeyboard(),
+                io.getWantTextInput(),
+                io.getWantCaptureMouse(),
+                ImGui.isAnyItemFocused(),
+                ImGui.isAnyItemActive()
         );
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
-        if (ImGui.getIO().getWantCaptureKeyboard() || ImGui.getIO().getWantCaptureMouse()) {
+        if (ImGuiInputCapture.isKeyboardCaptured() || ImGuiInputCapture.isMouseCaptured()) {
             tmpProcessor = Gdx.input.getInputProcessor();
             Gdx.input.setInputProcessor(null);
         }
@@ -271,6 +284,14 @@ public class ImGuiRenderer {
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.close(SHOW_MANIAC_OPTIONS);
         }
+    }
+
+    public static int getWindowScreenX() {
+        return windowScreenX;
+    }
+
+    public static int getWindowScreenY() {
+        return windowScreenY;
     }
 
     public static void moveManiacOptionsSelection(int delta) {

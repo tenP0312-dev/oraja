@@ -5,6 +5,7 @@ import java.util.Arrays;
 import bms.player.beatoraja.PlayModeConfig.KeyboardConfig;
 import bms.player.beatoraja.Resolution;
 import bms.player.beatoraja.modmenu.ArenaMenu;
+import bms.player.beatoraja.modmenu.ImGuiInputCapture;
 import bms.player.beatoraja.modmenu.SkinWidgetManager;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import com.badlogic.gdx.Gdx;
@@ -37,6 +38,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	private int lastPressedKey = -1;
 
 	private boolean textmode = false;
+	private boolean keyboardCaptureActive;
 
 	/**
 	 * 画面の解像度。マウスの入力イベント処理で使用
@@ -99,12 +101,18 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.clear();
 	}
 
-	public void poll(final long microtime) {
-		// NOTE: For further dev came here, it's better to wrap this variable instead of
-		// accessing imgui menu's field directly
-        boolean acceptInput = !SkinWidgetManager.focus
-                && !ArenaMenu.isFocused
-                && !BMSIRArenaOverlay.isKeyboardInputCaptured();
+	public synchronized void poll(final long microtime) {
+		boolean captureRequested = SkinWidgetManager.focus
+				|| ArenaMenu.isFocused
+				|| BMSIRArenaOverlay.isHotkeyCaptureActive()
+				|| ImGuiInputCapture.isKeyboardCaptured();
+		if (captureRequested) {
+			keyboardCaptureActive = true;
+		}
+		boolean acceptInput = !captureRequested && !keyboardCaptureActive;
+		if (!captureRequested && keyboardCaptureActive && capturedKeysReleased()) {
+			keyboardCaptureActive = false;
+		}
 		if (acceptInput && !textmode) {
 			for (int i = 0; i < keys.length; i++) {
 				if(keys[i] < 0) {
@@ -142,10 +150,14 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 			}
 		}
 		
-		mouseScratchInput.poll(microtime);
+		if (ImGuiInputCapture.isMouseCaptured()) {
+			mouseScratchInput.releaseCapturedInput(microtime);
+		} else {
+			mouseScratchInput.poll(microtime);
+		}
 	}
 
-	private void releaseCapturedKeys(long microtime) {
+	public synchronized void releaseCapturedKeys(long microtime) {
 		for (int index = 0; index < keys.length; index++) {
 			int keycode = keys[index];
 			if (keycode >= 0 && keystate[keycode]) {
@@ -168,6 +180,49 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 			keytime[key.keycode] = Long.MIN_VALUE;
 			keymodifiers[key.keycode] = 0;
 		}
+	}
+
+	public synchronized void beginCapturedKeyboardInput(long microtime) {
+		keyboardCaptureActive = true;
+		releaseCapturedKeys(microtime);
+	}
+
+	public synchronized void releaseCapturedMouseInput(long microtime) {
+		mouseScratchInput.releaseCapturedInput(microtime);
+	}
+
+	boolean isPhysicalKeyPressed(int index) {
+		return index >= 0
+				&& index < keys.length
+				&& keys[index] >= 0
+				&& Gdx.input.isKeyPressed(keys[index]);
+	}
+
+	boolean isPhysicalStartPressed() {
+		return control[0] >= 0 && Gdx.input.isKeyPressed(control[0]);
+	}
+
+	boolean isPhysicalSelectPressed() {
+		return control[1] >= 0 && Gdx.input.isKeyPressed(control[1]);
+	}
+
+	private boolean capturedKeysReleased() {
+		for (int keycode : keys) {
+			if (keycode >= 0 && Gdx.input.isKeyPressed(keycode)) {
+				return false;
+			}
+		}
+		for (int keycode : control) {
+			if (keycode >= 0 && Gdx.input.isKeyPressed(keycode)) {
+				return false;
+			}
+		}
+		for (ControlKeys key : ControlKeys.values()) {
+			if (Gdx.input.isKeyPressed(key.keycode)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private int currentlyHeldModifiers() {

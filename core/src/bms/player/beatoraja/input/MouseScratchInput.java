@@ -3,6 +3,7 @@ package bms.player.beatoraja.input;
 import bms.player.beatoraja.PlayModeConfig.KeyboardConfig;
 import bms.player.beatoraja.PlayModeConfig.MouseScratchConfig;
 import com.badlogic.gdx.Gdx;
+import java.util.Arrays;
 
 public class MouseScratchInput {
     private final BMSPlayerInputProcessor bmsPlayerInputProcessor;
@@ -43,6 +44,7 @@ public class MouseScratchInput {
      * スクラッチ距離
      */
     private int mouseScratchDistance = 150;
+    private boolean inputCaptured;
 
     public MouseScratchInput(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyBoardInputProcesseor keyboardInputProcessor, KeyboardConfig config) {
         this.bmsPlayerInputProcessor = bmsPlayerInputProcessor;
@@ -54,6 +56,12 @@ public class MouseScratchInput {
 		final long presstime = microtime / 1000;
         // MOUSEの更新
         if (mouseScratchEnabled) {
+            if (inputCaptured) {
+                inputCaptured = false;
+                mouseToAnalog.discardCurrentMovement();
+                clear();
+                return;
+            }
             mouseToAnalog.update();
             for (int i=0; i<mouseScratchAlgorithm.length; i++) {
                 mouseScratchAlgorithm[i].update(presstime);
@@ -134,6 +142,42 @@ public class MouseScratchInput {
         lastMouseScratch = -1;
     }
 
+    public void releaseCapturedInput(long microtime) {
+        if (!mouseScratchEnabled) {
+            return;
+        }
+        for (int index = 0; index < keys.length; index++) {
+            int axis = keys[index];
+            if (axis >= 0
+                    && mouseScratchState[axis]
+                    && !keyboardInputProcessor.isPhysicalKeyPressed(index)) {
+                bmsPlayerInputProcessor.keyChanged(
+                        keyboardInputProcessor,
+                        microtime,
+                        index,
+                        false
+                );
+            }
+            if (axis >= 0) {
+                bmsPlayerInputProcessor.setAnalogState(index, false, 0);
+            }
+        }
+        if (control[0] >= 0
+                && mouseScratchState[control[0]]
+                && !keyboardInputProcessor.isPhysicalStartPressed()) {
+            bmsPlayerInputProcessor.startChanged(false);
+        }
+        if (control[1] >= 0
+                && mouseScratchState[control[1]]
+                && !keyboardInputProcessor.isPhysicalSelectPressed()) {
+            bmsPlayerInputProcessor.setSelectPressed(false);
+        }
+        Arrays.fill(mouseScratchState, false);
+        Arrays.fill(mouseScratchChanged, false);
+        inputCaptured = true;
+        clear();
+    }
+
     private float getMouseAnalogValue(int mouseInput) {
         final boolean plus = mouseInput%2 == 0;
         final boolean xAxis = mouseInput < 2;
@@ -172,6 +216,10 @@ public class MouseScratchInput {
 
             totalXDistanceMoved = ((totalXDistanceMoved+xDistanceMoved)%domain + domain)%domain;
             totalYDistanceMoved = ((totalYDistanceMoved+yDistanceMoved)%domain + domain)%domain;
+        }
+
+        public void discardCurrentMovement() {
+            Gdx.input.setCursorPosition(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
         }
 
         public int getScratchDistance() {
