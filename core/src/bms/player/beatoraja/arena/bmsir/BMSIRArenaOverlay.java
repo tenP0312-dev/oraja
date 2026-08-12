@@ -16,6 +16,7 @@ import imgui.ImColor;
 import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
@@ -67,22 +68,21 @@ public final class BMSIRArenaOverlay {
     private static boolean confirmWithdrawal;
     private static boolean confirmRoomDisband;
     private static boolean hotkeyCaptureActive;
-    private static volatile boolean keyboardInputCaptured;
     private static final Set<Integer> HOTKEY_CAPTURE_KEYS = new LinkedHashSet<>();
-    private static final ImString CHAT_INPUT = new ImString(201);
-    private static final ImString LOBBY_CHAT_INPUT = new ImString(201);
+    private static final ImString CHAT_INPUT = new ImString(utf8BufferCapacity(200));
+    private static final ImString LOBBY_CHAT_INPUT = new ImString(utf8BufferCapacity(200));
     private static final ImString PRIVATE_ROOM_CODE = new ImString(7);
-    private static final ImString ROOM_NAME = new ImString(41);
+    private static final ImString ROOM_NAME = new ImString(utf8BufferCapacity(40));
     private static final ImString ROOM_PASSWORD = new ImString(65);
     private static final ImString USER_TABLE_ID = new ImString(12);
     private static final ImString USER_TABLE_KEY = new ImString(96);
     // ImString capacity is UTF-8 bytes; reserve four bytes per server-side
     // Unicode code point so Japanese metadata is not cut mid-character.
-    private static final ImString MY_TABLE_NAME = new ImString(321);
-    private static final ImString MY_TABLE_SYMBOL = new ImString(65);
-    private static final ImString MY_TABLE_DESCRIPTION = new ImString(4001);
-    private static final ImString MY_TABLE_LEVEL = new ImString(129);
-    private static final ImString MY_TABLE_COMMENT = new ImString(801);
+    private static final ImString MY_TABLE_NAME = new ImString(utf8BufferCapacity(80));
+    private static final ImString MY_TABLE_SYMBOL = new ImString(utf8BufferCapacity(16));
+    private static final ImString MY_TABLE_DESCRIPTION = new ImString(utf8BufferCapacity(1000));
+    private static final ImString MY_TABLE_LEVEL = new ImString(utf8BufferCapacity(32));
+    private static final ImString MY_TABLE_COMMENT = new ImString(utf8BufferCapacity(200));
     private static final ImInt MY_TABLE_VISIBILITY = new ImInt(0);
     private static final ImInt MY_TABLE_SELECTION = new ImInt(0);
     private static String loadedMyTableRevision = "";
@@ -359,9 +359,9 @@ public final class BMSIRArenaOverlay {
         boolean creatingTable = createNewMyTable || (!hasTable && noOwnedTables && canCreate);
         boolean showTableForm = hasTable || creatingTable;
         if (showTableForm) {
-            ImGui.inputText(t("表名", "Table name") + "##my-table-name", MY_TABLE_NAME);
-            ImGui.inputText(t("記号", "Symbol") + "##my-table-symbol", MY_TABLE_SYMBOL);
-            ImGui.inputText(t("説明", "Description") + "##my-table-description", MY_TABLE_DESCRIPTION);
+            inputTextWithIme(t("表名", "Table name"), "my-table-name", MY_TABLE_NAME, 80);
+            inputTextWithIme(t("記号", "Symbol"), "my-table-symbol", MY_TABLE_SYMBOL, 16);
+            inputTextWithIme(t("説明", "Description"), "my-table-description", MY_TABLE_DESCRIPTION, 1000);
             ImGui.combo(
                     t("公開範囲", "Visibility") + "##my-table-visibility",
                     MY_TABLE_VISIBILITY,
@@ -432,7 +432,7 @@ public final class BMSIRArenaOverlay {
             ImGui.textWrapped(selectedSong.getFullTitle());
             ImGui.textDisabled(selectedKey);
             ImGui.beginDisabled(!levelEditable);
-            ImGui.inputText(t("レベル", "Level") + "##my-table-level", MY_TABLE_LEVEL);
+            inputTextWithIme(t("レベル", "Level"), "my-table-level", MY_TABLE_LEVEL, 32);
             ImGui.endDisabled();
             if (!levelEditable) {
                 ImGui.textDisabled(t(
@@ -440,7 +440,7 @@ public final class BMSIRArenaOverlay {
                         "Levels in this table are synchronized from its master table."
                 ));
             }
-            ImGui.inputText(t("コメント", "Comment") + "##my-table-comment", MY_TABLE_COMMENT);
+            inputTextWithIme(t("コメント", "Comment"), "my-table-comment", MY_TABLE_COMMENT, 200);
             ImGui.beginDisabled(
                     !editEntries || busy || (levelEditable && MY_TABLE_LEVEL.get().isBlank())
             );
@@ -2203,7 +2203,7 @@ public final class BMSIRArenaOverlay {
                     && ImGui.collapsingHeader(t("部屋主の詳細設定", "Host settings"))) {
                 ImGui.separator();
                 ImGui.text(t("変更すると全員の準備OKを解除します", "Changes clear every player's ready state"));
-                ImGui.inputText(t("部屋名", "Room name"), ROOM_NAME);
+                inputTextWithIme(t("部屋名", "Room name"), "host-room-name", ROOM_NAME, 40);
                 ImGui.combo(t("勝敗ルール", "Scoring"), SCORE_RULE, scoreRules());
                 ImGui.combo(t("強制ゲージ", "Forced gauge"), FORCED_GAUGE, forcedGauges());
                 ImGui.combo(t("選曲範囲", "Chart scope"), CHART_SCOPE, chartScopes());
@@ -2300,12 +2300,11 @@ public final class BMSIRArenaOverlay {
                 "空欄で新規作成、6文字を入力すると既存ルームへ参加",
                 "Leave blank to create, or enter six characters to join"
         ));
-        ImGui.inputText(
-                PRIVATE_ROOM_CODE.get().isBlank()
-                        ? t("部屋名", "Room name")
-                        : t("パスワード", "Password"),
-                PRIVATE_ROOM_CODE.get().isBlank() ? ROOM_NAME : ROOM_PASSWORD
-        );
+        if (PRIVATE_ROOM_CODE.get().isBlank()) {
+            inputTextWithIme(t("部屋名", "Room name"), "new-room-name", ROOM_NAME, 40);
+        } else {
+            ImGui.inputText(t("パスワード", "Password"), ROOM_PASSWORD);
+        }
         if (PRIVATE_ROOM_CODE.get().isBlank()) {
             ImGui.inputText(t("パスワード（任意）", "Password (optional)"), ROOM_PASSWORD);
         }
@@ -2693,7 +2692,12 @@ public final class BMSIRArenaOverlay {
             }
         }
         ImGui.endChild();
-        ImGui.inputText("##bmsir-arena-lobby-chat-input", LOBBY_CHAT_INPUT);
+        inputTextWithIme(
+                "",
+                "bmsir-arena-lobby-chat-input",
+                LOBBY_CHAT_INPUT,
+                200
+        );
         ImGui.sameLine();
         ImGui.beginDisabled(!BMSIRArenaClient.isConnected());
         if (
@@ -3009,7 +3013,12 @@ public final class BMSIRArenaOverlay {
             ImGui.textDisabled(t("対戦中の入力は無効です", "Chat input is disabled during play"));
             return;
         }
-        ImGui.inputText("##bmsir-arena-chat-input", CHAT_INPUT);
+        inputTextWithIme(
+                "",
+                "bmsir-arena-chat-input",
+                CHAT_INPUT,
+                200
+        );
         ImGui.sameLine();
         boolean send = ImGui.button(t("送信", "Send"));
         if (send && !CHAT_INPUT.get().isBlank()) {
@@ -3420,12 +3429,36 @@ public final class BMSIRArenaOverlay {
         return hotkeyCaptureActive;
     }
 
-    public static boolean isKeyboardInputCaptured() {
-        return keyboardInputCaptured || hotkeyCaptureActive;
+    static int utf8BufferCapacity(int maxCodePoints) {
+        return Math.max(0, maxCodePoints) * 4 + 1;
     }
 
-    public static void updateKeyboardInputCapture(boolean captured) {
-        keyboardInputCaptured = captured;
+    private static void inputTextWithIme(
+            String label,
+            String id,
+            ImString value,
+            int maxCodePoints
+    ) {
+        ImGui.inputText(
+                label + "##" + id,
+                value,
+                ImGuiInputTextFlags.ReadOnly
+        );
+        if (ImGui.isItemClicked()) {
+            float editorWidth = ImGui.getItemRectSizeX();
+            if (!label.isEmpty()) {
+                editorWidth -= ImGui.calcTextSizeX(label)
+                        + ImGui.getStyle().getItemInnerSpacingX();
+            }
+            ArenaInlineTextEditor.open(
+                    value,
+                    maxCodePoints,
+                    ImGui.getItemRectMinX(),
+                    ImGui.getItemRectMinY(),
+                    editorWidth,
+                    ImGui.getItemRectSizeY()
+            );
+        }
     }
 
     private static void tableText(String text) {

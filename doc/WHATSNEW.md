@@ -1,3 +1,11 @@
+# Unreleased
+
+- Japanese-capable Arena fields now place an IME-aware OS text control directly
+  over the clicked field, so conversion text remains visible in the normal
+  input position. Chat/room buffers also retain their limits for UTF-8 text.
+- ImGui-owned keyboard, NUMPAD, mouse-scratch, scroll, click, and drag input is
+  discarded before the underlying game or skin processes the same frame.
+
 # Arena oraja 0.4.14.18
 
 - Restored the launcher self-update path for users who skipped the previous

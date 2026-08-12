@@ -16,6 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 // ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
 @ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaOverlayTest {
+    @Test
+    void utf8InputBuffersReserveFourBytesPerCodePoint() {
+        assertEquals(801, BMSIRArenaOverlay.utf8BufferCapacity(200));
+        assertEquals(161, BMSIRArenaOverlay.utf8BufferCapacity(40));
+    }
+
     @AfterEach
     void resetLanguage() {
         BMSIRArenaI18n.setLanguage("ja");

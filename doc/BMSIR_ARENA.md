@@ -30,6 +30,14 @@ root on the render thread, so the game does not need to restart and stale
 folder objects are not retained. Empty tables appear after their first chart is
 added. Bulk entry/order and My Dan/course editing remain on the Web editor.
 
+Clicking an Arena room-name, chat, or My Difficulty Table text field places an
+IME-capable OS text control directly over the same field. Japanese conversion
+text is therefore visible in its normal input position before it is committed,
+without a separate dialog. These fields reserve UTF-8 capacity by the
+documented Unicode-character limit. While an ImGui item or the inline editor
+owns input, keyboard, NUMPAD shortcuts, mouse scratch, scroll, clicks, and
+drags are discarded before the underlying game or skin can consume them.
+
 Version `0.4.14.35` optionally adds IIDX FHS after the five legacy Music
 Select HS-FIX values, lets players remove judge-rank sorting from the normal
 sort cycle, and gives each added value its own unsupported-skin notice switch.
