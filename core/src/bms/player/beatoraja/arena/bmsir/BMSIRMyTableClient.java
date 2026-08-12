@@ -95,13 +95,30 @@ final class BMSIRMyTableClient {
     }
 
     static void requestSnapshot() {
-        requestSnapshot(SESSION.get());
+        requestSnapshot(SESSION.get(), currentTableId());
     }
 
     private static void requestSnapshot(long expectedSession) {
+        requestSnapshot(expectedSession, 0L);
+    }
+
+    private static void requestSnapshot(long expectedSession, long tableId) {
         ObjectNode payload = JSON.createObjectNode();
         payload.put("action", "snapshot");
+        withTableId(payload, tableId);
         submit(payload, expectedSession, text("再読み込みました", "Reloaded"));
+    }
+
+    static void selectTable(long tableId) {
+        if (tableId <= 0L) {
+            errorMessage = text("編集する難易度表を選んでください", "Select a table to edit");
+            return;
+        }
+        requestSnapshot(
+                SESSION.get(),
+                tableId
+        );
+        statusMessage = text("難易度表を切り替えています", "Switching difficulty table");
     }
 
     static void createTable(
@@ -135,6 +152,7 @@ final class BMSIRMyTableClient {
                 description,
                 visibility
         );
+        withTableId(payload, currentTableId());
         submit(payload, SESSION.get(), text("表情報を保存して本体へ反映しました", "Table details saved and applied"));
     }
 
@@ -145,6 +163,7 @@ final class BMSIRMyTableClient {
         }
         ObjectNode payload = JSON.createObjectNode();
         payload.put("action", "upsert_entry");
+        withTableId(payload, currentTableId());
         payload.put("expected_revision", currentRevision());
         payload.put("md5", normalizedHash(song.getMd5(), 32));
         payload.put("sha256", normalizedHash(song.getSha256(), 64));
@@ -161,6 +180,7 @@ final class BMSIRMyTableClient {
         }
         ObjectNode payload = JSON.createObjectNode();
         payload.put("action", "remove_entry");
+        withTableId(payload, currentTableId());
         payload.put("expected_revision", currentRevision());
         payload.put("entry_hash", entryHash);
         submit(payload, SESSION.get(), text("譜面を削除して本体へ反映しました", "Chart removed and applied"));
@@ -231,6 +251,28 @@ final class BMSIRMyTableClient {
         payload.put("description", description == null ? "" : description);
         payload.put("visibility", visibility == null ? "private" : visibility);
         return payload;
+    }
+
+    static ObjectNode withTableId(ObjectNode payload, long tableId) {
+        if (payload != null && tableId > 0L) {
+            payload.put("table_id", tableId);
+        }
+        return payload;
+    }
+
+    static long selectedTableId(JsonNode ownerSnapshot) {
+        if (ownerSnapshot == null) {
+            return 0L;
+        }
+        long selected = ownerSnapshot.path("selected_table_id").asLong(0L);
+        return selected > 0L
+                ? selected
+                : ownerSnapshot.path("table").path("id").asLong(0L);
+    }
+
+    static boolean selectionRequired(JsonNode ownerSnapshot) {
+        return ownerSnapshot != null
+                && ownerSnapshot.path("selection_required").asBoolean(false);
     }
 
     static TableData tableData(JsonNode ownerSnapshot) {
@@ -335,10 +377,12 @@ final class BMSIRMyTableClient {
                 JsonNode body = response.body();
                 if (response.status() == 409 && body.path("current").path("ok").asBoolean(false)) {
                     acceptSnapshot(body.path("current"), expectedSession);
-                    errorMessage = text(
-                            "Webまたは別のクライアントで更新されていたため、最新状態を再読み込みしました。内容を確認してもう一度保存してください",
-                            "The table changed elsewhere. The latest state was reloaded; review it and save again"
-                    );
+                    errorMessage = "selection_required".equals(body.path("error").asText())
+                            ? text("編集する難易度表を選んでください", "Select a table to edit")
+                            : text(
+                                    "Webまたは別のクライアントで更新されていたため、最新状態を再読み込みしました。内容を確認してもう一度保存してください",
+                                    "The table changed elsewhere. The latest state was reloaded; review it and save again"
+                            );
                     return;
                 }
                 if (response.status() < 200
@@ -391,6 +435,10 @@ final class BMSIRMyTableClient {
 
     private static String currentRevision() {
         return snapshot.path("revision").asText("none").trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static long currentTableId() {
+        return selectedTableId(snapshot);
     }
 
     private static Response post(MainController controller, ObjectNode payload) throws IOException {
@@ -501,6 +549,7 @@ final class BMSIRMyTableClient {
             case "chart_hash_required" -> text("譜面ハッシュを取得できません", "The chart hash is unavailable");
             case "entry_not_found" -> text("対象譜面は表にありません", "The chart is not in the table");
             case "table_not_found" -> text("マイ難易度表が見つかりません", "My Difficulty Table was not found");
+            case "selection_required" -> text("編集する難易度表を選んでください", "Select a table to edit");
             default -> text("保存に失敗しました", "Save failed") + " (HTTP " + status + ")";
         };
     }
@@ -511,6 +560,11 @@ final class BMSIRMyTableClient {
         empty.put("version", 1);
         empty.put("revision", "none");
         empty.putNull("table");
+        empty.putArray("tables");
+        empty.put("selected_table_id", 0);
+        empty.put("selection_required", false);
+        empty.put("can_create", true);
+        empty.put("can_create_multiple", false);
         return empty;
     }
 

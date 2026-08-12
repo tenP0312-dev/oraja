@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRMyTableClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -88,6 +89,36 @@ class BMSIRMyTableClientTest {
     }
 
     @Test
+    void targetsOnlyTheExplicitlySelectedTable() {
+        ObjectNode payload = BMSIRMyTableClient.withTableId(
+                JSON.createObjectNode().put("action", "update_table"),
+                37L
+        );
+        ObjectNode untargeted = BMSIRMyTableClient.withTableId(
+                JSON.createObjectNode().put("action", "create"),
+                0L
+        );
+
+        assertEquals(37L, payload.path("table_id").asLong());
+        assertTrue(untargeted.path("table_id").isMissingNode());
+    }
+
+    @Test
+    void readsSelectionStateFromMultiTableSnapshot() {
+        ObjectNode snapshot = snapshot();
+        snapshot.put("selected_table_id", 37L);
+        snapshot.put("selection_required", false);
+
+        assertEquals(37L, BMSIRMyTableClient.selectedTableId(snapshot));
+
+        snapshot.put("selected_table_id", 0L);
+        ((ObjectNode) snapshot.path("table")).put("id", 0L);
+        snapshot.put("selection_required", true);
+        assertEquals(0L, BMSIRMyTableClient.selectedTableId(snapshot));
+        assertTrue(BMSIRMyTableClient.selectionRequired(snapshot));
+    }
+
+    @Test
     void omitsMusicSelectBarUntilTableHasAChart() {
         ObjectNode snapshot = snapshot();
         ((ArrayNode) snapshot.path("table").path("entries")).removeAll();
@@ -103,6 +134,7 @@ class BMSIRMyTableClientTest {
         snapshot.put("ok", true);
         snapshot.put("revision", "d".repeat(64));
         ObjectNode table = snapshot.putObject("table");
+        table.put("id", 12L);
         table.put("name", "Owner Table");
         table.put("symbol", "★");
         table.put("visibility", "private");

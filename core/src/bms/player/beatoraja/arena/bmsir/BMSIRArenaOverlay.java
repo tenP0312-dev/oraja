@@ -84,8 +84,11 @@ public final class BMSIRArenaOverlay {
     private static final ImString MY_TABLE_LEVEL = new ImString(129);
     private static final ImString MY_TABLE_COMMENT = new ImString(801);
     private static final ImInt MY_TABLE_VISIBILITY = new ImInt(0);
+    private static final ImInt MY_TABLE_SELECTION = new ImInt(0);
     private static String loadedMyTableRevision = "";
+    private static long loadedMyTableId;
     private static String loadedMyTableChart = "";
+    private static boolean createNewMyTable;
     private static boolean confirmMyTableEntryRemoval;
     private static boolean updateRoomPassword;
     private static String loadedRoomCode = "";
@@ -254,20 +257,16 @@ public final class BMSIRArenaOverlay {
         String revision = snapshot.path("revision").asText("none");
         JsonNode table = snapshot.path("table");
         boolean hasTable = table.isObject();
-        if (!revision.equals(loadedMyTableRevision)) {
-            if (hasTable) {
-                MY_TABLE_NAME.set(table.path("name").asText(""));
-                MY_TABLE_SYMBOL.set(table.path("symbol").asText(""));
-                MY_TABLE_DESCRIPTION.set(table.path("description").asText(""));
-                MY_TABLE_VISIBILITY.set(visibilityIndex(table.path("visibility").asText("private")));
-            } else {
-                MY_TABLE_NAME.set(t("マイ難易度表", "My Difficulty Table"));
-                MY_TABLE_SYMBOL.set("");
-                MY_TABLE_DESCRIPTION.set("");
-                MY_TABLE_VISIBILITY.set(0);
-            }
+        JsonNode tables = snapshot.path("tables");
+        long selectedTableId = BMSIRMyTableClient.selectedTableId(snapshot);
+        boolean canCreate = snapshot.path("can_create").asBoolean(!hasTable);
+        boolean canCreateMultiple = snapshot.path("can_create_multiple").asBoolean(false);
+        if (!revision.equals(loadedMyTableRevision) || selectedTableId != loadedMyTableId) {
+            setMyTableEditorFields(table, canCreateMultiple);
             loadedMyTableRevision = revision;
+            loadedMyTableId = selectedTableId;
             loadedMyTableChart = "";
+            createNewMyTable = false;
             confirmMyTableEntryRemoval = false;
         }
 
@@ -276,6 +275,49 @@ public final class BMSIRArenaOverlay {
                 "選曲中の譜面を表へ登録し、保存後すぐ本体の難易度表バーを差し替えます。",
                 "Register the selected chart and replace the in-game table bar immediately after saving."
         ));
+        if (tables.isArray() && !tables.isEmpty()) {
+            String[] tableOptions = new String[tables.size() + 1];
+            long[] tableIds = new long[tables.size() + 1];
+            tableOptions[0] = t("編集する表を選択", "Select a table to edit");
+            int selectedIndex = 0;
+            for (int index = 0; index < tables.size(); index++) {
+                JsonNode option = tables.get(index);
+                long optionId = option.path("id").asLong(0L);
+                tableIds[index + 1] = optionId;
+                tableOptions[index + 1] = f(
+                        "%s (#%d / %d譜面)",
+                        "%s (#%d / %d charts)",
+                        option.path("name").asText(t("名称未設定", "Untitled")),
+                        optionId,
+                        option.path("entry_count").asInt(0)
+                );
+                if (optionId == selectedTableId) {
+                    selectedIndex = index + 1;
+                }
+            }
+            if (!busy) {
+                MY_TABLE_SELECTION.set(selectedIndex);
+            }
+            ImGui.beginDisabled(busy);
+            if (ImGui.combo(
+                    t("編集対象", "Edit target") + "##my-table-selection",
+                    MY_TABLE_SELECTION,
+                    tableOptions
+            )) {
+                int index = MY_TABLE_SELECTION.get();
+                if (index > 0 && index < tableIds.length) {
+                    createNewMyTable = false;
+                    BMSIRMyTableClient.selectTable(tableIds[index]);
+                }
+            }
+            ImGui.endDisabled();
+            if (BMSIRMyTableClient.selectionRequired(snapshot)) {
+                ImGui.textDisabled(t(
+                        "複数の表があります。編集対象を明示的に選んでください。",
+                        "Multiple tables are available. Choose the edit target explicitly."
+                ));
+            }
+        }
         ImGui.beginDisabled(busy);
         if (ImGui.button(t("サーバーから再読み込み", "Reload from server"))) {
             BMSIRMyTableClient.requestSnapshot();
@@ -293,45 +335,78 @@ public final class BMSIRArenaOverlay {
             ));
         }
 
-        ImGui.separator();
-        ImGui.inputText(t("表名", "Table name") + "##my-table-name", MY_TABLE_NAME);
-        ImGui.inputText(t("記号", "Symbol") + "##my-table-symbol", MY_TABLE_SYMBOL);
-        ImGui.inputText(t("説明", "Description") + "##my-table-description", MY_TABLE_DESCRIPTION);
-        ImGui.combo(
-                t("公開範囲", "Visibility") + "##my-table-visibility",
-                MY_TABLE_VISIBILITY,
-                new String[]{
-                        t("非公開", "Private"),
-                        t("限定公開", "Unlisted"),
-                        t("公開", "Public")
+        if (canCreateMultiple) {
+            ImGui.sameLine();
+            ImGui.beginDisabled(busy);
+            if (!createNewMyTable) {
+                if (ImGui.button(t("新しい表を作成", "Create another table"))) {
+                    createNewMyTable = true;
+                    setMyTableEditorFields(null, true);
+                    loadedMyTableChart = "";
+                    confirmMyTableEntryRemoval = false;
                 }
-        );
-        boolean tableActionDisabled = busy || MY_TABLE_NAME.get().isBlank();
-        ImGui.beginDisabled(tableActionDisabled);
-        if (!hasTable) {
-            if (ImGui.button(t("作成して本体へ反映", "Create and apply"))) {
-                BMSIRMyTableClient.createTable(
+            } else if (ImGui.button(t("新規作成をやめる", "Cancel new table"))) {
+                createNewMyTable = false;
+                setMyTableEditorFields(table, true);
+                loadedMyTableChart = "";
+                confirmMyTableEntryRemoval = false;
+            }
+            ImGui.endDisabled();
+        }
+
+        ImGui.separator();
+        boolean noOwnedTables = !tables.isArray() || tables.isEmpty();
+        boolean creatingTable = createNewMyTable || (!hasTable && noOwnedTables && canCreate);
+        boolean showTableForm = hasTable || creatingTable;
+        if (showTableForm) {
+            ImGui.inputText(t("表名", "Table name") + "##my-table-name", MY_TABLE_NAME);
+            ImGui.inputText(t("記号", "Symbol") + "##my-table-symbol", MY_TABLE_SYMBOL);
+            ImGui.inputText(t("説明", "Description") + "##my-table-description", MY_TABLE_DESCRIPTION);
+            ImGui.combo(
+                    t("公開範囲", "Visibility") + "##my-table-visibility",
+                    MY_TABLE_VISIBILITY,
+                    new String[]{
+                            t("非公開", "Private"),
+                            t("限定公開", "Unlisted"),
+                            t("公開", "Public")
+                    }
+            );
+            boolean tableActionDisabled = busy || MY_TABLE_NAME.get().isBlank();
+            ImGui.beginDisabled(tableActionDisabled);
+            if (creatingTable) {
+                if (ImGui.button(t("作成して本体へ反映", "Create and apply"))) {
+                    BMSIRMyTableClient.createTable(
+                            MY_TABLE_NAME.get(),
+                            MY_TABLE_SYMBOL.get(),
+                            MY_TABLE_DESCRIPTION.get(),
+                            visibilityValue(MY_TABLE_VISIBILITY.get())
+                    );
+                }
+            } else if (ImGui.button(t("表情報を保存して本体へ反映", "Save details and apply"))) {
+                BMSIRMyTableClient.updateTable(
                         MY_TABLE_NAME.get(),
                         MY_TABLE_SYMBOL.get(),
                         MY_TABLE_DESCRIPTION.get(),
                         visibilityValue(MY_TABLE_VISIBILITY.get())
                 );
             }
-        } else if (ImGui.button(t("表情報を保存して本体へ反映", "Save details and apply"))) {
-            BMSIRMyTableClient.updateTable(
-                    MY_TABLE_NAME.get(),
-                    MY_TABLE_SYMBOL.get(),
-                    MY_TABLE_DESCRIPTION.get(),
-                    visibilityValue(MY_TABLE_VISIBILITY.get())
-            );
+            ImGui.endDisabled();
+        } else {
+            ImGui.textDisabled(t(
+                    "編集対象の表を選ぶと、表情報と譜面編集を表示します。",
+                    "Choose a table to show its details and chart editor."
+            ));
         }
-        ImGui.endDisabled();
 
         ImGui.separator();
         ImGui.text(t("選択中の譜面", "Selected chart"));
+        boolean editEntries = hasTable && !creatingTable;
+        boolean levelEditable = table.path("level_editable").asBoolean(true);
         SongData selectedSong = BMSIRMyTableClient.selectedSong();
         String selectedKey = BMSIRMyTableClient.chartKey(selectedSong);
-        JsonNode selectedEntry = BMSIRMyTableClient.entryFor(snapshot, selectedSong);
+        JsonNode selectedEntry = editEntries
+                ? BMSIRMyTableClient.entryFor(snapshot, selectedSong)
+                : null;
         String editorChartState = revision + ":" + selectedKey;
         if (!editorChartState.equals(loadedMyTableChart)) {
             if (selectedEntry != null) {
@@ -356,9 +431,19 @@ public final class BMSIRArenaOverlay {
         } else {
             ImGui.textWrapped(selectedSong.getFullTitle());
             ImGui.textDisabled(selectedKey);
+            ImGui.beginDisabled(!levelEditable);
             ImGui.inputText(t("レベル", "Level") + "##my-table-level", MY_TABLE_LEVEL);
+            ImGui.endDisabled();
+            if (!levelEditable) {
+                ImGui.textDisabled(t(
+                        "この表のレベルはマスター表から同期されます。",
+                        "Levels in this table are synchronized from its master table."
+                ));
+            }
             ImGui.inputText(t("コメント", "Comment") + "##my-table-comment", MY_TABLE_COMMENT);
-            ImGui.beginDisabled(!hasTable || busy || MY_TABLE_LEVEL.get().isBlank());
+            ImGui.beginDisabled(
+                    !editEntries || busy || (levelEditable && MY_TABLE_LEVEL.get().isBlank())
+            );
             if (ImGui.button(selectedEntry == null
                     ? t("表へ追加して本体へ反映", "Add and apply")
                     : t("登録内容を更新して本体へ反映", "Update and apply"))) {
@@ -404,6 +489,22 @@ public final class BMSIRArenaOverlay {
                 "一括登録・並び順・My Dan／コース編集はWeb版を利用してください。空の表は最初の譜面登録後に本体へ表示されます。",
                 "Use the Web editor for bulk entry, ordering, and My Dan/courses. An empty table appears in Music Select after its first chart is added."
         ));
+    }
+
+    private static void setMyTableEditorFields(JsonNode table, boolean systemDefault) {
+        if (table != null && table.isObject()) {
+            MY_TABLE_NAME.set(table.path("name").asText(""));
+            MY_TABLE_SYMBOL.set(table.path("symbol").asText(""));
+            MY_TABLE_DESCRIPTION.set(table.path("description").asText(""));
+            MY_TABLE_VISIBILITY.set(
+                    visibilityIndex(table.path("visibility").asText("private"))
+            );
+            return;
+        }
+        MY_TABLE_NAME.set(t("マイ難易度表", "My Difficulty Table"));
+        MY_TABLE_SYMBOL.set("");
+        MY_TABLE_DESCRIPTION.set("");
+        MY_TABLE_VISIBILITY.set(systemDefault ? 1 : 0);
     }
 
     private static int visibilityIndex(String visibility) {
