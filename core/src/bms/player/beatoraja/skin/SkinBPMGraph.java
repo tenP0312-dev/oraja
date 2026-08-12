@@ -111,16 +111,23 @@ public class SkinBPMGraph extends SkinObject {
 	private void updateGraph(SongInformation info) {
 		data = info.getSpeedchangeValues();
 		minbpm = Double.MAX_VALUE;
-		maxbpm = Double.MIN_VALUE;
+		maxbpm = maximumSpeed(data);
 		for(double[] d : data) {
 			if(d[0] > 0) {
 				minbpm = Math.min(d[0], minbpm);				
 			}
-			maxbpm = Math.min(d[0], maxbpm);
 		}
 		this.mainbpm = info.getMainbpm();
 		
 		updateTexture();
+	}
+
+	static double maximumSpeed(double[][] speedChanges) {
+		double maximum = 0;
+		for (double[] speedChange : speedChanges) {
+			maximum = Math.max(speedChange[0], maximum);
+		}
+		return maximum;
 	}
 
 	private void updateGraph(BMSModel model) {
@@ -167,7 +174,7 @@ public class SkinBPMGraph extends SkinObject {
 	
 	private void updateTexture() {
 		Pixmap shape;
-		if (data.length < 2) {
+		if (data.length < 2 || mainbpm <= 0) {
 			shape = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		} else {
 			final int width = (int) Math.abs(region.width);

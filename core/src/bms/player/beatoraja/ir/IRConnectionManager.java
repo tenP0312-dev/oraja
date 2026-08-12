@@ -6,13 +6,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.JarURLConnection;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
 /**
  * IRConnectionの管理用クラス
@@ -21,6 +24,7 @@ import java.util.jar.JarFile;
  */
 public class IRConnectionManager {
 	private static final Logger logger = LoggerFactory.getLogger(IRConnectionManager.class);
+	private static final String IR_RESOURCE = "bms/player/beatoraja/ir";
 	
 	/**
 	 * 検出されたIRConnection
@@ -115,36 +119,43 @@ public class IRConnectionManager {
 	private static List<Class<IRConnection>> fetchIRConnectionFromClassPath() throws ClassNotFoundException, IOException {
 		List<Class<IRConnection>> connections = new ArrayList<>();
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		Enumeration<URL> urlEnums = loader.getResources("bms/player/beatoraja/ir");
+		Enumeration<URL> urlEnums = loader.getResources(IR_RESOURCE);
 		while (urlEnums.hasMoreElements()) {
 			URL candidate = urlEnums.nextElement();
 			try {
 				if (candidate.getProtocol().equals("jar")) {
 					JarURLConnection connection = (JarURLConnection) candidate.openConnection();
+					connection.setUseCaches(false);
 					try (JarFile jarFile = connection.getJarFile()) {
 						connections.addAll(fetchIRConnectionFromJarFile(loader, jarFile));
 					} catch (Exception e) {
 						logger.error("Failed to load ir connections from {}: {}", candidate, e.getMessage());
 					}
 				} else if (candidate.getProtocol().equals("file")) {
-					// Below code is inherited from upstream, I don't know what it's used for
-					File dir = new File(candidate.getPath());
-					String[] list = dir.list();
-					if (list != null) {
-						for (String path : list) {
-							if (path.endsWith(".class")) {
-								Class<?> clazz = loader.loadClass("bms.player.beatoraja.ir." + path.substring(0, path.length() - 6));
-								if (clazz != null && validateIRConnectionClass(clazz)) {
-									connections.add((Class<IRConnection>) clazz);
-								}
-							}
-						}
-					}
+					connections.addAll(fetchIRConnectionFromDirectory(loader, candidate));
 				}
 			} catch (Exception e) {
 				logger.error("Failed to load ir connection from url({}): {}", candidate, e.getMessage());
 				throw e;
 			}
+		}
+		return connections;
+	}
+
+	private static List<Class<IRConnection>> fetchIRConnectionFromDirectory(ClassLoader loader, URL url) throws IOException {
+		final List<Class<IRConnection>> connections = new ArrayList<>();
+		try {
+			final Path directory = Path.of(url.toURI());
+			try (Stream<Path> paths = Files.walk(directory)) {
+				paths.filter(Files::isRegularFile)
+						.map(directory::relativize)
+						.map(Path::toString)
+						.map(path -> toClassName(IR_RESOURCE + "/" + path))
+						.filter(Objects::nonNull)
+						.forEach(className -> addConnectionClass(loader, className, connections));
+			}
+		} catch (URISyntaxException e) {
+			throw new IOException("Invalid IR classpath URL: " + url, e);
 		}
 		return connections;
 	}
@@ -174,16 +185,36 @@ public class IRConnectionManager {
 		Enumeration<JarEntry> jarEnum = jarFile.entries();
 		while (jarEnum.hasMoreElements()) {
 			JarEntry jarEntry = jarEnum.nextElement();
-			String path = jarEntry.getName();
-			if (path.startsWith("bms/player/beatoraja/ir/") && path.endsWith(".class")) {
-				Class<?> candidate = loader.loadClass("bms.player.beatoraja.ir."
-						+ path.substring(path.lastIndexOf("/") + 1, path.length() - 6));
-				if (candidate != null && validateIRConnectionClass(candidate)) {
-					ret.add((Class<IRConnection>) candidate);
-				}
+			String className = toClassName(jarEntry.getName());
+			if (className != null) {
+				addConnectionClass(loader, className, ret);
 			}
 		}
 		return ret;
+	}
+
+	private static void addConnectionClass(ClassLoader loader, String className, List<Class<IRConnection>> connections) {
+		try {
+			Class<?> candidate = loader.loadClass(className);
+			if (validateIRConnectionClass(candidate)) {
+				connections.add((Class<IRConnection>) candidate);
+			}
+		} catch (Throwable e) {
+			logger.warn("Failed to load IR connection class {}: {}", className, e.getMessage());
+		}
+	}
+
+	static String toClassName(String path) {
+		String normalizedPath = path.replace('\\', '/');
+		if (!normalizedPath.startsWith(IR_RESOURCE + "/") || !normalizedPath.endsWith(".class")) {
+			return null;
+		}
+		String className = normalizedPath.substring(0, normalizedPath.length() - 6).replace('/', '.');
+		String simpleName = className.substring(className.lastIndexOf('.') + 1);
+		if (simpleName.equals("module-info") || simpleName.equals("package-info") || simpleName.indexOf('$') >= 0) {
+			return null;
+		}
+		return className;
 	}
 
 	private static boolean validateIRConnectionClass(Class<?> clazz) {

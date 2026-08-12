@@ -24,6 +24,17 @@ GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
 
+## Unreleased Source Changes
+
+The current development source selectively incorporates conflict-free fixes
+from beatoraja without replacing Arena-specific rendering, rules, or IR plugin
+loading behavior. The synchronized fixes cover score/BPM graph arithmetic,
+JPEG crash avoidance, thick-note placement, preview-path refreshes, controller
+hat input, Practice controls and gauge handling, IR class discovery, and full
+local play-history retention with average-judge history. Manual full/differential
+song-database updates now require confirmation, and new audio configurations
+default to 256 simultaneous sources.
+
 ## Repository Scope
 
 - Client source, launcher source, client Issues, and client pull requests live

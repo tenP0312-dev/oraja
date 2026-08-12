@@ -13,16 +13,19 @@ public class PracticeModifier extends PatternModifier {
 	/**
 	 * 開始時間(ms)
 	 */
-	private long start;
+	private final long start;
 	/**
 	 * 終了時間(ms)
 	 */
-	private long end;
+	private final long end;
 
-	public PracticeModifier(long start, long end) {
+	private final int gaugeType;
+
+	public PracticeModifier(long start, long end, int gaugeType) {
 		super(AssistLevel.ASSIST);
 		this.start = start;
 		this.end = end;
+		this.gaugeType = gaugeType;
 	}
 
 	@Override
@@ -36,7 +39,11 @@ public class PracticeModifier extends PatternModifier {
 				}
 			}
 		}
-		model.setTotal(model.getTotal() * model.getTotalNotes() / totalnotes);
+		// Survival gauges use the configured TOTAL directly; only groove gauges
+		// need their TOTAL scaled to the selected practice range.
+		if (gaugeType < 3 && totalnotes > 0) {
+			model.setTotal(model.getTotal() * model.getTotalNotes() / totalnotes);
+		}
 	}
 
 }

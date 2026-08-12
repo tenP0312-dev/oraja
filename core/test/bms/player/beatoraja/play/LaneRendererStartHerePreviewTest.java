@@ -8,6 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
+	@Test
+	void noteThicknessGrowsFromTheChartAnchorInsteadOfShiftingItsCenter() {
+		assertEquals(105f, LaneRenderer.noteDestinationY(100f, 5f));
+	}
 
     @Test
     void previewFadesOutAndBackInOverExactlyOneSecond() {

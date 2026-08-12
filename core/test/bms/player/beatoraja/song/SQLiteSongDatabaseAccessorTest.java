@@ -3,6 +3,7 @@ package bms.player.beatoraja.song;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -45,4 +46,33 @@ class SQLiteSongDatabaseAccessorTest {
             statement.execute("ROLLBACK");
         }
     }
+
+	@Test
+	void refreshesPreviewPathWhenTheChartTimestampDidNotChange() throws Exception {
+		Path songs = temporary.resolve("songs");
+		Files.createDirectories(songs);
+		Path chart = songs.resolve("chart.bms");
+		Files.writeString(chart, "#PLAYER 1\n#TITLE Preview Test\n#BPM 120\n#00111:01\n");
+		Files.write(songs.resolve("preview.wav"), new byte[0]);
+
+		Path database = temporary.resolve("preview-songdata.db");
+		String[] roots = {songs.toString()};
+		SQLiteSongDatabaseAccessor accessor = new SQLiteSongDatabaseAccessor(database.toString(), roots);
+		accessor.updateSongDatas(null, roots, false, false, null);
+		assertEquals("preview.wav", previewPath(database));
+
+		Files.delete(songs.resolve("preview.wav"));
+		Files.write(songs.resolve("preview.ogg"), new byte[0]);
+		accessor.updateSongDatas(null, roots, false, false, null);
+
+		assertEquals("preview.ogg", previewPath(database));
+	}
+
+	private static String previewPath(Path database) throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+			 Statement statement = connection.createStatement();
+			 ResultSet result = statement.executeQuery("SELECT preview FROM song")) {
+			return result.next() ? result.getString(1) : null;
+		}
+	}
 }
