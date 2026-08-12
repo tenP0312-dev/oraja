@@ -21,6 +21,12 @@ public class Version {
 
     public static String getVersion() { return version; }
     public static String getLongVersion() { return versionLong; }
+    /**
+     * Compatibility identity exposed to legacy and Lua skins as STRING_VERSION.
+     * Keep this separate from the branded application title because third-party
+     * skins may use the word "Arena" to detect beatoraja's built-in Arena API.
+     */
+    public static String getSkinVersion() { return versionLong; }
     public static String getArenaClientVersion() { return ARENA_CLIENT_VERSION; }
     public static String getArenaDisplayName() { return arenaDisplayName; }
 
