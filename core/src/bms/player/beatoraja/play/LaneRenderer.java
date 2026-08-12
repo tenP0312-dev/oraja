@@ -224,9 +224,13 @@ public class LaneRenderer {
 	}
 	
 	public void setLanecover(float lanecover) {
-		playconfig.setLanecover(lanecover < 0 ? 0 : (lanecover > 1 ? 1 : lanecover));
+		setLanecoverWithoutHispeedReset(lanecover);
 		resetHispeed(playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS
 				&& nowbpm > 0 ? nowbpm : basebpm);
+	}
+
+	void setLanecoverWithoutHispeedReset(float lanecover) {
+		playconfig.setLanecover(lanecover < 0 ? 0 : (lanecover > 1 ? 1 : lanecover));
 	}
 
 	public void setEnableLanecover(boolean b) {

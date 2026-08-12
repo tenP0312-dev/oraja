@@ -1,5 +1,9 @@
 # Unreleased
 
+- Fixed LR2-style START+6/7 SUD+ changes recalculating HI-SPEED even when the
+  dedicated FHS recalculation switch was disabled. Ordinary scratch/mouse
+  cover control and IIDX FHS SUD+ green-number reload behavior are unchanged.
+
 # Arena oraja 0.4.14.37
 
 - The My Difficulty Table overlay now stages existing-table metadata and up to

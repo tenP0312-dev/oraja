@@ -367,8 +367,10 @@ setter and event are effective only on Music Select and persist immediately.
 `INFO通知を表示する` controls all transient ImGui INFO toasts as one group.
 It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
 controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
-is independent and OFF by default, so START+6/7 does not activate FHS-style
-scratch recalculation unless explicitly enabled.
+is independent and OFF by default, so START+6/7 changes the selected cover
+without changing HI-SPEED unless recalculation is explicitly enabled. IIDX
+FHS retains its own SUD+ green-number reload behavior independently of this
+legacy-FHS switch.
 
 `選曲OPにIIDX FHSを追加する` is OFF by default. When enabled, Music Select
 cycles `OFF / START / MAX / MAIN / MIN / IIDX FHS`; the ordinary pre-launch
