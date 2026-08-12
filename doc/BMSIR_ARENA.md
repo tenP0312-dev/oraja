@@ -15,10 +15,16 @@ server-managed CPU play, and the combined GENOCIDE normal ☆1--☆13 /
 official発狂 ★1--★25 rated selection.
 
 Version `0.4.14.36` adds a native `難易度表編集` overlay tab. It loads only
-the signed-in player's active BMS-IR My Difficulty Table, can create or rename
-it, and can add/update/remove the chart currently selected in Music Select with
-a level and comment. Each save includes the last server revision; a concurrent
-Web/client edit reloads the authoritative table instead of being overwritten.
+tables owned by the signed-in BMS-IR player, can create or rename a table, and
+can add/update/remove the chart currently selected in Music Select with a level
+and comment. Ordinary players keep one active table. The BMS-IR system owner
+(player 190000) can explicitly select one of multiple owned tables or create
+another one; no table is chosen implicitly when several exist. Each mutation
+includes the selected table ID and its last server revision, so another
+player's table cannot be targeted and a concurrent Web/client edit reloads the
+authoritative selected table instead of being overwritten. Child-table levels
+managed by a cross-game master are shown read-only and continue to come from
+the master.
 Successful responses replace one stable in-memory table bar from the selector
 root on the render thread, so the game does not need to restart and stale
 folder objects are not retained. Empty tables appear after their first chart is
