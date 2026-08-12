@@ -40,6 +40,7 @@ final class BMSIRMyTableClient {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
     private static final AtomicLong SESSION = new AtomicLong();
+    private static final BMSIRMyTableDraft DRAFT = new BMSIRMyTableDraft();
 
     private static volatile MainController main;
     private static volatile JsonNode snapshot = emptySnapshot();
@@ -61,6 +62,7 @@ final class BMSIRMyTableClient {
         pendingSequence = 0L;
         appliedSequence = 0L;
         requestRunning = false;
+        DRAFT.clear();
         statusMessage = text("マイ難易度表を読み込んでいます", "Loading My Difficulty Table");
         errorMessage = "";
         requestSnapshot(session);
@@ -74,6 +76,7 @@ final class BMSIRMyTableClient {
         pendingSequence = 0L;
         appliedSequence = 0L;
         requestRunning = false;
+        DRAFT.clear();
         statusMessage = "";
         errorMessage = "";
     }
@@ -95,6 +98,9 @@ final class BMSIRMyTableClient {
     }
 
     static void requestSnapshot() {
+        if (rejectDraftLoss()) {
+            return;
+        }
         requestSnapshot(SESSION.get(), currentTableId());
     }
 
@@ -114,6 +120,9 @@ final class BMSIRMyTableClient {
             errorMessage = text("編集する難易度表を選んでください", "Select a table to edit");
             return;
         }
+        if (rejectDraftLoss()) {
+            return;
+        }
         requestSnapshot(
                 SESSION.get(),
                 tableId
@@ -127,6 +136,9 @@ final class BMSIRMyTableClient {
             String description,
             String visibility
     ) {
+        if (rejectDraftLoss()) {
+            return;
+        }
         ObjectNode payload = tablePayload(
                 "create",
                 "none",
@@ -184,6 +196,151 @@ final class BMSIRMyTableClient {
         payload.put("expected_revision", currentRevision());
         payload.put("entry_hash", entryHash);
         submit(payload, SESSION.get(), text("譜面を削除して本体へ反映しました", "Chart removed and applied"));
+    }
+
+    static synchronized BMSIRMyTableDraft.StageResult stageTableUpdate(
+            String name,
+            String symbol,
+            String description,
+            String visibility
+    ) {
+        BMSIRMyTableDraft.StageResult result = DRAFT.stageTable(
+                currentTableId(),
+                currentRevision(),
+                snapshot.path("table"),
+                name,
+                symbol,
+                description,
+                visibility
+        );
+        reportStageResult(result, text("表情報の変更を保留しました", "Table detail changes staged"));
+        return result;
+    }
+
+    static synchronized BMSIRMyTableDraft.StageResult stageEntry(
+            SongData song,
+            String level,
+            String comment
+    ) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.StageResult result = DRAFT.stageUpsert(
+                currentTableId(),
+                currentRevision(),
+                authoritative,
+                song,
+                level,
+                comment
+        );
+        reportStageResult(result, authoritative == null
+                ? text("譜面の追加を保留しました", "Chart addition staged")
+                : text("譜面の変更を保留しました", "Chart changes staged"));
+        return result;
+    }
+
+    static synchronized BMSIRMyTableDraft.StageResult stageRemoval(SongData song) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.StageResult result = DRAFT.stageRemove(
+                currentTableId(),
+                currentRevision(),
+                authoritative,
+                song
+        );
+        reportStageResult(result, authoritative == null
+                ? text("保留中の追加を取り消しました", "Pending addition cancelled")
+                : text("譜面の削除を保留しました", "Chart removal staged"));
+        return result;
+    }
+
+    static synchronized BMSIRMyTableDraft.EntryChange draftEntryFor(SongData song) {
+        return DRAFT.entryFor(song, entryFor(snapshot, song));
+    }
+
+    static synchronized List<BMSIRMyTableDraft.EntryChange> draftEntries() {
+        return DRAFT.entries();
+    }
+
+    static synchronized boolean hasDraft() {
+        return DRAFT.hasChanges();
+    }
+
+    static synchronized boolean hasDraftTableChange() {
+        return DRAFT.hasTableChange();
+    }
+
+    static synchronized BMSIRMyTableDraft.TableChange draftTableChange() {
+        return DRAFT.tableChange();
+    }
+
+    static synchronized boolean draftConflicted() {
+        return DRAFT.conflicted();
+    }
+
+    static synchronized int draftCount() {
+        return DRAFT.totalCount();
+    }
+
+    static synchronized int draftEntryCount() {
+        return DRAFT.entryCount();
+    }
+
+    static synchronized long draftGeneration() {
+        return DRAFT.generation();
+    }
+
+    static synchronized void undoDraftEntry(String key) {
+        if (DRAFT.undoEntry(key)) {
+            statusMessage = text("保留中の変更を取り消しました", "Pending change removed");
+            errorMessage = "";
+        }
+    }
+
+    static synchronized void undoDraftTableChange() {
+        if (DRAFT.undoTable()) {
+            statusMessage = text("表情報の保留を取り消しました", "Pending table details removed");
+            errorMessage = "";
+        }
+    }
+
+    static synchronized void discardDraft() {
+        DRAFT.clear();
+        statusMessage = text("保留中の変更をすべて破棄しました", "All pending changes discarded");
+        errorMessage = "";
+    }
+
+    static synchronized void rebaseDraft() {
+        if (DRAFT.rebase(currentTableId(), currentRevision())) {
+            statusMessage = text(
+                    "最新状態を基準にしました。保留内容を確認して保存してください",
+                    "Draft rebased on the latest state; review it before saving"
+            );
+            errorMessage = "";
+        }
+    }
+
+    static synchronized void applyChanges() {
+        if (!DRAFT.hasChanges()) {
+            errorMessage = text("保留中の変更はありません", "There are no pending changes");
+            return;
+        }
+        if (DRAFT.conflicted()) {
+            errorMessage = text(
+                    "競合後の最新状態を確認し、基準を更新してから保存してください",
+                    "Review the latest state and rebase the draft before saving"
+            );
+            return;
+        }
+        ObjectNode payload = DRAFT.payload(JSON);
+        if (payload == null) {
+            errorMessage = text("保留内容を作成できません", "Could not build the pending changes");
+            return;
+        }
+        submit(
+                payload,
+                SESSION.get(),
+                text("変更を一括保存して本体へ反映しました", "Changes saved together and applied"),
+                true,
+                true
+        );
     }
 
     static String entryIdentity(JsonNode entry) {
@@ -346,6 +503,16 @@ final class BMSIRMyTableClient {
     }
 
     private static void submit(ObjectNode payload, long expectedSession, String successMessage) {
+        submit(payload, expectedSession, successMessage, false, false);
+    }
+
+    private static void submit(
+            ObjectNode payload,
+            long expectedSession,
+            String successMessage,
+            boolean clearDraftOnSuccess,
+            boolean retainDraftOnConflict
+    ) {
         MainController controller = main;
         if (controller == null || expectedSession != SESSION.get()) {
             return;
@@ -377,6 +544,9 @@ final class BMSIRMyTableClient {
                 JsonNode body = response.body();
                 if (response.status() == 409 && body.path("current").path("ok").asBoolean(false)) {
                     acceptSnapshot(body.path("current"), expectedSession);
+                    if (retainDraftOnConflict) {
+                        DRAFT.markConflict();
+                    }
                     errorMessage = "selection_required".equals(body.path("error").asText())
                             ? text("編集する難易度表を選んでください", "Select a table to edit")
                             : text(
@@ -392,6 +562,9 @@ final class BMSIRMyTableClient {
                     return;
                 }
                 acceptSnapshot(body, expectedSession);
+                if (clearDraftOnSuccess) {
+                    DRAFT.clear();
+                }
                 statusMessage = successMessage;
             } catch (Exception error) {
                 if (expectedSession == SESSION.get() && controller == main) {
@@ -439,6 +612,48 @@ final class BMSIRMyTableClient {
 
     private static long currentTableId() {
         return selectedTableId(snapshot);
+    }
+
+    private static synchronized boolean rejectDraftLoss() {
+        if (!DRAFT.hasChanges()) {
+            return false;
+        }
+        errorMessage = text(
+                "未保存の変更があります。先に一括保存するか、すべて破棄してください",
+                "Pending changes exist; save them together or discard them first"
+        );
+        return true;
+    }
+
+    private static void reportStageResult(
+            BMSIRMyTableDraft.StageResult result,
+            String stagedMessage
+    ) {
+        switch (result) {
+            case STAGED -> {
+                statusMessage = stagedMessage;
+                errorMessage = "";
+            }
+            case CLEARED -> {
+                statusMessage = text(
+                        "サーバーと同じ内容になったため保留を解除しました",
+                        "Pending change cleared because it matches the server"
+                );
+                errorMessage = "";
+            }
+            case NO_CHANGE -> {
+                statusMessage = text("変更はありません", "Nothing changed");
+                errorMessage = "";
+            }
+            case FULL -> errorMessage = text(
+                    "譜面の保留は64件までです。いったん保存してください",
+                    "Up to 64 chart changes can be staged; save this batch first"
+            );
+            case WRONG_TABLE -> errorMessage = text(
+                    "編集対象が変わりました。保留内容を保存または破棄してください",
+                    "The edit target changed; save or discard the pending changes"
+            );
+        }
     }
 
     private static Response post(MainController controller, ObjectNode payload) throws IOException {
@@ -550,6 +765,13 @@ final class BMSIRMyTableClient {
             case "entry_not_found" -> text("対象譜面は表にありません", "The chart is not in the table");
             case "table_not_found" -> text("マイ難易度表が見つかりません", "My Difficulty Table was not found");
             case "selection_required" -> text("編集する難易度表を選んでください", "Select a table to edit");
+            case "too_many_changes" -> text("一度に保存できる譜面変更は64件までです", "Up to 64 chart changes can be saved at once");
+            case "duplicate_entry" -> text("同じ譜面の変更が重複しています", "The batch contains duplicate chart changes");
+            case "changes_required" -> text("保存する変更がありません", "There are no changes to save");
+            case "invalid_table_changes", "invalid_changes", "unsupported_change" -> text(
+                    "保留内容を作り直してください",
+                    "Recreate the pending changes"
+            );
             default -> text("保存に失敗しました", "Save failed") + " (HTTP " + status + ")";
         };
     }

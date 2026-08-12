@@ -1,5 +1,11 @@
 # Unreleased
 
+- The My Difficulty Table overlay now stages existing-table metadata and up to
+  64 selected-chart add/update/remove changes in memory. Pending changes can be
+  reviewed, individually undone, discarded together, or saved atomically for
+  one authoritative Music Select hot reload. Table switching/reload cannot
+  silently discard a draft, and revision conflicts retain it until the user
+  explicitly reviews and rebases it.
 - Japanese-capable Arena fields now place an IME-aware OS text control directly
   over the clicked field, so conversion text remains visible in the normal
   input position. The underlying field remains editable if the OS control

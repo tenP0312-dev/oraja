@@ -25,10 +25,18 @@ player's table cannot be targeted and a concurrent Web/client edit reloads the
 authoritative selected table instead of being overwritten. Child-table levels
 managed by a cross-game master are shown read-only and continue to come from
 the master.
+For an existing table, metadata and up to 64 selected-chart add/update/remove
+changes are held as an in-memory draft. The overlay shows the pending count and
+list, supports per-change undo and discard-all, then saves the complete draft
+atomically. A revision conflict keeps the draft, loads the latest server state,
+and requires an explicit review/rebase before retry. Reload and table switching
+cannot silently discard pending work; drafts are lost when the client exits.
+New-table creation remains immediate so the server can assign its ID.
 Successful responses replace one stable in-memory table bar from the selector
-root on the render thread, so the game does not need to restart and stale
-folder objects are not retained. Empty tables appear after their first chart is
-added. Bulk entry/order and My Dan/course editing remain on the Web editor.
+root on the render thread, so one batch causes one hot reload without a game
+restart or stale folder objects. Empty tables appear after their first saved
+chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
+Web editor.
 
 Clicking an Arena room-name, chat, or My Difficulty Table text field places an
 IME-capable OS text control directly over the same field. Japanese conversion

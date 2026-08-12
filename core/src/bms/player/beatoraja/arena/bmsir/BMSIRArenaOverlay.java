@@ -90,6 +90,7 @@ public final class BMSIRArenaOverlay {
     private static String loadedMyTableChart = "";
     private static boolean createNewMyTable;
     private static boolean confirmMyTableEntryRemoval;
+    private static boolean confirmMyTableDraftDiscard;
     private static boolean updateRoomPassword;
     private static String loadedRoomCode = "";
     private static final ImInt SCORE_RULE = new ImInt(0);
@@ -263,17 +264,20 @@ public final class BMSIRArenaOverlay {
         boolean canCreateMultiple = snapshot.path("can_create_multiple").asBoolean(false);
         if (!revision.equals(loadedMyTableRevision) || selectedTableId != loadedMyTableId) {
             setMyTableEditorFields(table, canCreateMultiple);
+            setMyTableDraftFields(BMSIRMyTableClient.draftTableChange());
             loadedMyTableRevision = revision;
             loadedMyTableId = selectedTableId;
             loadedMyTableChart = "";
             createNewMyTable = false;
             confirmMyTableEntryRemoval = false;
+            confirmMyTableDraftDiscard = false;
         }
 
         boolean busy = BMSIRMyTableClient.isBusy();
+        boolean hasDraft = BMSIRMyTableClient.hasDraft();
         ImGui.textWrapped(t(
-                "選曲中の譜面を表へ登録し、保存後すぐ本体の難易度表バーを差し替えます。",
-                "Register the selected chart and replace the in-game table bar immediately after saving."
+                "表情報や複数の譜面変更を保留し、最後にまとめて保存すると本体へ1回反映します。",
+                "Stage table details and multiple chart changes, then save once for one in-game update."
         ));
         if (tables.isArray() && !tables.isEmpty()) {
             String[] tableOptions = new String[tables.size() + 1];
@@ -337,7 +341,7 @@ public final class BMSIRArenaOverlay {
 
         if (canCreateMultiple) {
             ImGui.sameLine();
-            ImGui.beginDisabled(busy);
+            ImGui.beginDisabled(busy || hasDraft);
             if (!createNewMyTable) {
                 if (ImGui.button(t("新しい表を作成", "Create another table"))) {
                     createNewMyTable = true;
@@ -382,8 +386,8 @@ public final class BMSIRArenaOverlay {
                             visibilityValue(MY_TABLE_VISIBILITY.get())
                     );
                 }
-            } else if (ImGui.button(t("表情報を保存して本体へ反映", "Save details and apply"))) {
-                BMSIRMyTableClient.updateTable(
+            } else if (ImGui.button(t("表情報の変更を保留", "Stage table details"))) {
+                BMSIRMyTableClient.stageTableUpdate(
                         MY_TABLE_NAME.get(),
                         MY_TABLE_SYMBOL.get(),
                         MY_TABLE_DESCRIPTION.get(),
@@ -407,9 +411,16 @@ public final class BMSIRArenaOverlay {
         JsonNode selectedEntry = editEntries
                 ? BMSIRMyTableClient.entryFor(snapshot, selectedSong)
                 : null;
-        String editorChartState = revision + ":" + selectedKey;
+        BMSIRMyTableDraft.EntryChange pendingEntry = editEntries
+                ? BMSIRMyTableClient.draftEntryFor(selectedSong)
+                : null;
+        String editorChartState = revision + ":" + selectedKey + ":"
+                + BMSIRMyTableClient.draftGeneration();
         if (!editorChartState.equals(loadedMyTableChart)) {
-            if (selectedEntry != null) {
+            if (pendingEntry != null && !pendingEntry.removal()) {
+                MY_TABLE_LEVEL.set(pendingEntry.level());
+                MY_TABLE_COMMENT.set(pendingEntry.comment());
+            } else if (selectedEntry != null) {
                 MY_TABLE_LEVEL.set(selectedEntry.path("level").asText(""));
                 MY_TABLE_COMMENT.set(selectedEntry.path("comment").asText(""));
             } else {
@@ -444,28 +455,44 @@ public final class BMSIRArenaOverlay {
             ImGui.beginDisabled(
                     !editEntries || busy || (levelEditable && MY_TABLE_LEVEL.get().isBlank())
             );
-            if (ImGui.button(selectedEntry == null
-                    ? t("表へ追加して本体へ反映", "Add and apply")
-                    : t("登録内容を更新して本体へ反映", "Update and apply"))) {
-                BMSIRMyTableClient.upsertEntry(
+            if (ImGui.button(selectedEntry == null && pendingEntry == null
+                    ? t("表への追加を保留", "Stage addition")
+                    : t("登録内容の変更を保留", "Stage chart changes"))) {
+                BMSIRMyTableClient.stageEntry(
                         selectedSong,
                         MY_TABLE_LEVEL.get(),
                         MY_TABLE_COMMENT.get()
                 );
             }
             ImGui.endDisabled();
-            if (selectedEntry != null) {
+            if (pendingEntry != null && pendingEntry.removal()) {
                 ImGui.sameLine();
-                if (!confirmMyTableEntryRemoval) {
+                ImGui.textDisabled(t("削除を保留中", "Removal staged"));
+                ImGui.sameLine();
+                ImGui.beginDisabled(busy);
+                if (ImGui.button(t("削除保留を取り消す", "Undo removal") + "##selected-chart")) {
+                    BMSIRMyTableClient.undoDraftEntry(pendingEntry.key());
+                }
+                ImGui.endDisabled();
+            } else if (selectedEntry != null || pendingEntry != null) {
+                ImGui.sameLine();
+                boolean pendingAddition = selectedEntry == null && pendingEntry != null;
+                if (pendingAddition) {
+                    ImGui.beginDisabled(busy);
+                    if (ImGui.button(t("追加保留を取り消す", "Undo addition"))) {
+                        BMSIRMyTableClient.stageRemoval(selectedSong);
+                    }
+                    ImGui.endDisabled();
+                } else if (!confirmMyTableEntryRemoval) {
                     ImGui.beginDisabled(busy);
                     if (ImGui.button(t("表から削除", "Remove"))) {
                         confirmMyTableEntryRemoval = true;
                     }
                     ImGui.endDisabled();
                 } else {
-                    ImGui.textDisabled(t("削除しますか？", "Remove this chart?"));
-                    if (ImGui.button(t("削除を確定", "Confirm remove"))) {
-                        BMSIRMyTableClient.removeEntry(selectedEntry);
+                    ImGui.textDisabled(t("削除を保留しますか？", "Stage removal?"));
+                    if (ImGui.button(t("削除を保留", "Stage removal"))) {
+                        BMSIRMyTableClient.stageRemoval(selectedSong);
                         confirmMyTableEntryRemoval = false;
                     }
                     ImGui.sameLine();
@@ -474,6 +501,94 @@ public final class BMSIRArenaOverlay {
                     }
                 }
             }
+        }
+
+        if (hasDraft) {
+            ImGui.separator();
+            ImGui.text(f(
+                    "未保存: 表情報 %d件 / 譜面 %d件",
+                    "Pending: %d table details / %d charts",
+                    BMSIRMyTableClient.hasDraftTableChange() ? 1 : 0,
+                    BMSIRMyTableClient.draftEntryCount()
+            ));
+            if (BMSIRMyTableClient.hasDraftTableChange()) {
+                ImGui.textWrapped(t("表情報: 追加・更新", "Table details: update"));
+                ImGui.beginDisabled(busy);
+                if (ImGui.button(t("取り消す", "Undo") + "##draft-table")) {
+                    BMSIRMyTableClient.undoDraftTableChange();
+                    setMyTableEditorFields(table, canCreateMultiple);
+                }
+                ImGui.endDisabled();
+            }
+            List<BMSIRMyTableDraft.EntryChange> pending = BMSIRMyTableClient.draftEntries();
+            if (!pending.isEmpty()) {
+                if (ImGui.beginChild(
+                        "##my-table-pending-list",
+                        0,
+                        Math.min(180.0f, 32.0f * pending.size() + 8.0f),
+                        true
+                )) {
+                    for (BMSIRMyTableDraft.EntryChange change : pending) {
+                        ImGui.textWrapped((change.removal()
+                                ? t("削除: ", "Remove: ")
+                                : t("追加・更新: ", "Add/update: ")) + change.title());
+                        ImGui.beginDisabled(busy);
+                        if (ImGui.button(t("取り消す", "Undo") + "##draft-" + change.key())) {
+                            BMSIRMyTableClient.undoDraftEntry(change.key());
+                        }
+                        ImGui.endDisabled();
+                    }
+                }
+                ImGui.endChild();
+            }
+            if (BMSIRMyTableClient.draftConflicted()) {
+                ImGui.textWrapped(t(
+                        "Webまたは別クライアントの更新と競合しました。最新状態と保留一覧を確認してください。",
+                        "The table changed elsewhere. Review the latest state and pending list."
+                ));
+                ImGui.beginDisabled(busy);
+                if (ImGui.button(t(
+                        "最新状態を基準にして保留内容を再採用",
+                        "Rebase pending changes on latest"
+                ))) {
+                    BMSIRMyTableClient.rebaseDraft();
+                }
+                ImGui.endDisabled();
+            }
+            ImGui.beginDisabled(busy || BMSIRMyTableClient.draftConflicted());
+            if (ImGui.button(f(
+                    "%d件を一括保存して本体へ反映",
+                    "Save %d pending changes and apply",
+                    BMSIRMyTableClient.draftCount()
+            ))) {
+                BMSIRMyTableClient.applyChanges();
+            }
+            ImGui.endDisabled();
+            ImGui.sameLine();
+            ImGui.beginDisabled(busy);
+            if (!confirmMyTableDraftDiscard) {
+                if (ImGui.button(t("すべて破棄", "Discard all"))) {
+                    confirmMyTableDraftDiscard = true;
+                }
+            } else {
+                ImGui.textDisabled(t("本当に破棄しますか？", "Discard all pending changes?"));
+                ImGui.sameLine();
+                if (ImGui.button(t("破棄を確定", "Confirm discard"))) {
+                    BMSIRMyTableClient.discardDraft();
+                    setMyTableEditorFields(table, canCreateMultiple);
+                    loadedMyTableChart = "";
+                    confirmMyTableDraftDiscard = false;
+                }
+                ImGui.sameLine();
+                if (ImGui.button(t("キャンセル", "Cancel") + "##draft-discard")) {
+                    confirmMyTableDraftDiscard = false;
+                }
+            }
+            ImGui.endDisabled();
+            ImGui.textDisabled(t(
+                    "保留内容はクライアント終了時に破棄されます。表の切替・再読み込み前に保存または破棄してください。",
+                    "Drafts are lost when the client exits. Save or discard before switching or reloading."
+            ));
         }
 
         String error = BMSIRMyTableClient.errorMessage();
@@ -486,8 +601,8 @@ public final class BMSIRArenaOverlay {
             ImGui.textDisabled(status);
         }
         ImGui.textDisabled(t(
-                "一括登録・並び順・My Dan／コース編集はWeb版を利用してください。空の表は最初の譜面登録後に本体へ表示されます。",
-                "Use the Web editor for bulk entry, ordering, and My Dan/courses. An empty table appears in Music Select after its first chart is added."
+                "貼り付け一括登録・並び順・My Dan／コース編集はWeb版を利用してください。空の表は最初の保存後に本体へ表示されます。",
+                "Use the Web editor for pasted bulk import, ordering, and My Dan/courses. An empty table appears after its first saved chart."
         ));
     }
 
@@ -505,6 +620,16 @@ public final class BMSIRArenaOverlay {
         MY_TABLE_SYMBOL.set("");
         MY_TABLE_DESCRIPTION.set("");
         MY_TABLE_VISIBILITY.set(systemDefault ? 1 : 0);
+    }
+
+    private static void setMyTableDraftFields(BMSIRMyTableDraft.TableChange change) {
+        if (change == null) {
+            return;
+        }
+        MY_TABLE_NAME.set(change.name());
+        MY_TABLE_SYMBOL.set(change.symbol());
+        MY_TABLE_DESCRIPTION.set(change.description());
+        MY_TABLE_VISIBILITY.set(visibilityIndex(change.visibility()));
     }
 
     private static int visibilityIndex(String visibility) {
