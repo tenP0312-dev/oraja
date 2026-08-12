@@ -11,9 +11,10 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.BorderFactory;
+import javax.swing.JDialog;
 import javax.swing.JTextField;
-import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.border.CompoundBorder;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
 /** Places an IME-capable native editor directly over an Arena ImGui field. */
 final class ArenaInlineTextEditor {
     private static final Logger logger = LoggerFactory.getLogger(ArenaInlineTextEditor.class);
-    private static final AtomicBoolean OPEN = new AtomicBoolean();
+    private static final AtomicReference<ImString> ACTIVE_TARGET = new AtomicReference<>();
 
     private ArenaInlineTextEditor() {
     }
@@ -36,7 +37,7 @@ final class ArenaInlineTextEditor {
             float itemWidth,
             float itemHeight
     ) {
-        if (!OPEN.compareAndSet(false, true)) {
+        if (!ACTIVE_TARGET.compareAndSet(null, target)) {
             return;
         }
         ImGuiInputCapture.setExternalEditorOpen(true);
@@ -62,9 +63,10 @@ final class ArenaInlineTextEditor {
             int itemHeight
     ) {
         try {
-            JWindow window = new JWindow();
+            JDialog window = new JDialog((java.awt.Frame) null);
             JTextField editor = new JTextField(initialValue);
             AtomicBoolean finished = new AtomicBoolean();
+            AtomicBoolean focusAcquired = new AtomicBoolean();
             editor.setBackground(new Color(41, 41, 41));
             editor.setForeground(new Color(245, 245, 245));
             editor.setCaretColor(Color.WHITE);
@@ -80,8 +82,10 @@ final class ArenaInlineTextEditor {
                     BorderFactory.createEmptyBorder(1, 5, 1, 5)
             ));
 
+            window.setUndecorated(true);
             window.setAlwaysOnTop(true);
             window.setFocusableWindowState(true);
+            window.setAutoRequestFocus(true);
             window.setContentPane(editor);
             window.setSize(itemWidth, itemHeight);
             position(window, itemX, itemY);
@@ -116,8 +120,15 @@ final class ArenaInlineTextEditor {
             });
             editor.addFocusListener(new FocusAdapter() {
                 @Override
+                public void focusGained(FocusEvent event) {
+                    focusAcquired.set(true);
+                }
+
+                @Override
                 public void focusLost(FocusEvent event) {
-                    accept.run();
+                    if (focusAcquired.get()) {
+                        accept.run();
+                    }
                 }
             });
 
@@ -131,12 +142,16 @@ final class ArenaInlineTextEditor {
             });
         } catch (RuntimeException error) {
             logger.warn("Arena inline IME editor could not be opened", error);
-            OPEN.set(false);
+            ACTIVE_TARGET.compareAndSet(target, null);
             ImGuiInputCapture.setExternalEditorOpen(false);
         }
     }
 
-    private static void position(JWindow window, int itemX, int itemY) {
+    static boolean isOpenFor(ImString target) {
+        return ACTIVE_TARGET.get() == target;
+    }
+
+    private static void position(JDialog window, int itemX, int itemY) {
         window.setLocation(
                 ImGuiRenderer.getWindowScreenX() + itemX,
                 ImGuiRenderer.getWindowScreenY() + itemY
@@ -144,7 +159,7 @@ final class ArenaInlineTextEditor {
     }
 
     private static void finish(
-            JWindow window,
+            JDialog window,
             Timer followWindow,
             AtomicBoolean finished,
             ImString target,
@@ -160,7 +175,7 @@ final class ArenaInlineTextEditor {
             if (result != null) {
                 target.set(result);
             }
-            OPEN.set(false);
+            ACTIVE_TARGET.compareAndSet(target, null);
             ImGuiInputCapture.setExternalEditorOpen(false);
         };
         if (Gdx.app != null) {

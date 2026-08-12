@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Shares BMSIRArenaI18n's static language field with BMSIRArenaI18nTest and
 // ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
@@ -20,6 +22,25 @@ class BMSIRArenaOverlayTest {
     void utf8InputBuffersReserveFourBytesPerCodePoint() {
         assertEquals(801, BMSIRArenaOverlay.utf8BufferCapacity(200));
         assertEquals(161, BMSIRArenaOverlay.utf8BufferCapacity(40));
+    }
+
+    @Test
+    void imeEditorOpensForActivationOrClickWithoutMakingTheBaseFieldReadOnly() {
+        assertTrue(BMSIRArenaOverlay.shouldOpenImeEditor(true, false));
+        assertTrue(BMSIRArenaOverlay.shouldOpenImeEditor(false, true));
+        assertFalse(BMSIRArenaOverlay.shouldOpenImeEditor(false, false));
+    }
+
+    @Test
+    void activeImeEditorUsesADifferentWidgetIdToDiscardStaleInputState() {
+        assertEquals(
+                "部屋名##room-name",
+                BMSIRArenaOverlay.imeInputWidgetLabel("部屋名", "room-name", false)
+        );
+        assertEquals(
+                "部屋名##room-name-ime-active",
+                BMSIRArenaOverlay.imeInputWidgetLabel("部屋名", "room-name", true)
+        );
     }
 
     @AfterEach

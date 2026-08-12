@@ -3439,12 +3439,14 @@ public final class BMSIRArenaOverlay {
             ImString value,
             int maxCodePoints
     ) {
-        ImGui.inputText(
-                label + "##" + id,
-                value,
-                ImGuiInputTextFlags.ReadOnly
-        );
-        if (ImGui.isItemClicked()) {
+        boolean inlineEditorOpen = ArenaInlineTextEditor.isOpenFor(value);
+        String widgetLabel = imeInputWidgetLabel(label, id, inlineEditorOpen);
+        if (inlineEditorOpen) {
+            ImGui.inputText(widgetLabel, value, ImGuiInputTextFlags.ReadOnly);
+            return;
+        }
+        ImGui.inputText(widgetLabel, value);
+        if (shouldOpenImeEditor(ImGui.isItemActivated(), ImGui.isItemClicked())) {
             float editorWidth = ImGui.getItemRectSizeX();
             if (!label.isEmpty()) {
                 editorWidth -= ImGui.calcTextSizeX(label)
@@ -3459,6 +3461,14 @@ public final class BMSIRArenaOverlay {
                     ImGui.getItemRectSizeY()
             );
         }
+    }
+
+    static boolean shouldOpenImeEditor(boolean itemActivated, boolean itemClicked) {
+        return itemActivated || itemClicked;
+    }
+
+    static String imeInputWidgetLabel(String label, String id, boolean inlineEditorOpen) {
+        return label + "##" + id + (inlineEditorOpen ? "-ime-active" : "");
     }
 
     private static void tableText(String text) {

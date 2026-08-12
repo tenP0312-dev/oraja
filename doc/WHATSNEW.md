@@ -2,7 +2,8 @@
 
 - Japanese-capable Arena fields now place an IME-aware OS text control directly
   over the clicked field, so conversion text remains visible in the normal
-  input position. Chat/room buffers also retain their limits for UTF-8 text.
+  input position. The underlying field remains editable if the OS control
+  cannot take focus, and chat/room buffers retain their limits for UTF-8 text.
 - ImGui-owned keyboard, NUMPAD, mouse-scratch, scroll, click, and drag input is
   discarded before the underlying game or skin processes the same frame.
 
