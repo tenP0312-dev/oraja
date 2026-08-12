@@ -13,13 +13,14 @@ import org.sqlite.SQLiteConfig.SynchronousMode;
  * @author exch
  */
 public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
+	private static final String TABLE_NAME = "scorelog";
 
 	private SQLiteDataSource ds;
 
 	private final QueryRunner qr;
 
 	public ScoreLogDatabaseAccessor(String path) throws ClassNotFoundException {
-		super(	new Table("scorelog",
+		super(	new Table(TABLE_NAME,
 						new Column("sha256", "TEXT", 1, 0),
 						new Column("mode", "INTEGER"),
 						new Column("clear", "INTEGER"),
@@ -30,6 +31,8 @@ public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 						new Column("oldcombo", "INTEGER"),
 						new Column("minbp", "INTEGER"),
 						new Column("oldminbp", "INTEGER"),
+						new Column("avgjudge", "INTEGER", 1, 0, String.valueOf(Long.MAX_VALUE)),
+						new Column("oldavgjudge", "INTEGER", 1, 0, String.valueOf(Long.MAX_VALUE)),
 						new Column("date", "INTEGER")
 						));
 
@@ -51,7 +54,7 @@ public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 
 	public void setScoreLog(ScoreLog log) {
 		try {
-			this.insert(qr, "scorelog", log);
+			this.insert(qr, TABLE_NAME, log);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -104,6 +107,14 @@ public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 		 * 旧ミスカウント
 		 */
 		private int oldminbp;
+		/**
+		 * 平均判定時間
+		 */
+		private long avgjudge = Long.MAX_VALUE;
+		/**
+		 * 旧平均判定時間
+		 */
+		private long oldavgjudge = Long.MAX_VALUE;
 		/**
 		 * スコア最終更新日時(unixtime, 秒単位)
 		 */
@@ -188,6 +199,22 @@ public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 		public void setOldminbp(int oldminbp) {
 			this.oldminbp = oldminbp;
 		}
+
+		public long getAvgjudge() {
+			return avgjudge;
+		}
+
+		public void setAvgjudge(long avgjudge) {
+			this.avgjudge = avgjudge;
+		}
+
+		public long getOldavgjudge() {
+			return oldavgjudge;
+		}
+
+		public void setOldavgjudge(long oldavgjudge) {
+			this.oldavgjudge = oldavgjudge;
+		}
 		
 		public long getDate() {
 			return date;
@@ -200,7 +227,8 @@ public class ScoreLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 		@Override
 		public boolean validate() {
 			return mode >= 0 && clear >= 0 && clear <= ClearType.Max.id && oldclear >= 0 && oldclear<= clear &&
-					score >= 0 && oldscore <= score && combo >= 0 && oldcombo <= combo && minbp >= 0 && oldminbp >= minbp && date >= 0;
+					score >= 0 && oldscore <= score && combo >= 0 && oldcombo <= combo && minbp >= 0 && oldminbp >= minbp &&
+					avgjudge >= 0 && oldavgjudge >= avgjudge && date >= 0;
 		}
 	}
 }

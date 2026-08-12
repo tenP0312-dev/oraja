@@ -602,6 +602,12 @@ public final class PlayDataAccessor {
 			log.setSha256(hash);
 			log.setMinbp(newscore.getMinbp());
 		}
+		log.setOldavgjudge(score.getAvgjudge());
+		log.setAvgjudge(score.getAvgjudge());
+		if (score.getAvgjudge() > newscore.getAvgjudge() && updateScore) {
+			log.setSha256(hash);
+			log.setAvgjudge(newscore.getAvgjudge());
+		}
 		log.setOldcombo(score.getCombo());
 		log.setCombo(score.getCombo());
 		if (score.getCombo() < newscore.getCombo() && updateScore) {
