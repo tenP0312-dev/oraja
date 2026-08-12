@@ -1,5 +1,7 @@
 # Unreleased
 
+# Arena oraja 0.4.14.37
+
 - The My Difficulty Table overlay now stages existing-table metadata and up to
   64 selected-chart add/update/remove changes in memory. Pending changes can be
   reviewed, individually undone, discarded together, or saved atomically for
