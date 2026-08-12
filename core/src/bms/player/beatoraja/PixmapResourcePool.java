@@ -60,20 +60,30 @@ public class PixmapResourcePool extends ResourcePool<String, Pixmap> {
 			return tex;
 		}
 
-		try {
-			if(path.endsWith(".cim")) {
-				tex = PixmapIO.readCIM(Gdx.files.internal(path));
-			} else {
-				tex = new Pixmap(Gdx.files.internal(path));				
+		final boolean jpeg = isJpeg(path);
+		// Some valid JPEGs can trigger a native jpgd assertion before Java can catch it.
+		// Route JPEG through ImageIO so a bad image cannot terminate the whole client.
+		if (!jpeg) {
+			try {
+				if(path.endsWith(".cim")) {
+					tex = PixmapIO.readCIM(Gdx.files.internal(path));
+				} else {
+					tex = new Pixmap(Gdx.files.internal(path));
+				}
+			} catch (Throwable e) {
+				logger.warn("BGAファイル読み込み失敗。{}", e.getMessage());
 			}
-		} catch (Throwable e) {
-			logger.warn("BGAファイル読み込み失敗。{}", e.getMessage());
 		}
 		if (tex == null) {
-			logger.warn("BGAファイル読み込み再試行:{}", path);
+			if (!jpeg) {
+				logger.warn("BGAファイル読み込み再試行:{}", path);
+			}
 			try {
 				// TODO 一部のbmsはImageIO.readで失敗する(e.g. past glow)。別の画像デコーダーが必要
 				BufferedImage bi = ImageIO.read(f);
+				if (bi == null) {
+					return null;
+				}
 //						System.out.println("width : " + bi.getWidth() + " height : " + bi.getHeight() + " type : " + bi.getType());
 				tex = new Pixmap(bi.getWidth(), bi.getHeight(), Pixmap.Format.RGBA8888);
 				for(int x = 0;x < bi.getWidth();x++) {
@@ -88,5 +98,10 @@ public class PixmapResourcePool extends ResourcePool<String, Pixmap> {
 		}
 
 		return tex;
+	}
+
+	static boolean isJpeg(String path) {
+		final String lower = path.toLowerCase(java.util.Locale.ROOT);
+		return lower.endsWith(".jpg") || lower.endsWith(".jpeg");
 	}
 }

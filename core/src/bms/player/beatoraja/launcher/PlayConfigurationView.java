@@ -63,6 +63,7 @@ import twitter4j.conf.ConfigurationBuilder;
 public class PlayConfigurationView implements Initializable {
 	private static final Logger logger = LoggerFactory.getLogger(PlayConfigurationView.class);
     // TODO スキンプレビュー機能
+	private String dbUpdateCheckDialogMessage;
 
 	@FXML
 	private Hyperlink newversion;
@@ -480,6 +481,7 @@ public class PlayConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
+		dbUpdateCheckDialogMessage = arg1.getString("UPDATE_DATABASE_MESSAGE");
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
 		List<String> shortButtonActions = english
@@ -1249,18 +1251,32 @@ public class PlayConfigurationView implements Initializable {
     @FXML
 	public void loadAllBMS() {
 		commit();
-		loadBMS(null, true);
+		if (checkIfLoadBMS()) {
+			loadBMS(null, true);
+		}
 	}
 
     @FXML
 	public void loadDiffBMS() {
 		commit();
-		loadBMS(null, false);
+		if (checkIfLoadBMS()) {
+			loadBMS(null, false);
+		}
 	}
 
 	public void loadBMSPath(String updatepath){
 		commit();
     	loadBMS(updatepath, false);
+	}
+
+	private boolean checkIfLoadBMS() {
+		Alert confirmAlert = new Alert(
+				Alert.AlertType.NONE,
+				dbUpdateCheckDialogMessage,
+				ButtonType.OK,
+				ButtonType.CANCEL
+		);
+		return confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
 	}
 
 	/**
