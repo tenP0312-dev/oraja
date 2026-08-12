@@ -19,7 +19,7 @@ public class Lwjgl3Controller implements Controller {
 	final int index;
 	final float[] axisState;	
 	final boolean[] buttonState;
-//	final byte[] hatState;
+	final byte[] hatState;
 	final Vector3 zero = new Vector3(0, 0, 0);
 	final String name;
 	
@@ -28,7 +28,8 @@ public class Lwjgl3Controller implements Controller {
 		this.index = index;
 		this.axisState = new float[GLFW.glfwGetJoystickAxes(index).limit()];	
 		this.buttonState = new boolean[GLFW.glfwGetJoystickButtons(index).limit()];
-//		this.hatState = new byte[GLFW.glfwGetJoystickHats(index).limit()];
+		ByteBuffer hats = GLFW.glfwGetJoystickHats(index);
+		this.hatState = new byte[hats != null ? hats.limit() : 0];
 		this.name = GLFW.glfwGetJoystickName(index);
 	}
 	
@@ -48,11 +49,7 @@ public class Lwjgl3Controller implements Controller {
 			manager.disconnected(this);
 			return;
 		}
-/*		ByteBuffer hats = GLFW.glfwGetJoystickHats(index);
-		if(hats == null) {
-			manager.disconnected(this);
-			return;
-		}*/
+		ByteBuffer hats = GLFW.glfwGetJoystickHats(index);
 
 		for(int i = 0; i < axes.limit(); i++) {
 			if(axisState[i] != axes.get(i)) {
@@ -64,7 +61,7 @@ public class Lwjgl3Controller implements Controller {
 			axisState[i] = axes.get(i);
 		}
 
-		for(int i = 0; i < buttons.limit(); i++) {
+		for(int i = 0; i < Math.min(buttons.limit(), buttonState.length); i++) {
 			if(buttonState[i] != (buttons.get(i) == GLFW.GLFW_PRESS)) {
 				for(ControllerListener listener: listeners) {
 					if(buttons.get(i) == GLFW.GLFW_PRESS) {
@@ -78,15 +75,11 @@ public class Lwjgl3Controller implements Controller {
 			buttonState[i] = buttons.get(i) == GLFW.GLFW_PRESS;
 		}
 
-/*		for(int i = 0; i < hats.limit(); i++) {
-			if(hatState[i] != hats.get(i)) {
+		if (hats != null) {
+			for (int i = 0; i < Math.min(hats.limit(), hatState.length); i++) {
 				hatState[i] = hats.get(i);
-				for(ControllerListener listener: listeners) {
-					//if (listener.povMoved(this, i, getPov(i))) break;
-				}
-				//manager.hatChanged(this, i, getPov(i));
 			}
-		}*/
+		}
 
 	}
 
@@ -102,10 +95,24 @@ public class Lwjgl3Controller implements Controller {
 	
 	@Override
 	public boolean getButton (int buttonCode) {
-		if(buttonCode < 0 || buttonCode >= buttonState.length) {
-			return false;
+		boolean pressed = buttonCode >= 0
+				&& buttonCode < buttonState.length
+				&& buttonState[buttonCode];
+		if (buttonCode >= 28 && buttonCode <= 31 && hatState.length > 0) {
+			pressed |= isFirstHatDirection(hatState[0], buttonCode);
 		}
-		return buttonState[buttonCode];
+		return pressed;
+	}
+
+	static boolean isFirstHatDirection(int hatState, int buttonCode) {
+		final int direction = switch (buttonCode) {
+			case 28 -> GLFW.GLFW_HAT_LEFT;
+			case 29 -> GLFW.GLFW_HAT_UP;
+			case 30 -> GLFW.GLFW_HAT_RIGHT;
+			case 31 -> GLFW.GLFW_HAT_DOWN;
+			default -> GLFW.GLFW_HAT_CENTERED;
+		};
+		return direction != GLFW.GLFW_HAT_CENTERED && (hatState & direction) != 0;
 	}
 
 	@Override
