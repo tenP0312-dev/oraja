@@ -13,6 +13,8 @@ import static bms.player.beatoraja.skin.SkinProperty.*;
 
 import bms.model.Mode;
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.config.SkinConfigurationSkin;
+import bms.player.beatoraja.config.SkinPreview;
 import bms.player.beatoraja.play.PlaySkin;
 import bms.player.beatoraja.play.SkinGauge;
 import bms.player.beatoraja.play.bga.BGAProcessor;
@@ -150,7 +152,8 @@ public abstract class LR2SkinCSVLoader<S extends Skin> extends LR2SkinLoader {
 				part = null;
 				int gr = Integer.parseInt(str[2]);
 				if (gr >= 100) {
-					part = new SkinImage(gr);
+					part = gr == 105 && skin instanceof SkinConfigurationSkin
+							? new SkinPreview() : new SkinImage(gr);
 					// System.out.println("add reference image : "
 					// + gr);
 				} else {
@@ -745,7 +748,7 @@ public abstract class LR2SkinCSVLoader<S extends Skin> extends LR2SkinLoader {
 		return skin;
 	}
 
-	SkinImage part = null;
+	SkinObject part = null;
 	SkinImage button = null;
 	SkinImage onmouse = null;
 	SkinGraph bar = null;

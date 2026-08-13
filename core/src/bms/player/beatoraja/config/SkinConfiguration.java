@@ -5,6 +5,7 @@ import bms.player.beatoraja.MainState;
 import static bms.player.beatoraja.skin.SkinProperty.*;
 
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.SkinConfig;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
@@ -12,6 +13,7 @@ import bms.player.beatoraja.skin.*;
 import bms.player.beatoraja.skin.json.JSONSkinLoader;
 import bms.player.beatoraja.skin.lr2.LR2SkinHeaderLoader;
 import bms.player.beatoraja.skin.lua.LuaSkinLoader;
+import bms.player.beatoraja.select.MusicSelector;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -41,6 +43,7 @@ public class SkinConfiguration extends MainState {
 	private int customOptionOffset;
 	private int customOptionOffsetMax;
 	private Skin selectedSkin;
+	private MainState selectedSkinState;
 	private PlayerConfig player;
 
 	public SkinConfiguration(MainController main, PlayerConfig player) {
@@ -53,6 +56,11 @@ public class SkinConfiguration extends MainState {
 		skin = (SkinConfigurationSkin) getSkin();
 		loadAllSkins();
 		changeSkinType(SkinType.getSkinTypeById(skin.getDefaultSkinType()));
+	}
+
+	@Override
+	public void shutdown() {
+		setSelectedSkin(null, null);
 	}
 
 	public void render() {
@@ -102,6 +110,14 @@ public class SkinConfiguration extends MainState {
 	
 	public SkinHeader getSelectedSkinHeader() {
 		return selectedSkinHeader;
+	}
+
+	public Skin getSelectedSkin() {
+		return selectedSkin;
+	}
+
+	public MainState getSelectedSkinState() {
+		return selectedSkinState != null ? selectedSkinState : this;
 	}
 
 	public void executeEvent(int id, int arg1, int arg2) {
@@ -208,9 +224,11 @@ public class SkinConfiguration extends MainState {
 			updateCustomFiles();
 			updateCustomOffsets();
 			customOptionOffsetMax = Math.max(0, customOptions.size() - skin.getCustomPropertyCount());
+			loadSelectedSkinPreview();
 		} else {
 			selectedSkinHeader = null;
 			customOptions = null;
+			setSelectedSkin(null, null);
 		}
 	}
 
@@ -442,6 +460,105 @@ public class SkinConfiguration extends MainState {
 		}
 	}
 
+	static boolean supportsPreview(SkinType type) {
+		return type != null && type != SkinType.SKIN_SELECT
+				&& type != SkinType.RESULT && type != SkinType.COURSE_RESULT;
+	}
+
+	private boolean hasPreviewObject() {
+		if (skin == null) {
+			return false;
+		}
+		for (SkinObject object : skin.getAllSkinObjects()) {
+			if (object instanceof SkinPreview) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void loadSelectedSkinPreview() {
+		if (selectedSkinHeader == null || config == null || config.getPath() == null
+				|| !supportsPreview(type) || !hasPreviewObject()) {
+			if (selectedSkinHeader != null && supportsPreview(type) && !hasPreviewObject()) {
+				logger.info("Skin Selectスキンにプレビュー表示枠がないため読み込みを省略します");
+			}
+			setSelectedSkin(null, null);
+			return;
+		}
+
+		setSelectedSkin(null, null);
+		SkinConfig previewConfig = new SkinConfig(config.getPath());
+		previewConfig.setProperties(config.getProperties());
+		previewConfig.validate();
+		Skin preview = null;
+		MainState previewState = null;
+		try {
+			if (type == SkinType.MUSIC_SELECT) {
+				MusicSelector selector = MusicSelector.createSkinPreview(main);
+				previewState = selector;
+				preview = SkinLoader.load(selector, type, previewConfig);
+				if (preview != null) {
+					selector.setSkinForPreview(preview);
+				}
+			} else if (type.isPlay()) {
+				PlayerResource previewResource = SkinPreviewModel.createResource(
+						main.getConfig(), player, type.getMode());
+				SkinPreviewPlayer previewPlayer = new SkinPreviewPlayer(main, previewResource);
+				previewState = previewPlayer;
+				preview = SkinLoader.load(previewPlayer, type, previewConfig);
+				if (preview != null) {
+					previewPlayer.attachSkin(preview);
+				}
+			} else {
+				preview = SkinLoader.load(this, type, previewConfig);
+			}
+			if (preview != null) {
+				preview.prepare(previewState != null ? previewState : this);
+				logger.info("スキンプレビューを読み込みました : type={} path={} size={}x{}",
+						type, config.getPath(), Math.round(preview.getWidth()), Math.round(preview.getHeight()));
+			} else {
+				logger.warn("スキンプレビューを読み込めませんでした : type={} path={}", type, config.getPath());
+				disposePreviewState(null, previewState);
+				previewState = null;
+			}
+		} catch (Throwable e) {
+			logger.warn("スキンプレビューの読み込みに失敗しました : {}", config.getPath(), e);
+			disposePreviewState(preview, previewState);
+			preview = null;
+			previewState = null;
+		}
+		setSelectedSkin(preview, previewState);
+	}
+
+	private void reloadSelectedSkinPreview() {
+		if (selectedSkinHeader != null) {
+			loadSelectedSkinPreview();
+		}
+	}
+
+	private void setSelectedSkin(Skin selectedSkin, MainState selectedSkinState) {
+		if (this.selectedSkin == selectedSkin && this.selectedSkinState == selectedSkinState) {
+			return;
+		}
+		disposePreviewState(this.selectedSkin, this.selectedSkinState);
+		this.selectedSkin = selectedSkin;
+		this.selectedSkinState = selectedSkinState;
+	}
+
+	private void disposePreviewState(Skin preview, MainState previewState) {
+		if (previewState instanceof MusicSelector selector) {
+			selector.disposeSkinPreview();
+		} else if (previewState != null) {
+			previewState.dispose();
+			if (previewState.resource != resource) {
+				previewState.resource.dispose();
+			}
+		} else if (preview != null) {
+			preview.dispose();
+		}
+	}
+
 	private void loadAllSkins() {
 		allSkins = new ArrayList<SkinHeader>();
 		List<Path> skinPaths = new ArrayList<>();
@@ -503,6 +620,7 @@ public class SkinConfiguration extends MainState {
 
 	@Override
 	public void dispose() {
+		setSelectedSkin(null, null);
 		super.dispose();
 	}
 
@@ -564,6 +682,7 @@ public class SkinConfiguration extends MainState {
 			value = i;
 			displayValue = values[value];
 			setCustomOption(categoryName, options[value]);
+			reloadSelectedSkinPreview();
 		}
 	}
 
@@ -595,6 +714,7 @@ public class SkinConfiguration extends MainState {
 			value = i;
 			displayValue = displayValues.get(value);
 			setFilePath(categoryName, actualValues.get(value));
+			reloadSelectedSkinPreview();
 		}
 	}
 
@@ -614,6 +734,7 @@ public class SkinConfiguration extends MainState {
 			value = i;
 			displayValue = String.valueOf(value);
 			setCustomOffset(offsetName, kind, value);
+			reloadSelectedSkinPreview();
 		}
 	}
 }

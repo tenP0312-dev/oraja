@@ -45,6 +45,7 @@ public class JsonSkin {
 		public HiddenCover[] hiddenCover = new HiddenCover[0];
 		public LiftCover[] liftCover = new LiftCover[0];
 		public BGA bga;
+		public SkinPreview skinpreview;
 		public Judge[] judge = new Judge[0];
 		public SongList songlist;
 		public PMchara[] pmchara = new PMchara[0];
@@ -404,6 +405,10 @@ public class JsonSkin {
 	}
 
 	public static class BGA {
+		public String id;
+	}
+
+	public static class SkinPreview {
 		public String id;
 	}
 

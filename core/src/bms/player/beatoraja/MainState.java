@@ -37,9 +37,18 @@ public abstract class MainState {
 	private final ScoreDataProperty score = new ScoreDataProperty();
 
 	public MainState(MainController main) {
+		this(main, main.getPlayerResource());
+	}
+
+	/**
+	 * Creates a state against an isolated resource. This is used by live skin
+	 * previews so their virtual song/session data cannot replace the active
+	 * selector's resource.
+	 */
+	protected MainState(MainController main, PlayerResource resource) {
 		this.main = main;
 		timer = main.getTimer();
-		resource = main.getPlayerResource();
+		this.resource = resource;
 	}
 
 	public abstract void create();
@@ -131,6 +140,17 @@ public abstract class MainState {
 				offset.a = e.value.a;
 			}
 		}
+	}
+
+	/**
+	 * Attaches a skin to an off-screen preview state without changing global
+	 * skin widgets or applying its offsets to the real game state.
+	 */
+	public void setSkinForPreview(Skin skin) {
+		if (this.skin != null && this.skin != skin) {
+			this.skin.dispose();
+		}
+		this.skin = skin;
 	}
 
 	public void loadSkin(SkinType skinType) {

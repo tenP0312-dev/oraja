@@ -83,7 +83,7 @@ public class BMSPlayer extends MainState {
 	 */
 	private ReplayData replay = null;
 
-	private final FloatArray[] gaugelog;
+	private FloatArray[] gaugelog;
 
 	private int playspeed = 100;
 
@@ -122,6 +122,20 @@ public class BMSPlayer extends MainState {
 
 	public BMSPlayer(MainController main, PlayerResource resource) {
 		super(main);
+		initialize(resource);
+	}
+
+	/** Constructor for an isolated, non-playing skin-preview state. */
+	protected BMSPlayer(MainController main, PlayerResource resource, boolean skinPreview) {
+		super(main, resource);
+		if (!skinPreview) {
+			throw new IllegalArgumentException("preview constructor requires skinPreview=true");
+		}
+		this.model = resource.getBMSModel();
+		this.gaugelog = new FloatArray[0];
+	}
+
+	private void initialize(PlayerResource resource) {
 		BMSIRArenaClient.enforceArenaOptions();
 		this.model = resource.getBMSModel();
 		BMSIRArenaClient.tracePlayPhase("constructor_begin", this);

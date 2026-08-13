@@ -628,6 +628,25 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   `LR2oraja Endless Dream` version identity. This prevents LITONE and similar
   skins from mistaking the product name for beatoraja's built-in Arena skin API;
   the BMS-IR Arena graph remains in its external overlay.
+- Skin Select can show a live, scaled preview of the selected skin. The bundled
+  Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
+  destination with the same ID. JSON and Lua skins use the same explicit
+  `skinpreview` declaration; LR2 Skin Select skins can use reference image 105.
+  For existing JSON/Lua Skin Select skins without that declaration, a large
+  change-skin click target (event 190, at least 160 x 90) is also used as the
+  preview destination, so common full-thumbnail layouts work without a skin
+  update. Small arrow/button-only layouts still need an explicit destination.
+  Changing a custom option, file, or offset reloads the preview. Skin Select,
+  result, and course-result skins are excluded to avoid recursive or
+  state-dependent previews. Music Select skins render against a deterministic
+  in-memory catalog containing two virtual folders and enough scored songs to
+  fill a normal bar list without reading the user's song DB. Play skins render
+  against a mode-matched, silent autoplay session whose normal notes, chords,
+  and charge notes loop in the preview; the preview does not replace the active
+  selector resource or play audio. A failed preview object is isolated from
+  the configuration screen, play-skin offset mutations are restored after each
+  frame, and the off-screen buffer is limited to the displayed destination size
+  and a 2048-pixel maximum dimension.
 
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. `全ロングノートを

@@ -251,6 +251,18 @@ public final class PlayerResource {
 	public BMSModel getBMSModel() {
 		return model;
 	}
+
+	/**
+	 * Installs an in-memory chart for an isolated skin preview without starting
+	 * the normal asynchronous audio/BGA loaders.
+	 */
+	public void setSkinPreviewModel(BMSModel model) {
+		this.model = model;
+		this.orgmode = model.getMode();
+		this.songdata = new SongData(model, false);
+		this.mode = BMSPlayerMode.AUTOPLAY;
+		this.replay = new ReplayData();
+	}
 	
 	public long getMarginTime() {
 		return marginTime;
@@ -273,11 +285,11 @@ public final class PlayerResource {
 	}
 
 	public BGAProcessor getBGAManager() {
-		return bmsresource.getBGAProcessor();
+		return bmsresource != null ? bmsresource.getBGAProcessor() : null;
 	}
 
 	public boolean mediaLoadFinished() {
-		return bmsresource.mediaLoadFinished();
+		return bmsresource == null || bmsresource.mediaLoadFinished();
 	}
 
 	public ScoreData getScoreData() {
