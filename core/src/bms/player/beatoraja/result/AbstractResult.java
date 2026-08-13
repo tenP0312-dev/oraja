@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.MathUtils;
 
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.MainState;
+import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.ir.RankingData;
@@ -70,6 +71,45 @@ public abstract class AbstractResult extends MainState {
 	public AbstractResult(MainController main) {
 		super(main);
 		timingDistribution = new TimingDistribution(distRange);
+	}
+
+	/** Constructor for an isolated Skin Select preview. */
+	protected AbstractResult(MainController main, PlayerResource resource) {
+		super(main, resource);
+		timingDistribution = new TimingDistribution(distRange);
+	}
+
+	/**
+	 * Installs representative, read-only result values without running the
+	 * normal score database, replay, IR, or sound paths.
+	 */
+	protected final void initializeSkinPreview(ScoreData previousScore) {
+		oldscore = previousScore != null ? previousScore : new ScoreData();
+		state = STATE_OFFLINE;
+		ranking = new RankingData();
+		rankingOffset = 0;
+		gaugeType = resource.getGrooveGauge().getType();
+		Arrays.fill(saveReplay, ReplayStatus.NOT_EXIST);
+
+		ScoreData score = getNewScore();
+		if (score != null) {
+			getScoreDataProperty().setTargetScore(
+					oldscore.getExscore(),
+					resource.getTargetScoreData() != null
+							? resource.getTargetScoreData().getExscore() : 0,
+					score.getNotes());
+			getScoreDataProperty().update(score);
+			avgduration = score.getAvgjudge();
+			avg = score.getAvg();
+			stddev = score.getStddev();
+		}
+
+		timingDistribution.init();
+		int timingSamples = score != null ? Math.max(1, score.getNotes()) : 1;
+		for (int i = 0; i < timingSamples; i++) {
+			timingDistribution.add(Math.floorMod(i * 17, 41) - 20);
+		}
+		timingDistribution.statisticValueCalcuate();
 	}
 	
 	public ReplayStatus getReplayStatus(int index) {

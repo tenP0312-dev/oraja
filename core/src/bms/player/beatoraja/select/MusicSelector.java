@@ -126,7 +126,17 @@ public final class MusicSelector extends MainState {
 
 	public MusicSelector(MainController main, boolean songUpdated) {
 		super(main);
-		this.config = main.getPlayerResource().getPlayerConfig();
+		initialize(songUpdated);
+	}
+
+	private MusicSelector(
+			MainController main, boolean songUpdated, PlayerResource previewResource) {
+		super(main, previewResource);
+		initialize(songUpdated);
+	}
+
+	private void initialize(boolean songUpdated) {
+		this.config = resource.getPlayerConfig();
 
 		songdb = main.getSongDatabase();
 
@@ -192,11 +202,13 @@ public final class MusicSelector extends MainState {
 	 * network initialization.
 	 */
 	public static MusicSelector createSkinPreview(MainController main) {
-		MusicSelector selector = new MusicSelector(main, true);
 		Mode mode = main.getPlayerConfig().getMode();
 		if (mode == null) {
 			mode = Mode.BEAT_7K;
 		}
+		PlayerResource previewResource = SkinPreviewModel.createResource(
+				main.getConfig(), main.getPlayerConfig(), mode);
+		MusicSelector selector = new MusicSelector(main, true, previewResource);
 
 		String[] titles = {
 				"SKIN PREVIEW", "NEON TEST PATTERN", "LONG NOTE CHECK",
@@ -226,6 +238,7 @@ public final class MusicSelector extends MainState {
 		bars[7] = createSkinPreviewFolder(selector, "SECOND VIRTUAL FOLDER", "folder-b");
 		System.arraycopy(songs, 6, bars, 8, songs.length - 6);
 		selector.manager.installSkinPreviewBars(bars, 3);
+		selector.resource.setSongdata(songs[2].getSongData());
 		selector.getScoreDataProperty().update(songs[2].getScore(), null);
 		return selector;
 	}
@@ -251,6 +264,7 @@ public final class MusicSelector extends MainState {
 			stagefiles = null;
 		}
 		super.dispose();
+		resource.dispose();
 	}
 
 	public void initializeLocalTables() {

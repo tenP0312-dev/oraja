@@ -37,7 +37,9 @@ public abstract class MainState {
 	private final ScoreDataProperty score = new ScoreDataProperty();
 
 	public MainState(MainController main) {
-		this(main, main.getPlayerResource());
+		this.main = main;
+		resource = main.getPlayerResource();
+		timer = main.getTimer();
 	}
 
 	/**
@@ -47,8 +49,9 @@ public abstract class MainState {
 	 */
 	protected MainState(MainController main, PlayerResource resource) {
 		this.main = main;
-		timer = main.getTimer();
 		this.resource = resource;
+		timer = new TimerManager();
+		timer.setMainState(this);
 	}
 
 	public abstract void create();

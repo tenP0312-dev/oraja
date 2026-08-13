@@ -36,6 +36,11 @@ public class CourseResult extends AbstractResult {
 		super(main);
 	}
 
+	/** Constructor for an isolated Skin Select preview. */
+	protected CourseResult(MainController main, PlayerResource resource) {
+		super(main, resource);
+	}
+
 	public void create() {
 		for(int i = 0;i < REPLAY_SIZE;i++) {
 			saveReplay[i] = main.getPlayDataAccessor().existsReplayData(resource.getCourseBMSModels(),

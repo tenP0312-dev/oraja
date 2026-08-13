@@ -126,16 +126,16 @@ public class BooleanPropertyFactory {
 					});
 		case OPTION_MODE_COURSE:
 			return new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-					(state) -> (state.main.getPlayerResource().getCourseData() != null));
+					(state) -> (state.resource.getCourseData() != null));
 		case OPTION_DISABLE_SAVE_SCORE:
 			// TODO select, decide時の実装
-			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (!state.main.getPlayerResource().isUpdateScore()));
+			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (!state.resource.isUpdateScore()));
 		case OPTION_ENABLE_SAVE_SCORE:
 			// TODO select, decide時の実装
-			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (state.main.getPlayerResource().isUpdateScore()));
+			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (state.resource.isUpdateScore()));
 		case OPTION_NO_SAVE_CLEAR:
 			// TODO 未実装
-			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (state.main.getPlayerResource().isUpdateScore()));
+			return new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> (state.resource.isUpdateScore()));
 
 		}
 		
@@ -358,7 +358,7 @@ public class BooleanPropertyFactory {
 		autoplay_off(OPTION_AUTOPLAYOFF, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
 				(state) -> ((state instanceof BMSPlayer) ? state.resource.getPlayMode().mode != BMSPlayerMode.Mode.AUTOPLAY : false))),
 		replay_off(OPTION_REPLAY_OFF, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
-				(state) -> ((state instanceof BMSPlayer) ? state.resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY || ((BMSPlayer) state).main.getPlayerResource().getPlayMode().mode == BMSPlayerMode.Mode.PRACTICE : false))),
+				(state) -> ((state instanceof BMSPlayer) ? state.resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY || state.resource.getPlayMode().mode == BMSPlayerMode.Mode.PRACTICE : false))),
 		replay_playing(OPTION_REPLAY_PLAYING, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
 				(state) -> ((state instanceof BMSPlayer) ? state.resource.getPlayMode().mode == BMSPlayerMode.Mode.REPLAY : false))),
 		state_practice(OPTION_STATE_PRACTICE, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
@@ -460,17 +460,17 @@ public class BooleanPropertyFactory {
 		course_hcn(OPTION_GRADEBAR_HCN,createCourseDataConstraintProperty(CourseData.CourseDataConstraint.HCN)),
 
 		stagefile(OPTION_STAGEFILE, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT, 
-				(state) -> (state.main.getPlayerResource().getBMSResource().getStagefile() != null))),
+				(state) -> (state.resource.getBMSResource().getStagefile() != null))),
 		no_stagefile(OPTION_NO_STAGEFILE, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-				(state) -> (state.main.getPlayerResource().getBMSResource().getStagefile() == null))),
+				(state) -> (state.resource.getBMSResource().getStagefile() == null))),
 		backbmp(OPTION_BACKBMP, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-				(state) -> (state.main.getPlayerResource().getBMSResource().getBackbmp() != null))),
+				(state) -> (state.resource.getBMSResource().getBackbmp() != null))),
 		no_backbmp(OPTION_NO_BACKBMP, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-				(state) -> (state.main.getPlayerResource().getBMSResource().getBackbmp() == null))),
+				(state) -> (state.resource.getBMSResource().getBackbmp() == null))),
 		banner(OPTION_BANNER, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-				(state) -> (state.main.getPlayerResource().getBMSResource().getBanner() != null))),
+				(state) -> (state.resource.getBMSResource().getBanner() != null))),
 		no_banner(OPTION_NO_BANNER, new DrawProperty(DrawProperty.TYPE_STATIC_WITHOUT_MUSICSELECT,
-				(state) -> (state.main.getPlayerResource().getBMSResource().getBanner() == null))),
+				(state) -> (state.resource.getBMSResource().getBanner() == null))),
 
 		judge_1p_perfect(OPTION_1P_PERFECT, new NowJudgeDrawCondition(0, 0)),
 		judge_1p_early(OPTION_1P_EARLY, new NowJudgeDrawCondition(0, 1)),
@@ -574,18 +574,18 @@ public class BooleanPropertyFactory {
 		draw_scorerank(OPTION_DRAW_SCORERANK, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
 				(state) -> (state.getScoreDataProperty().getNowRate() == state.getScoreDataProperty().getBestScoreRate()))),
 		update_target(OPTION_UPDATE_TARGET, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
-				(state) -> ((state instanceof AbstractResult) ? state.main.getPlayerResource().getScoreData().getExscore() > state.getScoreDataProperty().getRivalScore() : false))),
+				(state) -> ((state instanceof AbstractResult) ? state.resource.getScoreData().getExscore() > state.getScoreDataProperty().getRivalScore() : false))),
 		draw_target(OPTION_DRAW_TARGET, new DrawProperty(DrawProperty.TYPE_NO_STATIC,
-				(state) -> ((state instanceof AbstractResult) ? state.main.getPlayerResource().getScoreData().getExscore() == state.getScoreDataProperty().getRivalScore() : false))),
+				(state) -> ((state instanceof AbstractResult) ? state.resource.getScoreData().getExscore() == state.getScoreDataProperty().getRivalScore() : false))),
 
 		result_clear(OPTION_RESULT_CLEAR,new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> {
-			final ScoreData score = state.main.getPlayerResource().getScoreData();
-			final ScoreData cscore = state.main.getPlayerResource().getCourseScoreData();
+			final ScoreData score = state.resource.getScoreData();
+			final ScoreData cscore = state.resource.getCourseScoreData();
 			return score.getClear() != Failed.id && (cscore == null || cscore.getClear() != Failed.id);
 		})),
 		result_fail(OPTION_RESULT_FAIL,new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> {
-			final ScoreData score = state.main.getPlayerResource().getScoreData();
-			final ScoreData cscore = state.main.getPlayerResource().getCourseScoreData();
+			final ScoreData score = state.resource.getScoreData();
+			final ScoreData cscore = state.resource.getCourseScoreData();
 			return score.getClear() == Failed.id || (cscore != null && cscore.getClear() == Failed.id);
 		})),
 		result_1pwin(OPTION_1PWIN,new DrawProperty(DrawProperty.TYPE_NO_STATIC, 

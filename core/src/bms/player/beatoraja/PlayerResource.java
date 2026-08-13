@@ -263,6 +263,24 @@ public final class PlayerResource {
 		this.mode = BMSPlayerMode.AUTOPLAY;
 		this.replay = new ReplayData();
 	}
+
+	/**
+	 * Installs an in-memory course for an isolated Skin Select preview without
+	 * resolving chart paths or touching the song database.
+	 */
+	public void setSkinPreviewCourse(BMSModel[] models, CourseData courseData) {
+		if (models == null || models.length == 0) {
+			throw new IllegalArgumentException("preview course requires at least one chart");
+		}
+		course = models.clone();
+		courseindex = course.length - 1;
+		coursedata = courseData;
+		model = course[courseindex];
+		orgmode = model.getMode();
+		songdata = new SongData(model, false);
+		mode = BMSPlayerMode.PLAY;
+		replay = new ReplayData();
+	}
 	
 	public long getMarginTime() {
 		return marginTime;

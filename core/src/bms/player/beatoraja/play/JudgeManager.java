@@ -1007,6 +1007,39 @@ public class JudgeManager {
         return player >= 0 && player < judgecombo.length ? judgecombo[player] : 0;
     }
 
+    /**
+     * Installs one synthetic judgement for the in-game skin preview. This only
+     * updates values consumed by play-skin objects; it does not run scoring,
+     * audio, Arena, or replay side effects.
+     */
+    public void setSkinPreviewJudgement(int lane, int result, int combo, long microFast) {
+        if (lane < 0 || lane >= states.length) {
+            return;
+        }
+        LaneState state = states[lane];
+        if (state.player < judge.length && state.offset < judge[state.player].length) {
+            judge[state.player][state.offset] = result == 0
+                    ? 1 : result * 2 + (microFast > 0 ? 0 : 1);
+        }
+        if (judgenow.length == 0) {
+            return;
+        }
+        int lanesPerRegion = Math.max(1, states.length / judgenow.length);
+        int region = Math.min(judgenow.length - 1, lane / lanesPerRegion);
+        judgenow[region] = result + 1;
+        judgecombo[region] = combo;
+        judgefast[region] = microFast / 1000L;
+        mjudgefast[region] = microFast;
+    }
+
+    /** Clears synthetic play-skin judgement text between preview phases. */
+    public void clearSkinPreviewJudgement() {
+        Arrays.fill(judgenow, 0);
+        Arrays.fill(judgecombo, 0);
+        Arrays.fill(judgefast, 0L);
+        Arrays.fill(mjudgefast, 0L);
+    }
+
     public long[][] getJudgeTable(boolean sc) {
         return sc ? smjudge : nmjudge;
     }
