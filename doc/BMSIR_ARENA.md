@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.39`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.40`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -309,8 +309,9 @@ application is active. The start, success, failure, and already-running states
 use the built-in Japanese/English notifications. If the service is still
 building a registered-rival snapshot, the plugin can return its last completed
 snapshot; press F2 again after that build completes to load the newer snapshot.
-The normal startup path uses the same replacement mechanism without waiting for
-the network: it first loads a backup-safe per-player last-good cache, labels the
+Version `0.4.14.40` makes the normal startup path use the same replacement
+mechanism without waiting for the network: it first loads a backup-safe
+per-player last-good cache, labels the
 phase `Primary IR選曲テーブル`, makes Music Select usable, and then starts one
 silent background refresh. A valid non-empty result replaces the table cache;
 an empty, invalid, or failed result leaves the previous cache intact. Managed
@@ -858,12 +859,12 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.39-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.40-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
 
-- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.69.jar`;
+- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.71.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
   a Java 21 runtime, distribution-cleared base assets, and launch scripts. The
   Windows package contains the portable launcher EXE and the macOS package
@@ -879,8 +880,8 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.39-macos-aarch64.jar \
-  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.40-macos-aarch64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
   --launcher-app "/reviewed/BMS-IR Arena.app" \
@@ -895,8 +896,8 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.39-windows-x86-64.jar \
-  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.40-windows-x86-64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
   --launcher-exe /reviewed/BMS-IR-Arena-launcher.exe \
