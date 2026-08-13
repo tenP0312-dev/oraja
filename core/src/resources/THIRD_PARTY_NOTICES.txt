@@ -1,7 +1,7 @@
 Third-party notices for BMS-IR Arena oraja
 ==========================================
 
-Junrar 7.6.1 includes code derived from the UnRAR sources and is used only to
+Junrar 8.1.0 includes code derived from the UnRAR sources and is used only to
 read RAR archives. It is not used to create RAR-compatible archives.
 
 UnRAR license

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,6 +17,7 @@ import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SQLiteSongDatabaseAccessorTest {
@@ -139,10 +141,79 @@ class SQLiteSongDatabaseAccessorTest {
 		assertArrayEquals(original, Files.readAllBytes(archive));
 	}
 
+	@Test
+	void targetedArchiveFolderRefreshReenumeratesAndFailsClosed() throws Exception {
+		Path songs = temporary.resolve("targeted-archive-songs");
+		Files.createDirectories(songs);
+		Path archive = songs.resolve("targeted.zip");
+		writeChartArchive(archive, "Original");
+		String[] roots = { songs.toString() };
+		Path database = temporary.resolve("targeted-archive.db");
+		SQLiteSongDatabaseAccessor accessor = new SQLiteSongDatabaseAccessor(database.toString(), roots, true);
+		accessor.updateSongDatas(null, roots, false, false, null);
+		assertEquals(1, accessor.getSongDatas("title", "Original").length);
+		String virtualFolder = archiveFolderPath(database, "targeted.zip");
+
+		writeChartArchive(archive, "Modified");
+		accessor.updateSongDatas(virtualFolder, roots, false, false, null);
+		assertEquals(0, accessor.getSongDatas("title", "Original").length);
+		assertEquals(1, accessor.getSongDatas("title", "Modified").length);
+
+		Files.writeString(archive, "corrupt archive");
+		SongDatabaseUpdateListener listener = new SongDatabaseUpdateListener();
+		accessor.updateSongDatas(virtualFolder, roots, false, false, null, listener);
+		assertEquals(1, accessor.getSongDatas("title", "Modified").length);
+		assertEquals(1, listener.getArchivesRejected());
+		assertTrue(listener.getLastArchiveFailure().contains("ZIP"));
+	}
+
+	@Test
+	void nestedArchiveChartsRemainReachableAndUsePerDirectoryPreviews() throws Exception {
+		Path songs = temporary.resolve("nested-archive-songs");
+		Files.createDirectories(songs);
+		Path archive = songs.resolve("nested.zip");
+		try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive))) {
+			writeEntry(output, "Pack/A/chart.bms", chartWithTitle("Nested A"));
+			writeEntry(output, "Pack/A/sound.wav", "sound-a");
+			writeEntry(output, "Pack/A/preview.ogg", "preview-a");
+			writeEntry(output, "Pack/B/chart.bms", chartWithTitle("Nested B"));
+			writeEntry(output, "Pack/B/sound.wav", "sound-b");
+			writeEntry(output, "Pack/B/preview.mp3", "preview-b");
+		}
+		String[] roots = { songs.toString() };
+		Path database = temporary.resolve("nested-archive.db");
+		SQLiteSongDatabaseAccessor accessor = new SQLiteSongDatabaseAccessor(database.toString(), roots, true);
+		accessor.updateSongDatas(null, roots, false, false, null);
+
+		SongData first = accessor.getSongDatas("title", "Nested A")[0];
+		SongData second = accessor.getSongDatas("title", "Nested B")[0];
+		assertEquals("preview.ogg", first.getPreview());
+		assertEquals("preview.mp3", second.getPreview());
+		assertEquals(first.getParent(), second.getParent());
+		assertNotEquals(first.getFolder(), second.getFolder());
+
+		try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+				Statement statement = connection.createStatement();
+				ResultSet result = statement.executeQuery("SELECT path FROM folder WHERE title = 'nested.zip'")) {
+			assertTrue(result.next());
+			String folderPath = result.getString(1);
+			folderPath = folderPath.substring(0, folderPath.length() - 1);
+			assertEquals(SongUtils.crc32(folderPath, new String[0], Paths.get(".").toAbsolutePath().toString()),
+					first.getParent());
+		}
+	}
+
 	private static void writeEntry(ZipOutputStream output, String name, String value) throws Exception {
 		output.putNextEntry(new ZipEntry(name));
 		output.write(value.getBytes(StandardCharsets.UTF_8));
 		output.closeEntry();
+	}
+
+	private static void writeChartArchive(Path archive, String title) throws Exception {
+		try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive))) {
+			writeEntry(output, "Pack/chart.bms", chartWithTitle(title));
+			writeEntry(output, "Pack/sound.wav", "sound");
+		}
 	}
 
 	private static String chartWithTitle(String title) {
@@ -154,6 +225,17 @@ class SQLiteSongDatabaseAccessorTest {
 			 Statement statement = connection.createStatement();
 			 ResultSet result = statement.executeQuery("SELECT preview FROM song")) {
 			return result.next() ? result.getString(1) : null;
+		}
+	}
+
+	private static String archiveFolderPath(Path database, String title) throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+				java.sql.PreparedStatement statement = connection.prepareStatement(
+						"SELECT path FROM folder WHERE title = ?")) {
+			statement.setString(1, title);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? result.getString(1) : null;
+			}
 		}
 	}
 }

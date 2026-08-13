@@ -11,6 +11,10 @@ public class SongDatabaseUpdateListener {
 	private final AtomicInteger bmsFiles = new AtomicInteger(0);
 	private final AtomicInteger processedBMSFiles = new AtomicInteger(0);
 	private final AtomicInteger newBMSFiles = new AtomicInteger(0);
+	private final AtomicInteger archivesScanned = new AtomicInteger(0);
+	private final AtomicInteger archivesLoaded = new AtomicInteger(0);
+	private final AtomicInteger archivesRejected = new AtomicInteger(0);
+	private volatile String lastArchiveFailure = "";
 
 	public void addBMSFilesCount(int count) {
 		bmsFiles.addAndGet(count);
@@ -34,5 +38,36 @@ public class SongDatabaseUpdateListener {
 
 	public int getNewBMSFilesCount() {
 		return newBMSFiles.get();
+	}
+
+	public void archiveLoaded() {
+		archivesScanned.incrementAndGet();
+		archivesLoaded.incrementAndGet();
+	}
+
+	public void archiveRejected(String failure) {
+		archivesScanned.incrementAndGet();
+		archivesRejected.incrementAndGet();
+		if (failure == null) {
+			lastArchiveFailure = "";
+		} else {
+			lastArchiveFailure = failure.length() <= 500 ? failure : failure.substring(0, 497) + "...";
+		}
+	}
+
+	public int getArchivesScanned() {
+		return archivesScanned.get();
+	}
+
+	public int getArchivesLoaded() {
+		return archivesLoaded.get();
+	}
+
+	public int getArchivesRejected() {
+		return archivesRejected.get();
+	}
+
+	public String getLastArchiveFailure() {
+		return lastArchiveFailure;
 	}
 }

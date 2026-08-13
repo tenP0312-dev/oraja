@@ -1553,7 +1553,18 @@ public class MainController {
 
 		public void run() {
 			ImGuiNotify.info(this.message);
-			getSongDatabase().updateSongDatas(path, config.getBmsroot(), false, updateParentWhenMissing, getInfoDatabase());
+			SongDatabaseUpdateListener listener = new SongDatabaseUpdateListener();
+			getSongDatabase().updateSongDatas(path, config.getBmsroot(), false, updateParentWhenMissing,
+					getInfoDatabase(), listener);
+			if (listener.getArchivesScanned() > 0) {
+				String summary = String.format("Archives: %d loaded, %d rejected",
+						listener.getArchivesLoaded(), listener.getArchivesRejected());
+				if (listener.getArchivesRejected() > 0) {
+					ImGuiNotify.warning(summary + " (last: " + listener.getLastArchiveFailure() + ")", 8000);
+				} else {
+					ImGuiNotify.info(summary);
+				}
+			}
 		}
 	}
 

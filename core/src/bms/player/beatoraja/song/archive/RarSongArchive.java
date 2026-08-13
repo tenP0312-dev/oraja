@@ -19,9 +19,16 @@ import com.github.junrar.rarfile.FileHeader;
  * This code must not be used to develop a RAR-compatible compressor.
  */
 public final class RarSongArchive extends SongArchive {
+	private static final byte[] RAR4_SIGNATURE = { 'R', 'a', 'r', '!', 0x1a, 0x07, 0x00 };
+	private static final byte[] RAR5_SIGNATURE = { 'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00 };
 
 	public RarSongArchive() {
 		super(".rar");
+	}
+
+	@Override
+	public boolean matchesSignature(byte[] signature, int length) {
+		return matches(signature, length, RAR4_SIGNATURE) || matches(signature, length, RAR5_SIGNATURE);
 	}
 
 	@Override
@@ -155,5 +162,17 @@ public final class RarSongArchive extends SongArchive {
 			throw new IOException("Unsafe RAR entry: " + entryName);
 		}
 		return name;
+	}
+
+	private boolean matches(byte[] signature, int length, byte[] expected) {
+		if (length < expected.length) {
+			return false;
+		}
+		for (int index = 0; index < expected.length; index++) {
+			if (signature[index] != expected[index]) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
