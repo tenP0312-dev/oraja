@@ -1,5 +1,6 @@
 package bms.player.beatoraja.select;
 
+import bms.model.Mode;
 import bms.player.beatoraja.CourseData;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.ir.IRChartData;
@@ -14,8 +15,10 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BarManagerPrimaryIrTableTest {
     @Test
@@ -46,6 +49,13 @@ class BarManagerPrimaryIrTableTest {
     }
 
     @Test
+    void automaticRefreshWaitsAtRootWithoutDelayingManualRefresh() {
+        assertFalse(BarManager.canApplyPrimaryIrTables(false, 1));
+        assertTrue(BarManager.canApplyPrimaryIrTables(false, 0));
+        assertTrue(BarManager.canApplyPrimaryIrTables(true, 2));
+    }
+
+    @Test
     void convertsFreshIrFoldersAndCoursesWithoutAStoredTableUrl() {
         SongData song = new SongData();
         song.setSha256("sha256");
@@ -55,6 +65,7 @@ class BarManagerPrimaryIrTableTest {
         song.setArtist("artist");
         song.setSubartist("subartist");
         song.setGenre("genre");
+        song.setMode(Mode.BEAT_14K.id);
         IRChartData chart = new IRChartData(song);
         CourseData course = new CourseData();
         course.setName("course");
@@ -78,6 +89,8 @@ class BarManagerPrimaryIrTableTest {
         assertEquals("sha256", converted.getFolder()[0].getSong()[0].getSha256());
         assertEquals("subtitle", converted.getFolder()[0].getSong()[0].getSubtitle());
         assertEquals("subartist", converted.getFolder()[0].getSong()[0].getSubartist());
+        assertEquals(Mode.BEAT_14K, chart.mode);
+        assertEquals(Mode.BEAT_14K.id, converted.getFolder()[0].getSong()[0].getMode());
         assertEquals("course", converted.getCourse()[0].getName());
         assertEquals(
                 CourseData.CourseDataConstraint.CLASS,

@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
+import bms.player.beatoraja.arena.bmsir.BMSIRPrimaryIrTableCache;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
@@ -174,40 +175,46 @@ public class BarManager {
 		}).forEach(startupTables::add);
 	}
 
-	void initIrTables() {
+	int initIrTables() {
 		if (startupTables == null) {
 			initLocalTables();
 		}
 		bmsirPrimaryIrTables.clear();
+		int loadedTables = 0;
 		if(select.main.getIRStatus().length > 0) {
 			MainController.IRStatus primaryIr = select.main.getIRStatus()[0];
-			IRResponse<IRTableData[]> response = primaryIr.connection.getTableDatas();
-			if(response != null && response.isSucceeded() && response.getData() != null) {
-				boolean isBmsirPrimary = BMSIRDanCourseCache.isBmsirPrimaryName(
-						primaryIr.config.getIrname()
+			boolean isBmsirPrimary = BMSIRDanCourseCache.isBmsirPrimaryName(
+					primaryIr.config.getIrname()
+			);
+			if (isBmsirPrimary) {
+				TableData[] cachedTables = BMSIRPrimaryIrTableCache.read(
+						select.resource.getConfig().getPlayerpath(),
+						select.resource.getPlayerConfig().getId()
 				);
-				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
-						&& isBmsirPrimary) {
-					BMSIRDanCourseCache.sync(
-							select.resource.getConfig().getPlayerpath(),
-							select.resource.getPlayerConfig().getId(),
-							response.getData()
-					);
-				}
-				for(IRTableData irtd : response.getData()) {
-					TableBar table = createIrTableBar(irtd);
+				for (TableData cached : cachedTables) {
+					TableBar table = createIrTableBar(cached);
 					if (table != null) {
 						startupTables.add(table);
-						if (isBmsirPrimary) {
-							bmsirPrimaryIrTables.add(table);
-						}
+						bmsirPrimaryIrTables.add(table);
+						loadedTables++;
 					}
 				}
 			} else {
-				logger.warn(
-						"IRからのテーブル取得失敗 : {}",
-						response == null ? "No response" : response.getMessage()
-				);
+				IRResponse<IRTableData[]> response = primaryIr.connection.getTableDatas();
+				if(response != null && response.isSucceeded() && response.getData() != null) {
+					for(IRTableData irtd : response.getData()) {
+						TableBar table = createIrTableBar(irtd);
+						if (table != null) {
+							startupTables.add(table);
+							loadedTables++;
+						}
+					}
+				} else {
+					logger.warn(
+							"IRからのテーブル取得失敗 : {}",
+							response == null ? "No response" : response.getMessage()
+					);
+				}
 			}
 		}
 
@@ -221,6 +228,7 @@ public class BarManager {
 		}).start();
 
 		this.tables = startupTables.toArray(TableBar.class);
+		return loadedTables;
 	}
 
 	void initCourses() {
@@ -646,13 +654,39 @@ public class BarManager {
 			return false;
 		}
 		MainController.IRStatus primaryIr = statuses[0];
+		return startBmsirPrimaryIrTableReload(primaryIr, true);
+	}
+
+	/** Starts the automatic Primary IR refresh after startup has completed. */
+	public boolean refreshBmsirPrimaryIrTablesAfterStartup() {
+		MainController.IRStatus[] statuses = select.main.getIRStatus();
+		if (statuses.length == 0 || !BMSIRDanCourseCache.isBmsirPrimaryName(
+				statuses[0].config.getIrname()
+		)) {
+			return false;
+		}
+		return startBmsirPrimaryIrTableReload(statuses[0], false);
+	}
+
+	private boolean startBmsirPrimaryIrTableReload(
+			MainController.IRStatus primaryIr,
+			boolean notifyUser
+	) {
 		boolean hadPrimaryIrTables = !bmsirPrimaryIrTables.isEmpty();
 		boolean started = primaryIrTableReloader.start(
 				primaryIr.connection::getTableDatas,
 				new PrimaryIrTableReloader.Listener() {
 					@Override
 					public void succeeded(IRTableData[] refreshedTables) {
-						validateIrTableResponse(refreshedTables, hadPrimaryIrTables);
+						TableData[] cachedTables = convertValidIrTables(
+								refreshedTables,
+								hadPrimaryIrTables
+						);
+						BMSIRPrimaryIrTableCache.sync(
+								select.resource.getConfig().getPlayerpath(),
+								select.resource.getPlayerConfig().getId(),
+								cachedTables
+						);
 						boolean coursesChanged =
 								select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
 								&& BMSIRDanCourseCache.sync(
@@ -661,8 +695,9 @@ public class BarManager {
 										refreshedTables
 								);
 						pendingPrimaryIrTables = new PendingPrimaryIrTables(
-								refreshedTables,
-								coursesChanged
+								cachedTables,
+								coursesChanged,
+								notifyUser
 						);
 						postToRenderThread(BarManager.this::applyPendingPrimaryIrTables);
 					}
@@ -670,22 +705,24 @@ public class BarManager {
 					@Override
 					public void failed(String message) {
 						logger.warn("IRからのテーブル再取得失敗 : {}", message);
-						postToRenderThread(() -> ImGuiNotify.error(BMSIRArenaI18n.text(
-								"BMS-IR表の再読み込みに失敗しました: " + message,
-								"Failed to reload BMS-IR tables: " + message
-						)));
+						if (notifyUser) {
+							postToRenderThread(() -> ImGuiNotify.error(BMSIRArenaI18n.text(
+									"Primary IR選曲テーブルの更新に失敗しました: " + message,
+									"Failed to refresh Primary IR selection tables: " + message
+							)));
+						}
 					}
 				}
 		);
-		if (started) {
+		if (started && notifyUser) {
 			ImGuiNotify.info(BMSIRArenaI18n.text(
-					"BMS-IR表を再読み込みしています",
-					"Reloading BMS-IR tables"
+					"Primary IR選曲テーブルを更新しています",
+					"Refreshing Primary IR selection tables"
 			));
-		} else {
+		} else if (notifyUser) {
 			ImGuiNotify.warning(BMSIRArenaI18n.text(
-					"BMS-IR表は再読み込み中です",
-					"BMS-IR tables are already reloading"
+					"Primary IR選曲テーブルは更新中です",
+					"Primary IR selection tables are already refreshing"
 			));
 		}
 		return true;
@@ -694,13 +731,15 @@ public class BarManager {
 	/** Applies a completed fetch only while Music Select is active. */
 	void applyPendingPrimaryIrTables() {
 		PendingPrimaryIrTables pending = pendingPrimaryIrTables;
-		if (pending == null || select.main.getCurrentState() != select) {
+		if (pending == null
+				|| select.main.getCurrentState() != select
+				|| !canApplyPrimaryIrTables(pending.notifyUser(), dir.size)) {
 			return;
 		}
 		pendingPrimaryIrTables = null;
 		try {
 			List<TableBar> replacements = new ArrayList<>(pending.tables().length);
-			for (IRTableData source : pending.tables()) {
+			for (TableData source : pending.tables()) {
 				TableBar replacement = createIrTableBar(source);
 				if (replacement == null) {
 					throw new IllegalArgumentException("invalid Primary IR table response");
@@ -708,10 +747,12 @@ public class BarManager {
 				replacements.add(replacement);
 			}
 			replaceBmsirPrimaryIrTables(replacements, pending.coursesChanged());
-			ImGuiNotify.success(BMSIRArenaI18n.text(
-					"BMS-IR表を再読み込みしました",
-					"Reloaded BMS-IR tables"
-			));
+			if (pending.notifyUser()) {
+				ImGuiNotify.success(BMSIRArenaI18n.text(
+						"Primary IR選曲テーブルを更新しました",
+						"Refreshed Primary IR selection tables"
+				));
+			}
 		} catch (RuntimeException error) {
 			logger.error("BMS-IR table reload could not be applied", error);
 			ImGuiNotify.error(BMSIRArenaI18n.text(
@@ -783,16 +824,27 @@ public class BarManager {
 		return next;
 	}
 
+	static boolean canApplyPrimaryIrTables(boolean manualRefresh, int directoryDepth) {
+		return manualRefresh || directoryDepth <= 0;
+	}
+
 	static void validateIrTableResponse(IRTableData[] sources, boolean hadTables) {
+		convertValidIrTables(sources, hadTables);
+	}
+
+	static TableData[] convertValidIrTables(IRTableData[] sources, boolean hadTables) {
 		if (sources == null || (sources.length == 0 && hadTables)) {
 			throw new IllegalArgumentException("empty Primary IR table response");
 		}
-		for (IRTableData source : sources) {
-			TableData table = convertIrTable(source);
+		TableData[] converted = new TableData[sources.length];
+		for (int index = 0; index < sources.length; index++) {
+			TableData table = convertIrTable(sources[index]);
 			if (table == null || !table.validate()) {
 				throw new IllegalArgumentException("invalid Primary IR table response");
 			}
+			converted[index] = table;
 		}
+		return converted;
 	}
 
 	static TableData convertIrTable(IRTableData source) {
@@ -862,6 +914,10 @@ public class BarManager {
 
 	private TableBar createIrTableBar(IRTableData source) {
 		TableData table = convertIrTable(source);
+		return createIrTableBar(table);
+	}
+
+	private TableBar createIrTableBar(TableData table) {
 		if (table == null || !table.validate()) {
 			return null;
 		}
@@ -882,8 +938,9 @@ public class BarManager {
 	}
 
 	private record PendingPrimaryIrTables(
-			IRTableData[] tables,
-			boolean coursesChanged
+			TableData[] tables,
+			boolean coursesChanged,
+			boolean notifyUser
 	) {
 	}
 

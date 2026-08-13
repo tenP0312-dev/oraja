@@ -132,7 +132,7 @@ public class IRChartData {
 		
 		final BMSModel model = song.getBMSModel();
 		this.total = (int) (model != null ? model.getTotal() : 0);
-		this.mode = model != null ? model.getMode() : null;
+		this.mode = model != null ? model.getMode() : storedMode(song.getMode());
 		this.judge = song.getJudge();
 		this.minbpm = song.getMinbpm();
 		this.maxbpm = song.getMaxbpm();
@@ -149,5 +149,17 @@ public class IRChartData {
 		if(model != null) {
 			values.putAll(model.getValues());			
 		}
+	}
+
+	private static Mode storedMode(int storedMode) {
+		if (storedMode <= 0) {
+			return null;
+		}
+		for (Mode candidate : Mode.values()) {
+			if (candidate.id == storedMode) {
+				return candidate;
+			}
+		}
+		return null;
 	}
 }

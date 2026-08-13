@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
+import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.arena.bmsir.BMSIRJudgeTimingRestore;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.modmenu.*;
@@ -371,11 +372,17 @@ public class MainController {
 			selector.initializeLocalTables();
 			return StartupTask.Result.ok();
 		}));
-		tasks.add(StartupTask.required("BMS-IR難易度表・段位", () -> {
-			selector.initializeIrTables();
-			return ir.length > 0
-					? StartupTask.Result.ok()
-					: StartupTask.Result.skip("IR未接続");
+		tasks.add(StartupTask.required("Primary IR選曲テーブル", () -> {
+			int loadedTables = selector.initializeIrTables();
+			if (ir.length == 0) {
+				return StartupTask.Result.skip("IR未接続");
+			}
+			if (BMSIRDanCourseCache.isBmsirPrimaryName(ir[0].config.getIrname())) {
+				return loadedTables > 0
+						? StartupTask.Result.ok("保存済み " + loadedTables + "表")
+						: StartupTask.Result.skip("保存なし・起動後に取得");
+			}
+			return StartupTask.Result.ok(loadedTables + "表");
 		}));
 		tasks.add(StartupTask.required("コース", () -> {
 			selector.initializeCourses();
@@ -892,6 +899,7 @@ public class MainController {
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		initializeDownloadServices();
 		startIrResendProcess();
+		selector.refreshBmsirPrimaryIrTablesAfterStartup();
 		lastConfigSave = System.nanoTime();
 	}
 
