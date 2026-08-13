@@ -14,7 +14,10 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 
-/** RAR implementation backed by Junrar. */
+/**
+ * Read-only RAR implementation backed by Junrar/UnRAR-derived code.
+ * This code must not be used to develop a RAR-compatible compressor.
+ */
 public final class RarSongArchive extends SongArchive {
 
 	public RarSongArchive() {
