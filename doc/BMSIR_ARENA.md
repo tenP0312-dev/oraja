@@ -309,6 +309,16 @@ application is active. The start, success, failure, and already-running states
 use the built-in Japanese/English notifications. If the service is still
 building a registered-rival snapshot, the plugin can return its last completed
 snapshot; press F2 again after that build completes to load the newer snapshot.
+The normal startup path uses the same replacement mechanism without waiting for
+the network: it first loads a backup-safe per-player last-good cache, labels the
+phase `Primary IR選曲テーブル`, makes Music Select usable, and then starts one
+silent background refresh. A valid non-empty result replaces the table cache;
+an empty, invalid, or failed result leaves the previous cache intact. Managed
+Dan courses are refreshed with the completed response and remain available
+from their separate last-good cache while offline. If the player has already
+opened another folder when the automatic refresh completes, applying the new
+root bars waits until Music Select returns to the root instead of interrupting
+navigation; the saved cache is already ready for the next startup.
 The MANIAC OPTIONS screen is an opaque black full-window mode rather than a window over Music
 Select. Its enlarged list uses the available width and shows a brief
 description of the selected option on wide screens. Song selection input is

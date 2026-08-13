@@ -16,7 +16,9 @@ on unrelated tabs, and provide a compact difficulty-table editor. A song-root
 context menu can update only the selected root without rescanning unrelated
 roots. On the Music Select root, a short F2 press on a table supplied by the
 `BMS-IR` Primary IR now reloads the recommendation and registered-rival tables
-without restarting the client.
+without restarting the client. Startup now opens from a per-player last-good
+Primary IR selection-table cache and refreshes it after Music Select is usable,
+instead of blocking the startup screen on the complete server response.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 

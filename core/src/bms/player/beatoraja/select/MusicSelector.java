@@ -271,8 +271,12 @@ public final class MusicSelector extends MainState {
 		manager.initLocalTables();
 	}
 
-	public void initializeIrTables() {
-		manager.initIrTables();
+	public int initializeIrTables() {
+		return manager.initIrTables();
+	}
+
+	public boolean refreshBmsirPrimaryIrTablesAfterStartup() {
+		return manager.refreshBmsirPrimaryIrTablesAfterStartup();
 	}
 
 	public void initializeCourses() {
