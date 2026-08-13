@@ -153,11 +153,13 @@
 			</HBox>
 		</VBox>
 	</HBox>
-	<CheckBox fx:id="updatesong" mnemonicParsing="false"
-		prefHeight="25.0" prefWidth="300.0" text="%UPDATE_SONG">
+	<HBox>
 		<VBox.margin>
 			<Insets left="10.0" />
 		</VBox.margin>
-	</CheckBox>
+		<CheckBox fx:id="updatesong" mnemonicParsing="false"
+			prefHeight="25.0" prefWidth="390.0" text="%UPDATE_SONG" />
+		<CheckBox fx:id="scanSongArchives" mnemonicParsing="false"
+			prefHeight="25.0" prefWidth="500.0" text="%SCAN_SONG_ARCHIVES" />
+	</HBox>
 </VBox>
-

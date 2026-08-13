@@ -12,6 +12,8 @@ import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.play.bga.BGAProcessor;
 import bms.player.beatoraja.song.SongData;
+import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.song.SongResources;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 
@@ -37,6 +39,7 @@ public final class PlayerResource {
 	 * 選曲中のBMS
 	 */
 	private BMSModel model;
+	private SongResource chartResource;
 	
 	private long marginTime;
 	/**
@@ -173,7 +176,8 @@ public final class PlayerResource {
 		// TODO play mode, リプレイデータでの読み込み分岐をここで行う
 		this.mode = mode;
 		replay = new ReplayData();
-		model = loadBMSModel(f, pconfig.getLnmode());
+		chartResource = SongResources.fromPath(f);
+		model = loadBMSModel(chartResource, pconfig.getLnmode(), null);
 		if (model == null) {
 			logger.warn("楽曲が存在しないか、解析時にエラーが発生しました:{}", f.toString());
 			return false;
@@ -183,7 +187,7 @@ public final class PlayerResource {
 		}
 
 		orgmode = model.getMode();
-		bmsresource.setBMSFile(model, f, config, mode);
+		bmsresource.setBMSFile(model, chartResource, config, mode);
 		if(songdata != null) {
 			songdata.setBMSModel(model);
 		} else {
@@ -202,15 +206,55 @@ public final class PlayerResource {
 	}
 
 	public BMSModel loadBMSModel(Path f, int lnmode) {
-		return loadBMSModel(new ChartInformation(f, BMSIRLongNotePolicy.IR_LN_TYPE, null));
+		return loadBMSModel(SongResources.fromPath(f), lnmode, null);
 	}
 
 	public BMSModel loadBMSModel(int[] selectedRandom) {
 		if(model != null) {
+			if (chartResource != null) {
+				return loadBMSModel(chartResource, BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom);
+			}
 			ChartInformation info = model.getChartInformation();
 			return loadBMSModel(new ChartInformation(info.path, BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom));
 		}
 		return null;
+	}
+
+	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom) {
+		String lowerName = resource.name().toLowerCase(java.util.Locale.ROOT);
+		ChartDecoder decoder;
+		BMSModel loaded;
+		try {
+			if (lowerName.endsWith(".bms") || lowerName.endsWith(".bme")
+					|| lowerName.endsWith(".bml") || lowerName.endsWith(".pms")) {
+				decoder = new BMSDecoder(BMSIRLongNotePolicy.IR_LN_TYPE);
+				try (java.io.InputStream input = resource.openStream()) {
+					loaded = ((BMSDecoder) decoder).decode(input.readAllBytes(),
+							lowerName.endsWith(".pms"), selectedRandom);
+				}
+			} else {
+				Path decoderPath = resource.localPath().orElseGet(() -> {
+					try {
+						return resource.materialize();
+					} catch (java.io.IOException e) {
+						throw new java.io.UncheckedIOException(e);
+					}
+				});
+				decoder = ChartDecoder.getDecoder(decoderPath);
+				loaded = decoder != null
+						? decoder.decode(new ChartInformation(decoderPath,
+								BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom))
+						: null;
+			}
+		} catch (java.io.IOException | java.io.UncheckedIOException e) {
+			logger.warn("楽曲アーカイブ読み込み失敗: {} ({})", resource.displayPath(), e.getMessage());
+			return null;
+		}
+		if (loaded != null) {
+			loaded.setChartInformation(new ChartInformation(
+					Path.of(resource.displayPath()), BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom));
+		}
+		return prepareModel(loaded, decoder);
 	}
 
 	public BMSModel loadBMSModel(ChartInformation info) {
@@ -220,6 +264,10 @@ public final class PlayerResource {
 			return null;
 		}
 		BMSModel model = decoder.decode(info);
+		return prepareModel(model, decoder);
+	}
+
+	private BMSModel prepareModel(BMSModel model, ChartDecoder decoder) {
 		if (model == null) {
 			return null;
 		}
@@ -257,6 +305,7 @@ public final class PlayerResource {
 	 * the normal asynchronous audio/BGA loaders.
 	 */
 	public void setSkinPreviewModel(BMSModel model) {
+		this.chartResource = null;
 		this.model = model;
 		this.orgmode = model.getMode();
 		this.songdata = new SongData(model, false);
@@ -272,6 +321,7 @@ public final class PlayerResource {
 		if (models == null || models.length == 0) {
 			throw new IllegalArgumentException("preview course requires at least one chart");
 		}
+		chartResource = null;
 		course = models.clone();
 		courseindex = course.length - 1;
 		coursedata = courseData;

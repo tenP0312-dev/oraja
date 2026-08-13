@@ -272,6 +272,7 @@ dependencies {
 
     implementation(libs.sqlite)
     implementation(libs.commons.compress)
+    implementation(libs.junrar)
     implementation(libs.commons.csv)
     implementation(libs.commons.dbutils)
     implementation(libs.xz)

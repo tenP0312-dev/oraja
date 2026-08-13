@@ -259,7 +259,8 @@ public class MainLoader extends Application {
 			try {
 				Config config = Config.read();
 				Class.forName("org.sqlite.JDBC");
-				songdb = new SQLiteSongDatabaseAccessor(config.getSongpath(), config.getBmsroot());
+				songdb = new SQLiteSongDatabaseAccessor(config.getSongpath(), config.getBmsroot(),
+						config.isScanSongArchives());
 			} catch (ClassNotFoundException | PlayerConfigException e) {
 				logger.error("Failed to access score database: {}", e.getLocalizedMessage());
 			}

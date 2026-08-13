@@ -34,6 +34,8 @@ import bms.player.beatoraja.ir.IRTableData;
 import bms.player.beatoraja.select.bar.*;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
 import bms.player.beatoraja.song.SongData;
+import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.song.SongResources;
 import bms.player.beatoraja.song.SongInformationAccessor;
 
 /**
@@ -1139,19 +1141,19 @@ public class BarManager {
 					final SongBar songbar = (SongBar) bar;
 					SongData song = songbar.getSongData();
 					try {
-						Path bannerfile = Paths.get(song.getPath()).getParent().resolve(song.getBanner());
-						// System.out.println(bannerfile.getPath());
-						if (song.getBanner().length() > 0 && Files.exists(bannerfile)) {
-							songbar.setBanner(select.getBannerResource().get(bannerfile.toString()));
+						SongResource bannerfile = SongResources.fromPath(Paths.get(song.getPath()))
+								.parent().resolve(song.getBanner());
+						if (song.getBanner().length() > 0 && bannerfile.exists()) {
+							songbar.setBanner(select.getBannerResource().get(bannerfile));
 						}
 					} catch (Exception e) {
 						logger.warn("banner読み込み失敗 : {}", song.getBanner());
 					}
 					try {
-						Path stagefilefile = Paths.get(song.getPath()).getParent().resolve(song.getStagefile());
-						// System.out.println(stagefilefile.getPath());
-						if (song.getStagefile().length() > 0 && Files.exists(stagefilefile)) {
-							songbar.setStagefile(select.getStagefileResource().get(stagefilefile.toString()));
+						SongResource stagefilefile = SongResources.fromPath(Paths.get(song.getPath()))
+								.parent().resolve(song.getStagefile());
+						if (song.getStagefile().length() > 0 && stagefilefile.exists()) {
+							songbar.setStagefile(select.getStagefileResource().get(stagefilefile));
 						}
 					} catch (Exception e) {
 						logger.warn("stagefile読み込み失敗 : {}", song.getStagefile());
