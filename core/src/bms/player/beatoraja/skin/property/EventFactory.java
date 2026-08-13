@@ -329,7 +329,10 @@ public class EventFactory {
 				if (selected instanceof FolderBar) {
 					selector.main.updateSong(((FolderBar) selected).getFolderData().getPath());
 				} else if (selected instanceof TableBar) {
-					selector.main.updateTable((TableBar) selected);
+					TableBar table = (TableBar) selected;
+					if (!selector.getBarManager().reloadBmsirPrimaryIrTable(table)) {
+						selector.main.updateTable(table);
+					}
 				} else if (selected instanceof SongBar) {
 					final String path = ((SongBar) selected).getSongData().getPath();
 					if (path != null) {

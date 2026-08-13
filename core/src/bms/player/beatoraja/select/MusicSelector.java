@@ -387,6 +387,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void render() {
+		manager.applyPendingPrimaryIrTables();
 		final Bar current = manager.getSelected();
         if(timer.getNowTime() > getSkin().getInput()){
         	timer.switchTimer(TIMER_STARTINPUT, true);

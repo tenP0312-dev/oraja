@@ -14,7 +14,9 @@ The current client source version is **0.4.14.39**. The Resource settings now
 group song-library maintenance with the BMS roots, keep those controls hidden
 on unrelated tabs, and provide a compact difficulty-table editor. A song-root
 context menu can update only the selected root without rescanning unrelated
-roots.
+roots. On the Music Select root, a short F2 press on a table supplied by the
+`BMS-IR` Primary IR now reloads the recommendation and registered-rival tables
+without restarting the client.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
