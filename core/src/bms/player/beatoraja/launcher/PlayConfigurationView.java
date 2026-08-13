@@ -481,7 +481,7 @@ public class PlayConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
-		dbUpdateCheckDialogMessage = arg1.getString("UPDATE_DATABASE_MESSAGE");
+		dbUpdateCheckDialogMessage = arg1.getString("REBUILD_DATABASE_MESSAGE");
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
 		List<String> shortButtonActions = english
@@ -1251,7 +1251,7 @@ public class PlayConfigurationView implements Initializable {
     @FXML
 	public void loadAllBMS() {
 		commit();
-		if (checkIfLoadBMS()) {
+		if (confirmFullDatabaseUpdate()) {
 			loadBMS(null, true);
 		}
 	}
@@ -1259,9 +1259,7 @@ public class PlayConfigurationView implements Initializable {
     @FXML
 	public void loadDiffBMS() {
 		commit();
-		if (checkIfLoadBMS()) {
-			loadBMS(null, false);
-		}
+		loadBMS(null, false);
 	}
 
 	public void loadBMSPath(String updatepath){
@@ -1269,7 +1267,7 @@ public class PlayConfigurationView implements Initializable {
     	loadBMS(updatepath, false);
 	}
 
-	private boolean checkIfLoadBMS() {
+	private boolean confirmFullDatabaseUpdate() {
 		Alert confirmAlert = new Alert(
 				Alert.AlertType.NONE,
 				dbUpdateCheckDialogMessage,

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -74,6 +75,38 @@ class SQLiteSongDatabaseAccessorTest {
 	}
 
 	@Test
+	void updatesOnlyTheSelectedSongRootWhenAnUpdatePathIsProvided() throws Exception {
+		Path firstRoot = temporary.resolve("first-root");
+		Path secondRoot = temporary.resolve("second-root");
+		Files.createDirectories(firstRoot);
+		Files.createDirectories(secondRoot);
+		Path firstChart = firstRoot.resolve("chart.bms");
+		Path secondChart = secondRoot.resolve("chart.bms");
+		Files.writeString(firstChart, chartWithTitle("First original"));
+		Files.writeString(secondChart, chartWithTitle("Second original"));
+
+		Path database = temporary.resolve("selected-root-songdata.db");
+		String[] roots = {firstRoot.toString(), secondRoot.toString()};
+		SQLiteSongDatabaseAccessor accessor = new SQLiteSongDatabaseAccessor(database.toString(), roots);
+		accessor.updateSongDatas(null, roots, false, false, null);
+		assertEquals(1, accessor.getSongDatas("title", "First original").length);
+		assertEquals(1, accessor.getSongDatas("title", "Second original").length);
+
+		Files.writeString(firstChart, chartWithTitle("First updated"));
+		Files.writeString(secondChart, chartWithTitle("Second updated"));
+		FileTime changed = FileTime.fromMillis(System.currentTimeMillis() + 5_000);
+		Files.setLastModifiedTime(firstChart, changed);
+		Files.setLastModifiedTime(secondChart, changed);
+
+		accessor.updateSongDatas(firstRoot.toString(), roots, false, false, null);
+
+		assertEquals(0, accessor.getSongDatas("title", "First original").length);
+		assertEquals(1, accessor.getSongDatas("title", "First updated").length);
+		assertEquals(1, accessor.getSongDatas("title", "Second original").length);
+		assertEquals(0, accessor.getSongDatas("title", "Second updated").length);
+	}
+
+	@Test
 	void scansZipChartsOnlyWhenArchiveScanningIsEnabled() throws Exception {
 		Path songs = temporary.resolve("archive-songs");
 		Files.createDirectories(songs);
@@ -110,6 +143,10 @@ class SQLiteSongDatabaseAccessorTest {
 		output.putNextEntry(new ZipEntry(name));
 		output.write(value.getBytes(StandardCharsets.UTF_8));
 		output.closeEntry();
+	}
+
+	private static String chartWithTitle(String title) {
+		return "#PLAYER 1\n#TITLE " + title + "\n#BPM 120\n#WAV01 sound.wav\n#00111:01\n";
 	}
 
 	private static String previewPath(Path database) throws Exception {

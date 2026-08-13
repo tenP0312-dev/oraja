@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.38`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.39`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -179,6 +179,27 @@ ordinary-play LR2 one-bass input and READY preview, Lua play-skin accessors for 
 HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
 SP/DP random-placement browser view for OBS, progressive CPU score graphs,
 disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
+
+## Resource settings and song-library updates
+
+Version `0.4.14.39` keeps the song-library controls inside the Resource tab and
+places them beside short descriptions of their scope. `Load songs` checks
+added or changed songs immediately. `Full song update` first warns that it
+will reread every registered song. The controls do not appear while another
+configuration tab is open.
+
+Right-clicking a configured BMS root can update only that root, open or copy
+the path, or remove the root from configuration. Removing a root never deletes
+its files, and the configured download root cannot be removed this way. A
+selected-root update passes that root to the existing database scanner, so
+unrelated roots are neither rescanned nor deleted.
+
+Difficulty tables are shown in one active list. A row context menu can update
+one table, edit a custom URL, change its order, or remove it. `Choose built-in`
+opens a compact checkbox list and can add several non-duplicate tables in one
+operation; `Load from URL` handles custom tables separately. Existing table
+URLs, active ordering, BMS roots, and archive-scanning settings remain
+compatible with saved profiles.
 
 ## ZIP/RAR song archives
 
@@ -817,7 +838,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.38-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.39-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -838,7 +859,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.38-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.39-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -854,7 +875,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.38-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.39-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.69.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

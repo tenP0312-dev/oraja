@@ -1,5 +1,6 @@
 package bms.player.beatoraja.launcher;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -16,13 +17,17 @@ import bms.player.beatoraja.TableDataAccessor;
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
@@ -36,42 +41,59 @@ public class ResourceConfigurationView implements Initializable {
 	@FXML
 	private ListView<String> bmsroot;
 	@FXML
-	private TextField url;
-	@FXML
 	private EditableTableView<TableInfo> tableurl;
-    @FXML
-    private EditableTableView<TableInfo> available_tables;
 	@FXML
 	private CheckBox updatesong;
 	@FXML
 	private CheckBox scanSongArchives;
 
 	private Config config;
-	
+	private ResourceBundle resources;
+	private final LinkedHashSet<String> availableTableUrls = new LinkedHashSet<>();
 	private PlayConfigurationView main;
 	private String downloadDirectory;
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
+		resources = arg1;
 		bmsroot.setCellFactory(new Callback<>() {
 			@Override
 			public ListCell<String> call(ListView<String> param) {
 				return new ListCell<>() {
+					private final MenuItem updateItem = menuItem("BMS_PATH_UPDATE_SELECTED", () -> updateSongPath(getItem()));
+					private final MenuItem openItem = menuItem("BMS_PATH_OPEN", () -> openSongPath(getItem()));
+					private final MenuItem copyItem = menuItem("BMS_PATH_COPY", () -> copySongPath(getItem()));
+					private final MenuItem removeItem = menuItem("BMS_PATH_REMOVE", () -> removeSongPath(getItem()));
+					private final ContextMenu contextMenu = new ContextMenu(
+							updateItem, openItem, copyItem, new SeparatorMenuItem(), removeItem);
+
+					{
+						setOnContextMenuRequested(event -> {
+							if (!isEmpty()) {
+								bmsroot.getSelectionModel().clearAndSelect(getIndex());
+							}
+						});
+					}
+
 					@Override
 					protected void updateItem(String item, boolean empty) {
 						super.updateItem(item, empty);
 						if (item != null && !empty) {
 							setText(item);
 							String entryAbsolutePath = Path.of(item).toAbsolutePath().toString();
-							String downloadDirectoryAbsolutePath = Path.of(downloadDirectory).toAbsolutePath().toString();
-							if (entryAbsolutePath.equals(downloadDirectoryAbsolutePath)) {
-								setStyle("-fx-text-fill: #7878f8");
-							} else {
-								setStyle("-fx-text-fill: -fx-text-base-color");
+							String downloadDirectoryAbsolutePath = downloadDirectory == null
+									? ""
+									: Path.of(downloadDirectory).toAbsolutePath().toString();
+							if (!downloadDirectoryAbsolutePath.isEmpty()
+									&& entryAbsolutePath.equals(downloadDirectoryAbsolutePath)) {
+								setText(item + " " + resources.getString("BMS_PATH_DOWNLOAD_DIRECTORY_SUFFIX"));
 							}
+							setStyle("");
+							setContextMenu(contextMenu);
 						} else {
 							setText("");
-							setStyle("-fx-text-fill: -fx-text-base-color");
+							setStyle("");
+							setContextMenu(null);
 						}
 					}
 				};
@@ -82,59 +104,46 @@ public class ResourceConfigurationView implements Initializable {
 	void init(PlayConfigurationView main) {
 		this.main = main;
 
-		// Selected Tables
-        TableColumn<TableInfo,String> nameColumn = new TableColumn<TableInfo,String>("NAME/STATUS");
+		TableColumn<TableInfo,String> nameColumn = new TableColumn<>(resources.getString("TABLE_NAME_STATUS"));
         nameColumn.setCellValueFactory((p) -> p.getValue().nameStatusProperty());
         nameColumn.setSortable(false);
-        nameColumn.setMinWidth(180);
-        nameColumn.setMinWidth(0);
+		nameColumn.setPrefWidth(210);
 
-		TableColumn<TableInfo,String> commentColumn = new TableColumn<TableInfo,String>("COMMENT");
+		TableColumn<TableInfo,String> commentColumn = new TableColumn<>(resources.getString("TABLE_COMMENT"));
 		commentColumn.setCellValueFactory((p) -> p.getValue().commentProperty());
 		commentColumn.setSortable(false);
-		commentColumn.setMinWidth(180);
-		commentColumn.setMinWidth(0);
+		commentColumn.setPrefWidth(300);
 
-		TableColumn<TableInfo,String> urlColumn = new TableColumn<TableInfo,String>("URL");
+		TableColumn<TableInfo,String> urlColumn = new TableColumn<>(resources.getString("TABLE_URL_COLUMN"));
 		urlColumn.setCellValueFactory((p) -> p.getValue().urlProperty());
 		urlColumn.setSortable(false);
-		urlColumn.setMinWidth(300);
-		urlColumn.setMinWidth(0);
+		urlColumn.setPrefWidth(320);
 
 		tableurl.getColumns().setAll(nameColumn, commentColumn, urlColumn);
 		tableurl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		// Available Tables
+		tableurl.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+		tableurl.setRowFactory(view -> new TableRow<>() {
+			private final MenuItem updateItem = menuItem("TABLE_UPDATE_SELECTED", () -> updateTable(getItem()));
+			private final MenuItem editUrlItem = menuItem("TABLE_EDIT_URL", () -> editTableUrl(getItem()));
+			private final MenuItem moveUpItem = menuItem("TABLE_MOVE_UP", () -> moveTable(getItem(), -1));
+			private final MenuItem moveDownItem = menuItem("TABLE_MOVE_DOWN", () -> moveTable(getItem(), 1));
+			private final MenuItem removeItem = menuItem("TABLE_REMOVE", () -> removeTable(getItem()));
+			private final ContextMenu contextMenu = new ContextMenu(
+					updateItem, editUrlItem, new SeparatorMenuItem(), moveUpItem, moveDownItem,
+					new SeparatorMenuItem(), removeItem);
 
-		TableColumn<TableInfo,String> aNameColumn = new TableColumn<TableInfo,String>("NAME/STATUS");
-		aNameColumn.setCellValueFactory((p) -> p.getValue().nameStatusProperty());
-		aNameColumn.setSortable(false);
-		aNameColumn.setMinWidth(180);
-		aNameColumn.setMinWidth(0);
-
-		TableColumn<TableInfo,String> aCommentColumn = new TableColumn<TableInfo,String>("COMMENT");
-		aCommentColumn.setCellValueFactory((p) -> p.getValue().commentProperty());
-		aCommentColumn.setSortable(false);
-		aCommentColumn.setMinWidth(180);
-		aCommentColumn.setMinWidth(0);
-
-		TableColumn<TableInfo,String> aUrlColumn = new TableColumn<TableInfo,String>("URL");
-		aUrlColumn.setCellValueFactory((p) -> p.getValue().urlProperty());
-		aUrlColumn.setSortable(false);
-		aUrlColumn.setMinWidth(300);
-		aUrlColumn.setMinWidth(0);
-
-		available_tables.getColumns().setAll(aNameColumn, aCommentColumn, aUrlColumn);
-		available_tables.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-		// Clear selection in one table if another is selected
-		tableurl.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-			if (newValue != null) {
-				available_tables.getSelectionModel().clearSelection();
+			{
+				setOnContextMenuRequested(event -> {
+					if (!isEmpty()) {
+						tableurl.getSelectionModel().clearAndSelect(getIndex());
+					}
+				});
 			}
-		});
-		available_tables.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-			if (newValue != null) {
-				tableurl.getSelectionModel().clearSelection();
+
+			@Override
+			protected void updateItem(TableInfo item, boolean empty) {
+				super.updateItem(item, empty);
+				setContextMenu(empty || item == null ? null : contextMenu);
 			}
 		});
 
@@ -150,17 +159,6 @@ public class ResourceConfigurationView implements Initializable {
 				clipboard.setContent(content);
 			}
 		});
-		available_tables.setOnKeyPressed(e -> {
-			if (e.isControlDown() && e.getCode().equals(KeyCode.C)) {
-				Clipboard clipboard = Clipboard.getSystemClipboard();
-				ClipboardContent content = new ClipboardContent();
-				String selection = available_tables.getSelectionModel().getSelectedItems().stream()
-						.map(TableInfo::getUrl)
-						.collect(Collectors.joining("\n"));
-				content.putString(selection);
-				clipboard.setContent(content);
-			}
-		});
 	}
 
     public void update(Config config) {
@@ -170,13 +168,14 @@ public class ResourceConfigurationView implements Initializable {
 		updatesong.setSelected(config.isUpdatesong());
 		scanSongArchives.setSelected(config.isScanSongArchives());
 
-		// Make sure that all available tables are present in the list prior to deduplicating with the user tables
-        String[] intermediate = addUniqueTable(Config.AVAILABLE_TABLEURL, config.getAvailableURL());
-        // Remove user tables that have already been added to the active list
-		intermediate = subtractTable(intermediate ,config.getTableURL());
-		config.setAvailableURL(intermediate);
+		availableTableUrls.clear();
+		availableTableUrls.addAll(Arrays.asList(Config.AVAILABLE_TABLEURL));
+		if (config.getAvailableURL() != null) {
+			availableTableUrls.addAll(Arrays.asList(config.getAvailableURL()));
+		}
+		availableTableUrls.removeAll(Arrays.asList(config.getTableURL()));
+		config.setAvailableURL(availableTableUrls.toArray(new String[0]));
 		TableInfo.populateList(tableurl.getItems(), config.getTableURL());
-		TableInfo.populateList(available_tables.getItems(), config.getAvailableURL());
 	}
 
 	public void commit() {
@@ -184,6 +183,7 @@ public class ResourceConfigurationView implements Initializable {
 		config.setUpdatesong(updatesong.isSelected());
 		config.setScanSongArchives(scanSongArchives.isSelected());
 		config.setTableURL(TableInfo.toUrlArray(tableurl.getItems()));
+		config.setAvailableURL(availableTableUrls.toArray(new String[0]));
 		config.setDownloadDirectory(downloadDirectory);
 	}
 
@@ -512,129 +512,334 @@ public class ResourceConfigurationView implements Initializable {
 
     @FXML
 	public void removeSongPath() {
-		ObservableList<String> removingItem = bmsroot.getSelectionModel().getSelectedItems();
-		if (removingItem.contains(downloadDirectory)) {
-			Alert alert = new Alert(Alert.AlertType.WARNING, "You cannot remove the download directory!");
-			alert.showAndWait();
-			return ;
-		}
-		bmsroot.getItems().removeAll(removingItem);
+		removeSongPath(bmsroot.getSelectionModel().getSelectedItem());
 	}
 
 	@FXML
 	public void markAsDownloadDirectory() {
-		downloadDirectory = bmsroot.getSelectionModel().getSelectedItem();
+		String selected = bmsroot.getSelectionModel().getSelectedItem();
+		if (selected == null) {
+			return;
+		}
+		downloadDirectory = selected;
 		bmsroot.refresh();
 	}
 
-    @FXML
-	public void addTableURL() {
-		String s = url.getText();
-		if (s.startsWith("http") && !tableurl.getItems().contains(s)) {
-			tableurl.addItem(new TableInfo(url.getText()));
+	@FXML
+	public void showAvailableTables() {
+		Dialog<ButtonType> dialog = new Dialog<>();
+		dialog.setTitle(resources.getString("CHOOSE_EXISTING_TABLES"));
+		dialog.setHeaderText(null);
+		ButtonType addButtonType = new ButtonType(
+				resources.getString("ADD_SELECTED_TABLES"), ButtonBar.ButtonData.OK_DONE);
+		dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+		Label instructions = new Label(resources.getString("CHOOSE_EXISTING_TABLES_DESCRIPTION"));
+		instructions.setWrapText(true);
+		VBox choices = new VBox(1);
+		List<CheckBox> selectors = new ArrayList<>();
+		for (String tableUrl : availableTableUrls) {
+			TableInfo info = new TableInfo(tableUrl);
+			String name = info.getNameStatus().isBlank() ? tableUrl : info.getNameStatus();
+			CheckBox selector = new CheckBox(name);
+			selector.setUserData(tableUrl);
+			selector.setMinWidth(210);
+			selector.setPrefWidth(210);
+			selector.setMaxWidth(210);
+			selectors.add(selector);
+
+			Label detail = new Label(info.getComment());
+			detail.setMaxWidth(Double.MAX_VALUE);
+			String tooltipText = (info.getComment().isBlank() ? name : info.getComment())
+					+ "\n" + tableUrl;
+			selector.setTooltip(new Tooltip(tooltipText));
+			detail.setTooltip(new Tooltip(tooltipText));
+			HBox choice = new HBox(10, selector, detail);
+			choice.setAlignment(Pos.CENTER_LEFT);
+			choice.setPadding(new Insets(3, 6, 3, 6));
+			HBox.setHgrow(detail, Priority.ALWAYS);
+			choices.getChildren().add(choice);
 		}
-	}
 
-    @FXML
-	public void removeTableURL() {
-		if (tableurl.getSelectionModel().getSelectedItems().isEmpty()) {
-			available_tables.removeSelectedItems();
-		} else {
-			tableurl.removeSelectedItems();
+		if (selectors.isEmpty()) {
+			choices.getChildren().add(new Label(resources.getString("NO_AVAILABLE_TABLES")));
 		}
-	}
+		ScrollPane scroll = new ScrollPane(choices);
+		scroll.setFitToWidth(true);
+		scroll.setPrefViewportWidth(500);
+		scroll.setPrefViewportHeight(250);
+		VBox content = new VBox(8, instructions, scroll);
+		dialog.getDialogPane().setContent(content);
+		dialog.getDialogPane().setPrefWidth(540);
 
-	public void moveTableURLUp() {
-		if (tableurl.getSelectionModel().getSelectedItems().isEmpty()) {
-			available_tables.moveSelectedItemsUp();
-		} else {
-			tableurl.moveSelectedItemsUp();
+		Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
+		addButton.setDisable(true);
+		selectors.forEach(selector -> selector.selectedProperty().addListener((observable, oldValue, newValue) ->
+				addButton.setDisable(selectors.stream().noneMatch(CheckBox::isSelected))));
+
+		if (dialog.showAndWait().orElse(ButtonType.CANCEL) != addButtonType) {
+			return;
 		}
-	}
 
-	public void moveTableURLDown() {
-		if (tableurl.getSelectionModel().getSelectedItems().isEmpty()) {
-			available_tables.moveSelectedItemsDown();
-		} else {
-			tableurl.moveSelectedItemsDown();
-		}
-	}
-
-	public void moveTableURLIn() { transferSelection(available_tables, tableurl); }
-
-	public void moveTableURLOut() { transferSelection(tableurl, available_tables); }
-
-	public <T> void transferSelection(EditableTableView<T> source, EditableTableView<T> destination) {
-		ObservableList<T> selection = source.getSelectionModel().getSelectedItems();
-		// When a JavaFX ObservableList is changed it's handlers are invoked, and thus due to
-		// implementation specifics cannot be reversed in place. This copy bypasses this limitation.
-		//
-		// https://stackoverflow.com/questions/27348231/fxcollections-reverse-throwing-unsupportedoperationexception
-        List<T> copy = new ArrayList<T>(selection);
-		Collections.reverse(copy);
-		for (T item : copy) {
-			destination.getItems().add(0,  item);
-		}
-		source.removeSelectedItems();
-		source.getSelectionModel().clearSelection();
-	}
-
-    // Adds unique elements of the latter to the former
-    public String[] addUniqueTable(String[] formerArray, String[] latterArray) {
-        List<String> formerList = Arrays.asList(formerArray);
-        List<String> latterList = Arrays.asList(latterArray);
-
-        List<String> resultList = new ArrayList<String>(formerList);
-        for (String url : latterList) {
-            if (!formerList.contains(url)) {
-                resultList.add(url);
-            }
-        }
-
-        return resultList.toArray(new String[0]);
-    }
-
-	// Subtract members of the latter from the former
-	public String[] subtractTable(String[] formerArray, String[] latterArray) {
-		List<String> formerList = Arrays.asList(formerArray);
-		List<String> latterList = Arrays.asList(latterArray);
-
-		List<String> resultList = new ArrayList<String>();
-		for (String url : formerList) {
-			if (!latterList.contains(url)) {
-				resultList.add(url);
+		List<TableInfo> added = new ArrayList<>();
+		for (CheckBox selector : selectors) {
+			if (!selector.isSelected()) {
+				continue;
 			}
+			String tableUrl = (String) selector.getUserData();
+			if (hasTableUrl(tableUrl)) {
+				continue;
+			}
+			TableInfo info = new TableInfo(tableUrl);
+			tableurl.getItems().add(info);
+			availableTableUrls.remove(tableUrl);
+			added.add(info);
 		}
-
-		return resultList.toArray(new String[0]);
+		commit();
+		loadTableUrls(added.stream().map(TableInfo::getUrl).toArray(String[]::new));
 	}
- 	private static class TableInfo {
-		public StringProperty url;
-		public void setUrl(String value) { urlProperty().set(value); }
-		public String getUrl() { return urlProperty().get(); }
-		public StringProperty urlProperty() { 
-			if (url == null) url = new SimpleStringProperty(this, "url");
-			return url; 
+
+	@FXML
+	public void showAddTableUrlDialog() {
+		showTableUrlDialog(null);
+	}
+
+	@FXML
+	public void loadDiffBMS() {
+		if (main != null) {
+			main.loadDiffBMS();
 		}
-		public StringProperty nameStatus;
-		public void setNameStatus(String value) { nameStatusProperty().set(value); }
-		public String getNameStatus() { return nameStatusProperty().get(); }
-		public StringProperty nameStatusProperty() { 
-			if (nameStatus == null) nameStatus = new SimpleStringProperty(this, "nameStatus");
-			return nameStatus; 
+	}
+
+	@FXML
+	public void loadAllBMS() {
+		if (main != null) {
+			main.loadAllBMS();
+		}
+	}
+
+	private MenuItem menuItem(String resourceKey, Runnable action) {
+		MenuItem item = new MenuItem(resources.getString(resourceKey));
+		item.setOnAction(event -> action.run());
+		return item;
+	}
+
+	private void updateSongPath(String path) {
+		if (path == null || main == null || !bmsroot.getItems().contains(path)) {
+			return;
+		}
+		main.loadBMSPath(path);
+	}
+
+	private void openSongPath(String path) {
+		if (path == null) {
+			return;
+		}
+		try {
+			Path directory = Path.of(path).toAbsolutePath().normalize();
+			if (!Files.isDirectory(directory) || !Desktop.isDesktopSupported()) {
+				showWarning("BMS_PATH_OPEN_FAILED", directory.toString());
+				return;
+			}
+			Desktop.getDesktop().open(directory.toFile());
+		} catch (IOException | SecurityException e) {
+			showWarning("BMS_PATH_OPEN_FAILED", path);
+		}
+	}
+
+	private void copySongPath(String path) {
+		if (path == null) {
+			return;
+		}
+		ClipboardContent content = new ClipboardContent();
+		content.putString(path);
+		Clipboard.getSystemClipboard().setContent(content);
+	}
+
+	private void removeSongPath(String path) {
+		if (path == null) {
+			return;
+		}
+		if (samePath(path, downloadDirectory)) {
+			showWarning("BMS_PATH_DOWNLOAD_REMOVE_BLOCKED", path);
+			return;
+		}
+		Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+		confirm.setTitle(resources.getString("BMS_PATH_REMOVE_TITLE"));
+		confirm.setHeaderText(resources.getString("BMS_PATH_REMOVE_HEADER"));
+		confirm.setContentText(resources.getString("BMS_PATH_REMOVE_DESCRIPTION") + "\n\n" + path);
+		if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+			bmsroot.getItems().remove(path);
+		}
+	}
+
+	private boolean samePath(String left, String right) {
+		if (left == null || right == null) {
+			return false;
+		}
+		return Path.of(left).toAbsolutePath().normalize()
+				.equals(Path.of(right).toAbsolutePath().normalize());
+	}
+
+	private void showWarning(String resourceKey, String detail) {
+		Alert alert = new Alert(Alert.AlertType.WARNING);
+		alert.setTitle(resources.getString("RESOURCE_SETTINGS_TITLE"));
+		alert.setHeaderText(resources.getString(resourceKey));
+		alert.setContentText(detail);
+		alert.showAndWait();
+	}
+
+	private void updateTable(TableInfo info) {
+		if (info == null) {
+			return;
+		}
+		loadTableUrls(new String[]{info.getUrl()});
+	}
+
+	private void editTableUrl(TableInfo info) {
+		if (info != null) {
+			showTableUrlDialog(info);
+		}
+	}
+
+	private void showTableUrlDialog(TableInfo editing) {
+		TextInputDialog dialog = new TextInputDialog(editing == null ? "" : editing.getUrl());
+		dialog.setTitle(resources.getString(editing == null ? "ADD_TABLE_FROM_URL" : "TABLE_EDIT_URL"));
+		dialog.setHeaderText(resources.getString(editing == null
+				? "ADD_TABLE_FROM_URL_DESCRIPTION"
+				: "TABLE_EDIT_URL_DESCRIPTION"));
+		dialog.setContentText(resources.getString("TABLE_URL_COLUMN"));
+
+		Optional<String> result = dialog.showAndWait();
+		if (result.isEmpty()) {
+			return;
+		}
+		String newUrl = result.get().trim();
+		if (!isHttpUrl(newUrl)) {
+			showWarning("TABLE_URL_INVALID", newUrl);
+			return;
+		}
+		if (tableurl.getItems().stream().anyMatch(info -> info != editing && info.getUrl().equals(newUrl))) {
+			showWarning("TABLE_URL_DUPLICATE", newUrl);
+			return;
 		}
 
-		public StringProperty comment;
-		public void setComment(String value) { commentProperty().set(value); }
-		public String commentStatus() { return commentProperty().get(); }
-		public StringProperty commentProperty() {
-			if (comment == null) comment = new SimpleStringProperty(this, "comment");
-			return comment;
+		if (editing == null) {
+			TableInfo info = new TableInfo(newUrl);
+			tableurl.getItems().add(info);
+			availableTableUrls.remove(newUrl);
+			commit();
+			loadTableUrls(new String[]{newUrl});
+			return;
 		}
 
-		public TableInfo(String url) {
-			setUrl(url);
-			Pair<String, String> nameComment = tableNameComment.get(url);
+		String oldUrl = editing.getUrl();
+		if (oldUrl.equals(newUrl)) {
+			return;
+		}
+		availableTableUrls.add(oldUrl);
+		availableTableUrls.remove(newUrl);
+		editing.setUrl(newUrl);
+		tableurl.refresh();
+		commit();
+		loadTableUrls(new String[]{newUrl});
+	}
+
+	private boolean isHttpUrl(String value) {
+		try {
+			URL parsed = new URL(value);
+			return ("http".equalsIgnoreCase(parsed.getProtocol())
+					|| "https".equalsIgnoreCase(parsed.getProtocol()))
+					&& parsed.getHost() != null && !parsed.getHost().isBlank();
+		} catch (IOException e) {
+			return false;
+		}
+	}
+
+	private boolean hasTableUrl(String value) {
+		return tableurl.getItems().stream().anyMatch(info -> info.getUrl().equals(value));
+	}
+
+	private void moveTable(TableInfo info, int direction) {
+		if (info == null) {
+			return;
+		}
+		int from = tableurl.getItems().indexOf(info);
+		int to = from + direction;
+		if (from < 0 || to < 0 || to >= tableurl.getItems().size()) {
+			return;
+		}
+		tableurl.getItems().remove(from);
+		tableurl.getItems().add(to, info);
+		tableurl.getSelectionModel().clearAndSelect(to);
+		commit();
+	}
+
+	private void removeTable(TableInfo info) {
+		if (info == null) {
+			return;
+		}
+		Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+		confirm.setTitle(resources.getString("TABLE_REMOVE_TITLE"));
+		confirm.setHeaderText(resources.getString("TABLE_REMOVE_HEADER"));
+		confirm.setContentText(info.displayName() + "\n" + info.getUrl());
+		if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+			return;
+		}
+		tableurl.getItems().remove(info);
+		availableTableUrls.add(info.getUrl());
+		commit();
+	}
+
+	private void loadTableUrls(String[] urls) {
+		if (urls == null || urls.length == 0) {
+			return;
+		}
+		commit();
+		try {
+			Files.createDirectories(Paths.get(config.getTablepath()));
+		} catch (IOException ignored) {
+		}
+
+		Stage loadingBarStage = new Stage();
+		loadingBarStage.setResizable(false);
+		loadingBarStage.initModality(Modality.APPLICATION_MODAL);
+		loadingBarStage.setTitle(resources.getString("PROGRESS_TABLE_TITLE"));
+		loadingBarStage.initStyle(StageStyle.UTILITY);
+		ProgressBar progressBar = new ProgressBar();
+		progressBar.setPrefWidth(300);
+		Label messageLabel = new Label(resources.getString("PROGRESS_TABLE_LABEL"));
+		VBox root = new VBox(10, messageLabel, progressBar);
+		root.setStyle("-fx-padding: 20; -fx-alignment: center;");
+		loadingBarStage.setScene(new Scene(root));
+		loadingBarStage.setOnCloseRequest(Event::consume);
+		loadingBarStage.show();
+
+		List<TableInfo> visibleTables = new ArrayList<>(tableurl.getItems());
+		Thread worker = new Thread(() -> {
+			TableDataAccessor accessor = new TableDataAccessor(config.getTablepath());
+			accessor.updateTableData(urls);
+			String[] visibleUrls = visibleTables.stream().map(TableInfo::getUrl).toArray(String[]::new);
+			HashMap<String, String> names = accessor.readLocalTableNames(visibleUrls);
+			Platform.runLater(() -> {
+				for (TableInfo info : visibleTables) {
+					String loadedName = names == null ? null : names.get(info.getUrl());
+					info.setNameStatus(loadedName == null
+							? resources.getString("TABLE_NOT_LOADED")
+							: loadedName);
+				}
+				tableurl.refresh();
+				loadingBarStage.hide();
+			});
+		}, "Difficulty Table Update");
+		worker.start();
+	}
+
+	private static class TableInfo {
+		private StringProperty url;
+		public void setUrl(String value) {
+			urlProperty().set(value);
+			Pair<String, String> nameComment = tableNameComment.get(value);
 			if (nameComment == null) {
 				setNameStatus("");
 				setComment("");
@@ -642,6 +847,34 @@ public class ResourceConfigurationView implements Initializable {
 				setNameStatus(nameComment.getKey());
 				setComment(nameComment.getValue());
 			}
+		}
+		public String getUrl() { return urlProperty().get(); }
+		public StringProperty urlProperty() { 
+			if (url == null) url = new SimpleStringProperty(this, "url");
+			return url; 
+		}
+		private StringProperty nameStatus;
+		public void setNameStatus(String value) { nameStatusProperty().set(value); }
+		public String getNameStatus() { return nameStatusProperty().get(); }
+		public StringProperty nameStatusProperty() { 
+			if (nameStatus == null) nameStatus = new SimpleStringProperty(this, "nameStatus");
+			return nameStatus; 
+		}
+
+		private StringProperty comment;
+		public void setComment(String value) { commentProperty().set(value); }
+		public String getComment() { return commentProperty().get(); }
+		public StringProperty commentProperty() {
+			if (comment == null) comment = new SimpleStringProperty(this, "comment");
+			return comment;
+		}
+
+		public TableInfo(String url) {
+			setUrl(url);
+		}
+
+		public String displayName() {
+			return getNameStatus().isBlank() ? getUrl() : getNameStatus();
 		}
 
 		public static String[] toUrlArray(List<TableInfo> list) {

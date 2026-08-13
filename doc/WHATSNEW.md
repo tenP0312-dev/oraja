@@ -1,5 +1,20 @@
 # Unreleased
 
+# Arena oraja 0.4.14.39
+
+- Redesigned Resource settings so BMS roots, difficulty tables, and song
+  maintenance controls are easier to understand without adding colored status
+  styling. Song-loading controls are now visible only on the Resource tab,
+  with ordinary loading as a direct action and a warning reserved for the full
+  database rebuild.
+- Added BMS-root context actions to update only the selected root, open or copy
+  its path, or remove it from configuration without deleting the source
+  folder. The configured download root remains protected, and a regression
+  test verifies that a selected-root update does not rescan another root.
+- Replaced the side-by-side difficulty-table lists with one active list,
+  contextual update/edit/order/remove actions, a compact checkbox picker that
+  adds several built-in tables at once, and a separate custom-URL dialog.
+
 # Arena oraja 0.4.14.38
 
 - Song roots can opt in to scanning BMS/BMSON charts directly from ZIP and
