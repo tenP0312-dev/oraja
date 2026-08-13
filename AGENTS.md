@@ -24,6 +24,9 @@ repository.
 - Read-only investigation does not require an Issue. Implementation uses a
   scoped `codex/` branch, an Issue, local validation, a pull request, and merge
   only after required checks pass.
+- Use the configured `gh` CLI from the first request for GitHub write actions,
+  including Issues and pull requests. Do not probe the connected GitHub app
+  first; its write path for this repository is already known to return `403`.
 - Keep `main` protected. Do not push feature commits directly to `main`.
 - Preserve unrelated local changes and avoid destructive Git commands.
 - Use `apply_patch` for manual file edits.
