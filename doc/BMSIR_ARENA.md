@@ -299,7 +299,17 @@ passwords, or unrelated player settings.
 
 Holding F2 for about one second on Music Select opens the one-column MANIAC
 OPTIONS screen; a short F2 press keeps the existing refresh command. The
-screen is an opaque black full-window mode rather than a window over Music
+short refresh command recognizes root tables supplied by an exactly named
+`BMS-IR` Primary IR. It fetches the complete Primary IR table response in the
+background, then replaces only those BMS-IR-derived root tables together on
+the render thread. Local tables, My Difficulty Table, favorites, and command
+folders remain unchanged. A failed fetch or failed conversion keeps the
+current tables, and a second request is rejected while one fetch or pending
+application is active. The start, success, failure, and already-running states
+use the built-in Japanese/English notifications. If the service is still
+building a registered-rival snapshot, the plugin can return its last completed
+snapshot; press F2 again after that build completes to load the newer snapshot.
+The MANIAC OPTIONS screen is an opaque black full-window mode rather than a window over Music
 Select. Its enlarged list uses the available width and shows a brief
 description of the selected option on wide screens. Song selection input is
 suspended while it is open. Changes remain in

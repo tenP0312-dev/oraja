@@ -6,15 +6,19 @@ import java.io.BufferedInputStream;
 import java.lang.reflect.Method;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.arena.client.ArenaBar;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
+import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Queue;
@@ -30,6 +34,8 @@ import bms.player.beatoraja.CourseData.CourseDataConstraint;
 import bms.player.beatoraja.CourseData.TrophyData;
 import bms.player.beatoraja.external.BMSSearchAccessor;
 import bms.player.beatoraja.ir.IRResponse;
+import bms.player.beatoraja.ir.IRChartData;
+import bms.player.beatoraja.ir.IRCourseData;
 import bms.player.beatoraja.ir.IRTableData;
 import bms.player.beatoraja.select.bar.*;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
@@ -51,6 +57,10 @@ public class BarManager {
 	 * 難易度表バー一覧
 	 */
 	private volatile TableBar[] tables = new TableBar[0];
+	private final Set<TableBar> bmsirPrimaryIrTables =
+			Collections.newSetFromMap(new IdentityHashMap<>());
+	private final PrimaryIrTableReloader primaryIrTableReloader;
+	private volatile PendingPrimaryIrTables pendingPrimaryIrTables;
 	private static final String BMSIR_MY_DIFFICULTY_TABLE_URL =
 			"bmsir://my-difficulty-table";
 
@@ -103,7 +113,17 @@ public class BarManager {
 	private Array<TableBar> startupTables;
 
 	public BarManager(MusicSelector select) {
+		this(select, task -> {
+			Thread thread = new Thread(task, "BMS-IR Primary IR table reload");
+			thread.setDaemon(true);
+			thread.start();
+		});
+	}
+
+	BarManager(MusicSelector select, Executor primaryIrReloadExecutor) {
 		this.select = select;
+		this.primaryIrTableReloader =
+				new PrimaryIrTableReloader(primaryIrReloadExecutor);
 	}
 	
 	void init() {
@@ -158,14 +178,16 @@ public class BarManager {
 		if (startupTables == null) {
 			initLocalTables();
 		}
+		bmsirPrimaryIrTables.clear();
 		if(select.main.getIRStatus().length > 0) {
 			MainController.IRStatus primaryIr = select.main.getIRStatus()[0];
 			IRResponse<IRTableData[]> response = primaryIr.connection.getTableDatas();
-			if(response.isSucceeded()) {
+			if(response != null && response.isSucceeded() && response.getData() != null) {
+				boolean isBmsirPrimary = BMSIRDanCourseCache.isBmsirPrimaryName(
+						primaryIr.config.getIrname()
+				);
 				if (select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
-						&& BMSIRDanCourseCache.isBmsirPrimaryName(
-								primaryIr.config.getIrname()
-						)) {
+						&& isBmsirPrimary) {
 					BMSIRDanCourseCache.sync(
 							select.resource.getConfig().getPlayerpath(),
 							select.resource.getPlayerConfig().getId(),
@@ -173,65 +195,19 @@ public class BarManager {
 					);
 				}
 				for(IRTableData irtd : response.getData()) {
-					TableData td = new TableData();
-					td.setName(irtd.name);
-					td.setFolder(Stream.of(irtd.folders).map(folder -> {
-						TableData.TableFolder tf = new TableData.TableFolder();
-						tf.setName(folder.name);
-						tf.setSong(Stream.of(folder.charts).map(chart -> {
-							SongData song = new SongData();
-							song.setSha256(chart.sha256);
-							song.setMd5(chart.md5);
-							song.setTitle(chart.title);
-							song.setArtist(chart.artist);
-							song.setGenre(chart.genre);
-							song.setUrl(chart.url);
-							song.setAppendurl(chart.appendurl);
-							if(chart.mode != null) {
-								song.setMode(chart.mode.id);								
-							}
-							return song;
-						}).toArray(SongData[]::new));
-						return tf;
-					}).toArray(TableData.TableFolder[]::new));
-					
-					td.setCourse(Stream.of(irtd.courses).map(course -> {
-						CourseData cd = new CourseData();
-						cd.setName(course.name);
-						cd.setSong(Stream.of(course.charts).map(chart -> {
-							SongData song = new SongData();
-							song.setSha256(chart.sha256);
-							song.setMd5(chart.md5);
-							song.setTitle(chart.title);
-							song.setArtist(chart.artist);
-							song.setGenre(chart.genre);
-							song.setUrl(chart.url);
-							song.setAppendurl(chart.appendurl);
-							if(chart.mode != null) {
-								song.setMode(chart.mode.id);								
-							}
-							return song;
-						}).toArray(SongData[]::new));
-						
-						cd.setConstraint(course.constraint);
-						cd.setTrophy(Stream.of(course.trophy).map(t -> {
-						    TrophyData trophyData = new TrophyData();
-						    trophyData.setName(t.name);
-						    trophyData.setMissrate(t.smissrate);
-						    trophyData.setScorerate(t.scorerate);
-							return trophyData;
-						}).toArray(TrophyData[]::new));
-						
-						cd.setRelease(true);
-						return cd;
-					}).toArray(CourseData[]::new));
-					
-					if(td.validate()) {
-						startupTables.add(new TableBar(select, td, new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl())));
+					TableBar table = createIrTableBar(irtd);
+					if (table != null) {
+						startupTables.add(table);
+						if (isBmsirPrimary) {
+							bmsirPrimaryIrTables.add(table);
+						}
 					}
 				}
 			} else {
-				logger.warn("IRからのテーブル取得失敗 : {}", response.getMessage());
+				logger.warn(
+						"IRからのテーブル取得失敗 : {}",
+						response == null ? "No response" : response.getMessage()
+				);
 			}
 		}
 
@@ -652,6 +628,264 @@ public class BarManager {
 	}
 
     public TableBar[] getTables() { return tables.clone(); }
+
+	/** Returns true when this root bar came from the configured BMS-IR Primary IR. */
+	public boolean isBmsirPrimaryIrTable(TableBar table) {
+		return table != null && bmsirPrimaryIrTables.contains(table);
+	}
+
+	/** Starts a non-blocking refresh for a selected BMS-IR Primary IR root table. */
+	public boolean reloadBmsirPrimaryIrTable(TableBar table) {
+		if (!isBmsirPrimaryIrTable(table)) {
+			return false;
+		}
+		MainController.IRStatus[] statuses = select.main.getIRStatus();
+		if (statuses.length == 0 || !BMSIRDanCourseCache.isBmsirPrimaryName(
+				statuses[0].config.getIrname()
+		)) {
+			return false;
+		}
+		MainController.IRStatus primaryIr = statuses[0];
+		boolean hadPrimaryIrTables = !bmsirPrimaryIrTables.isEmpty();
+		boolean started = primaryIrTableReloader.start(
+				primaryIr.connection::getTableDatas,
+				new PrimaryIrTableReloader.Listener() {
+					@Override
+					public void succeeded(IRTableData[] refreshedTables) {
+						validateIrTableResponse(refreshedTables, hadPrimaryIrTables);
+						boolean coursesChanged =
+								select.resource.getPlayerConfig().isBmsirDanLocalSyncEnabled()
+								&& BMSIRDanCourseCache.sync(
+										select.resource.getConfig().getPlayerpath(),
+										select.resource.getPlayerConfig().getId(),
+										refreshedTables
+								);
+						pendingPrimaryIrTables = new PendingPrimaryIrTables(
+								refreshedTables,
+								coursesChanged
+						);
+						postToRenderThread(BarManager.this::applyPendingPrimaryIrTables);
+					}
+
+					@Override
+					public void failed(String message) {
+						logger.warn("IRからのテーブル再取得失敗 : {}", message);
+						postToRenderThread(() -> ImGuiNotify.error(BMSIRArenaI18n.text(
+								"BMS-IR表の再読み込みに失敗しました: " + message,
+								"Failed to reload BMS-IR tables: " + message
+						)));
+					}
+				}
+		);
+		if (started) {
+			ImGuiNotify.info(BMSIRArenaI18n.text(
+					"BMS-IR表を再読み込みしています",
+					"Reloading BMS-IR tables"
+			));
+		} else {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"BMS-IR表は再読み込み中です",
+					"BMS-IR tables are already reloading"
+			));
+		}
+		return true;
+	}
+
+	/** Applies a completed fetch only while Music Select is active. */
+	void applyPendingPrimaryIrTables() {
+		PendingPrimaryIrTables pending = pendingPrimaryIrTables;
+		if (pending == null || select.main.getCurrentState() != select) {
+			return;
+		}
+		pendingPrimaryIrTables = null;
+		try {
+			List<TableBar> replacements = new ArrayList<>(pending.tables().length);
+			for (IRTableData source : pending.tables()) {
+				TableBar replacement = createIrTableBar(source);
+				if (replacement == null) {
+					throw new IllegalArgumentException("invalid Primary IR table response");
+				}
+				replacements.add(replacement);
+			}
+			replaceBmsirPrimaryIrTables(replacements, pending.coursesChanged());
+			ImGuiNotify.success(BMSIRArenaI18n.text(
+					"BMS-IR表を再読み込みしました",
+					"Reloaded BMS-IR tables"
+			));
+		} catch (RuntimeException error) {
+			logger.error("BMS-IR table reload could not be applied", error);
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"BMS-IR表の再読み込み結果を適用できませんでした",
+					"Could not apply the reloaded BMS-IR tables"
+			));
+		} finally {
+			primaryIrTableReloader.complete();
+		}
+	}
+
+	private synchronized void replaceBmsirPrimaryIrTables(
+			List<TableBar> replacements,
+			boolean coursesChanged
+	) {
+		TableBar[] previousTables = tables;
+		Set<TableBar> previousManaged = Collections.newSetFromMap(new IdentityHashMap<>());
+		previousManaged.addAll(bmsirPrimaryIrTables);
+		TableBar previousCourses = courses;
+		List<TableBar> next = replaceManagedTables(
+				Arrays.asList(tables),
+				bmsirPrimaryIrTables,
+				replacements
+		);
+		// Directory stacks retain child instances from the old TableBars. Return
+		// to root before replacing their owners so no stale child can survive.
+		updateBar(null);
+		try {
+			tables = next.toArray(TableBar[]::new);
+			bmsirPrimaryIrTables.clear();
+			bmsirPrimaryIrTables.addAll(replacements);
+			if (coursesChanged) {
+				initCourses();
+			}
+			updateBar(null);
+		} catch (RuntimeException error) {
+			tables = previousTables;
+			bmsirPrimaryIrTables.clear();
+			bmsirPrimaryIrTables.addAll(previousManaged);
+			courses = previousCourses;
+			try {
+				updateBar(null);
+			} catch (RuntimeException rollbackError) {
+				error.addSuppressed(rollbackError);
+			}
+			throw error;
+		}
+	}
+
+	static <T> List<T> replaceManagedTables(
+			List<T> current,
+			Set<T> managed,
+			List<T> replacements
+	) {
+		List<T> next = new ArrayList<>(
+				Math.max(0, current.size() - managed.size()) + replacements.size()
+		);
+		int insertionIndex = -1;
+		for (T item : current) {
+			if (managed.contains(item)) {
+				if (insertionIndex < 0) {
+					insertionIndex = next.size();
+				}
+			} else {
+				next.add(item);
+			}
+		}
+		next.addAll(insertionIndex < 0 ? next.size() : insertionIndex, replacements);
+		return next;
+	}
+
+	static void validateIrTableResponse(IRTableData[] sources, boolean hadTables) {
+		if (sources == null || (sources.length == 0 && hadTables)) {
+			throw new IllegalArgumentException("empty Primary IR table response");
+		}
+		for (IRTableData source : sources) {
+			TableData table = convertIrTable(source);
+			if (table == null || !table.validate()) {
+				throw new IllegalArgumentException("invalid Primary IR table response");
+			}
+		}
+	}
+
+	static TableData convertIrTable(IRTableData source) {
+		if (source == null) {
+			return null;
+		}
+		TableData table = new TableData();
+		table.setName(source.name);
+		table.setFolder(Arrays.stream(
+				source.folders == null ? new IRTableData.IRTableFolder[0] : source.folders
+		).filter(Objects::nonNull).map(folder -> {
+			TableData.TableFolder converted = new TableData.TableFolder();
+			converted.setName(folder.name);
+			converted.setSong(Arrays.stream(
+					folder.charts == null ? new IRChartData[0] : folder.charts
+			).filter(Objects::nonNull).map(BarManager::convertIrChart).toArray(SongData[]::new));
+			return converted;
+		}).toArray(TableData.TableFolder[]::new));
+		table.setCourse(Arrays.stream(
+				source.courses == null ? new IRCourseData[0] : source.courses
+		).filter(Objects::nonNull).map(course -> {
+			CourseData converted = new CourseData();
+			converted.setName(course.name);
+			converted.setSong(Arrays.stream(
+					course.charts == null ? new IRChartData[0] : course.charts
+			).filter(Objects::nonNull).map(BarManager::convertIrChart).toArray(SongData[]::new));
+			converted.setConstraint(
+					course.constraint == null
+							? CourseDataConstraint.EMPTY
+							: Arrays.stream(course.constraint)
+									.filter(Objects::nonNull)
+									.toArray(CourseDataConstraint[]::new)
+			);
+			converted.setTrophy(Arrays.stream(
+					course.trophy == null
+							? new IRCourseData.IRTrophyData[0]
+							: course.trophy
+			).filter(Objects::nonNull).map(trophy -> {
+				TrophyData convertedTrophy = new TrophyData();
+				convertedTrophy.setName(trophy.name);
+				convertedTrophy.setMissrate(trophy.smissrate);
+				convertedTrophy.setScorerate(trophy.scorerate);
+				return convertedTrophy;
+			}).toArray(TrophyData[]::new));
+			converted.setRelease(true);
+			return converted;
+		}).toArray(CourseData[]::new));
+		return table;
+	}
+
+	private static SongData convertIrChart(IRChartData chart) {
+		SongData song = new SongData();
+		song.setSha256(chart.sha256);
+		song.setMd5(chart.md5);
+		song.setTitle(chart.title);
+		song.setSubtitle(chart.subtitle);
+		song.setArtist(chart.artist);
+		song.setSubartist(chart.subartist);
+		song.setGenre(chart.genre);
+		song.setUrl(chart.url);
+		song.setAppendurl(chart.appendurl);
+		if (chart.mode != null) {
+			song.setMode(chart.mode.id);
+		}
+		return song;
+	}
+
+	private TableBar createIrTableBar(IRTableData source) {
+		TableData table = convertIrTable(source);
+		if (table == null || !table.validate()) {
+			return null;
+		}
+		return new TableBar(
+				select,
+				table,
+				new TableDataAccessor.DifficultyTableAccessor(
+						select.resource.getConfig().getTablepath(),
+						table.getUrl()
+				)
+		);
+	}
+
+	private static void postToRenderThread(Runnable task) {
+		if (Gdx.app != null) {
+			Gdx.app.postRunnable(task);
+		}
+	}
+
+	private record PendingPrimaryIrTables(
+			IRTableData[] tables,
+			boolean coursesChanged
+	) {
+	}
 
 	/** Replaces the server-backed owner table after returning to a safe root. */
 	public synchronized void replaceBmsirMyDifficultyTable(TableData data) {
