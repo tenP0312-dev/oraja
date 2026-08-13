@@ -33,7 +33,11 @@ JPEG crash avoidance, thick-note placement, preview-path refreshes, controller
 hat input, Practice controls and gauge handling, IR class discovery, and full
 local play-history retention with average-judge history. Manual full/differential
 song-database updates now require confirmation, and new audio configurations
-default to 256 simultaneous sources.
+default to 256 simultaneous sources. Skin Select now renders a live preview of
+the selected supported skin and refreshes it after option, file, or offset
+changes; Music Select previews use an in-memory folder/song catalog, while play
+previews loop a silent in-memory chart with moving notes. Lua, JSON, and LR2
+Skin Select skins can opt in to the preview object.
 
 ## Repository Scope
 

@@ -23,6 +23,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.ObjectSet;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -245,6 +246,7 @@ public class Skin {
 	}
 	
 	private SkinObjectRenderer renderer;
+	private final ObjectSet<SkinObject> safelyDisabledObjects = new ObjectSet<>();
 	
 	private long nextpreparetime;
 	private long prepareduration;
@@ -314,6 +316,67 @@ public class Skin {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Draws as much of a skin as possible when it is used as a configuration
+	 * preview. A failing object is skipped for the rest of this skin instance so
+	 * one state-specific object cannot break Skin Select or log every frame.
+	 */
+	public void drawAllObjectsSafely(SpriteBatch sprite, MainState state) {
+		drawAllObjectsSafely(sprite, state, state.timer.getNowTime());
+	}
+
+	/**
+	 * Preview variant that keeps preparation scheduling on the real frame clock
+	 * while exposing a synthetic state time to objects such as scrolling notes.
+	 */
+	public void drawAllObjectsSafely(SpriteBatch sprite, MainState state, long stateTime) {
+		if (renderer == null) {
+			SkinOffset offsetAll = getOffsetAll(state);
+			Matrix4 transform = new Matrix4();
+			if (offsetAll != null) {
+				transform.set(width * offsetAll.x / 100, height * offsetAll.y / 100, 0, 0, 0, 0, 0,
+						(offsetAll.w + 100) / 100, (offsetAll.h + 100) / 100, 1);
+			} else {
+				transform.set(0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+			}
+			sprite.setTransformMatrix(transform);
+			renderer = new SkinObjectRenderer(sprite);
+		}
+
+		final long microtime = state.timer.getNowMicroTime();
+		if (nextpreparetime <= microtime) {
+			for (SkinObject obj : objectarray) {
+				if (safelyDisabledObjects.contains(obj)) {
+					continue;
+				}
+				try {
+					obj.prepare(stateTime, state);
+				} catch (Throwable e) {
+					disablePreviewObject(obj, e);
+				}
+			}
+
+			nextpreparetime += ((microtime - nextpreparetime) / prepareduration + 1) * prepareduration;
+		}
+
+		for (SkinObject obj : objectarray) {
+			if (safelyDisabledObjects.contains(obj) || !obj.draw || !obj.visible) {
+				continue;
+			}
+			try {
+				obj.draw(renderer);
+			} catch (Throwable e) {
+				disablePreviewObject(obj, e);
+			}
+		}
+	}
+
+	private void disablePreviewObject(SkinObject object, Throwable error) {
+		object.draw = false;
+		safelyDisabledObjects.add(object);
+		logger.warn("スキンプレビューで {} を無効化しました", object.getClass().getSimpleName(), error);
 	}
 
 	public void mousePressed(MainState state, int button, int x, int y) {
@@ -435,6 +498,10 @@ public class Skin {
 
 			sprite.setShader(shaders[current]);
 			sprite.setColor(Color.WHITE);
+		}
+
+		public SpriteBatch getSpriteBatch() {
+			return sprite;
 		}
 
 		public void draw(BitmapFont font, String s, float x, float y, Color c) {

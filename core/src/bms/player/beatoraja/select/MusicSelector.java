@@ -39,6 +39,8 @@ import bms.player.beatoraja.skin.SkinType;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
+import bms.player.beatoraja.song.FolderData;
+import bms.player.beatoraja.config.SkinPreviewModel;
 
 /**
  * 選曲部分。 楽曲一覧とカーソルが指す楽曲のステータスを表示し、選択した楽曲を 曲決定部分に渡す。
@@ -182,6 +184,73 @@ public final class MusicSelector extends MainState {
 		if (!songUpdated && main.getPlayerResource().getConfig().isUpdatesong()) {
 			main.updateSong(null);
 		}
+	}
+
+	/**
+	 * Builds a selector-shaped state with virtual folders and songs. It is never
+	 * registered as the controller's current state and performs no database or
+	 * network initialization.
+	 */
+	public static MusicSelector createSkinPreview(MainController main) {
+		MusicSelector selector = new MusicSelector(main, true);
+		Mode mode = main.getPlayerConfig().getMode();
+		if (mode == null) {
+			mode = Mode.BEAT_7K;
+		}
+
+		String[] titles = {
+				"SKIN PREVIEW", "NEON TEST PATTERN", "LONG NOTE CHECK",
+				"BPM SHIFT TEST", "SCRATCH SHOWCASE", "GAUGE COLOR CHECK",
+				"MIDNIGHT SESSION", "BRIGHT STAGE", "DARK STAGE",
+				"HIGH DENSITY", "LOW DENSITY", "RESULT TARGET"
+		};
+		SongBar[] songs = new SongBar[titles.length];
+		for (int index = 0; index < songs.length; index++) {
+			int difficulty = index % 5 + 1;
+			int level = 4 + index;
+			songs[index] = new SongBar(
+					SkinPreviewModel.createSong(mode, titles[index], difficulty, level));
+			ScoreData score = new ScoreData(mode);
+			score.setNotes(1200 + index * 200);
+			score.setEpg(900 + index * 80);
+			score.setEgr(180 + index * 20);
+			score.setMinbp(18 + index * 7);
+			score.setCombo(800 + index * 120);
+			score.setClear(4 + index % 7);
+			songs[index].setScore(score);
+		}
+
+		Bar[] bars = new Bar[songs.length + 2];
+		bars[0] = createSkinPreviewFolder(selector, "VIRTUAL PREVIEW FOLDER", "folder-a");
+		System.arraycopy(songs, 0, bars, 1, 6);
+		bars[7] = createSkinPreviewFolder(selector, "SECOND VIRTUAL FOLDER", "folder-b");
+		System.arraycopy(songs, 6, bars, 8, songs.length - 6);
+		selector.manager.installSkinPreviewBars(bars, 3);
+		selector.getScoreDataProperty().update(songs[2].getScore(), null);
+		return selector;
+	}
+
+	private static FolderBar createSkinPreviewFolder(
+			MusicSelector selector, String title, String pathSuffix) {
+		FolderData folderData = new FolderData();
+		folderData.setTitle(title);
+		folderData.setPath("skin-preview://" + pathSuffix);
+		return new FolderBar(selector, folderData, "skin-preview-" + pathSuffix);
+	}
+
+	public void disposeSkinPreview() {
+		if (bar != null) {
+			bar.dispose();
+		}
+		if (banners != null) {
+			banners.dispose();
+			banners = null;
+		}
+		if (stagefiles != null) {
+			stagefiles.dispose();
+			stagefiles = null;
+		}
+		super.dispose();
 	}
 
 	public void initializeLocalTables() {

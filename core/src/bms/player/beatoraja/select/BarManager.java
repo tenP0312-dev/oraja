@@ -622,6 +622,18 @@ public class BarManager {
 		return currentsongs != null ? currentsongs[selectedindex] : null;
 	}
 
+	/** Installs deterministic in-memory bars for an off-screen skin preview. */
+	void installSkinPreviewBars(Bar[] bars, int selectedIndex) {
+		currentsongs = bars != null && bars.length > 0 ? bars : new Bar[0];
+		selectedindex = currentsongs.length == 0
+				? 0
+				: Math.max(0, Math.min(selectedIndex, currentsongs.length - 1));
+		dir.clear();
+		sourcebars.clear();
+		dirString = "SKIN PREVIEW / VIRTUAL FOLDER";
+		select.getBarRender().updateBarText();
+	}
+
 	public void setSelected(Bar bar) {
 		for (int i = 0; i < currentsongs.length; i++) {
 			if (currentsongs[i].getTitle().equals(bar.getTitle())) {
