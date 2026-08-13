@@ -174,6 +174,16 @@ public class SkinImage extends SkinObject {
 		}
     }
 
+	@Override
+	public void resetSkinPreviewCycle() {
+		for (SkinSource source : image) {
+			if (source != null) {
+				source.resetSkinPreviewCycle();
+			}
+		}
+		currentImage = null;
+	}
+
     public void dispose() {
     	disposeAll(removedSources.toArray(SkinSource.class));
     	disposeAll(image);

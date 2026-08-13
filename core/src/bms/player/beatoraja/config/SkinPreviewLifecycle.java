@@ -30,6 +30,7 @@ final class SkinPreviewLifecycle {
 	record SceneFrame(
 			long position,
 			long cycle,
+			long iteration,
 			long inputTime,
 			long updateTime,
 			long fadeoutTime) {}
@@ -81,11 +82,13 @@ final class SkinPreviewLifecycle {
 		long fadeout = Math.max(500L, Math.min(4000L, configuredFadeout));
 		long cycle = scene + fadeout;
 		long position = Math.floorMod(elapsed, cycle);
+		long iteration = Math.floorDiv(elapsed, cycle);
 		long inputAt = Math.max(0L, Math.min(scene - 1000L, configuredInput));
 		long updateAt = Math.max(1500L, inputAt);
 		return new SceneFrame(
 				position,
 				cycle,
+				iteration,
 				position >= inputAt ? position - inputAt : -1L,
 				position >= updateAt ? position - updateAt : -1L,
 				position >= scene ? position - scene : -1L);

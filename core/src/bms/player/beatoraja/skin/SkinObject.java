@@ -525,6 +525,10 @@ public abstract class SkinObject extends DisposableObject {
 
 	public abstract void draw(SkinObjectRenderer sprite);
 
+	/** Resets state held below this object before a Skin Select preview repeats. */
+	public void resetSkinPreviewCycle() {
+	}
+
 	protected void draw(SkinObjectRenderer sprite, TextureRegion image) {
 		if (color.a == 0f || image == null) {
 			return;

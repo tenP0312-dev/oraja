@@ -90,7 +90,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 				playSkin.getFadeout());
 		if (previewIteration != frame.iteration()) {
 			previewIteration = frame.iteration();
-			resetPreviewCycle();
+			resetPreviewCycle(skin);
 		}
 
 		previewState = switch (frame.phase()) {
@@ -129,10 +129,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		} else {
 			clearPlayEffects();
 		}
-		return timer.getNowTime();
+		return frame.position();
 	}
 
-	private void resetPreviewCycle() {
+	private void resetPreviewCycle(Skin skin) {
+		timer.resetSkinPreviewCycle();
+		skin.resetSkinPreviewCycle();
 		previewLaneRenderer.resetSkinPreviewTimeline();
 		Arrays.fill(previewPastNotesByPlayer, 0);
 		clearPlayEffects();

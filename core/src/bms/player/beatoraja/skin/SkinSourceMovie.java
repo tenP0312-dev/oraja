@@ -54,6 +54,12 @@ public class SkinSourceMovie extends SkinSource {
 		return null;
 	}
 
+	@Override
+	public void resetSkinPreviewCycle() {
+		image.play(0L, true);
+		playing = true;
+	}
+
 	public void dispose() {
     	if(isNotDisposed()) {
     		Optional.ofNullable(image).ifPresent(FFmpegProcessor::dispose);

@@ -4,11 +4,16 @@ import bms.model.BMSModel;
 import bms.model.LongNote;
 import bms.model.Note;
 import bms.model.TimeLine;
+import bms.player.beatoraja.TimerManager;
+import bms.player.beatoraja.skin.CustomTimer;
+import bms.player.beatoraja.skin.Skin;
+import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinType;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumSet;
 
+import static bms.player.beatoraja.skin.SkinProperty.TIMER_JUDGE_1P;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -58,6 +63,43 @@ class SkinPreviewTest {
 		assertEquals(-1, intro.inputTime());
 		assertEquals(0, update.updateTime());
 		assertEquals(200, fadeout.fadeoutTime());
+	}
+
+	@Test
+	void everySceneLoopRestartsItsOneShotDestinationTimeline() {
+		var firstIntro = SkinPreviewLifecycle.sceneFrame(250, 1000, 5000, 700);
+		var firstEnd = SkinPreviewLifecycle.sceneFrame(
+				firstIntro.cycle() - 1, 1000, 5000, 700);
+		var secondIntro = SkinPreviewLifecycle.sceneFrame(
+				firstIntro.cycle() + 250, 1000, 5000, 700);
+		DummySkinObject oneShot = new DummySkinObject();
+		oneShot.setDestination(0, 0, 0, 1, 1, 0, 255, 255, 255, 255,
+				0, 0, 0, 0, -1, 0, 0, 0, 0, 0);
+		oneShot.setDestination(500, 0, 0, 1, 1, 0, 0, 255, 255, 255,
+				0, 0, 0, 0, -1, 0, 0, 0, 0, 0);
+
+		oneShot.prepare(firstIntro.position(), null);
+		assertTrue(oneShot.draw);
+		oneShot.prepare(firstEnd.position(), null);
+		assertFalse(oneShot.draw);
+		oneShot.prepare(secondIntro.position(), null);
+		assertTrue(oneShot.draw);
+		assertEquals(firstIntro.position(), secondIntro.position());
+		assertEquals(1, secondIntro.iteration());
+	}
+
+	@Test
+	void loopBoundaryClearsStandardAndPassiveCustomTimerCaches() {
+		TimerManager timer = new TimerManager();
+		timer.setMicroTimer(TIMER_JUDGE_1P, 123L);
+		CustomTimer customTimer = new CustomTimer(10_001, null);
+		customTimer.setMicroTimer(456L);
+
+		timer.resetSkinPreviewCycle();
+		customTimer.resetSkinPreviewCycle();
+
+		assertFalse(timer.isTimerOn(TIMER_JUDGE_1P));
+		assertEquals(Long.MIN_VALUE, customTimer.getMicroTimer());
 	}
 
 	@Test
@@ -157,5 +199,10 @@ class SkinPreviewTest {
 			if (timeline.getNote(lane) != null) return lane;
 		}
 		throw new AssertionError("preview timeline has no note");
+	}
+
+	private static final class DummySkinObject extends SkinObject {
+		@Override public void draw(Skin.SkinObjectRenderer sprite) {}
+		@Override public void dispose() {}
 	}
 }
