@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.40`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.41`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -203,7 +203,9 @@ compatible with saved profiles.
 
 ## ZIP/RAR/7z song archives
 
-Version `0.4.14.38` added the opt-in archive scanner. Current source labels it
+Version `0.4.14.38` added the opt-in archive scanner, and version `0.4.14.41`
+completed RAR5/7z, replacement, lookup, refresh, preview, and diagnostic
+coverage. Current source labels it
 `Scan ZIP/RAR/7z song archives` (`ZIP/RAR/7z内の曲を走査`). It is off by
 default so existing song-database update
 behavior and startup cost do not change until the player enables it. After the
@@ -882,7 +884,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.40-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.41-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -903,7 +905,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.40-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.41-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -919,7 +921,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.40-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.41-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

@@ -1,5 +1,17 @@
 # Unreleased
 
+# Arena oraja 0.4.14.41
+
+- Added direct RAR5 and 7z song-package reading alongside ZIP and RAR4, with
+  content-signature reader selection for mislabeled supported suffixes.
+- Added Unicode-normalized, case-folded entry lookup with collision rejection,
+  deeply nested chart reachability, and per-chart-directory automatic preview
+  discovery.
+- Archive revisions now detect byte replacements reliably. A rejected refresh
+  keeps the last indexed folder and songs, while bounded temporary extraction,
+  stale cleanup, loaded/rejected totals, and causal diagnostic messages make
+  failures recoverable without expanding the archive into the song library.
+
 # Arena oraja 0.4.14.39
 
 - Redesigned Resource settings so BMS roots, difficulty tables, and song
