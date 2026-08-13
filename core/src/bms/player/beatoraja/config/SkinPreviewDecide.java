@@ -10,6 +10,8 @@ import static bms.player.beatoraja.skin.SkinProperty.TIMER_STARTINPUT;
 
 /** MusicDecide-compatible virtual state used only by Skin Select. */
 final class SkinPreviewDecide extends MusicDecide implements SkinPreviewState {
+	private long previewIteration = Long.MIN_VALUE;
+
 	SkinPreviewDecide(MainController main, PlayerResource resource) {
 		super(main, resource);
 	}
@@ -26,8 +28,13 @@ final class SkinPreviewDecide extends MusicDecide implements SkinPreviewState {
 		timer.update();
 		SkinPreviewLifecycle.SceneFrame frame = SkinPreviewLifecycle.sceneFrame(
 				timer.getNowTime(), skin.getInput(), skin.getScene(), skin.getFadeout());
+		if (previewIteration != frame.iteration()) {
+			previewIteration = frame.iteration();
+			timer.resetSkinPreviewCycle();
+			skin.resetSkinPreviewCycle();
+		}
 		SkinPreviewLifecycle.setTimer(timer, TIMER_STARTINPUT, frame.inputTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_FADEOUT, frame.fadeoutTime());
-		return timer.getNowTime();
+		return frame.position();
 	}
 }

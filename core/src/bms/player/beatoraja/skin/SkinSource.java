@@ -14,4 +14,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public abstract class SkinSource extends DisposableObject implements Validatable {
 
 	public abstract TextureRegion getImage(long time, MainState state);
+
+	/** Rewinds stateful media when an off-screen Skin Select preview repeats. */
+	public void resetSkinPreviewCycle() {
+	}
 }

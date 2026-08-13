@@ -632,10 +632,15 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
   destination with the same ID. JSON and Lua skins use the same explicit
   `skinpreview` declaration; LR2 Skin Select skins can use reference image 105.
-  For existing JSON/Lua Skin Select skins without that declaration, a large
-  change-skin click target (event 190, at least 160 x 90) is also used as the
-  preview destination, so common full-thumbnail layouts work without a skin
-  update. Small arrow/button-only layouts still need an explicit destination.
+  For existing JSON/Lua Skin Select skins without that declaration, the client
+  finds the large change-skin click target (event 190, at least 160 x 90) and
+  prefers a later, similarly shaped visual contained inside it. That visual is
+  replaced at its original draw position, preventing a legacy thumbnail or
+  gray placeholder from covering the live preview. If there is no safe
+  contained visual, the click target remains the compatibility placement;
+  small arrow/button-only layouts still need an explicit destination. The
+  off-screen surface clears to the same opaque black as the real game screen,
+  so an underlying placeholder cannot show through before READY.
   Changing a custom option, file, or offset reloads the preview. Skin Select
   itself is excluded to avoid recursive previews. Music Select skins render
   against a deterministic in-memory catalog containing two virtual folders and
@@ -644,8 +649,18 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   `MusicDecide`-compatible state. Play skins render against a mode-matched,
   silent autoplay session whose normal notes, chords, and charge notes advance
   through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
-  score, combo, gauge, judge, and end timers advance with it. RESULT and COURSE
-  RESULT skins receive result-compatible states with a representative
+  score, combo, gauge, judge, and end timers advance with it. The chart's time
+  and measure positions stay aligned so its first notes enter from above the
+  visible lane. Double-play previews place sample notes on both sides and
+  advance the independent 1P/2P judgement, combo, key-beam, end-of-note, and
+  full-combo timers used by 14-key skins. Each loop resets the lane scan and
+  input state, tap key beams release after a bounded hold, and charge-note
+  pairs drive the held-LN body and HOLD timers. All data-backed previews also
+  rewind untimed one-shot destinations, cached custom timers/events, and movie
+  sources at the loop boundary, so DECIDE, PLAY, RESULT, and COURSE RESULT
+  intro/fade animations replay after the first iteration. RESULT and COURSE
+  RESULT skins receive result-compatible
+  states with a representative
   current/best/rival score, gauge history, timing distribution, replay status,
   and a four-chart virtual course. Every data-backed preview has its own timer
   and player resource, so it does not replace the active selector resource,

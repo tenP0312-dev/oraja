@@ -719,4 +719,23 @@ public class Skin {
 			event.value.update(state);
 		}
 	}
+
+	/**
+	 * Rewinds state cached by a skin before an off-screen preview starts its next
+	 * synthetic scene. Failed preview-only objects stay disabled.
+	 */
+	public void resetSkinPreviewCycle() {
+		nextpreparetime = -1L;
+		for (IntMap.Entry<CustomTimer> timer : customTimers) {
+			timer.value.resetSkinPreviewCycle();
+		}
+		for (IntMap.Entry<CustomEvent> event : customEvents) {
+			event.value.resetSkinPreviewCycle();
+		}
+		if (objectarray != null) {
+			for (SkinObject object : objectarray) {
+				object.resetSkinPreviewCycle();
+			}
+		}
+	}
 }

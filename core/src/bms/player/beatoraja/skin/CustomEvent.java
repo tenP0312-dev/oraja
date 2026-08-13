@@ -36,4 +36,9 @@ public class CustomEvent {
 			lastExecuteTime = state.timer.getNowMicroTime();
 		}
 	}
+
+	/** Lets a synthetic preview scene fire its custom events again next loop. */
+	public void resetSkinPreviewCycle() {
+		lastExecuteTime = Long.MIN_VALUE;
+	}
 }

@@ -107,6 +107,15 @@ public class TimerManager {
 		nowmicrotime = ((System.nanoTime() - starttime) / 1000);
 	}
 
+	/**
+	 * Clears timers owned by an isolated Skin Select preview when its synthetic
+	 * scene starts another iteration. The wall clock remains monotonic; preview
+	 * states immediately reinstall the timers that belong to the new frame.
+	 */
+	public void resetSkinPreviewCycle() {
+		Arrays.fill(timer, Long.MIN_VALUE);
+	}
+
     public void setFrozen(boolean freeze) { this.frozen = freeze; }
 	
 	public void update() {

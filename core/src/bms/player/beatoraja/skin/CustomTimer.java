@@ -45,4 +45,9 @@ public class CustomTimer {
 			time = timerFunc.getMicro(state);
 		}
 	}
+
+	/** Clears the cached/passive value before a synthetic preview scene repeats. */
+	public void resetSkinPreviewCycle() {
+		time = Long.MIN_VALUE;
+	}
 }

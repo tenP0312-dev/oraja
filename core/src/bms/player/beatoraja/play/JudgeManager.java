@@ -1040,6 +1040,34 @@ public class JudgeManager {
         Arrays.fill(mjudgefast, 0L);
     }
 
+    /**
+     * Exposes one synthetic held long note to play-skin renderers. It does not
+     * mutate the chart or run normal judgement, scoring, audio, or input code.
+     */
+    public void setSkinPreviewLongNote(int lane, LongNote start) {
+        if (lane < 0 || lane >= states.length) {
+            return;
+        }
+        LaneState state = states[lane];
+        state.processing = start != null ? start.getPair() : null;
+        boolean hellCharge = start != null
+                && ((start.getType() == LongNote.TYPE_UNDEFINED
+                        && lntype == BMSModel.LNTYPE_HELLCHARGENOTE)
+                    || start.getType() == LongNote.TYPE_HELLCHARGENOTE);
+        state.passing = hellCharge ? start : null;
+        state.inclease = start != null;
+    }
+
+    /** Clears every held-LN renderer state at preview phase and loop boundaries. */
+    public void clearSkinPreviewLongNotes() {
+        for (LaneState state : states) {
+            state.processing = null;
+            state.passing = null;
+            state.inclease = false;
+            state.mpassingcount = 0L;
+        }
+    }
+
     public long[][] getJudgeTable(boolean sc) {
         return sc ? smjudge : nmjudge;
     }
