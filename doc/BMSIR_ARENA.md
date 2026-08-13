@@ -632,10 +632,15 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
   destination with the same ID. JSON and Lua skins use the same explicit
   `skinpreview` declaration; LR2 Skin Select skins can use reference image 105.
-  For existing JSON/Lua Skin Select skins without that declaration, a large
-  change-skin click target (event 190, at least 160 x 90) is also used as the
-  preview destination, so common full-thumbnail layouts work without a skin
-  update. Small arrow/button-only layouts still need an explicit destination.
+  For existing JSON/Lua Skin Select skins without that declaration, the client
+  finds the large change-skin click target (event 190, at least 160 x 90) and
+  prefers a later, similarly shaped visual contained inside it. That visual is
+  replaced at its original draw position, preventing a legacy thumbnail or
+  gray placeholder from covering the live preview. If there is no safe
+  contained visual, the click target remains the compatibility placement;
+  small arrow/button-only layouts still need an explicit destination. The
+  off-screen surface clears to the same opaque black as the real game screen,
+  so an underlying placeholder cannot show through before READY.
   Changing a custom option, file, or offset reloads the preview. Skin Select
   itself is excluded to avoid recursive previews. Music Select skins render
   against a deterministic in-memory catalog containing two virtual folders and

@@ -41,8 +41,11 @@ through loading, READY, play, music-end, and fadeout; and RESULT / COURSE
 RESULT receive representative scores, gauge histories, timing data, and course
 content. Play-preview loops reset their lane scan and simulated input state;
 notes enter from the lane top, tap beams release, and held charge notes expose
-their active body animation on every loop. Lua, JSON, and LR2 Skin Select skins
-can opt in to the preview object.
+their active body animation on every loop. Lua and JSON Skin Select skins can
+declare an exact preview destination, LR2 skins retain the GR 105 contract,
+and legacy Lua/JSON skins safely prefer a contained preview background over
+the larger skin-change click target. The preview is drawn at that background's
+position instead of being covered by an old thumbnail.
 
 ## Repository Scope
 

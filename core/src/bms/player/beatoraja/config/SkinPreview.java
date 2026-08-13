@@ -101,7 +101,9 @@ public final class SkinPreview extends SkinObject {
 		try {
 			frameBuffer.begin();
 			frameBufferBegun = true;
-			Gdx.gl.glClearColor(0f, 0f, 0f, 0f);
+			// Match the real game backbuffer. An opaque black surface also keeps a
+			// legacy Skin Select thumbnail from showing through before READY.
+			Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 			previewBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, previewWidth, previewHeight));
 			previewBatch.begin();

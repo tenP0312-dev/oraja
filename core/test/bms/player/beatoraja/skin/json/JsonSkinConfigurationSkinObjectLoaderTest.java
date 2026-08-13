@@ -4,6 +4,7 @@ import bms.player.beatoraja.skin.property.EventFactory;
 import com.badlogic.gdx.utils.Json;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,35 +26,76 @@ class JsonSkinConfigurationSkinObjectLoaderTest {
 	}
 
 	@Test
-	void largeSkinChangeTargetProvidesCompatibilityPreviewPlacement() {
+	void legacyContainedBackgroundBecomesThePreviewInsteadOfCoveringIt() {
+		JsonSkin.Skin skin = new JsonSkin.Skin();
+		JsonSkin.Image changeArea = new JsonSkin.Image();
+		changeArea.id = "skin-change-area";
+		changeArea.act = EventFactory.getEvent(BUTTON_CHANGE_SKIN);
+		JsonSkin.Image background = new JsonSkin.Image();
+		background.id = "preview-background";
+		skin.image = new JsonSkin.Image[]{changeArea, background};
+
+		JsonSkin.Destination changeDestination = destination(changeArea.id, 100, 200, 680, 360);
+		JsonSkin.Destination backgroundDestination =
+				destination(background.id, 120, 200, 640, 360);
+		skin.destination = new JsonSkin.Destination[]{changeDestination, backgroundDestination};
+
+		var placement = JsonSkinConfigurationSkinObjectLoader.findPreviewPlacement(skin);
+
+		assertNotNull(placement);
+		assertEquals(backgroundDestination, placement.destination());
+		assertFalse(placement.preserveOriginal());
+	}
+
+	@Test
+	void legacySkinWithoutAContainedVisualKeepsItsChangeTarget() {
+		JsonSkin.Skin skin = new JsonSkin.Skin();
+		JsonSkin.Image changeArea = new JsonSkin.Image();
+		changeArea.id = "skin-change-area";
+		changeArea.act = EventFactory.getEvent(BUTTON_CHANGE_SKIN);
+		skin.image = new JsonSkin.Image[]{changeArea};
+		JsonSkin.Destination changeDestination = destination(changeArea.id, 111, 523, 687, 388);
+		skin.destination = new JsonSkin.Destination[]{changeDestination};
+
+		var placement = JsonSkinConfigurationSkinObjectLoader.findPreviewPlacement(skin);
+
+		assertNotNull(placement);
+		assertEquals(changeDestination, placement.destination());
+		assertTrue(placement.preserveOriginal());
+	}
+
+	@Test
+	void explicitPreviewDestinationWinsOverLegacyInference() {
 		JsonSkin.Skin skin = new JsonSkin.Skin();
 		JsonSkin.Image changeArea = new JsonSkin.Image();
 		changeArea.id = "skin-change-area";
 		changeArea.act = EventFactory.getEvent(BUTTON_CHANGE_SKIN);
 		skin.image = new JsonSkin.Image[]{changeArea};
 
-		JsonSkin.Destination destination = new JsonSkin.Destination();
-		destination.id = changeArea.id;
-		JsonSkin.Animation animation = new JsonSkin.Animation();
-		animation.w = 687;
-		animation.h = 388;
-		destination.dst = new JsonSkin.Animation[]{animation};
-		skin.destination = new JsonSkin.Destination[]{destination};
+		JsonSkin.Destination changeDestination = destination(changeArea.id, 0, 0, 680, 360);
+		JsonSkin.Destination explicit = destination("explicit-preview", 40, 20, 600, 320);
+		skin.destination = new JsonSkin.Destination[]{changeDestination, explicit};
 
-		assertTrue(JsonSkinConfigurationSkinObjectLoader
-				.shouldInjectPreviewBehindSkinChangeTarget(skin, destination));
-
-		animation.h = 40;
-		assertFalse(JsonSkinConfigurationSkinObjectLoader
-				.shouldInjectPreviewBehindSkinChangeTarget(skin, destination));
-
-		animation.h = 388;
 		skin.skinpreview = new JsonSkin.SkinPreview();
 		skin.skinpreview.id = "explicit-preview";
-		JsonSkin.Destination explicit = new JsonSkin.Destination();
-		explicit.id = "explicit-preview";
-		skin.destination = new JsonSkin.Destination[]{destination, explicit};
-		assertFalse(JsonSkinConfigurationSkinObjectLoader
-				.shouldInjectPreviewBehindSkinChangeTarget(skin, destination));
+
+		var placement = JsonSkinConfigurationSkinObjectLoader.findPreviewPlacement(skin);
+
+		assertNotNull(placement);
+		assertEquals(explicit, placement.destination());
+		assertFalse(placement.preserveOriginal());
+	}
+
+	private static JsonSkin.Destination destination(
+			String id, int x, int y, int width, int height) {
+		JsonSkin.Destination destination = new JsonSkin.Destination();
+		destination.id = id;
+		JsonSkin.Animation animation = new JsonSkin.Animation();
+		animation.x = x;
+		animation.y = y;
+		animation.w = width;
+		animation.h = height;
+		destination.dst = new JsonSkin.Animation[]{animation};
+		return destination;
 	}
 }
