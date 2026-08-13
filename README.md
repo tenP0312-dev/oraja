@@ -84,12 +84,15 @@ and legacy Lua/JSON skins safely prefer a contained preview background over
 the larger skin-change click target. The preview is drawn at that background's
 position instead of being covered by an old thumbnail.
 
-Song roots can opt in to scanning `.zip` and `.rar` song archives from
+Song roots can opt in to scanning `.zip`, `.rar` (including RAR5), and `.7z`
+song archives from
 the Resource settings. BMS/BMSON charts, key sounds, preview music, stage,
 banner and back images, and image or movie BGA are read through stable archive
 virtual paths without expanding the archive into the song library. Existing
 chart hashes, IR records, replays, tables, courses, and Arena ownership checks
-continue to use the decoded chart identity.
+continue to use the decoded chart identity. Archive content signatures select
+the reader, so a ZIP/RAR/7z file with another supported archive suffix is still
+read correctly.
 
 ## Repository Scope
 

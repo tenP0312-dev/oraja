@@ -201,28 +201,51 @@ operation; `Load from URL` handles custom tables separately. Existing table
 URLs, active ordering, BMS roots, and archive-scanning settings remain
 compatible with saved profiles.
 
-## ZIP/RAR song archives
+## ZIP/RAR/7z song archives
 
-Version `0.4.14.38` adds an opt-in `Scan ZIP/RAR song archives` setting
-(`ZIP/RAR内の曲を走査`). It is off by default so existing song-database update
+Version `0.4.14.38` added the opt-in archive scanner. Current source labels it
+`Scan ZIP/RAR/7z song archives` (`ZIP/RAR/7z内の曲を走査`). It is off by
+default so existing song-database update
 behavior and startup cost do not change until the player enables it. After the
 setting is enabled, run a normal song-database update for the configured song
 roots.
 
 The scanner recognizes BMS, BME, BML, PMS, and BMSON charts inside `.zip` and
-`.rar` files. Chart references for key sounds, preview music, stage, banner,
-back images, image BGA, and movie BGA are resolved inside the same archive.
-Entries use stable virtual paths such as `songs/pack.zip!/folder/chart.bms`;
-the original archive is not moved, renamed, rewritten, or expanded into the
-song library. A single entry may be copied to an operating-system temporary
-file only when an existing decoder accepts file paths instead of streams.
+`.rar` files (RAR4 and RAR5) and `.7z` files. The filename must use one of
+those three supported suffixes, but the reader is selected from the content
+signature; for example, a ZIP file accidentally named `.rar` is still read as
+ZIP. Chart references for key sounds, preview music, stage, banner, back
+images, image BGA, and movie BGA are resolved inside the same archive. Entries
+use stable virtual paths such as `songs/pack.zip!/folder/chart.bms`; the
+original archive is not moved, renamed, rewritten, or expanded into the song
+library. A single entry may be copied to a bounded operating-system temporary
+cache only when an existing decoder accepts file paths instead of streams.
+The cache holds at most 128 entries and 2 GiB, removes its live entries on
+normal shutdown, and removes older orphaned files on a later startup without
+touching temporary files owned by another running client.
 
 ZIP entry names use UTF-8 and fall back to Windows-31J for legacy Japanese
-archives. Archive entry names are normalized, path escapes and duplicate
-normalized names are rejected, and entry-count and expanded-size limits are
-applied before charts are indexed. Encrypted, split/multi-volume, and nested
+archives. Archive lookup names use Unicode NFC normalization and
+locale-independent case folding, while the original entry spelling is kept
+for archive I/O. Canonically colliding names, path escapes, duplicate names,
+7z anti-items, excessive entry counts, and excessive expanded sizes are
+rejected before charts are indexed. Encrypted, split/multi-volume, and nested
 archives are unsupported and fail locally without changing the source file.
 OSU charts inside archives are not indexed.
+
+All chart directories inside an archive are presented from one archive folder
+so deeply nested charts remain reachable. Same-folder grouping still uses each
+chart's real directory, and automatic preview discovery is performed per chart
+directory instead of selecting one preview for the whole archive. Refreshing
+an archive folder re-enumerates its physical archive. If that read is rejected
+or the containing directory cannot be read, the update fails closed and keeps
+the last indexed folder and songs. The client logs the causal rejection reason
+and shows loaded/rejected archive totals when the update finishes.
+
+Archive cache revisions combine filesystem identity/change metadata with
+sampled content so ordinary replacements are noticed even when file size and
+modification time were preserved. This revision also invalidates any
+materialized single-entry resource left in the in-process cache.
 
 The decoded chart data keeps the same MD5/SHA-256 identity as an unpacked
 copy. IR records, replays, tables, courses, and Arena chart possession
