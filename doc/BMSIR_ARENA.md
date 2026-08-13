@@ -621,6 +621,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Ordinary-play and skin additions
 
+- The application and configuration windows keep the `Arena oraja` product
+  name, while legacy skin string property `1010` retains the upstream-compatible
+  `LR2oraja Endless Dream` version identity. This prevents LITONE and similar
+  skins from mistaking the product name for beatoraja's built-in Arena skin API;
+  the BMS-IR Arena graph remains in its external overlay.
+
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. `全ロングノートを
 LONG NOTEとして扱う` is shown as an always-ON compatibility rule rather than
