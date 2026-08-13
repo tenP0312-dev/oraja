@@ -10,13 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.37**. This source adds an
-owner-only My Difficulty Table editor to the Arena overlay and hot-reloads its
-server-confirmed table bar in Music Select without restarting the game. When
-the authenticated BMS-IR system owner has multiple tables, the overlay lists
-them and requires an explicit edit target before any mutation. Existing-table
-metadata and up to 64 selected-chart changes can be staged, reviewed, undone,
-and saved together for one authoritative in-game refresh.
+The current client source version is **0.4.14.38**. Song roots can opt in to
+scanning `.zip` and `.rar` song archives, then play the contained BMS/BMSON
+charts, key sounds, preview music, images, and movie BGA without expanding the
+archive into the song library. Decoded chart identity remains compatible with
+existing IR records, replays, tables, courses, and Arena possession checks.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -24,7 +22,7 @@ GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
 
-## Unreleased Source Changes
+## Arena oraja 0.4.14.38
 
 The current development source selectively incorporates conflict-free fixes
 from beatoraja without replacing Arena-specific rendering, rules, or IR plugin
@@ -52,7 +50,7 @@ and legacy Lua/JSON skins safely prefer a contained preview background over
 the larger skin-change click target. The preview is drawn at that background's
 position instead of being covered by an old thumbnail.
 
-Song roots can now opt in to scanning `.zip` and `.rar` song archives from
+Song roots can opt in to scanning `.zip` and `.rar` song archives from
 the Resource settings. BMS/BMSON charts, key sounds, preview music, stage,
 banner and back images, and image or movie BGA are read through stable archive
 virtual paths without expanding the archive into the song library. Existing

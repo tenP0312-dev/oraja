@@ -1,5 +1,25 @@
 # Unreleased
 
+# Arena oraja 0.4.14.38
+
+- Song roots can opt in to scanning BMS/BMSON charts directly from ZIP and
+  RAR files. Key sounds, preview music, stage/banner/back images, and image or
+  movie BGA are loaded from stable archive virtual paths without expanding the
+  archive into the song library. Decoded chart hashes continue to identify the
+  same IR records, replays, tables, courses, and Arena chart possession as an
+  unpacked copy.
+- Archive entry names support UTF-8 ZIPs and legacy Windows-31J ZIPs. Path
+  escapes, duplicate normalized names, encrypted/split/nested archives, and
+  archives exceeding the entry-count or expanded-size limits fail locally
+  without changing the source archive.
+- Skin Select now provides live Lua, JSON, and LR2 skin previews. DECIDE,
+  PLAY, RESULT, and COURSE RESULT sample sessions reset their animations,
+  input, movie, gauge, and score state on every preview loop, including normal
+  14-key autoplay behavior for double-play skins.
+- Incorporated conflict-free beatoraja runtime fixes for graph arithmetic,
+  JPEG loading, thick-note placement, previews, controller hats, Practice,
+  gauge handling, IR discovery, and complete local play history. Manual full
+  and differential song-database updates now require confirmation.
 - Fixed LR2-style START+6/7 SUD+ changes recalculating HI-SPEED even when the
   dedicated FHS recalculation switch was disabled. Ordinary scratch/mouse
   cover control and IIDX FHS SUD+ green-number reload behavior are unchanged.
