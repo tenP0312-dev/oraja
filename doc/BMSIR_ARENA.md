@@ -651,9 +651,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
   score, combo, gauge, judge, and end timers advance with it. The chart's time
   and measure positions stay aligned so its first notes enter from above the
-  visible lane. Each loop resets the lane scan and input state, tap key beams
-  release after a bounded hold, and charge-note pairs drive the held-LN body
-  and HOLD timers. RESULT and COURSE RESULT skins receive result-compatible
+  visible lane. Double-play previews place sample notes on both sides and
+  advance the independent 1P/2P judgement, combo, key-beam, end-of-note, and
+  full-combo timers used by 14-key skins. Each loop resets the lane scan and
+  input state, tap key beams release after a bounded hold, and charge-note
+  pairs drive the held-LN body and HOLD timers. RESULT and COURSE RESULT skins
+  receive result-compatible
   states with a representative
   current/best/rival score, gauge history, timing distribution, replay status,
   and a four-chart virtual course. Every data-backed preview has its own timer

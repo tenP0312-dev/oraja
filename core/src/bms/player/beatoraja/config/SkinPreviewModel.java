@@ -20,6 +20,7 @@ import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.utils.FloatArray;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /** Creates deterministic in-memory content for live skin previews. */
@@ -49,8 +50,10 @@ public final class SkinPreviewModel {
 		model.setSHA256("0000000000000000000000000000000000000000000000000000000000000000");
 
 		List<TimeLine> timelines = new ArrayList<>();
-		LongNote pendingLongNote = null;
-		int pendingLongNoteLane = -1;
+		int players = Math.max(1, mode.player);
+		LongNote[] pendingLongNotes = new LongNote[players];
+		int[] pendingLongNoteLanes = new int[players];
+		Arrays.fill(pendingLongNoteLanes, -1);
 		for (int step = 0; step < STEP_COUNT; step++) {
 			long time = LEAD_IN_MICROS + step * STEP_MICROS;
 			TimeLine timeline = new TimeLine((double) time / MEASURE_MICROS, time, mode.key);
@@ -58,28 +61,35 @@ public final class SkinPreviewModel {
 			timeline.setScroll(1.0);
 			timeline.setSectionLine(time % MEASURE_MICROS == 0L);
 
-			int primaryLane = playableLane(mode, step * 5 + step / 4, pendingLongNoteLane);
-			if (step % 16 == 4) {
-				pendingLongNote = new LongNote(0);
-				pendingLongNote.setType(LongNote.TYPE_CHARGENOTE);
-				timeline.setNote(primaryLane, pendingLongNote);
-				pendingLongNoteLane = primaryLane;
-			} else if (step % 16 == 10 && pendingLongNote != null) {
-				LongNote end = new LongNote(0);
-				end.setType(LongNote.TYPE_CHARGENOTE);
-				timeline.setNote(pendingLongNoteLane, end);
-				pendingLongNote.setPair(end);
-				pendingLongNote = null;
-				pendingLongNoteLane = -1;
-			} else {
-				timeline.setNote(primaryLane, new NormalNote(0));
-			}
+			for (int player = 0; player < players; player++) {
+				int sideWidth = mode.key / players;
+				int seed = step * 5 + step / 4 + player * 3;
+				int primaryLane = playableLane(
+						mode, player, seed, pendingLongNoteLanes[player]);
+				if (step % 16 == 4) {
+					LongNote start = new LongNote(0);
+					start.setType(LongNote.TYPE_CHARGENOTE);
+					timeline.setNote(primaryLane, start);
+					pendingLongNotes[player] = start;
+					pendingLongNoteLanes[player] = primaryLane;
+				} else if (step % 16 == 10 && pendingLongNotes[player] != null) {
+					LongNote end = new LongNote(0);
+					end.setType(LongNote.TYPE_CHARGENOTE);
+					timeline.setNote(pendingLongNoteLanes[player], end);
+					pendingLongNotes[player].setPair(end);
+					pendingLongNotes[player] = null;
+					pendingLongNoteLanes[player] = -1;
+				} else {
+					timeline.setNote(primaryLane, new NormalNote(0));
+				}
 
-			if (step % 4 == 0 && mode.key > 1) {
-				int chordLane = playableLane(
-						mode, primaryLane + Math.max(2, mode.key / 3), pendingLongNoteLane);
-				if (chordLane != primaryLane && timeline.getNote(chordLane) == null) {
-					timeline.setNote(chordLane, new NormalNote(0));
+				if (step % 4 == 0 && sideWidth > 1) {
+					int chordLane = playableLane(
+							mode, player, seed + Math.max(2, sideWidth / 3),
+							pendingLongNoteLanes[player]);
+					if (chordLane != primaryLane && timeline.getNote(chordLane) == null) {
+						timeline.setNote(chordLane, new NormalNote(0));
+					}
 				}
 			}
 			timelines.add(timeline);
@@ -242,12 +252,15 @@ public final class SkinPreviewModel {
 		return song;
 	}
 
-	private static int playableLane(Mode mode, int seed, int blockedLane) {
-		int lane = Math.floorMod(seed, mode.key);
+	private static int playableLane(Mode mode, int player, int seed, int blockedLane) {
+		int players = Math.max(1, mode.player);
+		int sideWidth = mode.key / players;
+		int sideStart = player * sideWidth;
+		int lane = sideStart + Math.floorMod(seed, sideWidth);
 		for (int attempts = 0;
-				attempts < mode.key && (mode.isScratchKey(lane) || lane == blockedLane);
+				attempts < sideWidth && (mode.isScratchKey(lane) || lane == blockedLane);
 				attempts++) {
-			lane = (lane + 1) % mode.key;
+			lane = sideStart + Math.floorMod(lane - sideStart + 1, sideWidth);
 		}
 		return lane;
 	}

@@ -41,7 +41,9 @@ through loading, READY, play, music-end, and fadeout; and RESULT / COURSE
 RESULT receive representative scores, gauge histories, timing data, and course
 content. Play-preview loops reset their lane scan and simulated input state;
 notes enter from the lane top, tap beams release, and held charge notes expose
-their active body animation on every loop. Lua and JSON Skin Select skins can
+their active body animation on every loop. Double-play sample sessions advance
+1P and 2P notes, judgement, combo, key-beam, and end timers independently, as
+normal 14-key autoplay does. Lua and JSON Skin Select skins can
 declare an exact preview destination, LR2 skins retain the GR 105 contract,
 and legacy Lua/JSON skins safely prefer a contained preview background over
 the larger skin-change click target. The preview is drawn at that background's

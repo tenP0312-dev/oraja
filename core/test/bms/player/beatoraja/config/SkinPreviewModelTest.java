@@ -42,11 +42,15 @@ class SkinPreviewModelTest {
 		assertLongNotesArePairedOnOneNonScratchLane(model);
 		assertLongNoteLanesRemainEmptyBetweenTheirPairs(model);
 		for (TimeLine timeline : model.getAllTimeLines()) {
+			boolean[] playerHasNote = new boolean[model.getMode().player];
 			for (int lane = 0; lane < model.getMode().key; lane++) {
 				if (timeline.getNote(lane) != null) {
 					assertFalse(model.getMode().isScratchKey(lane));
+					playerHasNote[lane / (model.getMode().key / model.getMode().player)] = true;
 				}
 			}
+			assertTrue(playerHasNote[0], "1P preview lane must advance every step");
+			assertTrue(playerHasNote[1], "2P preview lane must advance every step");
 		}
 	}
 

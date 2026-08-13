@@ -74,6 +74,28 @@ class SkinPreviewTest {
 	}
 
 	@Test
+	void doublePlayAdvancesJudgementsAndCombosIndependentlyForBothPlayers() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_14K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+		long lastNoteMillis = model.getLastTime();
+
+		assertEquals(0, SkinPreviewPlayer.countPastNotes(model, firstNoteMillis - 1, 0));
+		assertEquals(0, SkinPreviewPlayer.countPastNotes(model, firstNoteMillis - 1, 1));
+		assertTrue(SkinPreviewPlayer.countPastNotes(model, firstNoteMillis, 0) > 0);
+		assertTrue(SkinPreviewPlayer.countPastNotes(model, firstNoteMillis, 1) > 0);
+
+		int playerOneNotes = SkinPreviewPlayer.countPastNotes(model, lastNoteMillis, 0);
+		int playerTwoNotes = SkinPreviewPlayer.countPastNotes(model, lastNoteMillis, 1);
+		assertTrue(playerOneNotes > 0);
+		assertTrue(playerTwoNotes > 0);
+		assertEquals(model.getTotalNotes(), playerOneNotes + playerTwoNotes);
+		assertTrue(SkinPreviewPlayer.latestJudgementTimeForPlayer(
+				model, 0, lastNoteMillis) >= firstNoteMillis);
+		assertTrue(SkinPreviewPlayer.latestJudgementTimeForPlayer(
+				model, 1, lastNoteMillis) >= firstNoteMillis);
+	}
+
+	@Test
 	void tapKeyBeamTurnsOffAfterItsBoundedHold() {
 		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
 		TimeLine first = model.getAllTimeLines()[0];
