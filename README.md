@@ -10,15 +10,12 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.39**. The Resource settings now
-group song-library maintenance with the BMS roots, keep those controls hidden
-on unrelated tabs, and provide a compact difficulty-table editor. A song-root
-context menu can update only the selected root without rescanning unrelated
-roots. On the Music Select root, a short F2 press on a table supplied by the
-`BMS-IR` Primary IR now reloads the recommendation and registered-rival tables
-without restarting the client. Startup now opens from a per-player last-good
-Primary IR selection-table cache and refreshes it after Music Select is usable,
-instead of blocking the startup screen on the complete server response.
+The current client source version is **0.4.14.40**. Startup now opens from a
+per-player last-good Primary IR selection-table cache and refreshes it after
+Music Select is usable, instead of blocking the startup screen on the complete
+server response. The startup phase is labeled `Primary IR選曲テーブル`, and a
+short F2 press on the Music Select root can still refresh BMS-IR recommendation
+and registered-rival tables without restarting the client.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -30,6 +27,19 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.40
+
+The complete BMS-IR Primary IR table response no longer blocks startup. The
+client restores the last valid per-player selection-table cache first, opens
+Music Select, and performs one background refresh. A successful refresh is
+saved for the next startup and applied on the render thread; if the player is
+inside another folder, root-table replacement waits until the selector returns
+to its root. Empty, invalid, and failed refreshes keep the previous cache.
+
+The startup display name is now `Primary IR選曲テーブル`, which distinguishes
+these server-provided selection tables from ordinary Web difficulty-table
+updates.
 
 ## Arena oraja 0.4.14.39
 
