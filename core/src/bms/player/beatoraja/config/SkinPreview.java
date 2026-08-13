@@ -17,7 +17,6 @@ import com.badlogic.gdx.math.Matrix4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static bms.player.beatoraja.skin.SkinProperty.TIMER_PLAY;
 import static bms.player.beatoraja.skin.SkinProperty.OFFSET_HIDDEN_COVER;
 import static bms.player.beatoraja.skin.SkinProperty.OFFSET_LANECOVER;
 import static bms.player.beatoraja.skin.SkinProperty.OFFSET_LIFT;
@@ -107,24 +106,15 @@ public final class SkinPreview extends SkinObject {
 			previewBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, previewWidth, previewHeight));
 			previewBatch.begin();
 			batchBegun = true;
-			long previousPlayTimer = previewState.timer.getMicroTimer(TIMER_PLAY);
-			long stateTime = previewState.timer.getNowTime();
-			if (previewState instanceof SkinPreviewPlayer) {
-				long loopMicros = Math.max(1L,
-						((SkinPreviewPlayer) previewState).getPlaytime() * 1000L);
-				long loopPosition = previewState.timer.getNowMicroTime() % loopMicros;
-				previewState.timer.setMicroTimer(
-						TIMER_PLAY, previewState.timer.getNowMicroTime() - loopPosition);
-				stateTime = loopPosition / 1000L;
+			long stateTime;
+			if (previewState instanceof SkinPreviewState statefulPreview) {
+				stateTime = statefulPreview.preparePreviewFrame(previewSkin);
+			} else {
+				previewState.timer.update();
+				stateTime = previewState.timer.getNowTime();
 			}
-			try {
-				previewSkin.updateCustomObjects(previewState);
-				previewSkin.drawAllObjectsSafely(previewBatch, previewState, stateTime);
-			} finally {
-				if (previewState instanceof SkinPreviewPlayer) {
-					previewState.timer.setMicroTimer(TIMER_PLAY, previousPlayTimer);
-				}
-			}
+			previewSkin.updateCustomObjects(previewState);
+			previewSkin.drawAllObjectsSafely(previewBatch, previewState, stateTime);
 		} finally {
 			if (offsetSnapshots != null) {
 				for (SkinOffsetSnapshot snapshot : offsetSnapshots) {

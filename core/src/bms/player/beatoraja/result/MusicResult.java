@@ -43,6 +43,11 @@ public class MusicResult extends AbstractResult {
 		super(main);
 	}
 
+	/** Constructor for an isolated Skin Select preview. */
+	protected MusicResult(MainController main, PlayerResource resource) {
+		super(main, resource);
+	}
+
 	public void create() {
 		BMSIROrajaHelperBridge.publishScene("result");
 		for(int i = 0;i < REPLAY_SIZE;i++) {

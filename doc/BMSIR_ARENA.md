@@ -636,17 +636,23 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   change-skin click target (event 190, at least 160 x 90) is also used as the
   preview destination, so common full-thumbnail layouts work without a skin
   update. Small arrow/button-only layouts still need an explicit destination.
-  Changing a custom option, file, or offset reloads the preview. Skin Select,
-  result, and course-result skins are excluded to avoid recursive or
-  state-dependent previews. Music Select skins render against a deterministic
-  in-memory catalog containing two virtual folders and enough scored songs to
-  fill a normal bar list without reading the user's song DB. Play skins render
-  against a mode-matched, silent autoplay session whose normal notes, chords,
-  and charge notes loop in the preview; the preview does not replace the active
-  selector resource or play audio. A failed preview object is isolated from
-  the configuration screen, play-skin offset mutations are restored after each
-  frame, and the off-screen buffer is limited to the displayed destination size
-  and a 2048-pixel maximum dimension.
+  Changing a custom option, file, or offset reloads the preview. Skin Select
+  itself is excluded to avoid recursive previews. Music Select skins render
+  against a deterministic in-memory catalog containing two virtual folders and
+  enough scored songs to fill a normal bar list without reading the user's song
+  DB. DECIDE skins receive the same virtual selected chart through a
+  `MusicDecide`-compatible state. Play skins render against a mode-matched,
+  silent autoplay session whose normal notes, chords, and charge notes advance
+  through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
+  score, combo, gauge, judge, and end timers advance with it. RESULT and COURSE
+  RESULT skins receive result-compatible states with a representative
+  current/best/rival score, gauge history, timing distribution, replay status,
+  and a four-chart virtual course. Every data-backed preview has its own timer
+  and player resource, so it does not replace the active selector resource,
+  play audio, access a song database, save a score, or contact IR. A failed
+  preview object is isolated from the configuration screen, play-skin offset
+  mutations are restored after each frame, and the off-screen buffer is limited
+  to the displayed destination size and a 2048-pixel maximum dimension.
 
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. `全ロングノートを

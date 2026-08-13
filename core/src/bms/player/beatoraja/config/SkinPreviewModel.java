@@ -6,11 +6,18 @@ import bms.model.Mode;
 import bms.model.NormalNote;
 import bms.model.TimeLine;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.ClearType;
 import bms.player.beatoraja.Config;
+import bms.player.beatoraja.CourseData;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.PlayerData;
 import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.ReplayData;
+import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.song.SongData;
+
+import com.badlogic.gdx.utils.FloatArray;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,7 +92,141 @@ public final class SkinPreviewModel {
 		resource.setSkinPreviewModel(model);
 		resource.setPlayMode(BMSPlayerMode.AUTOPLAY);
 		resource.setReplayData(new ReplayData());
+		PlayerData playerData = new PlayerData();
+		playerData.setPlaycount(4321);
+		playerData.setClear(3456);
+		playerData.setEpg(654321);
+		playerData.setLpg(432123);
+		playerData.setEgr(87654);
+		playerData.setLgr(76543);
+		playerData.setEgd(5432);
+		playerData.setLgd(4321);
+		playerData.setEbd(876);
+		playerData.setLbd(765);
+		playerData.setEpr(654);
+		playerData.setLpr(543);
+		playerData.setEms(432);
+		playerData.setLms(321);
+		playerData.setPlaytime(987654);
+		playerData.setMaxcombo(2468);
+		resource.setPlayerData(playerData);
 		return resource;
+	}
+
+	static ResultData createResultResource(
+			Config config, PlayerConfig player, Mode mode, boolean courseResult) {
+		PlayerResource resource = createResource(config, player, mode);
+		resource.setPlayMode(BMSPlayerMode.PLAY);
+
+		int totalNotes;
+		if (courseResult) {
+			BMSModel[] course = new BMSModel[4];
+			String[] titles = {
+					"PREVIEW OPENING", "PREVIEW MIDDLE",
+					"PREVIEW CLIMAX", "PREVIEW FINAL"
+			};
+			totalNotes = 0;
+			for (int i = 0; i < course.length; i++) {
+				course[i] = create(mode);
+				course[i].setTitle(titles[i]);
+				course[i].setPlaylevel(String.valueOf(8 + i * 2));
+				totalNotes += course[i].getTotalNotes();
+			}
+			CourseData courseData = new CourseData();
+			courseData.setName("VIRTUAL PREVIEW COURSE");
+			courseData.setSong(course);
+			courseData.setConstraint(new CourseData.CourseDataConstraint[] {
+					CourseData.CourseDataConstraint.CLASS
+			});
+			resource.setSkinPreviewCourse(course, courseData);
+		} else {
+			totalNotes = resource.getBMSModel().getTotalNotes();
+		}
+
+		ScoreData score = createResultScore(mode, totalNotes, true);
+		ScoreData oldScore = createResultScore(mode, totalNotes, false);
+		ScoreData targetScore = createResultScore(mode, totalNotes, false);
+		targetScore.setPlayer("PREVIEW RIVAL");
+		targetScore.setEpg(Math.max(0, targetScore.getEpg() - 2));
+		targetScore.setLpg(targetScore.getLpg() + 2);
+		resource.setScoreData(score);
+		resource.setRivalScoreData(targetScore);
+		resource.setTargetScoreData(targetScore);
+		if (courseResult) {
+			resource.setCourseScoreData(score);
+		}
+		resource.setCombo(score.getCombo());
+		resource.setMaxcombo(score.getCombo());
+		resource.setUpdateScore(false);
+		resource.setUpdateCourseScore(false);
+
+		GrooveGauge gauge = GrooveGauge.create(
+				resource.getBMSModel(), GrooveGauge.NORMAL, resource);
+		FloatArray[] gaugeHistory = createGaugeHistory(gauge.getGaugeTypeLength(), 0);
+		resource.setGauge(gaugeHistory);
+		for (int type = 0; type < gauge.getGaugeTypeLength(); type++) {
+			gauge.setValue(type, gaugeHistory[type].peek());
+		}
+		resource.setGrooveGauge(gauge);
+		if (courseResult) {
+			for (int song = 0; song < 4; song++) {
+				resource.addCourseGauge(createGaugeHistory(gauge.getGaugeTypeLength(), song));
+			}
+		}
+		return new ResultData(resource, oldScore);
+	}
+
+	private static ScoreData createResultScore(Mode mode, int notes, boolean current) {
+		ScoreData score = new ScoreData(mode);
+		int pgreat = notes * (current ? 72 : 62) / 100;
+		int great = notes * (current ? 18 : 20) / 100;
+		int good = notes * (current ? 6 : 9) / 100;
+		int bad = notes * (current ? 2 : 4) / 100;
+		int poor = Math.max(0, notes - pgreat - great - good - bad);
+		score.setNotes(notes);
+		score.setEpg(pgreat * 3 / 5);
+		score.setLpg(pgreat - score.getEpg());
+		score.setEgr(great / 2);
+		score.setLgr(great - score.getEgr());
+		score.setEgd(good / 2);
+		score.setLgd(good - score.getEgd());
+		score.setEbd(bad / 2);
+		score.setLbd(bad - score.getEbd());
+		score.setEpr(poor / 2);
+		score.setLpr(poor - score.getEpr());
+		score.setCombo(Math.max(1, notes - (current ? 7 : 19)));
+		score.setMinbp(current ? 12 : 31);
+		score.setPassnotes(notes);
+		score.setClear(current ? ClearType.Hard.id : ClearType.Normal.id);
+		score.setAvgjudge(current ? -1800L : 4300L);
+		score.setAvg(current ? -900L : 2800L);
+		score.setStddev(current ? 9200L : 13400L);
+		score.setTotalDuration((long) notes * Math.abs(score.getAvgjudge()));
+		return score;
+	}
+
+	private static FloatArray[] createGaugeHistory(int gaugeTypes, int courseSong) {
+		FloatArray[] history = new FloatArray[gaugeTypes];
+		for (int type = 0; type < gaugeTypes; type++) {
+			history[type] = new FloatArray(48);
+			for (int point = 0; point < 48; point++) {
+				float progress = point / 47f;
+				float wave = (float) Math.sin((point + courseSong * 7) * 0.31f) * 7f;
+				history[type].add(Math.max(2f, Math.min(100f,
+						24f + courseSong * 8f + progress * 54f + wave)));
+			}
+		}
+		return history;
+	}
+
+	static final class ResultData {
+		final PlayerResource resource;
+		final ScoreData oldScore;
+
+		ResultData(PlayerResource resource, ScoreData oldScore) {
+			this.resource = resource;
+			this.oldScore = oldScore;
+		}
 	}
 
 	public static SongData createSong(Mode mode, String title, int difficulty, int level) {

@@ -1,5 +1,7 @@
 package bms.player.beatoraja.config;
 
+import bms.model.Mode;
+import bms.player.beatoraja.BMSPlayerMode;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.MainState;
 import static bms.player.beatoraja.skin.SkinProperty.*;
@@ -461,8 +463,7 @@ public class SkinConfiguration extends MainState {
 	}
 
 	static boolean supportsPreview(SkinType type) {
-		return type != null && type != SkinType.SKIN_SELECT
-				&& type != SkinType.RESULT && type != SkinType.COURSE_RESULT;
+		return type != null && type != SkinType.SKIN_SELECT;
 	}
 
 	private boolean hasPreviewObject() {
@@ -510,6 +511,36 @@ public class SkinConfiguration extends MainState {
 				if (preview != null) {
 					previewPlayer.attachSkin(preview);
 				}
+			} else if (type == SkinType.DECIDE) {
+				PlayerResource previewResource = SkinPreviewModel.createResource(
+						main.getConfig(), player, getPreviewMode());
+				previewResource.setPlayMode(BMSPlayerMode.PLAY);
+				SkinPreviewDecide previewDecide = new SkinPreviewDecide(main, previewResource);
+				previewState = previewDecide;
+				preview = SkinLoader.load(previewDecide, type, previewConfig);
+				if (preview != null) {
+					previewDecide.attachSkin(preview);
+				}
+			} else if (type == SkinType.RESULT) {
+				SkinPreviewModel.ResultData resultData = SkinPreviewModel.createResultResource(
+						main.getConfig(), player, getPreviewMode(), false);
+				SkinPreviewMusicResult previewResult = new SkinPreviewMusicResult(
+						main, resultData.resource, resultData.oldScore);
+				previewState = previewResult;
+				preview = SkinLoader.load(previewResult, type, previewConfig);
+				if (preview != null) {
+					previewResult.attachSkin(preview);
+				}
+			} else if (type == SkinType.COURSE_RESULT) {
+				SkinPreviewModel.ResultData resultData = SkinPreviewModel.createResultResource(
+						main.getConfig(), player, getPreviewMode(), true);
+				SkinPreviewCourseResult previewResult = new SkinPreviewCourseResult(
+						main, resultData.resource, resultData.oldScore);
+				previewState = previewResult;
+				preview = SkinLoader.load(previewResult, type, previewConfig);
+				if (preview != null) {
+					previewResult.attachSkin(preview);
+				}
 			} else {
 				preview = SkinLoader.load(this, type, previewConfig);
 			}
@@ -529,6 +560,11 @@ public class SkinConfiguration extends MainState {
 			previewState = null;
 		}
 		setSelectedSkin(preview, previewState);
+	}
+
+	private Mode getPreviewMode() {
+		Mode mode = player.getMode();
+		return mode != null ? mode : Mode.BEAT_7K;
 	}
 
 	private void reloadSelectedSkinPreview() {

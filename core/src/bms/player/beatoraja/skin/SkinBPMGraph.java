@@ -182,7 +182,7 @@ public class SkinBPMGraph extends SkinObject {
 			shape = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
 			int lastTime = (int) data[data.length - 1][1];
-			final SongData song = state.main.getPlayerResource().getSongdata();
+			final SongData song = state.resource.getSongdata();
 			if (song != null && song.getLength() < lastTime) {
 				lastTime = song.getLength();
 			}

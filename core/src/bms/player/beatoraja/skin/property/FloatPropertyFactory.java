@@ -419,9 +419,9 @@ public class FloatPropertyFactory {
 		hispeed(310, (state) -> {
 			if (state instanceof BMSPlayer) {
 				return ((BMSPlayer) state).getLanerender().getHispeed();
-			} else if (state.main.getPlayerResource().getSongdata() != null) {
-				var song = state.main.getPlayerResource().getSongdata();
-				var pc = state.main.getPlayerResource().getPlayerConfig().getPlayConfig(song.getMode())
+			} else if (state.resource.getSongdata() != null) {
+				var song = state.resource.getSongdata();
+				var pc = state.resource.getPlayerConfig().getPlayConfig(song.getMode())
 						.getPlayconfig();
 				return pc.getHispeed();
 			}

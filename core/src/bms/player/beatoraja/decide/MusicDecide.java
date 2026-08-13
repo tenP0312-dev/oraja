@@ -22,6 +22,11 @@ public class MusicDecide extends MainState {
 		super(main);
 	}
 
+	/** Constructor for an isolated Skin Select preview. */
+	protected MusicDecide(MainController main, PlayerResource resource) {
+		super(main, resource);
+	}
+
 	public void create() {
 		cancel = false;
 		

@@ -35,9 +35,11 @@ local play-history retention with average-judge history. Manual full/differentia
 song-database updates now require confirmation, and new audio configurations
 default to 256 simultaneous sources. Skin Select now renders a live preview of
 the selected supported skin and refreshes it after option, file, or offset
-changes; Music Select previews use an in-memory folder/song catalog, while play
-previews loop a silent in-memory chart with moving notes. Lua, JSON, and LR2
-Skin Select skins can opt in to the preview object.
+changes. Music Select previews use an in-memory folder/song catalog; DECIDE
+receives a virtual selected chart; play previews run a silent in-memory chart
+through loading, READY, play, music-end, and fadeout; and RESULT / COURSE
+RESULT receive representative scores, gauge histories, timing data, and course
+content. Lua, JSON, and LR2 Skin Select skins can opt in to the preview object.
 
 ## Repository Scope
 
