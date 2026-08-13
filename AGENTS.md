@@ -50,9 +50,10 @@ repository.
   inventory verification, self-update, cleanup, or storage behavior changed.
   A bug found during final validation must still be fixed and retested; these
   limits prevent redundant passes, not necessary regression work.
-- For UI or rendering changes, verify the affected flow in a real client at
-  desktop resolution and check that controls remain usable at smaller window
-  sizes.
+- For UI or rendering changes, use automated/static checks and leave physical
+  client acceptance to the operator. Codex must not use Computer Use or launch,
+  activate, focus, or control the launcher, updater, or game body. Record only
+  the manual evidence returned by the operator.
 - For Arena protocol changes, verify both an ordinary non-Arena play path and
   a controlled Arena match against the paired server version.
 
@@ -60,10 +61,20 @@ repository.
 
 - Source merge does not authorize binary publication, production rollout, or
   Discord announcements.
-- Official releases require an exact reviewed source commit, matching version
-  fields, successful builds, signing/notarization where applicable, artifact
-  verification, BMS-IR allowlist updates when required, and explicit release
-  approval.
+- Any BMS-IR-built body or plugin made downloadable through the BMS-IR
+  launcher is gate-bound, including internal test builds, prereleases, sparse
+  updates, and stable releases. Launcher availability, not a formal-release
+  label, is the trigger.
+- Before promoting the signed launcher channel, complete every applicable
+  ordinary-score body/plugin allowlist and Arena client-version/build gate,
+  the required guarded service reloads, and effective verification through
+  `BMS-Mania/IR`'s `docs/PRODUCTION_VPS_OPERATIONS.md`. Once distribution is
+  authorized, these additive gate steps need no separate per-artifact prompt.
+- Use only the exact reviewed artifacts named by the signed manifest. Local
+  previews and third-party or unreviewed builds are excluded. A launcher-only
+  update has no score or Arena body/plugin gate to add.
+- Do not report a release complete while its body or plugin is downloadable
+  but rejected by ordinary score submission or the Arena connection gate.
 - Do not publish private server addresses, credentials, signing material,
   plugin fingerprints, allowlist values, or Discord route values.
 - Development progress notes are approval-free, but cannot authorize or
