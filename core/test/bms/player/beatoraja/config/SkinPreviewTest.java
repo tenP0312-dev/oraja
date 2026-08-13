@@ -1,5 +1,9 @@
 package bms.player.beatoraja.config;
 
+import bms.model.BMSModel;
+import bms.model.LongNote;
+import bms.model.Note;
+import bms.model.TimeLine;
 import bms.player.beatoraja.skin.SkinType;
 import org.junit.jupiter.api.Test;
 
@@ -7,6 +11,9 @@ import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkinPreviewTest {
@@ -38,6 +45,7 @@ class SkinPreviewTest {
 		assertEquals(SkinPreviewLifecycle.PlayPhase.PLAY, play.phase());
 		assertEquals(SkinPreviewLifecycle.PlayPhase.FINISHED, finish.phase());
 		assertEquals(0, looped.position());
+		assertEquals(1, looped.iteration());
 		assertEquals(SkinPreviewLifecycle.PlayPhase.PRELOAD, looped.phase());
 	}
 
@@ -55,13 +63,62 @@ class SkinPreviewTest {
 	@Test
 	void playDataStartsAtTheFirstRealNoteTimeAndReachesTheFullChart() {
 		var model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
 
-		assertEquals(0, SkinPreviewPlayer.countPastNotes(model, 799));
-		assertTrue(SkinPreviewPlayer.countPastNotes(model, 800) > 0);
+		assertEquals(0, SkinPreviewPlayer.countPastNotes(model, firstNoteMillis - 1));
+		assertTrue(SkinPreviewPlayer.countPastNotes(model, firstNoteMillis) > 0);
 		assertEquals(model.getTotalNotes(),
 				SkinPreviewPlayer.countPastNotes(model, model.getLastTime()));
-		assertEquals(-1, SkinPreviewPlayer.latestJudgementTime(model, 0, 799));
+		assertEquals(-1, SkinPreviewPlayer.latestJudgementTime(model, 0, firstNoteMillis - 1));
 		assertTrue(SkinPreviewPlayer.latestJudgementTime(model, 0, model.getLastTime()) >= 800);
+	}
+
+	@Test
+	void tapKeyBeamTurnsOffAfterItsBoundedHold() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		TimeLine first = model.getAllTimeLines()[0];
+		int lane = firstOccupiedLane(model, first);
+		long noteTime = first.getTime();
+
+		var pressed = SkinPreviewPlayer.laneEffect(model, lane, noteTime + 99L);
+		var released = SkinPreviewPlayer.laneEffect(model, lane, noteTime + 100L);
+
+		assertEquals(99L, pressed.keyOnElapsed());
+		assertEquals(-1L, pressed.keyOffElapsed());
+		assertEquals(-1L, released.keyOnElapsed());
+		assertEquals(0L, released.keyOffElapsed());
+	}
+
+	@Test
+	void longNoteKeepsKeyAndAnimationActiveOnlyUntilItsEnd() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		LongNote start = null;
+		int lane = -1;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int candidate = 0; candidate < model.getMode().key; candidate++) {
+				Note note = timeline.getNote(candidate);
+				if (note instanceof LongNote longNote && !longNote.isEnd()) {
+					start = longNote;
+					lane = candidate;
+					break;
+				}
+			}
+			if (start != null) break;
+		}
+
+		assertNotNull(start);
+		long startTime = start.getTime();
+		long endTime = start.getPair().getTime();
+		var held = SkinPreviewPlayer.laneEffect(model, lane, startTime + 1L);
+		var released = SkinPreviewPlayer.laneEffect(model, lane, endTime);
+
+		assertSame(start, held.activeLongNote());
+		assertEquals(1L, held.keyOnElapsed());
+		assertEquals(1L, held.longNoteElapsed());
+		assertNull(released.activeLongNote());
+		assertEquals(-1L, released.keyOnElapsed());
+		assertEquals(0L, released.keyOffElapsed());
+		assertEquals(-1L, released.longNoteElapsed());
 	}
 
 	@Test
@@ -71,5 +128,12 @@ class SkinPreviewTest {
 		assertEquals(1280, SkinPreview.bufferDimension(1280, 4096));
 		assertEquals(2048, SkinPreview.bufferDimension(8192, 4096));
 		assertEquals(1, SkinPreview.bufferDimension(0, 0));
+	}
+
+	private static int firstOccupiedLane(BMSModel model, TimeLine timeline) {
+		for (int lane = 0; lane < model.getMode().key; lane++) {
+			if (timeline.getNote(lane) != null) return lane;
+		}
+		throw new AssertionError("preview timeline has no note");
 	}
 }

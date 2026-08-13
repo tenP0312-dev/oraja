@@ -19,6 +19,7 @@ final class SkinPreviewLifecycle {
 	record PlayFrame(
 			long position,
 			long cycle,
+			long iteration,
 			PlayPhase phase,
 			long phaseTime,
 			long readyTime,
@@ -48,26 +49,27 @@ final class SkinPreviewLifecycle {
 		long finish = Math.max(MIN_FINISH_MS, finishBeforeFade + fadeout);
 		long cycle = load + ready + play + finish;
 		long position = Math.floorMod(elapsed, cycle);
+		long iteration = Math.floorDiv(elapsed, cycle);
 
 		if (position < load) {
-			return new PlayFrame(position, cycle, PlayPhase.PRELOAD,
+			return new PlayFrame(position, cycle, iteration, PlayPhase.PRELOAD,
 					position, -1L, -1L, -1L, -1L);
 		}
 		if (position < load + ready) {
 			long phaseTime = position - load;
-			return new PlayFrame(position, cycle, PlayPhase.READY,
+			return new PlayFrame(position, cycle, iteration, PlayPhase.READY,
 					phaseTime, phaseTime, -1L, -1L, -1L);
 		}
 		if (position < load + ready + play) {
 			long phaseTime = position - load - ready;
-			return new PlayFrame(position, cycle, PlayPhase.PLAY,
+			return new PlayFrame(position, cycle, iteration, PlayPhase.PLAY,
 					phaseTime, ready + phaseTime, phaseTime, -1L, -1L);
 		}
 
 		long phaseTime = position - load - ready - play;
 		long fadeoutTime = phaseTime >= finishBeforeFade
 				? phaseTime - finishBeforeFade : -1L;
-		return new PlayFrame(position, cycle, PlayPhase.FINISHED,
+		return new PlayFrame(position, cycle, iteration, PlayPhase.FINISHED,
 				phaseTime, ready + play + phaseTime, play + phaseTime,
 				phaseTime, fadeoutTime);
 	}

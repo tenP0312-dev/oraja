@@ -20,6 +20,8 @@ import static bms.player.beatoraja.skin.SkinProperty.*;
 
 /** Stateful autoplay-shaped BMSPlayer used only to evaluate a play skin. */
 final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
+	private static final long TAP_HOLD_MILLIS = 100L;
+
 	private final BMSModel previewModel;
 	private ScoreData previewScore;
 	private LaneProperty previewLaneProperty;
@@ -28,6 +30,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private GrooveGauge previewGauge;
 	private int previewState = STATE_PRELOAD;
 	private int previewPastNotes;
+	private long previewIteration = Long.MIN_VALUE;
 
 	SkinPreviewPlayer(MainController main, PlayerResource resource) {
 		super(main, resource, true);
@@ -69,6 +72,10 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 				getPlaytime(),
 				playSkin.getFinishMargin(),
 				playSkin.getFadeout());
+		if (previewIteration != frame.iteration()) {
+			previewIteration = frame.iteration();
+			resetPreviewCycle();
+		}
 
 		previewState = switch (frame.phase()) {
 			case PRELOAD -> STATE_PRELOAD;
@@ -106,9 +113,17 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 			SkinPreviewLifecycle.setTimer(timer, TIMER_JUDGE_1P, -1L);
 			SkinPreviewLifecycle.setTimer(timer, TIMER_COMBO_1P, -1L);
 			previewJudge.clearSkinPreviewJudgement();
+			previewJudge.clearSkinPreviewLongNotes();
 			clearLaneEffects();
 		}
 		return timer.getNowTime();
+	}
+
+	private void resetPreviewCycle() {
+		previewLaneRenderer.resetSkinPreviewTimeline();
+		previewJudge.clearSkinPreviewJudgement();
+		previewJudge.clearSkinPreviewLongNotes();
+		clearLaneEffects();
 	}
 
 	private void updateLiveData(long playTime) {
@@ -147,7 +162,9 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		int latestLane = -1;
 		for (int lane = 0; lane < previewModel.getMode().key; lane++) {
 			long laneTime = latestJudgementTime(previewModel, lane, playTime);
-			setLaneEffectTimers(lane, laneTime, playTime);
+			LaneEffect effect = laneEffect(previewModel, lane, playTime);
+			setLaneEffectTimers(lane, laneTime, playTime, effect);
+			previewJudge.setSkinPreviewLongNote(lane, effect.activeLongNote());
 			if (laneTime > latestTime) {
 				latestTime = laneTime;
 				latestLane = lane;
@@ -163,23 +180,66 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		}
 	}
 
-	private void setLaneEffectTimers(int lane, long noteTime, long playTime) {
+	private void setLaneEffectTimers(
+			int lane, long noteTime, long playTime, LaneEffect effect) {
 		int player = previewLaneProperty.getLanePlayer()[lane];
 		int offset = previewLaneProperty.getLaneSkinOffset()[lane];
 		long elapsed = noteTime >= 0L ? playTime - noteTime : -1L;
 		SkinPreviewLifecycle.setTimer(
 				timer, SkinPropertyMapper.bombTimerId(player, offset), elapsed);
 		SkinPreviewLifecycle.setTimer(
-				timer, SkinPropertyMapper.keyOnTimerId(player, offset), elapsed);
+				timer, SkinPropertyMapper.keyOnTimerId(player, offset), effect.keyOnElapsed());
 		SkinPreviewLifecycle.setTimer(
-				timer, SkinPropertyMapper.keyOffTimerId(player, offset),
-				elapsed >= 100L ? elapsed - 100L : -1L);
+				timer, SkinPropertyMapper.keyOffTimerId(player, offset), effect.keyOffElapsed());
+		SkinPreviewLifecycle.setTimer(
+				timer, SkinPropertyMapper.holdTimerId(player, offset), effect.longNoteElapsed());
 	}
 
 	private void clearLaneEffects() {
 		for (int lane = 0; lane < previewModel.getMode().key; lane++) {
-			setLaneEffectTimers(lane, -1L, 0L);
+			setLaneEffectTimers(lane, -1L, 0L, LaneEffect.NONE);
 		}
+	}
+
+	static LaneEffect laneEffect(BMSModel model, int lane, long playTime) {
+		long pressedAt = -1L;
+		long releasedAt = -1L;
+		LongNote activeLongNote = null;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getTime() > playTime) {
+				break;
+			}
+			Note note = timeline.getNote(lane);
+			if (note == null || note instanceof LongNote longNote && longNote.isEnd()) {
+				continue;
+			}
+			pressedAt = timeline.getTime();
+			if (note instanceof LongNote longNote && longNote.getPair() != null) {
+				releasedAt = longNote.getPair().getTime();
+				activeLongNote = playTime < releasedAt ? longNote : null;
+			} else {
+				releasedAt = pressedAt + TAP_HOLD_MILLIS;
+				activeLongNote = null;
+			}
+		}
+
+		if (pressedAt < 0L) {
+			return LaneEffect.NONE;
+		}
+		if (playTime < releasedAt) {
+			long held = playTime - pressedAt;
+			return new LaneEffect(held, -1L, activeLongNote,
+					activeLongNote != null ? held : -1L);
+		}
+		return new LaneEffect(-1L, playTime - releasedAt, null, -1L);
+	}
+
+	record LaneEffect(
+			long keyOnElapsed,
+			long keyOffElapsed,
+			LongNote activeLongNote,
+			long longNoteElapsed) {
+		private static final LaneEffect NONE = new LaneEffect(-1L, -1L, null, -1L);
 	}
 
 	static long latestJudgementTime(BMSModel model, int lane, long playTime) {

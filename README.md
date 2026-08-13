@@ -39,7 +39,10 @@ changes. Music Select previews use an in-memory folder/song catalog; DECIDE
 receives a virtual selected chart; play previews run a silent in-memory chart
 through loading, READY, play, music-end, and fadeout; and RESULT / COURSE
 RESULT receive representative scores, gauge histories, timing data, and course
-content. Lua, JSON, and LR2 Skin Select skins can opt in to the preview object.
+content. Play-preview loops reset their lane scan and simulated input state;
+notes enter from the lane top, tap beams release, and held charge notes expose
+their active body animation on every loop. Lua, JSON, and LR2 Skin Select skins
+can opt in to the preview object.
 
 ## Repository Scope
 

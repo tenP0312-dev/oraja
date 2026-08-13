@@ -644,8 +644,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   `MusicDecide`-compatible state. Play skins render against a mode-matched,
   silent autoplay session whose normal notes, chords, and charge notes advance
   through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
-  score, combo, gauge, judge, and end timers advance with it. RESULT and COURSE
-  RESULT skins receive result-compatible states with a representative
+  score, combo, gauge, judge, and end timers advance with it. The chart's time
+  and measure positions stay aligned so its first notes enter from above the
+  visible lane. Each loop resets the lane scan and input state, tap key beams
+  release after a bounded hold, and charge-note pairs drive the held-LN body
+  and HOLD timers. RESULT and COURSE RESULT skins receive result-compatible
+  states with a representative
   current/best/rival score, gauge history, timing distribution, replay status,
   and a four-chart virtual course. Every data-backed preview has its own timer
   and player resource, so it does not replace the active selector resource,

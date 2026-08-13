@@ -25,8 +25,10 @@ import java.util.List;
 /** Creates deterministic in-memory content for live skin previews. */
 public final class SkinPreviewModel {
 	static final double BPM = 150.0;
+	static final long LEAD_IN_MICROS = 800_000L;
 	static final long STEP_MICROS = 200_000L;
 	static final int STEP_COUNT = 64;
+	private static final long MEASURE_MICROS = Math.round(60_000_000d / BPM * 4d);
 
 	private SkinPreviewModel() {}
 
@@ -50,13 +52,13 @@ public final class SkinPreviewModel {
 		LongNote pendingLongNote = null;
 		int pendingLongNoteLane = -1;
 		for (int step = 0; step < STEP_COUNT; step++) {
-			long time = 800_000L + step * STEP_MICROS;
-			TimeLine timeline = new TimeLine(step / 8.0, time, mode.key);
+			long time = LEAD_IN_MICROS + step * STEP_MICROS;
+			TimeLine timeline = new TimeLine((double) time / MEASURE_MICROS, time, mode.key);
 			timeline.setBPM(BPM);
 			timeline.setScroll(1.0);
-			timeline.setSectionLine(step % 8 == 0);
+			timeline.setSectionLine(time % MEASURE_MICROS == 0L);
 
-			int primaryLane = playableLane(mode, step * 5 + step / 4);
+			int primaryLane = playableLane(mode, step * 5 + step / 4, pendingLongNoteLane);
 			if (step % 16 == 4) {
 				pendingLongNote = new LongNote(0);
 				pendingLongNote.setType(LongNote.TYPE_CHARGENOTE);
@@ -74,7 +76,8 @@ public final class SkinPreviewModel {
 			}
 
 			if (step % 4 == 0 && mode.key > 1) {
-				int chordLane = playableLane(mode, primaryLane + Math.max(2, mode.key / 3));
+				int chordLane = playableLane(
+						mode, primaryLane + Math.max(2, mode.key / 3), pendingLongNoteLane);
 				if (chordLane != primaryLane && timeline.getNote(chordLane) == null) {
 					timeline.setNote(chordLane, new NormalNote(0));
 				}
@@ -239,9 +242,11 @@ public final class SkinPreviewModel {
 		return song;
 	}
 
-	private static int playableLane(Mode mode, int seed) {
+	private static int playableLane(Mode mode, int seed, int blockedLane) {
 		int lane = Math.floorMod(seed, mode.key);
-		for (int attempts = 0; attempts < mode.key && mode.isScratchKey(lane); attempts++) {
+		for (int attempts = 0;
+				attempts < mode.key && (mode.isScratchKey(lane) || lane == blockedLane);
+				attempts++) {
 			lane = (lane + 1) % mode.key;
 		}
 		return lane;

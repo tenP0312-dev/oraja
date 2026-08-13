@@ -169,6 +169,11 @@ public class LaneRenderer {
 		updateStartHerePreviewMetrics();
 	}
 
+	/** Restarts the monotonic timeline scan when an isolated skin preview loops. */
+	public void resetSkinPreviewTimeline() {
+		pos = 0;
+	}
+
 	public float getHispeed() {
 		return playconfig.getHispeed();
 	}
