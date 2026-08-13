@@ -180,6 +180,33 @@ HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
 SP/DP random-placement browser view for OBS, progressive CPU score graphs,
 disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
 
+## ZIP/RAR song archives
+
+The Resource tab has an opt-in `Scan ZIP/RAR song archives` setting
+(`ZIP/RAR内の曲を走査`). It is off by default so existing song-database update
+behavior and startup cost do not change until the player enables it. After the
+setting is enabled, run a normal song-database update for the configured song
+roots.
+
+The scanner recognizes BMS, BME, BML, PMS, and BMSON charts inside `.zip` and
+`.rar` files. Chart references for key sounds, preview music, stage, banner,
+back images, image BGA, and movie BGA are resolved inside the same archive.
+Entries use stable virtual paths such as `songs/pack.zip!/folder/chart.bms`;
+the original archive is not moved, renamed, rewritten, or expanded into the
+song library. A single entry may be copied to an operating-system temporary
+file only when an existing decoder accepts file paths instead of streams.
+
+ZIP entry names use UTF-8 and fall back to Windows-31J for legacy Japanese
+archives. Archive entry names are normalized, path escapes and duplicate
+normalized names are rejected, and entry-count and expanded-size limits are
+applied before charts are indexed. Encrypted, split/multi-volume, and nested
+archives are unsupported and fail locally without changing the source file.
+OSU charts inside archives are not indexed.
+
+The decoded chart data keeps the same MD5/SHA-256 identity as an unpacked
+copy. IR records, replays, tables, courses, and Arena chart possession
+therefore continue to match by chart hash rather than by the virtual path.
+
 ## Enabling
 
 1. Configure the normal BMS-IR IR entry with the BMS-IR player ID and game

@@ -27,4 +27,16 @@ class PreviewMusicProcessorTest {
                 PreviewMusicProcessor.resolvePreviewPath(song)
         );
     }
+
+    @Test
+    void archiveSongPathResolvesPreviewInsideTheArchive() {
+        SongData song = new SongData();
+        song.setPath(Paths.get("songs", "pack.zip!-Pack", "chart.bms").toString());
+        song.setPreview("preview.ogg");
+
+        assertEquals(
+                Paths.get("songs", "pack.zip!-Pack", "preview.ogg").toAbsolutePath().toString(),
+                PreviewMusicProcessor.resolvePreviewPath(song)
+        );
+    }
 }

@@ -2,6 +2,7 @@ package bms.player.beatoraja.audio;
 
 import bms.model.BMSModel;
 import bms.model.Note;
+import bms.player.beatoraja.song.SongResource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,13 @@ public interface AudioDriver extends Disposable {
 	 *            ループ再生するかどうか
 	 */
 	public void play(String path, float volume, boolean loop);
+
+	default void play(SongResource resource, float volume, boolean loop) {
+		try {
+			play(resource.materialize().toString(), volume, loop);
+		} catch (java.io.IOException ignored) {
+		}
+	}
 	
 	/**
 	 * 指定したパスの音源のボリュームを設定する
@@ -36,6 +44,10 @@ public interface AudioDriver extends Disposable {
 	 *            ボリューム
 	 */
 	public void setVolume(String path, float volume);
+
+	default void setVolume(SongResource resource, float volume) {
+		setVolume(resource.cacheKey(), volume);
+	}
 	
 	/**
 	 * 指定したパスの音源がなっている場合はtrueを返す
@@ -44,6 +56,10 @@ public interface AudioDriver extends Disposable {
 	 *            音源のファイルパス
 	 */
 	public boolean isPlaying(String path);
+
+	default boolean isPlaying(SongResource resource) {
+		return isPlaying(resource.cacheKey());
+	}
 	
 	/**
 	 * 指定したパスの音源がなっている場合は止める
@@ -53,6 +69,10 @@ public interface AudioDriver extends Disposable {
 	 */
 	public void stop(String path);
 
+	default void stop(SongResource resource) {
+		stop(resource.cacheKey());
+	}
+
 	/**
 	 * 指定したパスの音源を開放する
 	 * 
@@ -61,6 +81,10 @@ public interface AudioDriver extends Disposable {
 	 */
 	public void dispose(String path);
 
+	default void dispose(SongResource resource) {
+		dispose(resource.cacheKey());
+	}
+
 	/**
 	 * BMSの音源データを読み込む
 	 * 
@@ -68,6 +92,10 @@ public interface AudioDriver extends Disposable {
 	 *            BMSモデル
 	 */
 	public void setModel(BMSModel model);
+
+	default void setModel(BMSModel model, SongResource resource) {
+		setModel(model);
+	}
 	
 	/**
 	 * 判定に対応した追加キー音を定義する
@@ -165,5 +193,30 @@ public interface AudioDriver extends Disposable {
 		}
 		
 		return result.toArray(new Path[result.size()]);
+	}
+
+	public static SongResource[] getResources(SongResource resource) {
+		final String[] extensions = { ".wav", ".flac", ".ogg", ".mp3" };
+		List<SongResource> result = new ArrayList<>();
+		try {
+			if (resource.exists()) {
+				result.add(resource);
+			}
+			String filename = resource.name();
+			int index = filename.lastIndexOf('.');
+			String name = index < 0 ? filename : filename.substring(0, index);
+			String extension = index < 0 ? "" : filename.substring(index);
+			for (String candidateExtension : extensions) {
+				if (candidateExtension.equalsIgnoreCase(extension)) {
+					continue;
+				}
+				SongResource candidate = resource.parent().resolve(name + candidateExtension);
+				if (candidate.exists()) {
+					result.add(candidate);
+				}
+			}
+		} catch (Exception ignored) {
+		}
+		return result.isEmpty() ? new SongResource[] { resource } : result.toArray(new SongResource[0]);
 	}
 }

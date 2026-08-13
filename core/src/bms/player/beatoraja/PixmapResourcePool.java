@@ -2,6 +2,10 @@ package bms.player.beatoraja;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +14,8 @@ import javax.imageio.ImageIO;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
+import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.song.SongResources;
 
 /**
  * Pixmapリソースプール
@@ -18,6 +24,7 @@ import com.badlogic.gdx.graphics.PixmapIO;
  */
 public class PixmapResourcePool extends ResourcePool<String, Pixmap> {
 	private static Logger logger = LoggerFactory.getLogger(PixmapResourcePool.class);
+	private final ConcurrentHashMap<String, SongResource> songResources = new ConcurrentHashMap<>();
 
 	public PixmapResourcePool() {
 		super(1);
@@ -29,8 +36,19 @@ public class PixmapResourcePool extends ResourcePool<String, Pixmap> {
 	
 	@Override
 	protected Pixmap load(String path) {
-		final Pixmap pixmap = loadPicture(path);
+		SongResource resource = songResources.get(path);
+		final Pixmap pixmap = resource != null ? loadPicture(resource) : loadPicture(path);
 		return pixmap != null ? convert(pixmap) : null;
+	}
+
+	public Pixmap get(SongResource resource) {
+		String key = resource.cacheKey();
+		songResources.put(key, resource);
+		try {
+			return get(key);
+		} finally {
+			songResources.remove(key, resource);
+		}
 	}
 
 	/**
@@ -98,6 +116,37 @@ public class PixmapResourcePool extends ResourcePool<String, Pixmap> {
 		}
 
 		return tex;
+	}
+
+	public static Pixmap loadPicture(SongResource resource) {
+		if (resource.localPath().isPresent()) {
+			return loadPicture(resource.localPath().get().toString());
+		}
+		try {
+			if (!resource.exists() || resource.isDirectory()) {
+				return null;
+			}
+			String lowerName = resource.name().toLowerCase(Locale.ROOT);
+			if (lowerName.endsWith(".cim") || lowerName.endsWith(".tga")) {
+				return loadPicture(resource.materialize().toString());
+			}
+			try (InputStream input = resource.openStream()) {
+				BufferedImage image = ImageIO.read(input);
+				if (image == null) {
+					return null;
+				}
+				Pixmap pixmap = new Pixmap(image.getWidth(), image.getHeight(), Pixmap.Format.RGBA8888);
+				for (int x = 0; x < image.getWidth(); x++) {
+					for (int y = 0; y < image.getHeight(); y++) {
+						pixmap.drawPixel(x, y, image.getRGB(x, y) << 8 | 0x000000ff);
+					}
+				}
+				return pixmap;
+			}
+		} catch (Throwable e) {
+			logger.warn("BGAファイル読み込み失敗。{} ({})", resource.displayPath(), e.getMessage());
+			return null;
+		}
 	}
 
 	static boolean isJpeg(String path) {

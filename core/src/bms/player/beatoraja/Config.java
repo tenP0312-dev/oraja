@@ -173,6 +173,9 @@ public class Config implements Validatable {
 
 	private boolean updatesong = false;
 
+	/** Whether song database updates scan BMS/BMSON charts in ZIP/RAR files. */
+	private boolean scanSongArchives = false;
+
 	private int skinPixmapGen = 4;
 	private int stagefilePixmapGen = 2;
 	private int bannerPixmapGen = 2;
@@ -585,6 +588,14 @@ public class Config implements Validatable {
 
 	public void setUpdatesong(boolean updatesong) {
 		this.updatesong = updatesong;
+	}
+
+	public boolean isScanSongArchives() {
+		return scanSongArchives;
+	}
+
+	public void setScanSongArchives(boolean scanSongArchives) {
+		this.scanSongArchives = scanSongArchives;
 	}
 
 	public DisplayMode getDisplaymode() {

@@ -43,6 +43,8 @@ public class ResourceConfigurationView implements Initializable {
     private EditableTableView<TableInfo> available_tables;
 	@FXML
 	private CheckBox updatesong;
+	@FXML
+	private CheckBox scanSongArchives;
 
 	private Config config;
 	
@@ -166,6 +168,7 @@ public class ResourceConfigurationView implements Initializable {
 		this.downloadDirectory = config.getDownloadDirectory();
 		bmsroot.getItems().setAll(config.getBmsroot());
 		updatesong.setSelected(config.isUpdatesong());
+		scanSongArchives.setSelected(config.isScanSongArchives());
 
 		// Make sure that all available tables are present in the list prior to deduplicating with the user tables
         String[] intermediate = addUniqueTable(Config.AVAILABLE_TABLEURL, config.getAvailableURL());
@@ -179,6 +182,7 @@ public class ResourceConfigurationView implements Initializable {
 	public void commit() {
 		config.setBmsroot(bmsroot.getItems().toArray(new String[0]));
 		config.setUpdatesong(updatesong.isSelected());
+		config.setScanSongArchives(scanSongArchives.isSelected());
 		config.setTableURL(TableInfo.toUrlArray(tableurl.getItems()));
 		config.setDownloadDirectory(downloadDirectory);
 	}

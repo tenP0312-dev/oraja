@@ -7,6 +7,8 @@ import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.song.SongResources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -216,7 +218,7 @@ public class BMSRenderer {
 
 		Map<Integer, PCM> result = new HashMap<>();
 		String[] wavList = model.getWavList();
-		Path basePath = Paths.get(model.getPath()).getParent();
+		SongResource baseResource = SongResources.fromPath(Paths.get(model.getPath())).parent();
 
 		int loaded = 0;
 		DummyAudioDriver driver = new DummyAudioDriver(sampleRate, channels);
@@ -226,29 +228,29 @@ public class BMSRenderer {
 			}
 
 			// Resolve audio file path
-			Path wavPath = null;
-			Path resolvedPath = basePath.resolve(wavList[i]).toAbsolutePath();
-			Path[] candidates = AudioDriver.getPaths(resolvedPath.toString());
-
-			for (Path candidate : candidates) {
-				if (candidate.toFile().exists()) {
-					wavPath = candidate;
-					break;
+			SongResource wavResource = null;
+			for (SongResource candidate : AudioDriver.getResources(baseResource.resolve(wavList[i]))) {
+				try {
+					if (candidate.exists()) {
+						wavResource = candidate;
+						break;
+					}
+				} catch (java.io.IOException ignored) {
 				}
 			}
 
-			if (wavPath == null) {
+			if (wavResource == null) {
 				logger.warn("Audio file not found: {}", wavList[i]);
 				continue;
 			}
 
 			// Load as PCM
-			PCM pcm = PCM.load(wavPath, driver);
+			PCM pcm = PCM.load(wavResource, driver);
 			if (pcm != null) {
 				result.put(i, pcm);
 				loaded++;
 			} else {
-				logger.trace("Failed to load audio file: {}", wavPath);
+				logger.trace("Failed to load audio file: {}", wavResource.displayPath());
 			}
 		}
 

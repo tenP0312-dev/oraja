@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import bms.player.beatoraja.SQLiteDatabaseAccessor;
 import bms.player.beatoraja.Validatable;
 import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
+import bms.player.beatoraja.song.archive.SongArchives;
 import javafx.util.Pair;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
@@ -47,6 +48,8 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 	private final ResultSetHandler<List<FolderData>> folderhandler = new BeanListHandler<FolderData>(FolderData.class);
 
 	private final QueryRunner qr;
+
+	private final boolean scanSongArchives;
 	
 	private List<SongDatabaseAccessorPlugin> plugins = new ArrayList();
 	/**
@@ -57,6 +60,11 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 	private Set<String> checkedParent = new HashSet<>();
 	
 	public SQLiteSongDatabaseAccessor(String filepath, String[] bmsroot) throws ClassNotFoundException {
+		this(filepath, bmsroot, false);
+	}
+
+	public SQLiteSongDatabaseAccessor(String filepath, String[] bmsroot, boolean scanSongArchives)
+			throws ClassNotFoundException {
 		super(new Table("folder", 
 				new Column("title", "TEXT"),
 				new Column("subtitle", "TEXT"),
@@ -112,6 +120,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 		ds = new SQLiteDataSource(conf);
 		ds.setUrl("jdbc:sqlite:" + filepath);
 		qr = new QueryRunner(ds);
+		this.scanSongArchives = scanSongArchives;
 		root = Paths.get(".");
 		createTable();
 	}
@@ -439,12 +448,21 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 		private boolean txt = false;
 		private final List<Path> bmsfiles = new ArrayList<Path>();
 		private final List<BMSFolder> dirs = new ArrayList<BMSFolder>();
+		private final Set<String> archiveEntries = new HashSet<>();
 		private String previewpath = null;
 		private final String[] bmsroot;
+		private final long lastModifiedTime;
+		private final String title;
 
 		public BMSFolder(Path path, String[] bmsroot) {
+			this(path, bmsroot, -1, path.getFileName().toString());
+		}
+
+		private BMSFolder(Path path, String[] bmsroot, long lastModifiedTime, String title) {
 			this.path = path;
 			this.bmsroot = bmsroot;
+			this.lastModifiedTime = lastModifiedTime;
+			this.title = title;
 		}
 		
 		private void processDirectory(SongDatabaseUpdaterProperty property)
@@ -453,6 +471,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 					SongUtils.crc32(path.toString(), bmsroot, root.toString()));
 			final List<FolderData> folders = qr.query(property.conn, "SELECT path,date FROM folder WHERE parent = ?",
 					folderhandler, SongUtils.crc32(path.toString(), bmsroot, root.toString()));
+			if (!SongArchives.isVirtualPath(path)) {
 			try (DirectoryStream<Path> paths = Files.newDirectoryStream(path)) {
 
 				// Explicit lower-priority selection of auto-generated previews.
@@ -462,6 +481,21 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 				for (Path p : paths) {
 					if(Files.isDirectory(p)) {
 						dirs.add(new BMSFolder(p, bmsroot));
+					} else if (scanSongArchives && SongArchives.isSupportedArchive(p)) {
+						try {
+							SongArchives.ArchiveContents contents = SongArchives.readContents(p);
+							BMSFolder archive = new BMSFolder(
+									SongArchives.virtualRoot(p, contents.rootDirectory()),
+									bmsroot,
+									Files.getLastModifiedTime(p).toMillis() / 1000,
+									p.getFileName().toString());
+							archive.addArchiveFiles(p, contents);
+							if (!archive.bmsfiles.isEmpty()) {
+								dirs.add(archive);
+							}
+						} catch (IOException e) {
+							logger.warn("楽曲アーカイブ読み込み失敗: {} ({})", p, e.getMessage());
+						}
 					} else {
 						final String s = p.getFileName().toString().toLowerCase();
 						if (!txt && s.endsWith(".txt")) {
@@ -497,6 +531,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			}
 
 			final boolean containsBMS = bmsfiles.size() > 0;
 			property.listener.addBMSFilesCount(bmsfiles.size());
@@ -517,7 +552,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 						folders.set(i, null);
 //						System.out.println(System.nanoTime() - t);
 						try {
-							if (record.getDate() == Files.getLastModifiedTime(bf.path).toMillis() / 1000) {
+							if (record.getDate() == bf.getLastModifiedTime()) {
 								bf.updateFolder = false;
 							}
 						} catch (IOException e) {
@@ -548,10 +583,10 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 					parentpath = path.toAbsolutePath().getParent();
 				}
 				FolderData folder = new FolderData();
-				folder.setTitle(path.getFileName().toString());
+				folder.setTitle(title);
 				folder.setPath(s);
 				folder.setParent(SongUtils.crc32(parentpath.toString() , bmsroot, root.toString()));
-				folder.setDate((int) (Files.getLastModifiedTime(path).toMillis() / 1000));
+				folder.setDate((int) getLastModifiedTime());
 				folder.setAdddate((int) property.updatetime);
 
 				SQLiteSongDatabaseAccessor.this.insert(qr, property.conn, "folder", folder);
@@ -569,6 +604,34 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 			});
 		}
 
+		private void addArchiveFiles(Path archive, SongArchives.ArchiveContents contents) {
+			String autoPreviewFile = null;
+			for (String entry : contents.entries()) {
+				if (contents.rootDirectory() != null && !entry.startsWith(contents.rootDirectory() + "/")) {
+					continue;
+				}
+				String filename = Path.of(entry).getFileName().toString();
+				String lowerName = filename.toLowerCase(Locale.ROOT);
+				archiveEntries.add(entry.toLowerCase(Locale.ROOT));
+				if (!txt && lowerName.endsWith(".txt")) {
+					txt = true;
+				}
+				if (isPreviewFile(lowerName)) {
+					if (lowerName.startsWith("preview_auto_generator")) {
+						autoPreviewFile = filename;
+					} else if (previewpath == null) {
+						previewpath = filename;
+					}
+				}
+				if (isArchiveChartFile(lowerName)) {
+					bmsfiles.add(SongArchives.virtualPath(archive, entry, contents.rootDirectory()));
+				}
+			}
+			if (previewpath == null) {
+				previewpath = autoPreviewFile;
+			}
+		}
+
 		/**
 		 * @return a pair, first is the count of charts that are already registered, second is the count of new charts.
 		 */
@@ -581,7 +644,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 			for (Path path : bmsfiles) {
 				long lastModifiedTime = -1;
 				try {
-					lastModifiedTime = Files.getLastModifiedTime(path).toMillis() / 1000;
+					lastModifiedTime = getLastModifiedTime(path);
 				} catch (IOException e) {
 //					throw new RuntimeException(e);
 				}
@@ -595,7 +658,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 							update = false;
 
 							final String oldPreview = record.getPreview() == null ? "" : record.getPreview();
-							final String newPreview = previewpath == null ? "" : previewpath;
+							final String newPreview = resolvePreview(path, oldPreview);
 							if (!oldPreview.equals(newPreview)) {
 								try {
 									qr.update(property.conn, "UPDATE song SET preview=? WHERE path=?", newPreview, pathname);
@@ -617,7 +680,11 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 						bmsondecoder = new BMSONDecoder(BMSModel.LNTYPE_LONGNOTE);
 					}
 					try {
-						model = bmsondecoder.decode(path);
+						Path decodedPath = SongArchives.isVirtualPath(path) ? SongArchives.resolve(path) : path;
+						model = bmsondecoder.decode(decodedPath);
+						if (model != null && SongArchives.isVirtualPath(path)) {
+							model.setChartInformation(new ChartInformation(path, BMSModel.LNTYPE_LONGNOTE, null));
+						}
 					} catch (Exception e) {
 						logger.error("Error while decoding bmson at path: {}{}", pathname, e.getMessage());
 					}
@@ -635,7 +702,15 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 						bmsdecoder = new BMSDecoder(BMSModel.LNTYPE_LONGNOTE);
 					}
 					try {
-						model = bmsdecoder.decode(path);
+						if (SongArchives.isVirtualPath(path)) {
+							model = bmsdecoder.decode(SongArchives.readEntry(path),
+									pathname.toLowerCase(Locale.ROOT).endsWith(".pms"), null);
+							if (model != null) {
+								model.setChartInformation(new ChartInformation(path, BMSModel.LNTYPE_LONGNOTE, null));
+							}
+						} else {
+							model = bmsdecoder.decode(path);
+						}
 					} catch (Exception e) {
 						logger.error("Error while decoding bms at path: {}{}", pathname, e.getMessage());
 					}
@@ -687,9 +762,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 								}
 							}
 						}
-						if ((sd.getPreview() == null || sd.getPreview().length() == 0) && previewpath != null) {
-							sd.setPreview(previewpath);
-						}
+						sd.setPreview(resolvePreview(path, sd.getPreview()));
                         final String tag = property.tags.get(sd.getSha256());
                         final Integer favorite = property.favorites.get(sd.getSha256());
 
@@ -734,9 +807,67 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 				}
 			});
 
-			return new Pair<>(skipCount, newCount);
+				return new Pair<>(skipCount, newCount);
+			}
+
+			private long getLastModifiedTime(Path chartPath) throws IOException {
+				return SongArchives.isVirtualPath(chartPath)
+						? lastModifiedTime
+						: Files.getLastModifiedTime(chartPath).toMillis() / 1000;
+			}
+
+			private String resolvePreview(Path chartPath, String preview) {
+				if (preview == null || preview.isEmpty()) {
+					return previewpath != null ? previewpath : "";
+				}
+				if (resourceExists(chartPath, preview)) {
+					return preview;
+				}
+				int separator = Math.max(preview.lastIndexOf('/'), preview.lastIndexOf('\\'));
+				int extension = preview.lastIndexOf('.');
+				if (extension <= separator) {
+					return preview;
+				}
+				String baseName = preview.substring(0, extension);
+				for (String fallbackExtension : List.of(".ogg", ".mp3", ".flac")) {
+					String fallback = baseName + fallbackExtension;
+					if (resourceExists(chartPath, fallback)) {
+						return fallback;
+					}
+				}
+				return preview;
+			}
+
+			private boolean resourceExists(Path chartPath, String relativePath) {
+				try {
+					Path candidate = chartPath.getParent().resolve(relativePath).normalize();
+					String archiveEntry = SongArchives.entryName(candidate);
+					return archiveEntry != null
+							? archiveEntries.contains(archiveEntry.toLowerCase(Locale.ROOT))
+							: Files.isRegularFile(candidate);
+				} catch (IllegalArgumentException e) {
+					return false;
+				}
+			}
+
+			private long getLastModifiedTime() throws IOException {
+				return lastModifiedTime >= 0
+						? lastModifiedTime
+						: Files.getLastModifiedTime(path).toMillis() / 1000;
+			}
+
+			private boolean isPreviewFile(String filename) {
+				return (filename.startsWith("preview") || filename.startsWith("_preview"))
+						&& (filename.endsWith(".wav") || filename.endsWith(".ogg")
+								|| filename.endsWith(".mp3") || filename.endsWith(".flac"));
+			}
+
+			private boolean isArchiveChartFile(String filename) {
+				return filename.endsWith(".bms") || filename.endsWith(".bme")
+						|| filename.endsWith(".bml") || filename.endsWith(".pms")
+						|| filename.endsWith(".bmson");
+			}
 		}
-	}
 	
 	private static class SongDatabaseUpdaterProperty {
 		private final Map<String, String> tags = new HashMap<String, String>();

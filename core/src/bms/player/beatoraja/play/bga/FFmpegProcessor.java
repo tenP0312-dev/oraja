@@ -1,14 +1,15 @@
 package bms.player.beatoraja.play.bga;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.song.SongResources;
 
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -66,7 +67,11 @@ public class FFmpegProcessor implements MovieProcessor {
 	}
 
 	public void create(String filepath) {
-		movieseek = new MovieSeekThread(filepath);
+		create(SongResources.fromPath(java.nio.file.Path.of(filepath)));
+	}
+
+	public void create(SongResource resource) {
+		movieseek = new MovieSeekThread(resource);
 		movieseek.start();
 	}
 
@@ -145,16 +150,15 @@ public class FFmpegProcessor implements MovieProcessor {
 		private boolean firstFrameLogged;
 		private boolean firstTextureLogged;
 
+		private final SongResource resource;
 		private final String filepath;
 		
 		private long offset;
 		private long framecount;
 
-		public MovieSeekThread(String filepath) {
-			this.filepath = Paths.get(filepath)
-					.toAbsolutePath()
-					.normalize()
-					.toString();
+		public MovieSeekThread(SongResource resource) {
+			this.resource = resource;
+			this.filepath = resource.displayPath();
 		}
 
 		public void run() {
@@ -162,7 +166,9 @@ public class FFmpegProcessor implements MovieProcessor {
 			logger.info("movie decoder state INITIALIZING: {}", filepath);
 			boolean failed = false;
 			try {
-				movieBytes = Files.readAllBytes(Paths.get(filepath));
+				try (InputStream input = resource.openStream()) {
+					movieBytes = input.readAllBytes();
+				}
 				logger.info(
 						"movie decoder opening: {} ({} bytes)",
 						filepath,

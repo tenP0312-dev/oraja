@@ -866,6 +866,20 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void archiveVirtualPathsRemainPlayableArenaPossessions() {
+        SongData archived = song("archive-md5");
+        archived.setSha256("a".repeat(64));
+        archived.setPath("/songs/pack.zip!-Pack/chart.bms");
+
+        SongData[] playable = BMSIRArenaClient.playableOwnedSongs(
+                new SongData[]{archived}
+        );
+
+        assertArrayEquals(new SongData[]{archived}, playable);
+        assertEquals("/songs/pack.zip!-Pack/chart.bms", playable[0].getPath());
+    }
+
+    @Test
     void cpuChoosesAcrossTheInclusiveSixBandRange() {
         SongData below = song("below");
         SongData floor = song("floor");
