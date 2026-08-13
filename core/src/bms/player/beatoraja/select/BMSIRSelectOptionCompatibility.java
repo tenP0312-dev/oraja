@@ -73,8 +73,8 @@ public final class BMSIRSelectOptionCompatibility {
             return false;
         }
         ImGuiNotify.info(BMSIRArenaI18n.text(
-                "IIDX FHSを選択しました（未対応スキンではOFFと表示されます）",
-                "IIDX FHS selected (unsupported skins display OFF)"
+                "IIDX FHSを選択しました（未対応スキンでは正常に表示されない場合があります）",
+                "IIDX FHS selected (unsupported skins may not display it correctly)"
         ), 4000);
         return true;
     }
@@ -85,8 +85,8 @@ public final class BMSIRSelectOptionCompatibility {
             return false;
         }
         ImGuiNotify.info(BMSIRArenaI18n.text(
-                "判定難易度ソートを選択しました（未対応スキンではTITLEと表示されます）",
-                "Judge-rank sort selected (unsupported skins display TITLE)"
+                "判定難易度ソートを選択しました（未対応スキンでは正常に表示されない場合があります）",
+                "Judge-rank sort selected (unsupported skins may not display it correctly)"
         ), 4000);
         return true;
     }
