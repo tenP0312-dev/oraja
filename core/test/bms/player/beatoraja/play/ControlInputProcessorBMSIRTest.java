@@ -1,6 +1,7 @@
 package bms.player.beatoraja.play;
 
 import bms.model.Mode;
+import bms.player.beatoraja.PlayConfig;
 import bms.player.beatoraja.PlayerConfig;
 import org.junit.jupiter.api.Test;
 
@@ -64,5 +65,40 @@ class ControlInputProcessorBMSIRTest {
         assertTrue(ControlInputProcessor.isSevenKey(Mode.BEAT_7K, 6));
         assertFalse(ControlInputProcessor.isSevenKey(Mode.BEAT_14K, 14));
         assertTrue(ControlInputProcessor.isSevenKey(Mode.BEAT_14K, 15));
+    }
+
+    @Test
+    void sixSevenLaneCoverOnlyKeepsTheBuiltInIidxFhsReset() {
+        assertFalse(ControlInputProcessor.keepsIidxFhsLaneCoverReset(
+                PlayConfig.FIX_HISPEED_OFF
+        ));
+        assertFalse(ControlInputProcessor.keepsIidxFhsLaneCoverReset(
+                PlayConfig.FIX_HISPEED_STARTBPM
+        ));
+        assertFalse(ControlInputProcessor.keepsIidxFhsLaneCoverReset(
+                PlayConfig.FIX_HISPEED_MAINBPM
+        ));
+        assertTrue(ControlInputProcessor.keepsIidxFhsLaneCoverReset(
+                PlayConfig.FIX_HISPEED_IIDX_FHS
+        ));
+    }
+
+    @Test
+    void sixSevenFhsRecalculationRequiresBothSwitchesAndCurrentBpm() {
+        assertFalse(ControlInputProcessor.shouldRecalculateSixSevenHispeed(
+                false, false, 150.0
+        ));
+        assertFalse(ControlInputProcessor.shouldRecalculateSixSevenHispeed(
+                true, false, 150.0
+        ));
+        assertFalse(ControlInputProcessor.shouldRecalculateSixSevenHispeed(
+                false, true, 150.0
+        ));
+        assertFalse(ControlInputProcessor.shouldRecalculateSixSevenHispeed(
+                true, true, 0.0
+        ));
+        assertTrue(ControlInputProcessor.shouldRecalculateSixSevenHispeed(
+                true, true, 150.0
+        ));
     }
 }

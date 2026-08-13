@@ -181,9 +181,15 @@ public final class ControlInputProcessor {
 		if (PlayerConfig.BMSIR_COVER_CONTROL_LR2.equals(
 				config.getBmsirCoverControlMode()
 		)) {
-			laneRenderer.setLanecover(laneRenderer.getLanecover() + delta);
+			setSixSevenLaneCoverValue(
+					laneRenderer,
+					laneRenderer.getLanecover() + delta
+			);
 		} else if (laneRenderer.isEnableLanecover()) {
-			laneRenderer.setLanecover(laneRenderer.getLanecover() + delta);
+			setSixSevenLaneCoverValue(
+					laneRenderer,
+					laneRenderer.getLanecover() + delta
+			);
 		} else if (laneRenderer.isEnableHidden() && laneRenderer.isEnableLift()) {
 			if (isChangeLift) {
 				laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
@@ -196,11 +202,38 @@ public final class ControlInputProcessor {
 			laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
 		}
 
-		if (config.isBmsirCoverHispeedAutoAdjustEnabled()
-				&& hispeedAutoAdjust
-				&& laneRenderer.getNowBPM() > 0) {
+		if (shouldRecalculateSixSevenHispeed(
+				config.isBmsirCoverHispeedAutoAdjustEnabled(),
+				hispeedAutoAdjust,
+				laneRenderer.getNowBPM()
+		)) {
 			laneRenderer.resetHispeed(laneRenderer.getNowBPM());
 		}
+	}
+
+	private static void setSixSevenLaneCoverValue(
+			LaneRenderer laneRenderer,
+			float laneCover
+	) {
+		if (keepsIidxFhsLaneCoverReset(
+				laneRenderer.getPlayConfig().getFixhispeed()
+		)) {
+			laneRenderer.setLanecover(laneCover);
+		} else {
+			laneRenderer.setLanecoverWithoutHispeedReset(laneCover);
+		}
+	}
+
+	static boolean keepsIidxFhsLaneCoverReset(int fixHispeed) {
+		return fixHispeed == PlayConfig.FIX_HISPEED_IIDX_FHS;
+	}
+
+	static boolean shouldRecalculateSixSevenHispeed(
+			boolean bmsirAutoAdjust,
+			boolean playAutoAdjust,
+			double nowBpm
+	) {
+		return bmsirAutoAdjust && playAutoAdjust && nowBpm > 0;
 	}
 
 	public void setEnableControl(boolean b) {
