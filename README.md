@@ -10,12 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.40**. Startup now opens from a
-per-player last-good Primary IR selection-table cache and refreshes it after
-Music Select is usable, instead of blocking the startup screen on the complete
-server response. The startup phase is labeled `Primary IR選曲テーブル`, and a
-short F2 press on the Music Select root can still refresh BMS-IR recommendation
-and registered-rival tables without restarting the client.
+The current client source version is **0.4.14.41**. Song roots can read ZIP,
+RAR4/RAR5, and 7z packages directly without extraction. Archive refreshes now
+detect replacements reliably, keep the previous indexed songs after a rejected
+read, and expose bounded diagnostics for loaded and rejected archives.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -27,6 +25,19 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.41
+
+Direct song-archive support now includes RAR5 and 7z in addition to ZIP and
+RAR4. The reader uses the archive content signature when a supported suffix is
+mislabeled, normalizes Unicode lookup safely, keeps deeply nested charts
+reachable, discovers previews per chart directory, and reloads an archive when
+its bytes are replaced even if simple file metadata is unchanged.
+
+Rejected or unreadable archive refreshes fail closed and preserve the last
+indexed songs. Temporary decoder files have bounded capacity and stale-file
+cleanup, and song loading reports loaded/rejected archive totals with the
+causal rejection reason in the diagnostic log.
 
 ## Arena oraja 0.4.14.40
 
