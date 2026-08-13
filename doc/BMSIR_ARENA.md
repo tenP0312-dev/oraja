@@ -920,5 +920,9 @@ during decoder initialization. Release acceptance must test both skin movies
 and in-play BGA on the target Windows/Java 21 bundle.
 
 Do not publish an artifact from an uncommitted worktree. Build the reviewed
-commit, record the artifact hashes privately for rollout, and configure the
-server allowlists before distribution.
+commit and record artifact identities privately. For every BMS-IR-built body
+or plugin that will become downloadable through the launcher, including the
+internal test channel, follow the server repository's
+`docs/PRODUCTION_VPS_OPERATIONS.md`: activate the exact ordinary-score
+body/plugin allowlists and Arena client-version/build gates, perform required
+guarded reloads, and verify both paths before promoting the signed channel.

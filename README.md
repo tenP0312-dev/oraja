@@ -24,6 +24,11 @@ GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
 
+Every BMS-IR-built body or plugin made downloadable through the launcher is
+covered by that procedure, including internal test and prerelease updates. A
+distribution is not complete until both ordinary-score acceptance and the
+Arena client-version/build gate are activated and verified where applicable.
+
 ## Arena oraja 0.4.14.39
 
 The Resource settings now explain ordinary and full song-library updates next
