@@ -10,17 +10,32 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.38**. Song roots can opt in to
-scanning `.zip` and `.rar` song archives, then play the contained BMS/BMSON
-charts, key sounds, preview music, images, and movie BGA without expanding the
-archive into the song library. Decoded chart identity remains compatible with
-existing IR records, replays, tables, courses, and Arena possession checks.
+The current client source version is **0.4.14.39**. The Resource settings now
+group song-library maintenance with the BMS roots, keep those controls hidden
+on unrelated tabs, and provide a compact difficulty-table editor. A song-root
+context menu can update only the selected root without rescanning unrelated
+roots.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
+
+## Arena oraja 0.4.14.39
+
+The Resource settings now explain ordinary and full song-library updates next
+to their buttons. Ordinary loading checks only added or changed songs without
+a confirmation step; full loading warns before rebuilding every registered
+song. The controls stay inside the Resource tab rather than appearing on every
+configuration tab.
+
+Each BMS root has right-click actions to update only that root, open or copy
+its path, or remove it from configuration without deleting the source folder.
+The configured download root remains protected. Difficulty tables use one
+active list with row actions for update, URL editing, ordering, and removal.
+The compact built-in-table picker supports selecting and adding several tables
+at once, while custom URLs remain available through a separate dialog.
 
 ## Arena oraja 0.4.14.38
 
@@ -30,7 +45,7 @@ loading behavior. The synchronized fixes cover score/BPM graph arithmetic,
 JPEG crash avoidance, thick-note placement, preview-path refreshes, controller
 hat input, Practice controls and gauge handling, IR class discovery, and full
 local play-history retention with average-judge history. Manual full/differential
-song-database updates now require confirmation, and new audio configurations
+song-database updates required confirmation, and new audio configurations
 default to 256 simultaneous sources. Skin Select now renders a live preview of
 the selected supported skin and refreshes it after option, file, or offset
 changes. Music Select previews use an in-memory folder/song catalog; DECIDE

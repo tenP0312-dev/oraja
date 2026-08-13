@@ -607,29 +607,14 @@
             </AnchorPane>
         </Tab> -->
     </TabPane>
-    <HBox fx:id="controlPanel" prefWidth="552.0">
+    <HBox fx:id="controlPanel" alignment="CENTER_LEFT" prefWidth="552.0" spacing="10.0">
         <VBox.margin>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="20.0" />
+            <Insets bottom="5.0" left="15.0" right="15.0" top="10.0" />
         </VBox.margin>
-        <Button alignment="CENTER" mnemonicParsing="false" onAction="#start" prefHeight="25.0" prefWidth="120.0" text="%START">
-         <HBox.margin>
-            <Insets left="10.0" />
-         </HBox.margin>
-        </Button>
-        <Button alignment="CENTER" mnemonicParsing="false" onAction="#loadDiffBMS" prefHeight="25.0" prefWidth="200.0" text="%UPDATE_DATABASE">
-            <HBox.margin>
-                <Insets left="10.0" />
-            </HBox.margin>
-        </Button>
-        <Button alignment="CENTER" mnemonicParsing="false" onAction="#loadAllBMS" prefHeight="25.0" prefWidth="230.0" text="%REBUILD_DATABASE">
-            <HBox.margin>
-                <Insets left="10.0" />
-            </HBox.margin>
-        </Button>
-        <Button alignment="CENTER" mnemonicParsing="false" onAction="#exit" prefHeight="25.0" prefWidth="108.0" text="%EXIT">
-            <HBox.margin>
-                <Insets left="10.0" />
-            </HBox.margin>
-        </Button>
+        <Button alignment="CENTER" mnemonicParsing="false" onAction="#start"
+                prefHeight="28.0" prefWidth="120.0" text="%START" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Button alignment="CENTER" mnemonicParsing="false" onAction="#exit"
+                prefHeight="28.0" prefWidth="108.0" text="%EXIT" />
     </HBox>
 </VBox>
