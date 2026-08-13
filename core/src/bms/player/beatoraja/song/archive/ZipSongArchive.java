@@ -23,6 +23,14 @@ public final class ZipSongArchive extends SongArchive {
 	}
 
 	@Override
+	public boolean matchesSignature(byte[] signature, int length) {
+		return length >= 4 && signature[0] == 'P' && signature[1] == 'K'
+				&& ((signature[2] == 3 && signature[3] == 4)
+						|| (signature[2] == 5 && signature[3] == 6)
+						|| (signature[2] == 7 && signature[3] == 8));
+	}
+
+	@Override
 	public List<String> listEntries(Path archive) throws IOException {
 		try {
 			return listEntriesWithDefaultEncoding(archive);

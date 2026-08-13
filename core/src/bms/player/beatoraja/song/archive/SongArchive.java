@@ -37,6 +37,9 @@ public abstract class SongArchive {
 		return extensions.stream().anyMatch(name::endsWith);
 	}
 
+	/** Returns whether the leading bytes identify this archive format. */
+	public abstract boolean matchesSignature(byte[] signature, int length);
+
 	public final List<String> extensions() {
 		return extensions;
 	}

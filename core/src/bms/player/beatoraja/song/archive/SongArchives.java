@@ -2,13 +2,20 @@ package bms.player.beatoraja.song.archive;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.CRC32;
 
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
@@ -19,14 +26,17 @@ import bms.player.beatoraja.song.SongResources;
  */
 public final class SongArchives {
 
-	private static final List<SongArchive> ARCHIVES = List.of(new ZipSongArchive(), new RarSongArchive());
+	private static final List<SongArchive> ARCHIVES = List.of(
+			new ZipSongArchive(), new RarSongArchive(), new SevenZipSongArchive());
 	private static final int MAX_CACHED_ARCHIVES = 128;
+	private static final int SIGNATURE_SIZE = 8;
+	private static final int REVISION_SAMPLE_SIZE = 4 * 1024;
 	private static final ConcurrentHashMap<Path, CachedArchive> ENTRY_CACHE = new ConcurrentHashMap<>();
 	private SongArchives() {
 	}
 
 	public static boolean isSupportedArchive(Path path) {
-		return archiveFor(path) != null;
+		return hasSupportedExtension(path) && Files.isRegularFile(path);
 	}
 
 	/** Converts a local or virtual archive path into a resource abstraction. */
@@ -76,6 +86,12 @@ public final class SongArchives {
 		return archivePath != null ? archivePath.entryName() : null;
 	}
 
+	/** Returns the physical archive behind a virtual path, or {@code null}. */
+	public static Path archivePath(Path path) {
+		ArchivePath archivePath = parse(path);
+		return archivePath != null ? archivePath.archive() : null;
+	}
+
 	public static InputStream openStream(Path path) throws IOException {
 		ArchivePath archivePath = parse(path);
 		return archivePath == null ? Files.newInputStream(path) : openEntry(archivePath.archive(), archivePath.entryName());
@@ -95,21 +111,20 @@ public final class SongArchives {
 
 	private static CachedArchive cachedArchive(Path archive) throws IOException {
 		Path normalized = archive.toAbsolutePath().normalize();
-		long size = Files.size(normalized);
-		long modified = Files.getLastModifiedTime(normalized).toMillis();
+		ArchiveRevision revision = revision(normalized);
 		CachedArchive cached = ENTRY_CACHE.get(normalized);
-		if (cached != null && cached.size() == size && cached.modified() == modified) {
+		if (cached != null && cached.revision().equals(revision)) {
 			return cached;
 		}
 		List<String> entries = List.copyOf(archiveForRequired(normalized).listEntries(normalized));
-		Map<String, String> namesByLowerCase = new HashMap<>();
+		Map<String, String> namesByCanonicalName = new HashMap<>();
 		for (String entry : entries) {
-			String previous = namesByLowerCase.put(entry.toLowerCase(Locale.ROOT), entry);
+			String previous = namesByCanonicalName.put(canonicalKey(entry), entry);
 			if (previous != null && !previous.equals(entry)) {
-				throw new IOException("Archive has entries that differ only by case: " + previous + " / " + entry);
+				throw new IOException("Archive has canonically ambiguous entries: " + previous + " / " + entry);
 			}
 		}
-		CachedArchive result = new CachedArchive(entries, Map.copyOf(namesByLowerCase), size, modified);
+		CachedArchive result = new CachedArchive(entries, Map.copyOf(namesByCanonicalName), revision);
 		ENTRY_CACHE.put(normalized, result);
 		trimEntryCache(normalized);
 		return result;
@@ -132,13 +147,13 @@ public final class SongArchives {
 	}
 
 	static boolean hasEntry(Path archive, String entryName) throws IOException {
-		return cachedArchive(archive).namesByLowerCase().containsKey(entryName.toLowerCase(Locale.ROOT));
+		return cachedArchive(archive).namesByCanonicalName().containsKey(canonicalKey(entryName));
 	}
 
 	static boolean hasDirectory(Path archive, String entryName) throws IOException {
-		String prefix = (entryName.isEmpty() ? "" : entryName + "/").toLowerCase(Locale.ROOT);
+		String prefix = canonicalKey(entryName.isEmpty() ? "" : entryName + "/");
 		return listEntries(archive).stream()
-				.anyMatch(candidate -> candidate.toLowerCase(Locale.ROOT).startsWith(prefix));
+				.anyMatch(candidate -> canonicalKey(candidate).startsWith(prefix));
 	}
 
 	static long entrySize(Path archive, String entryName) throws IOException {
@@ -147,10 +162,44 @@ public final class SongArchives {
 
 	static String archiveCacheKey(Path archive) {
 		try {
-			return archive.toAbsolutePath() + ":" + Files.size(archive) + ":" + Files.getLastModifiedTime(archive);
+			return archive.toAbsolutePath() + ":" + revision(archive.toAbsolutePath().normalize());
 		} catch (IOException e) {
 			return archive.toAbsolutePath().toString();
 		}
+	}
+
+	/** Stable database token that changes for sampled same-size/same-mtime replacements. */
+	public static int revisionToken(Path archive) throws IOException {
+		ArchiveRevision revision = revision(archive.toAbsolutePath().normalize());
+		return Long.hashCode(revision.size()) * 31 * 31
+				+ Long.hashCode(revision.modified()) * 31
+				+ Long.hashCode(revision.contentFingerprint())
+				+ revision.changeMarker().hashCode();
+	}
+
+	/** Formats the useful causal chain instead of hiding an archive backend reason. */
+	public static String failureDescription(Throwable failure) {
+		StringBuilder description = new StringBuilder();
+		Throwable current = failure;
+		while (current != null) {
+			String message = current.getMessage();
+			String part = message == null || message.isBlank()
+					? current.getClass().getSimpleName()
+					: message;
+			if (description.indexOf(part) < 0) {
+				if (!description.isEmpty()) {
+					description.append(" <- ");
+				}
+				description.append(part);
+			}
+			current = current.getCause();
+		}
+		return description.toString();
+	}
+
+	/** Canonical lookup form used for Windows-compatible archive resources. */
+	public static String canonicalKey(String value) {
+		return Normalizer.normalize(value, Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
 	}
 
 	static String resolveEntryName(String base, String relativePath) {
@@ -211,15 +260,26 @@ public final class SongArchives {
 	}
 
 	private static String canonicalEntryName(Path archive, String entryName) throws IOException {
-		String canonical = cachedArchive(archive).namesByLowerCase()
-				.get(entryName.toLowerCase(Locale.ROOT));
+		String canonical = cachedArchive(archive).namesByCanonicalName().get(canonicalKey(entryName));
 		if (canonical == null) {
 			throw new IOException("Archive entry does not exist: " + entryName);
 		}
 		return canonical;
 	}
 
-	private static SongArchive archiveFor(Path path) {
+	private static SongArchive archiveFor(Path path) throws IOException {
+		if (!Files.isRegularFile(path)) {
+			return null;
+		}
+		byte[] signature;
+		try (InputStream input = Files.newInputStream(path)) {
+			signature = input.readNBytes(SIGNATURE_SIZE);
+		}
+		for (SongArchive archive : ARCHIVES) {
+			if (archive.matchesSignature(signature, signature.length)) {
+				return archive;
+			}
+		}
 		return ARCHIVES.stream().filter(archive -> archive.supports(path)).findFirst().orElse(null);
 	}
 
@@ -229,6 +289,42 @@ public final class SongArchives {
 			throw new IOException("Unsupported song archive: " + path);
 		}
 		return archive;
+	}
+
+	private static boolean hasSupportedExtension(Path path) {
+		return ARCHIVES.stream().anyMatch(archive -> archive.supports(path));
+	}
+
+	private static ArchiveRevision revision(Path archive) throws IOException {
+		BasicFileAttributes attributes = Files.readAttributes(archive, BasicFileAttributes.class);
+		long size = attributes.size();
+		long modified = attributes.lastModifiedTime().toMillis();
+		StringBuilder changeMarker = new StringBuilder(String.valueOf(attributes.fileKey()));
+		try {
+			FileTime changeTime = (FileTime) Files.getAttribute(archive, "unix:ctime");
+			changeMarker.append(':').append(changeTime.toMillis());
+		} catch (IOException | UnsupportedOperationException | IllegalArgumentException ignored) {
+		}
+		CRC32 crc = new CRC32();
+		try (SeekableByteChannel channel = Files.newByteChannel(archive, StandardOpenOption.READ)) {
+			long[] positions = { 0, Math.max(0, size / 2 - REVISION_SAMPLE_SIZE / 2),
+					Math.max(0, size - REVISION_SAMPLE_SIZE) };
+			ByteBuffer buffer = ByteBuffer.allocate(REVISION_SAMPLE_SIZE);
+			long previous = -1;
+			for (long position : positions) {
+				if (position == previous) {
+					continue;
+				}
+				previous = position;
+				channel.position(position);
+				buffer.clear();
+				int read = channel.read(buffer);
+				if (read > 0) {
+					crc.update(buffer.array(), 0, read);
+				}
+			}
+		}
+		return new ArchiveRevision(size, modified, crc.getValue(), changeMarker.toString());
 	}
 
 	private static ArchivePath parse(Path path) {
@@ -251,11 +347,14 @@ public final class SongArchives {
 				if (separator != '/' && separator != '\\' && separator != '-') {
 					continue;
 				}
+				if ((separator == '/' || separator == '\\') && value.length() == archiveEnd + 2) {
+					return new ArchivePath(Path.of(value.substring(0, archiveEnd)), "", null, true);
+				}
 				if (separator == '-') {
 					String rootAndEntry = value.substring(archiveEnd + 2).replace('\\', '/');
 					int rootEnd = rootAndEntry.indexOf('/');
 					String root = normalizeRootDirectory(rootEnd >= 0 ? rootAndEntry.substring(0, rootEnd) : rootAndEntry);
-					if (rootEnd < 0) {
+					if (rootEnd < 0 || rootEnd == rootAndEntry.length() - 1) {
 						return new ArchivePath(Path.of(value.substring(0, archiveEnd)), root, root, true);
 					}
 					String relativeEntry = normalizeEntryNameOrNull(rootAndEntry.substring(rootEnd + 1));
@@ -312,8 +411,11 @@ public final class SongArchives {
 	private record ArchivePath(Path archive, String entryName, String visibleRoot, boolean directory) {
 	}
 
-	private record CachedArchive(List<String> entries, Map<String, String> namesByLowerCase,
-			long size, long modified) {
+	private record CachedArchive(List<String> entries, Map<String, String> namesByCanonicalName,
+			ArchiveRevision revision) {
+	}
+
+	private record ArchiveRevision(long size, long modified, long contentFingerprint, String changeMarker) {
 	}
 
 	public record ArchiveContents(List<String> entries, String rootDirectory) {
