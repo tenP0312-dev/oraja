@@ -253,6 +253,11 @@ The decoded chart data keeps the same MD5/SHA-256 identity as an unpacked
 copy. IR records, replays, tables, courses, and Arena chart possession
 therefore continue to match by chart hash rather than by the virtual path.
 
+Music Select keeps child folders visible when their parent also contains
+directly indexed charts. This includes ZIP/RAR/7z archive folders, so an
+archive remains reachable from a mixed ordinary-song folder before the
+selected key-mode filter is applied to its charts.
+
 ## Enabling
 
 1. Configure the normal BMS-IR IR entry with the BMS-IR player ID and game
