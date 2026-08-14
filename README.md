@@ -10,12 +10,9 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.43**. Music Select merges charts
-from immediate ZIP/RAR/7z virtual containers into the physical parent's song
-list without exposing an extra archive-folder level. The current development
-source adds one default-OFF BMS-IR setting that hides unavailable songs across
-all difficulty tables without changing ordinary folders, searches, or Arena
-candidate lists.
+The current client source version is **0.4.14.45**. One default-OFF BMS-IR
+setting hides unavailable songs across every difficulty table without changing
+ordinary folders, searches, or Arena candidate lists.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -27,6 +24,17 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.45
+
+The startup launcher's BMS-IR-specific settings now include one shared switch
+to hide unavailable songs across every difficulty table. It remains off by
+default, also applies inside tables when HTTP downloads are enabled, and leaves
+ordinary folders, searches, and Arena candidate lists unchanged.
+
+The signed internal channel used `0.4.14.44` for a launcher/plugin-only sparse
+update while the body stayed on `0.4.14.43`; the body therefore advances to
+`0.4.14.45` so its identity and the next channel version are aligned again.
 
 ## Arena oraja 0.4.14.43
 

@@ -1,5 +1,14 @@
 # Unreleased
 
+# Arena oraja 0.4.14.45
+
+- Added one default-OFF BMS-IR-specific startup setting that hides unavailable
+  songs across every difficulty table, including while HTTP downloads are
+  enabled. Ordinary folders, searches, and Arena candidate lists keep their
+  existing visibility behavior.
+- Version `0.4.14.44` was a launcher/plugin-only signed channel update; the
+  Arena oraja body advances from `0.4.14.43` to `0.4.14.45`.
+
 # Arena oraja 0.4.14.43
 
 - Music Select now merges charts from immediate ZIP/RAR/7z virtual containers
