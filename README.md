@@ -10,9 +10,9 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.42**. Music Select now keeps
-child folders visible when a parent also contains directly indexed songs, so
-ZIP/RAR/7z packages remain reachable from mixed song folders.
+The current client source version is **0.4.14.43**. Music Select merges charts
+from immediate ZIP/RAR/7z virtual containers into the physical parent's song
+list without exposing an extra archive-folder level.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -25,18 +25,19 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Arena oraja 0.4.14.43
+
+Music Select now merges indexed charts from immediate ZIP/RAR/7z virtual
+containers into the physical parent's song list. Ordinary per-song container
+folders stay hidden as before, the extra archive-folder level is removed, and
+already-scanned databases work without a rescan.
+
 ## Arena oraja 0.4.14.42
 
 Music Select now combines directly indexed song bars with child folder bars.
 Previously, finding any direct song caused every child folder to be discarded,
 which could hide a successfully scanned ZIP/RAR/7z package before its chart's
 key-mode filter was evaluated.
-
-The current development source supersedes that hierarchy behavior: ordinary
-per-song container folders stay hidden as before, while charts from immediate
-ZIP/RAR/7z virtual containers are merged into the physical parent's song list.
-This removes the extra archive-folder level and also applies to databases that
-were already scanned.
 
 ## Arena oraja 0.4.14.41
 

@@ -1,5 +1,12 @@
 # Unreleased
 
+# Arena oraja 0.4.14.43
+
+- Music Select now merges charts from immediate ZIP/RAR/7z virtual containers
+  into the physical parent's song list. This removes the extra archive-folder
+  level, keeps ordinary per-song containers hidden, and applies to databases
+  that were already scanned without requiring another song update.
+
 # Arena oraja 0.4.14.42
 
 - Music Select now preserves child folders alongside directly indexed songs.
