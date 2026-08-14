@@ -526,9 +526,6 @@
 	                    </HBox>
 	                    <CheckBox fx:id="bmsirCoverHispeedAutoAdjustEnabled" mnemonicParsing="false" text="%BMSIR_COVER_HISPEED_AUTO_ADJUST_ENABLED" />
 	                    <Separator />
-	                    <CheckBox fx:id="bmsirIidxFhsEnabled" mnemonicParsing="false" text="%BMSIR_IIDX_FHS_ENABLED" />
-	                    <CheckBox fx:id="bmsirIidxFhsSkinNoticeEnabled" mnemonicParsing="false" text="%BMSIR_IIDX_FHS_SKIN_NOTICE_ENABLED" />
-	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_IIDX_FHS_DESCRIPTION" wrapText="true" />
 	                    <CheckBox fx:id="bmsirJudgeRankSortEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_RANK_SORT_ENABLED" />
 	                    <CheckBox fx:id="bmsirJudgeRankSortSkinNoticeEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_RANK_SORT_SKIN_NOTICE_ENABLED" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_JUDGE_RANK_SORT_DESCRIPTION" wrapText="true" />

@@ -1,5 +1,10 @@
 # Unreleased
 
+- Removed the standalone optional IIDX FHS while its replacement behavior is
+  unspecified. Music Select again cycles only the five legacy HI-SPEED FIX
+  values, and a saved former FHS value migrates to START BPM. Judge-rank sort
+  remains independently configurable.
+
 # Arena oraja 0.4.14.43
 
 - Music Select now merges charts from immediate ZIP/RAR/7z virtual containers

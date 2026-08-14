@@ -121,7 +121,6 @@ public final class MusicSelector extends MainState {
 	private PixmapResourcePool banners;
 
 	private PixmapResourcePool stagefiles;
-	private boolean iidxFhsRestoredNoticeShown;
 	private boolean judgeRankSortRestoredNoticeShown;
 
 	public MusicSelector(MainController main, boolean songUpdated) {
@@ -326,8 +325,6 @@ public final class MusicSelector extends MainState {
 	public void create() {
 		BMSIROrajaHelperBridge.publishScene("select");
 		main.getSoundManager().shuffle();
-		config.resetBmsirIidxFhsRuntimeState();
-
 		play = null;
 		showNoteGraph = false;
 		resource.setPlayerData(main.getPlayDataAccessor().readPlayerData());
@@ -372,13 +369,6 @@ public final class MusicSelector extends MainState {
 	}
 
 	private void showRestoredSkinCompatibilityNotices() {
-		PlayConfig playConfig = getSelectedBarPlayConfig();
-		if (!iidxFhsRestoredNoticeShown
-				&& playConfig != null
-				&& playConfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-			iidxFhsRestoredNoticeShown =
-					BMSIRSelectOptionCompatibility.notifyIidxFhsIfEnabled(config);
-		}
 		if (!judgeRankSortRestoredNoticeShown
 				&& BarSorter.JUDGE.name().equals(config.getSortid())) {
 			judgeRankSortRestoredNoticeShown =

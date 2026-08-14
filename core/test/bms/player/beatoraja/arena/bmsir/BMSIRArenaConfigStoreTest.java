@@ -55,8 +55,6 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_EXTENDED);
         player.setBmsirCoverChangeStep(12);
         player.setBmsirCoverHispeedAutoAdjustEnabled(true);
-        player.setBmsirIidxFhsEnabled(true);
-        player.setBmsirIidxFhsSkinNoticeEnabled(false);
         player.setBmsirJudgeRankSortEnabled(true);
         player.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         player.setBmsirNumpadActions(new String[]{
@@ -108,8 +106,8 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
         assertTrue(serialized.contains("\"coverHispeedAutoAdjustEnabled\": true"));
-        assertTrue(serialized.contains("\"iidxFhsEnabled\": true"));
-        assertTrue(serialized.contains("\"iidxFhsSkinNoticeEnabled\": false"));
+        assertFalse(serialized.contains("iidxFhsEnabled"));
+        assertFalse(serialized.contains("iidxFhsSkinNoticeEnabled"));
         assertTrue(serialized.contains("\"judgeRankSortEnabled\": true"));
         assertTrue(serialized.contains("\"judgeRankSortSkinNoticeEnabled\": false"));
         assertTrue(serialized.contains("\"numpadJudgeTimingStep\": 7"));
@@ -160,8 +158,6 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirCoverControlMode(PlayerConfig.BMSIR_COVER_CONTROL_LR2);
         arenaBody.setBmsirCoverChangeStep(15);
         arenaBody.setBmsirCoverHispeedAutoAdjustEnabled(true);
-        arenaBody.setBmsirIidxFhsEnabled(true);
-        arenaBody.setBmsirIidxFhsSkinNoticeEnabled(false);
         arenaBody.setBmsirJudgeRankSortEnabled(false);
         arenaBody.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         String[] numpadActions = BMSIRNumpadAction.defaultIds();
@@ -237,8 +233,6 @@ class BMSIRArenaConfigStoreTest {
         );
         assertEquals(15, restored.getBmsirCoverChangeStep());
         assertTrue(restored.isBmsirCoverHispeedAutoAdjustEnabled());
-        assertTrue(restored.isBmsirIidxFhsEnabled());
-        assertFalse(restored.isBmsirIidxFhsSkinNoticeEnabled());
         assertFalse(restored.isBmsirJudgeRankSortEnabled());
         assertFalse(restored.isBmsirJudgeRankSortSkinNoticeEnabled());
         assertEquals(
@@ -378,8 +372,6 @@ class BMSIRArenaConfigStoreTest {
         );
         assertEquals(10, restored.getBmsirCoverChangeStep());
         assertFalse(restored.isBmsirCoverHispeedAutoAdjustEnabled());
-        assertFalse(restored.isBmsirIidxFhsEnabled());
-        assertTrue(restored.isBmsirIidxFhsSkinNoticeEnabled());
         assertTrue(restored.isBmsirJudgeRankSortEnabled());
         assertTrue(restored.isBmsirJudgeRankSortSkinNoticeEnabled());
         assertEquals(
@@ -400,6 +392,41 @@ class BMSIRArenaConfigStoreTest {
         assertEquals(1, restored.getBmsirNumpadJudgeTimingStep());
         assertFalse(restored.isBmsirJudgeTimingRestoreEnabled());
         assertTrue(restored.isBmsirInfoNotificationsEnabled());
+    }
+
+    @Test
+    void removedFhsSidecarKeysAreIgnoredAndDroppedOnRewrite() throws Exception {
+        Path playerDirectory = temporaryDirectory.resolve("player1");
+        Files.createDirectories(playerDirectory);
+        RobustFile.write(
+                playerDirectory.resolve("bmsir_arena.json"),
+                """
+                {
+                  "schemaVersion": 15,
+                  "iidxFhsEnabled": true,
+                  "iidxFhsSkinNoticeEnabled": false,
+                  "judgeRankSortEnabled": false
+                }
+                """.getBytes(StandardCharsets.UTF_8)
+        );
+
+        PlayerConfig restored = player("player1");
+        assertTrue(BMSIRArenaConfigStore.loadOrMigrate(
+                temporaryDirectory.toString(),
+                "player1",
+                restored
+        ));
+        assertFalse(restored.isBmsirJudgeRankSortEnabled());
+        assertTrue(BMSIRArenaConfigStore.write(
+                temporaryDirectory.toString(),
+                restored
+        ));
+
+        String rewritten = Files.readString(
+                playerDirectory.resolve("bmsir_arena.json")
+        );
+        assertFalse(rewritten.contains("iidxFhsEnabled"));
+        assertFalse(rewritten.contains("iidxFhsSkinNoticeEnabled"));
     }
 
     private PlayerConfig player(String id) throws Exception {
