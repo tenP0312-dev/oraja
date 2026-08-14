@@ -2,6 +2,7 @@ package bms.player.beatoraja.select.bar;
 
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.song.*;
+import bms.player.beatoraja.song.archive.SongArchives;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -42,26 +43,50 @@ public class FolderBar extends DirectoryBar {
         final SongDatabaseAccessor songdb = selector.getSongDatabase();
         final SongData[] songs = songdb.getSongDatas("parent", crc);
         final String rootpath = Paths.get(".").toAbsolutePath().toString();
-        return createChildren(selector, songs, songdb.getFolderDatas("parent", crc), rootpath);
+        final FolderData[] folders = songdb.getFolderDatas("parent", crc);
+        final String[] archiveParents = archiveParentCrcs(folders, rootpath);
+        final SongData[] archiveSongs = songdb.getSongDatasByParents(archiveParents);
+        return createChildren(selector, songs, archiveSongs, folders, rootpath);
     }
 
     static Bar[] createChildren(
             MusicSelector selector,
             SongData[] songs,
+            SongData[] archiveSongs,
             FolderData[] folders,
             String rootpath
     ) {
-        Stream<Bar> songBars = Arrays.stream(SongBar.toSongBarArray(songs));
-        Stream<Bar> folderBars = Stream.of(folders).map(folder -> {
-            String path = folder.getPath();
-            if (path.endsWith(String.valueOf(File.separatorChar))) {
-                path = path.substring(0, path.length() - 1);
-            }
+        SongData[] visibleSongs = Stream.concat(Arrays.stream(songs), Arrays.stream(archiveSongs))
+                .toArray(SongData[]::new);
+        if (visibleSongs.length > 0) {
+            return SongBar.toSongBarArray(visibleSongs);
+        }
 
-            String ccrc = SongUtils.crc32(path, new String[0], rootpath);
-            return new FolderBar(selector, folder, ccrc);
-        });
-        return Stream.concat(songBars, folderBars).toArray(Bar[]::new);
+        return Stream.of(folders)
+                .filter(folder -> !isArchiveFolder(folder))
+                .map(folder -> new FolderBar(selector, folder, folderCrc(folder, rootpath)))
+                .toArray(Bar[]::new);
+    }
+
+    static String[] archiveParentCrcs(FolderData[] folders, String rootpath) {
+        return Stream.of(folders)
+                .filter(FolderBar::isArchiveFolder)
+                .map(folder -> folderCrc(folder, rootpath))
+                .toArray(String[]::new);
+    }
+
+    private static boolean isArchiveFolder(FolderData folder) {
+        return SongArchives.isVirtualPath(Paths.get(trimTrailingSeparator(folder.getPath())));
+    }
+
+    private static String folderCrc(FolderData folder, String rootpath) {
+        return SongUtils.crc32(trimTrailingSeparator(folder.getPath()), new String[0], rootpath);
+    }
+
+    private static String trimTrailingSeparator(String path) {
+        return path.endsWith(String.valueOf(File.separatorChar))
+                ? path.substring(0, path.length() - 1)
+                : path;
     }
 
     public void updateFolderStatus() {

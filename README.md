@@ -32,6 +32,12 @@ Previously, finding any direct song caused every child folder to be discarded,
 which could hide a successfully scanned ZIP/RAR/7z package before its chart's
 key-mode filter was evaluated.
 
+The current development source supersedes that hierarchy behavior: ordinary
+per-song container folders stay hidden as before, while charts from immediate
+ZIP/RAR/7z virtual containers are merged into the physical parent's song list.
+This removes the extra archive-folder level and also applies to databases that
+were already scanned.
+
 ## Arena oraja 0.4.14.41
 
 Direct song-archive support now includes RAR5 and 7z in addition to ZIP and
