@@ -1,5 +1,10 @@
 package bms.player.beatoraja.song;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * 楽曲データベースへのアクセスインターフェイス
  * 
@@ -17,6 +22,28 @@ public interface SongDatabaseAccessor {
 	 * @return 検索結果
 	 */
 	public SongData[] getSongDatas(String key, String value);
+
+	/**
+	 * Returns songs whose selection-screen parent matches any supplied folder CRC.
+	 *
+	 * @param parents selection-screen parent folder CRCs
+	 * @return matching songs
+	 */
+	public default SongData[] getSongDatasByParents(String[] parents) {
+		if (parents == null || parents.length == 0) {
+			return SongData.EMPTY;
+		}
+		List<SongData> songs = new ArrayList<>();
+		Set<String> seen = new HashSet<>();
+		for (String parent : parents) {
+			if (parent != null && !parent.isBlank() && seen.add(parent)) {
+				for (SongData song : getSongDatas("parent", parent)) {
+					songs.add(song);
+				}
+			}
+		}
+		return songs.toArray(SongData[]::new);
+	}
 
 	/**
 	 * MD5/SHA256で指定した楽曲をまとめて取得する

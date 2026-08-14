@@ -203,10 +203,14 @@ compatible with saved profiles.
 
 ## ZIP/RAR/7z song archives
 
-Version `0.4.14.38` added the opt-in archive scanner, version `0.4.14.41`
+Version `0.4.14.38` added the opt-in archive scanner and version `0.4.14.41`
 completed RAR5/7z, replacement, lookup, refresh, preview, and diagnostic
-coverage, and version `0.4.14.42` keeps archive folders reachable when their
-parent also contains direct songs. Current source labels it
+coverage. Version `0.4.14.42` exposed child folder bars when a parent also had
+direct songs, but that also exposed ordinary per-song containers that are not
+selection levels. Current development source instead merges charts from an
+immediate ZIP/RAR/7z virtual container into the physical parent's song list,
+keeps ordinary song containers hidden, and works with an already-scanned
+database. The archive setting is labeled
 `Scan ZIP/RAR/7z song archives` (`ZIP/RAR/7z内の曲を走査`). It is off by
 default so existing song-database update
 behavior and startup cost do not change until the player enables it. After the

@@ -55,6 +55,27 @@ class SQLiteSongDatabaseAccessorTest {
         }
     }
 
+    @Test
+    void readsSongsForMultipleSelectionParentsInOneOperation() throws Exception {
+        Path database = temporary.resolve("song-parent-batch.db");
+        SQLiteSongDatabaseAccessor accessor = new SQLiteSongDatabaseAccessor(
+                database.toString(),
+                new String[]{temporary.toString()}
+        );
+        SongData first = songWithParent("First", "a".repeat(64), "parent-a");
+        SongData second = songWithParent("Second", "b".repeat(64), "parent-b");
+        SongData excluded = songWithParent("Excluded", "c".repeat(64), "parent-c");
+        accessor.setSongDatas(new SongData[]{first, second, excluded});
+
+        SongData[] visible = accessor.getSongDatasByParents(
+                new String[]{"parent-a", "parent-b", "parent-a"});
+
+        assertEquals(2, visible.length);
+        assertTrue(java.util.Arrays.stream(visible).anyMatch(song -> song.getTitle().equals("First")));
+        assertTrue(java.util.Arrays.stream(visible).anyMatch(song -> song.getTitle().equals("Second")));
+        assertEquals(0, accessor.getSongDatasByParents(new String[0]).length);
+    }
+
 	@Test
 	void refreshesPreviewPathWhenTheChartTimestampDidNotChange() throws Exception {
 		Path songs = temporary.resolve("songs");
@@ -219,6 +240,15 @@ class SQLiteSongDatabaseAccessorTest {
 	private static String chartWithTitle(String title) {
 		return "#PLAYER 1\n#TITLE " + title + "\n#BPM 120\n#WAV01 sound.wav\n#00111:01\n";
 	}
+
+    private SongData songWithParent(String title, String sha256, String parent) {
+        SongData song = new SongData();
+        song.setTitle(title);
+        song.setSha256(sha256);
+        song.setPath(temporary.resolve(title + ".bms").toString());
+        song.setParent(parent);
+        return song;
+    }
 
 	private static String previewPath(Path database) throws Exception {
 		try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);

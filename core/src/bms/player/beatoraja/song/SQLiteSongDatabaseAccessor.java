@@ -174,6 +174,33 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 		return SongData.EMPTY;
 	}
 
+	@Override
+	public SongData[] getSongDatasByParents(String[] parents) {
+		if (parents == null || parents.length == 0) {
+			return SongData.EMPTY;
+		}
+		try {
+			List<SongData> songs = new ArrayList<>();
+			List<String> uniqueParents = Arrays.stream(parents)
+					.filter(Objects::nonNull)
+					.filter(parent -> !parent.isBlank())
+					.distinct()
+					.toList();
+			for (int offset = 0; offset < uniqueParents.size(); offset += 500) {
+				List<String> chunk = uniqueParents.subList(offset, Math.min(offset + 500, uniqueParents.size()));
+				String placeholders = String.join(",", Collections.nCopies(chunk.size(), "?"));
+				songs.addAll(qr.query(
+						"SELECT * FROM song WHERE parent IN (" + placeholders + ")",
+						songhandler,
+						chunk.toArray()));
+			}
+			return Validatable.removeInvalidElements(songs).toArray(new SongData[0]);
+		} catch (Exception e) {
+			logger.error("song.db更新時の例外:{}", e.getMessage());
+		}
+		return SongData.EMPTY;
+	}
+
 	/**
 	 * MD5/SHA256で指定した楽曲をまとめて取得する
 	 * 
