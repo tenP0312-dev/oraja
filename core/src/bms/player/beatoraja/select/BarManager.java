@@ -408,7 +408,21 @@ public class BarManager {
 			}
 		}
 
-		if(!select.resource.getConfig().isShowNoSongExistingBar()) {
+		final PlayerConfig playerConfig = select.resource.getPlayerConfig();
+		boolean tableContext = bar instanceof TableBar;
+		if (!tableContext) {
+			for (DirectoryBar parent : dir) {
+				if (parent instanceof TableBar) {
+					tableContext = true;
+					break;
+				}
+			}
+		}
+		if (shouldHideUnavailableBars(
+				select.resource.getConfig().isShowNoSongExistingBar(),
+				tableContext,
+				playerConfig.isBmsirHideMissingTableSongs()
+		)) {
 			Array<Bar> remove = new Array<Bar>();
 			for (Bar b : l) {
 				if ((b instanceof SongBar && !((SongBar) b).existsSong())
@@ -420,7 +434,7 @@ public class BarManager {
 		}
 
 		if (l.size > 0) {
-			final PlayerConfig config = select.resource.getPlayerConfig();
+			final PlayerConfig config = playerConfig;
 			final String[] visibleModes = config.getBmsirSelectKeyModes();
 			Mode mode = config.getMode();
 			if (!BMSIRSelectKeyMode.isModeVisible(visibleModes, mode)) {
@@ -580,6 +594,14 @@ public class BarManager {
 		}
 		logger.warn("楽曲がありません");
 		return false;
+	}
+
+	static boolean shouldHideUnavailableBars(
+			boolean showUnavailableBars,
+			boolean tableContext,
+			boolean hideMissingTableSongs
+	) {
+		return !showUnavailableBars || (tableContext && hideMissingTableSongs);
 	}
 
 	public void close() {

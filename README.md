@@ -12,7 +12,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 The current client source version is **0.4.14.43**. Music Select merges charts
 from immediate ZIP/RAR/7z virtual containers into the physical parent's song
-list without exposing an extra archive-folder level.
+list without exposing an extra archive-folder level. The current development
+source adds one default-OFF BMS-IR setting that hides unavailable songs across
+all difficulty tables without changing ordinary folders, searches, or Arena
+candidate lists.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
