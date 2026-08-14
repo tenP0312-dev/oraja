@@ -1,5 +1,11 @@
 # Unreleased
 
+# Arena oraja 0.4.14.42
+
+- Music Select now preserves child folders alongside directly indexed songs.
+  This keeps successfully scanned ZIP/RAR/7z packages reachable from a mixed
+  parent folder before key-mode filtering is applied to the archived charts.
+
 # Arena oraja 0.4.14.41
 
 - Added direct RAR5 and 7z song-package reading alongside ZIP and RAR4, with
