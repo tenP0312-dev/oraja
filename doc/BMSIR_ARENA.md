@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.42`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.43`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -207,10 +207,10 @@ Version `0.4.14.38` added the opt-in archive scanner and version `0.4.14.41`
 completed RAR5/7z, replacement, lookup, refresh, preview, and diagnostic
 coverage. Version `0.4.14.42` exposed child folder bars when a parent also had
 direct songs, but that also exposed ordinary per-song containers that are not
-selection levels. Current development source instead merges charts from an
-immediate ZIP/RAR/7z virtual container into the physical parent's song list,
-keeps ordinary song containers hidden, and works with an already-scanned
-database. The archive setting is labeled
+selection levels. Version `0.4.14.43` instead merges charts from an immediate
+ZIP/RAR/7z virtual container into the physical parent's song list, keeps
+ordinary song containers hidden, and works with an already-scanned database.
+The archive setting is labeled
 `Scan ZIP/RAR/7z song archives` (`ZIP/RAR/7z内の曲を走査`). It is off by
 default so existing song-database update
 behavior and startup cost do not change until the player enables it. After the
@@ -894,7 +894,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.42-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.43-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -915,7 +915,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.42-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.43-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -931,7 +931,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.42-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.43-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
