@@ -5,6 +5,7 @@ import bms.player.beatoraja.song.*;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 /**
@@ -40,12 +41,18 @@ public class FolderBar extends DirectoryBar {
     public Bar[] getChildren() {
         final SongDatabaseAccessor songdb = selector.getSongDatabase();
         final SongData[] songs = songdb.getSongDatas("parent", crc);
-        if (songs.length > 0) {
-            return SongBar.toSongBarArray(songs);
-        }
-
         final String rootpath = Paths.get(".").toAbsolutePath().toString();
-        return Stream.of(songdb.getFolderDatas("parent", crc)).map(folder -> {
+        return createChildren(selector, songs, songdb.getFolderDatas("parent", crc), rootpath);
+    }
+
+    static Bar[] createChildren(
+            MusicSelector selector,
+            SongData[] songs,
+            FolderData[] folders,
+            String rootpath
+    ) {
+        Stream<Bar> songBars = Arrays.stream(SongBar.toSongBarArray(songs));
+        Stream<Bar> folderBars = Stream.of(folders).map(folder -> {
             String path = folder.getPath();
             if (path.endsWith(String.valueOf(File.separatorChar))) {
                 path = path.substring(0, path.length() - 1);
@@ -53,7 +60,8 @@ public class FolderBar extends DirectoryBar {
 
             String ccrc = SongUtils.crc32(path, new String[0], rootpath);
             return new FolderBar(selector, folder, ccrc);
-        }).toArray(Bar[]::new);
+        });
+        return Stream.concat(songBars, folderBars).toArray(Bar[]::new);
     }
 
     public void updateFolderStatus() {
