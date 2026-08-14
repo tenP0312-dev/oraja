@@ -38,6 +38,24 @@ class BMSIRMyTableClientTest {
     }
 
     @Test
+    void appendsServerDeclaredAggregateFolderWithoutDuplicatingEntries() {
+        ObjectNode snapshot = snapshot();
+        ((ObjectNode) snapshot.path("table")).put("aggregate_folder", "全曲");
+
+        TableData data = BMSIRMyTableClient.tableData(snapshot);
+
+        assertNotNull(data);
+        assertEquals(3, data.getFolder().length);
+        assertEquals("★1", data.getFolder()[0].getName());
+        assertEquals("★2", data.getFolder()[1].getName());
+        assertEquals("★全曲", data.getFolder()[2].getName());
+        assertEquals(2, data.getFolder()[2].getSong().length);
+        assertEquals(MD5, data.getFolder()[2].getSong()[0].getMd5());
+        assertEquals(SHA256, data.getFolder()[2].getSong()[1].getSha256());
+        assertEquals(2, snapshot.path("table").path("entries").size());
+    }
+
+    @Test
     void matchesSelectedChartsByMd5OrBmsonSha256() {
         ObjectNode snapshot = snapshot();
         SongData bms = new SongData();

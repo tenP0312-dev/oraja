@@ -39,6 +39,12 @@ restart or stale folder objects. Empty tables appear after their first saved
 chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
 Web editor.
 
+The selected-table snapshot may include an optional `aggregate_folder` label.
+When present, the client keeps every authoritative level folder and appends one
+display-only folder containing the same complete chart set. It does not add
+duplicate snapshot entries or draft/edit identities. The cross-game all-song
+master uses this field for `全曲`; ordinary personal and system tables omit it.
+
 In the same version, clicking an Arena room-name, chat, or My Difficulty Table
 text field places an
 IME-capable OS text control directly over the same field. Japanese conversion
