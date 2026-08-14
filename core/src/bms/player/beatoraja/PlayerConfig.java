@@ -265,6 +265,8 @@ public final class PlayerConfig {
 	private int bmsirSelectDifficultyStage = 1;
 	/** Ordered key-mode display allow-list and short-press cycle. */
 	private String[] bmsirSelectKeyModes = BMSIRSelectKeyMode.defaultIds();
+	/** Hide unavailable song/course bars only while browsing difficulty tables. */
+	private boolean bmsirHideMissingTableSongs = false;
 
 	private IRConfig[] irconfig;
 
@@ -755,6 +757,14 @@ public final class PlayerConfig {
 
 	public void setBmsirSelectKeyModes(String[] modes) {
 		bmsirSelectKeyModes = BMSIRSelectKeyMode.normalizeIds(modes);
+	}
+
+	public boolean isBmsirHideMissingTableSongs() {
+		return bmsirHideMissingTableSongs;
+	}
+
+	public void setBmsirHideMissingTableSongs(boolean enabled) {
+		bmsirHideMissingTableSongs = enabled;
 	}
 
 	/**

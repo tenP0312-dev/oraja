@@ -41,6 +41,7 @@ class BMSIRArenaConfigStoreTest {
         );
         player.setBmsirSelectDifficultyStage(4);
         player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
+        player.setBmsirHideMissingTableSongs(true);
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -98,12 +99,13 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 15"));
+        assertTrue(serialized.contains("\"schemaVersion\": 16"));
         assertTrue(serialized.contains("\"startButtonAction\": \"difficulty\""));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
         assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
         assertTrue(serialized.contains("\"selectDifficultyStage\": 4"));
         assertTrue(serialized.contains("\"selectKeyModes\": ["));
+        assertTrue(serialized.contains("\"hideMissingTableSongs\": true"));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -146,6 +148,7 @@ class BMSIRArenaConfigStoreTest {
         );
         arenaBody.setBmsirSelectDifficultyStage(5);
         arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
+        arenaBody.setBmsirHideMissingTableSongs(true);
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -211,6 +214,7 @@ class BMSIRArenaConfigStoreTest {
                 java.util.List.of("5k", "7k"),
                 java.util.Arrays.asList(restored.getBmsirSelectKeyModes())
         );
+        assertTrue(restored.isBmsirHideMissingTableSongs());
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,

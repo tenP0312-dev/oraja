@@ -795,6 +795,10 @@ make chart note counts and submitted scores disagree.
   modes are hidden throughout Music Select and are omitted from every mode
   cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
   retains all concrete modes. An empty allow-list is normalized to 7K.
+- `全難易度表で未所持曲を隠す` is a single per-player, default-OFF switch for
+  every difficulty table. When enabled it hides unavailable song bars inside
+  table folders even while HTTP downloads are enabled. Ordinary folders,
+  searches, and Arena candidate lists keep their existing visibility behavior.
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
   playable key through the DECIDE-to-READY transition to place the first source
   key on that destination. Once READY is visible the input has been captured
