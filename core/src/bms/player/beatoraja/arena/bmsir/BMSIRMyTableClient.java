@@ -438,6 +438,7 @@ final class BMSIRMyTableClient {
             return null;
         }
         Map<String, List<SongData>> levels = new LinkedHashMap<>();
+        List<SongData> allSongs = new ArrayList<>();
         JsonNode entries = table.path("entries");
         if (entries.isArray()) {
             for (JsonNode entry : entries) {
@@ -466,10 +467,16 @@ final class BMSIRMyTableClient {
                 String level = limited(entry.path("level").asText("-"), 32).trim();
                 levels.computeIfAbsent(level.isEmpty() ? "-" : level, ignored -> new ArrayList<>())
                         .add(song);
+                allSongs.add(song);
             }
         }
         if (levels.isEmpty()) {
             return null;
+        }
+        String aggregateFolder = limited(table.path("aggregate_folder").asText(""), 32).trim();
+        if (!aggregateFolder.isEmpty()) {
+            levels.remove(aggregateFolder);
+            levels.put(aggregateFolder, new ArrayList<>(allSongs));
         }
         String symbol = limited(table.path("symbol").asText(""), 16).trim();
         TableData data = new TableData();
