@@ -10,10 +10,9 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.41**. Song roots can read ZIP,
-RAR4/RAR5, and 7z packages directly without extraction. Archive refreshes now
-detect replacements reliably, keep the previous indexed songs after a rejected
-read, and expose bounded diagnostics for loaded and rejected archives.
+The current client source version is **0.4.14.42**. Music Select now keeps
+child folders visible when a parent also contains directly indexed songs, so
+ZIP/RAR/7z packages remain reachable from mixed song folders.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -25,6 +24,13 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.42
+
+Music Select now combines directly indexed song bars with child folder bars.
+Previously, finding any direct song caused every child folder to be discarded,
+which could hide a successfully scanned ZIP/RAR/7z package before its chart's
+key-mode filter was evaluated.
 
 ## Arena oraja 0.4.14.41
 
