@@ -1,5 +1,7 @@
 # Unreleased
 
+# Arena oraja 0.4.14.46
+
 - Fixed macOS Arena text fields leaving the body input-locked while audio and
   rendering continued. The IME-capable Swing control now runs in a short-lived
   helper JVM on macOS, and startup failure, helper exit, or protocol failure
