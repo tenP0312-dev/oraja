@@ -33,6 +33,7 @@ import javafx.scene.layout.VBox;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.ir.IRConnectionManager;
@@ -226,6 +227,13 @@ public class MainLoader extends Application {
             gdxConfig.setTitle(MainController.getVersion());
 
 			gdxConfig.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(), config.getAudioConfig().getDeviceBufferSize(), 1);
+			gdxConfig.setWindowListener(new Lwjgl3WindowAdapter() {
+				@Override
+				public void filesDropped(String[] files) {
+					String[] droppedFiles = files.clone();
+					Gdx.app.postRunnable(() -> main.handleFilesDropped(droppedFiles));
+				}
+			});
 
 			Config.DisplayMode displaymode = config.getDisplaymode();
 			Graphics.DisplayMode finalGdxDisplayMode = gdxDisplayMode;
