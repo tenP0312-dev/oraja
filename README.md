@@ -15,7 +15,9 @@ setting hides unavailable songs across every difficulty table without changing
 ordinary folders, searches, or Arena candidate lists. The current development
 source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
 FIX values remain available. Entering READY after the first-timing preview now
-preserves the live fixed HI-SPEED and cover settings.
+preserves the live fixed HI-SPEED and cover settings. In Music Select, loose
+BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto a selected
+physical song to copy them beside that song and refresh only that folder.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -38,6 +40,12 @@ ordinary folders, searches, and Arena candidate lists unchanged.
 The signed internal channel used `0.4.14.44` for a launcher/plugin-only sparse
 update while the body stayed on `0.4.14.43`; the body therefore advances to
 `0.4.14.45` so its identity and the next channel version are aligned again.
+
+The current development source also accepts loose BMS/BME/BML/PMS/BMSON
+difference-chart files dropped onto a selected physical song in Music Select.
+It copies them into that song folder without overwriting existing files,
+rescans only the folder, and refreshes Music Select. Folder/package drops and
+archive-backed selected songs remain unsupported.
 
 ## Arena oraja 0.4.14.43
 

@@ -1,5 +1,10 @@
 # Unreleased
 
+- Music Select accepts loose BMS/BME/BML/PMS/BMSON difference-chart files
+  dropped onto a selected physical song. The source files are copied into that
+  song folder without overwriting, only that folder is rescanned, and the song
+  list refreshes when the update finishes. Folder/package drops, ZIP/RAR/7z
+  files, and archive-backed selected songs are rejected without changing them.
 - Fixed the loading-to-READY transition restoring saved lane-renderer settings.
   Manual and natural first-timing preview completion now rewind only the chart
   timeline, preserving the live fixed HI-SPEED, green number, and covers.
