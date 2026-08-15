@@ -18,9 +18,10 @@ FIX values remain available. Entering READY after the first-timing preview now
 preserves the live fixed HI-SPEED and cover settings. Applying one-bass to a
 borrowed standard RANDOM now retains its placement except for the required
 two-lane swap and re-encodes the result as an ordinary 24-bit seed. In Music
-Select, loose
-BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto a selected
-physical song to copy them beside that song and refresh only that folder.
+Select, loose BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto
+a selected physical song to copy them beside that song and refresh only that
+folder. On macOS, Arena overlay IME fields use an isolated helper JVM so native
+text entry cannot lock the JavaFX/LWJGL body input.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
