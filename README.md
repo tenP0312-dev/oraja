@@ -14,7 +14,8 @@ The current client source version is **0.4.14.45**. One default-OFF BMS-IR
 setting hides unavailable songs across every difficulty table without changing
 ordinary folders, searches, or Arena candidate lists. The current development
 source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
-FIX values remain available.
+FIX values remain available. Entering READY after the first-timing preview now
+preserves the live fixed HI-SPEED and cover settings.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
