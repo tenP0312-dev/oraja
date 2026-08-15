@@ -47,10 +47,8 @@ public class PlayConfig implements Cloneable {
 	public static final int FIX_HISPEED_MAXBPM = 2;
 	public static final int FIX_HISPEED_MAINBPM = 3;
 	public static final int FIX_HISPEED_MINBPM = 4;
-	public static final int FIX_HISPEED_IIDX_FHS = 5;
-
-	/** Runtime-only state used by the IIDX FHS SUD+ toggle rules. */
-	private transient boolean iidxFhsSudActivated;
+	/** Saved by Arena oraja 0.4.14.35--0.4.14.43. */
+	private static final int REMOVED_FIX_HISPEED_IIDX_FHS = 5;
 
 	/**
 	 * ハイスピード変化間隔
@@ -203,18 +201,6 @@ public class PlayConfig implements Cloneable {
 		this.fixhispeed = fixhispeed;
 	}
 
-	public boolean isIidxFhsSudActivated() {
-		return iidxFhsSudActivated;
-	}
-
-	public void markIidxFhsSudActivated() {
-		iidxFhsSudActivated = true;
-	}
-
-	public void resetIidxFhsRuntimeState() {
-		iidxFhsSudActivated = false;
-	}
-
 	public float getLanecover() {
 		return lanecover;
 	}
@@ -324,7 +310,9 @@ public class PlayConfig implements Cloneable {
 				START_HERE_PREVIEW_MAX_NOTES_MIN,
 				START_HERE_PREVIEW_MAX_NOTES_MAX
 		);
-		fixhispeed = MathUtils.clamp(fixhispeed, 0, FIX_HISPEED_IIDX_FHS);
+		fixhispeed = fixhispeed == REMOVED_FIX_HISPEED_IIDX_FHS
+				? FIX_HISPEED_STARTBPM
+				: MathUtils.clamp(fixhispeed, FIX_HISPEED_OFF, FIX_HISPEED_MINBPM);
 		lanecover = MathUtils.clamp(lanecover, 0f, 1f);
 		lift = MathUtils.clamp(lift, 0f, 1f);
 		hidden = MathUtils.clamp(hidden, 0f, 1f);

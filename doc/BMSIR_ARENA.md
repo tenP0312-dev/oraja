@@ -56,10 +56,11 @@ half-width input. While an ImGui item or the inline editor
 owns input, keyboard, NUMPAD shortcuts, mouse scratch, scroll, clicks, and
 drags are discarded before the underlying game or skin can consume them.
 
-Version `0.4.14.35` optionally adds IIDX FHS after the five legacy Music
-Select HS-FIX values, lets players remove judge-rank sorting from the normal
-sort cycle, and gives each added value its own unsupported-skin notice switch.
-Legacy skins continue to fall back safely to OFF or TITLE.
+Version `0.4.14.35` added a standalone optional IIDX FHS after the five legacy
+Music Select HS-FIX values. The current development source removes that FHS
+pending a new specification and safely migrates its saved value to START BPM.
+The independently configurable judge-rank sorter and its unsupported-skin
+notice remain available.
 Version `0.4.14` adds LR2-compatible MANIAC OPTIONS, MANIAC-owned Double
 Battle and AUTO SCRATCH, isolated MANIAC local and online records, a
 mode-following leaderboard and ghost,
@@ -332,8 +333,8 @@ MANIAC, Double Battle AUTO SCRATCH, Arena language, graph presentation, and
 detailed logs. SP TO DP upgrades the sidecar to schema 11, SELECT actions to
 schema 12, the difficulty display choice to schema 13, and independent
 START/SELECT actions plus the shared difficulty stage to schema 14. The
-optional IIDX FHS and judge-rank sort cycles plus their two independent skin
-notices upgrade it to schema 15.
+judge-rank sort cycle and its skin notice upgrade it to schema 15. Historic
+schema-15 IIDX FHS keys are ignored and removed on the next sidecar save.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -478,32 +479,19 @@ setter and event are effective only on Music Select and persist immediately.
 It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
 controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
 is independent and OFF by default, so START+6/7 changes the selected cover
-without changing HI-SPEED unless recalculation is explicitly enabled. IIDX
-FHS retains its own SUD+ green-number reload behavior independently of this
-legacy-FHS switch.
-
-`選曲OPにIIDX FHSを追加する` is OFF by default. When enabled, Music Select
-cycles `OFF / START / MAX / MAIN / MIN / IIDX FHS`; the ordinary pre-launch
-HI-SPEED FIX combo still offers only the five legacy choices. In IIDX FHS,
-START plus a HI-SPEED key changes the current multiplier by exactly 0.50.
-Changing SUD+ reloads the saved green number at the current BPM and includes
-LIFT in the cover calculation. Without LIFT, an SUD+ off/on cycle reloads when
-SUD+ is enabled. With LIFT, later cycles reload when SUD+ is disabled; the
-first in-play SUD+ activation also reloads and starts at white number 125. That
-first-activation state is retained between charts in one course and reset on
-returning to Music Select.
+without changing HI-SPEED unless recalculation is explicitly enabled. Music
+Select cycles the five legacy HI-SPEED FIX values: `OFF / START / MAX / MAIN /
+MIN`. A value `5` saved by the removed standalone IIDX FHS migrates to START
+BPM during configuration validation.
 
 `選曲ソートに判定難易度を追加する` remains ON by default to preserve the
 existing judge-rank sorter. Turning it OFF restores the original eight-value
-sort cycle. IIDX FHS uses skin index 5 after the five legacy HS-FIX images;
-judge-rank sort uses index 8 after the eight legacy sort images. A skin without
-those images safely falls back to `OFF` or `TITLE`. Their compatibility notices
-have separate switches, `IIDX FHS選択時に未対応スキン向け通知を表示する` and
-`判定難易度ソート選択時に未対応スキン向け通知を表示する`, both ON by
-default. Each notice appears when its value is selected and once when Music
-Select restores that value. The global INFO-notification switch must also be
-ON. Disabling an extension while it is active normalizes IIDX FHS to START BPM
-or judge-rank sort to TITLE.
+sort cycle. Judge-rank sort uses index 8 after the eight legacy sort images. A
+skin without that image may not display the value correctly. Its compatibility
+notice switch, `判定難易度ソート選択時に未対応スキン向け通知を表示する`, is ON
+by default. The notice appears when the value is selected and once when Music
+Select restores it. The global INFO-notification switch must also be ON.
+Disabling the extension while it is active normalizes judge-rank sort to TITLE.
 
 The song context menu contains one `BMS-IR Leaderboard` entry. It reads the
 LR2-compatible ranking and selectable ghost directly from BMS-IR over HTTPS;

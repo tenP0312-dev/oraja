@@ -158,10 +158,6 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirCoverHispeedAutoAdjustEnabled;
 	@FXML
-	private CheckBox bmsirIidxFhsEnabled;
-	@FXML
-	private CheckBox bmsirIidxFhsSkinNoticeEnabled;
-	@FXML
 	private CheckBox bmsirJudgeRankSortEnabled;
 	@FXML
 	private CheckBox bmsirJudgeRankSortSkinNoticeEnabled;
@@ -539,9 +535,6 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverChangeStep.setValueFactory(
 				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
-		bmsirIidxFhsSkinNoticeEnabled.disableProperty().bind(
-				bmsirIidxFhsEnabled.selectedProperty().not()
-		);
 		bmsirJudgeRankSortSkinNoticeEnabled.disableProperty().bind(
 				bmsirJudgeRankSortEnabled.selectedProperty().not()
 		);
@@ -836,10 +829,6 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverHispeedAutoAdjustEnabled.setSelected(
 				player.isBmsirCoverHispeedAutoAdjustEnabled()
 		);
-		bmsirIidxFhsEnabled.setSelected(player.isBmsirIidxFhsEnabled());
-		bmsirIidxFhsSkinNoticeEnabled.setSelected(
-				player.isBmsirIidxFhsSkinNoticeEnabled()
-		);
 		bmsirJudgeRankSortEnabled.setSelected(
 				player.isBmsirJudgeRankSortEnabled()
 		);
@@ -1041,10 +1030,6 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirCoverHispeedAutoAdjustEnabled(
 				bmsirCoverHispeedAutoAdjustEnabled.isSelected()
 		);
-		player.setBmsirIidxFhsEnabled(bmsirIidxFhsEnabled.isSelected());
-		player.setBmsirIidxFhsSkinNoticeEnabled(
-				bmsirIidxFhsSkinNoticeEnabled.isSelected()
-		);
 		player.setBmsirJudgeRankSortEnabled(
 				bmsirJudgeRankSortEnabled.isSelected()
 		);
@@ -1190,14 +1175,7 @@ public class PlayConfigurationView implements Initializable {
 		enableConstant.setSelected(conf.isEnableConstant());
 		constFadeinTime.getValueFactory().setValue(conf.getConstantFadeinTime());
 		hispeedmargin.getValueFactory().setValue((double) conf.getHispeedMargin());
-		if (conf.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-			fixhispeed.getSelectionModel().clearSelection();
-			fixhispeed.setValue(null);
-			fixhispeed.setPromptText("IIDX FHS (Music Select OP)");
-		} else {
-			fixhispeed.setPromptText("");
-			fixhispeed.setValue(conf.getFixhispeed());
-		}
+		fixhispeed.setValue(conf.getFixhispeed());
 		enableLanecover.setSelected(conf.isEnablelanecover());
 		lanecover.getValueFactory().setValue((int) (conf.getLanecover() * 1000));
 		lanecovermarginlow.getValueFactory().setValue((int) (conf.getLanecovermarginlow() * 1000));

@@ -333,10 +333,6 @@ public final class PlayerConfig {
 	private String bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
 	private int bmsirCoverChangeStep = 10;
 	private boolean bmsirCoverHispeedAutoAdjustEnabled = false;
-	/** Add IIDX FHS as the sixth Music Select HS-FIX value. */
-	private boolean bmsirIidxFhsEnabled = false;
-	/** Explain the OFF image fallback when IIDX FHS is selected. */
-	private boolean bmsirIidxFhsSkinNoticeEnabled = true;
 	/** Keep the Arena-added JUDGE sorter in the normal Music Select cycle. */
 	private boolean bmsirJudgeRankSortEnabled = true;
 	/** Explain the TITLE image fallback when JUDGE sort is selected. */
@@ -1086,30 +1082,6 @@ public final class PlayerConfig {
 		bmsirCoverHispeedAutoAdjustEnabled = enabled;
 	}
 
-	public boolean isBmsirIidxFhsEnabled() {
-		return bmsirIidxFhsEnabled;
-	}
-
-	public void setBmsirIidxFhsEnabled(boolean enabled) {
-		bmsirIidxFhsEnabled = enabled;
-		if (!enabled) {
-			forEachPlayConfig(playConfig -> {
-				if (playConfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-					playConfig.setFixhispeed(PlayConfig.FIX_HISPEED_STARTBPM);
-				}
-				playConfig.resetIidxFhsRuntimeState();
-			});
-		}
-	}
-
-	public boolean isBmsirIidxFhsSkinNoticeEnabled() {
-		return bmsirIidxFhsSkinNoticeEnabled;
-	}
-
-	public void setBmsirIidxFhsSkinNoticeEnabled(boolean enabled) {
-		bmsirIidxFhsSkinNoticeEnabled = enabled;
-	}
-
 	public boolean isBmsirJudgeRankSortEnabled() {
 		return bmsirJudgeRankSortEnabled;
 	}
@@ -1134,21 +1106,6 @@ public final class PlayerConfig {
 
 	public void setBmsirJudgeRankSortSkinNoticeEnabled(boolean enabled) {
 		bmsirJudgeRankSortSkinNoticeEnabled = enabled;
-	}
-
-	public void resetBmsirIidxFhsRuntimeState() {
-		forEachPlayConfig(PlayConfig::resetIidxFhsRuntimeState);
-	}
-
-	private void forEachPlayConfig(java.util.function.Consumer<PlayConfig> action) {
-		PlayModeConfig[] modes = {
-				mode5, mode7, mode10, mode14, mode9, mode24, mode24double
-		};
-		for (PlayModeConfig mode : modes) {
-			if (mode != null && mode.getPlayconfig() != null) {
-				action.accept(mode.getPlayconfig());
-			}
-		}
 	}
 
 	public String[] getBmsirNumpadActions() {
@@ -1647,8 +1604,6 @@ public final class PlayerConfig {
 		setBmsirCoverHispeedAutoAdjustEnabled(
 				bmsirCoverHispeedAutoAdjustEnabled
 		);
-		setBmsirIidxFhsEnabled(bmsirIidxFhsEnabled);
-		setBmsirIidxFhsSkinNoticeEnabled(bmsirIidxFhsSkinNoticeEnabled);
 		setBmsirJudgeRankSortEnabled(bmsirJudgeRankSortEnabled);
 		setBmsirJudgeRankSortSkinNoticeEnabled(
 				bmsirJudgeRankSortSkinNoticeEnabled

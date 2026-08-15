@@ -168,8 +168,6 @@ public final class BMSIRArenaConfigStore {
         private String coverControlMode;
         private Integer coverChangeStep;
         private boolean coverHispeedAutoAdjustEnabled = false;
-        private Boolean iidxFhsEnabled;
-        private Boolean iidxFhsSkinNoticeEnabled;
         private Boolean judgeRankSortEnabled;
         private Boolean judgeRankSortSkinNoticeEnabled;
         private String[] numpadActions;
@@ -233,9 +231,6 @@ public final class BMSIRArenaConfigStore {
             settings.coverChangeStep = player.getBmsirCoverChangeStep();
             settings.coverHispeedAutoAdjustEnabled =
                     player.isBmsirCoverHispeedAutoAdjustEnabled();
-            settings.iidxFhsEnabled = player.isBmsirIidxFhsEnabled();
-            settings.iidxFhsSkinNoticeEnabled =
-                    player.isBmsirIidxFhsSkinNoticeEnabled();
             settings.judgeRankSortEnabled =
                     player.isBmsirJudgeRankSortEnabled();
             settings.judgeRankSortSkinNoticeEnabled =
@@ -335,14 +330,6 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirCoverHispeedAutoAdjustEnabled(
                     coverHispeedAutoAdjustEnabled
             );
-            if (iidxFhsEnabled != null) {
-                player.setBmsirIidxFhsEnabled(iidxFhsEnabled);
-            }
-            if (iidxFhsSkinNoticeEnabled != null) {
-                player.setBmsirIidxFhsSkinNoticeEnabled(
-                        iidxFhsSkinNoticeEnabled
-                );
-            }
             if (judgeRankSortEnabled != null) {
                 player.setBmsirJudgeRankSortEnabled(judgeRankSortEnabled);
             }
