@@ -10,11 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.45**. One default-OFF BMS-IR
+The current client source version is **0.4.14.46**. One default-OFF BMS-IR
 setting hides unavailable songs across every difficulty table without changing
-ordinary folders, searches, or Arena candidate lists. The current development
-source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
-FIX values remain available. Entering READY after the first-timing preview now
+ordinary folders, searches, or Arena candidate lists. This release also removes
+the standalone optional IIDX FHS; the five legacy HI-SPEED FIX values remain
+available. Entering READY after the first-timing preview now
 preserves the live fixed HI-SPEED and cover settings. Applying one-bass to a
 borrowed standard RANDOM now retains its placement except for the required
 two-lane swap and re-encodes the result as an ordinary 24-bit seed. In Music
@@ -34,6 +34,16 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Arena oraja 0.4.14.46
+
+This release removes the standalone optional IIDX FHS while its replacement
+behavior is unspecified, preserves fixed HI-SPEED and cover settings when the
+first-timing preview enters READY, and keeps a borrowed RANDOM placement when
+one-bass is applied. Music Select also accepts loose difference charts dropped
+onto a selected physical song. On macOS, Arena overlay IME fields now run their
+native text control in an isolated helper JVM and automatically unlock body
+input if that helper cannot start or exits unexpectedly.
+
 ## Arena oraja 0.4.14.45
 
 The startup launcher's BMS-IR-specific settings now include one shared switch
@@ -44,12 +54,6 @@ ordinary folders, searches, and Arena candidate lists unchanged.
 The signed internal channel used `0.4.14.44` for a launcher/plugin-only sparse
 update while the body stayed on `0.4.14.43`; the body therefore advances to
 `0.4.14.45` so its identity and the next channel version are aligned again.
-
-The current development source also accepts loose BMS/BME/BML/PMS/BMSON
-difference-chart files dropped onto a selected physical song in Music Select.
-It copies them into that song folder without overwriting existing files,
-rescans only the folder, and refreshes Music Select. Folder/package drops and
-archive-backed selected songs remain unsupported.
 
 ## Arena oraja 0.4.14.43
 
