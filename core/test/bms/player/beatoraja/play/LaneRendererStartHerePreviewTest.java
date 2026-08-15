@@ -9,6 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
 	@Test
+	void previewExitRewindsTheTimelineCursorToTheChartStart() {
+		assertEquals(0, LaneRenderer.chartStartTimelinePosition());
+	}
+
+	@Test
 	void noteThicknessGrowsFromTheChartAnchorInsteadOfShiftingItsCenter() {
 		assertEquals(105f, LaneRenderer.noteDestinationY(100f, 5f));
 	}

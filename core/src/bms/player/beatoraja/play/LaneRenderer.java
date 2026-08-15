@@ -110,7 +110,7 @@ public class LaneRenderer {
 	}
 
 	public void init(BMSModel model) {
-		pos = 0;
+		pos = chartStartTimelinePosition();
 		this.model = model;
 		BMSIRManiacPlayContext maniacContext = main.resource.getManiacPlayContext();
 		this.maniacSettings = maniacContext == null ? null : maniacContext.settings();
@@ -166,9 +166,13 @@ public class LaneRenderer {
 		updateStartHerePreviewMetrics();
 	}
 
-	/** Restarts the monotonic timeline scan when an isolated skin preview loops. */
-	public void resetSkinPreviewTimeline() {
-		pos = 0;
+	/** Restarts the monotonic timeline scan without restoring saved play settings. */
+	public void resetTimelinePosition() {
+		pos = chartStartTimelinePosition();
+	}
+
+	static int chartStartTimelinePosition() {
+		return 0;
 	}
 
 	public float getHispeed() {
@@ -308,7 +312,7 @@ public class LaneRenderer {
 			(main.timer.isTimerOn(141) ? time - main.timer.getTimer(141) : 0)) + config.getJudgetiming();
 		if (main.getState() == BMSPlayer.STATE_PRACTICE) {
 			time = main.getPracticeConfiguration().getPracticeProperty().starttime;
-			pos = 0;
+			pos = chartStartTimelinePosition();
 		}
 		final long microtime = time * 1000;
 		final boolean showTimeline = (main.getState() == BMSPlayer.STATE_PRACTICE);
