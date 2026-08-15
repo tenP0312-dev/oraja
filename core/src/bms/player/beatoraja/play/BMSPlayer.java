@@ -149,6 +149,8 @@ public class BMSPlayer extends MainState {
 
 		RandomTrainer randomtrainer = new RandomTrainer();
         Optional<GhostBattlePlay.Settings> ghostBattle = GhostBattlePlay.consume();
+		final ReplayData borrowedChartOption = resource.getChartOption();
+		boolean borrowedChartOptionApplied = false;
 
 		ReplayData HSReplay = null;
 
@@ -173,14 +175,14 @@ public class BMSPlayer extends MainState {
                 }
             }
         }
-		else if(resource.getChartOption() != null) {
-			ReplayData chartOption = resource.getChartOption();
-			playinfo.randomoption = chartOption.randomoption;
-			playinfo.randomoptionseed = chartOption.randomoptionseed;
-			playinfo.randomoption2 = chartOption.randomoption2;
-			playinfo.randomoption2seed = chartOption.randomoption2seed;
-			playinfo.doubleoption = normalDoubleOption(chartOption.doubleoption);
-			playinfo.rand = chartOption.rand;
+		else if(borrowedChartOption != null) {
+			borrowedChartOptionApplied = true;
+			playinfo.randomoption = borrowedChartOption.randomoption;
+			playinfo.randomoptionseed = borrowedChartOption.randomoptionseed;
+			playinfo.randomoption2 = borrowedChartOption.randomoption2;
+			playinfo.randomoption2seed = borrowedChartOption.randomoption2seed;
+			playinfo.doubleoption = normalDoubleOption(borrowedChartOption.doubleoption);
+			playinfo.rand = borrowedChartOption.rand;
 		}
 		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 			if (resource.getCourseBMSModels() != null) {
@@ -459,30 +461,56 @@ public class BMSPlayer extends MainState {
 				playinfo.oneBassTarget2 = -1;
 			}
 			if (rd == null && playinfo.oneBassTarget >= 0) {
-				playinfo.randomoptionseed = OneBassPattern.selectReplayableSeed(
-						model.getMode(),
-						0,
-						playinfo.oneBassTarget,
-						playinfo.randomoptionseed
-				);
-				logger.info(
-						"LR2ワンバス(1P) : Target Lane {}, Seed : {}",
-						playinfo.oneBassTarget,
-						playinfo.randomoptionseed
-				);
+				long selectedSeed = borrowedChartOptionApplied
+						? OneBassPattern.selectBorrowedReplayableSeed(
+								model.getMode(),
+								0,
+								playinfo.oneBassTarget,
+								playinfo.randomoptionseed
+						)
+						: OneBassPattern.selectReplayableSeed(
+								model.getMode(),
+								0,
+								playinfo.oneBassTarget,
+								playinfo.randomoptionseed
+						);
+				if (selectedSeed >= 0) {
+					playinfo.randomoptionseed = selectedSeed;
+					logger.info(
+							"LR2ワンバス(1P) : Target Lane {}, Seed : {}",
+							playinfo.oneBassTarget,
+							playinfo.randomoptionseed
+					);
+				} else {
+					logger.warn("LR2ワンバス(1P) : 借用RANDOM seedを再符号化できないため無効化");
+					playinfo.oneBassTarget = -1;
+				}
 			}
 			if (rd == null && playinfo.oneBassTarget2 >= 0) {
-				playinfo.randomoption2seed = OneBassPattern.selectReplayableSeed(
-						model.getMode(),
-						1,
-						playinfo.oneBassTarget2,
-						playinfo.randomoption2seed
-				);
-				logger.info(
-						"LR2ワンバス(2P) : Target Lane {}, Seed : {}",
-						playinfo.oneBassTarget2,
-						playinfo.randomoption2seed
-				);
+				long selectedSeed = borrowedChartOptionApplied
+						? OneBassPattern.selectBorrowedReplayableSeed(
+								model.getMode(),
+								1,
+								playinfo.oneBassTarget2,
+								playinfo.randomoption2seed
+						)
+						: OneBassPattern.selectReplayableSeed(
+								model.getMode(),
+								1,
+								playinfo.oneBassTarget2,
+								playinfo.randomoption2seed
+						);
+				if (selectedSeed >= 0) {
+					playinfo.randomoption2seed = selectedSeed;
+					logger.info(
+							"LR2ワンバス(2P) : Target Lane {}, Seed : {}",
+							playinfo.oneBassTarget2,
+							playinfo.randomoption2seed
+					);
+				} else {
+					logger.warn("LR2ワンバス(2P) : 借用RANDOM seedを再符号化できないため無効化");
+					playinfo.oneBassTarget2 = -1;
+				}
 			}
 
 			Array<PatternModifier> mods = new Array<PatternModifier>();

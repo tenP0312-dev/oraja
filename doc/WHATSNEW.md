@@ -1,5 +1,8 @@
 # Unreleased
 
+- One-bass applied to a borrowed standard RANDOM now preserves the borrowed
+  placement except for its required two-lane swap, then re-encodes the complete
+  result as an ordinary 24-bit seed for replay and later IR borrowing.
 - Fixed the loading-to-READY transition restoring saved lane-renderer settings.
   Manual and natural first-timing preview completion now rewind only the chart
   timeline, preserving the live fixed HI-SPEED, green number, and covers.

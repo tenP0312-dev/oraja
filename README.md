@@ -15,7 +15,9 @@ setting hides unavailable songs across every difficulty table without changing
 ordinary folders, searches, or Arena candidate lists. The current development
 source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
 FIX values remain available. Entering READY after the first-timing preview now
-preserves the live fixed HI-SPEED and cover settings.
+preserves the live fixed HI-SPEED and cover settings. Applying one-bass to a
+borrowed standard RANDOM now retains its placement except for the required
+two-lane swap and re-encodes the result as an ordinary 24-bit seed.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
