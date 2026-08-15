@@ -1,6 +1,7 @@
 package bms.player.beatoraja.select;
 
 import bms.player.beatoraja.PlayerConfig;
+import com.badlogic.gdx.utils.Json;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,11 +13,26 @@ class BMSIRSelectOptionCompatibilityTest {
     void judgeExtensionAndNoticeDefaultsAreIndependent() {
         PlayerConfig player = new PlayerConfig();
 
+        assertFalse(player.isBmsirHideMissingTableSongs());
         assertTrue(player.isBmsirJudgeRankSortEnabled());
         assertTrue(player.isBmsirJudgeRankSortSkinNoticeEnabled());
 
         player.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         assertFalse(player.isBmsirJudgeRankSortSkinNoticeEnabled());
+    }
+
+    @Test
+    void missingTableSongSettingPersistsInPlayerConfig() {
+        PlayerConfig player = new PlayerConfig();
+
+        player.setBmsirHideMissingTableSongs(true);
+
+        assertTrue(player.isBmsirHideMissingTableSongs());
+        PlayerConfig restored = new Json().fromJson(
+                PlayerConfig.class,
+                PlayerConfig.getConfigJson(player)
+        );
+        assertTrue(restored.isBmsirHideMissingTableSongs());
     }
 
     @Test

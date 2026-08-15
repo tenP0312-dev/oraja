@@ -142,6 +142,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirSelectMode24kDp;
 	@FXML
+	private CheckBox bmsirHideMissingTableSongs;
+	@FXML
 	private CheckBox bmsirLongNoteFixed;
 	@FXML
 	private ComboBox<String> bmsirArenaLanguage;
@@ -801,6 +803,9 @@ public class PlayConfigurationView implements Initializable {
 					selectModes.contains(selectableModes[index].id())
 			);
 		}
+		bmsirHideMissingTableSongs.setSelected(
+				player.isBmsirHideMissingTableSongs()
+		);
 		bmsirLongNoteFixed.setSelected(true);
 		bmsirLongNoteFixed.setDisable(true);
 		bmsirArenaLanguage.getSelectionModel().select(
@@ -996,6 +1001,9 @@ public class PlayConfigurationView implements Initializable {
 			}
 		}
 		player.setBmsirSelectKeyModes(selectModes.toArray(String[]::new));
+		player.setBmsirHideMissingTableSongs(
+				bmsirHideMissingTableSongs.isSelected()
+		);
 		player.setBmsirArenaLanguage(
 				bmsirArenaLanguage.getSelectionModel().getSelectedIndex() == 1
 						? "en"

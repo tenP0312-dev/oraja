@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.43`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.45`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -38,6 +38,12 @@ root on the render thread, so one batch causes one hot reload without a game
 restart or stale folder objects. Empty tables appear after their first saved
 chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
 Web editor.
+
+The selected-table snapshot may include an optional `aggregate_folder` label.
+When present, the client keeps every authoritative level folder and appends one
+display-only folder containing the same complete chart set. It does not add
+duplicate snapshot entries or draft/edit identities. The cross-game all-song
+master uses this field for `全曲`; ordinary personal and system tables omit it.
 
 In the same version, clicking an Arena room-name, chat, or My Difficulty Table
 text field places an
@@ -783,6 +789,10 @@ make chart note counts and submitted scores disagree.
   modes are hidden throughout Music Select and are omitted from every mode
   cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
   retains all concrete modes. An empty allow-list is normalized to 7K.
+- `全難易度表で未所持曲を隠す` is a single per-player, default-OFF switch for
+  every difficulty table. When enabled it hides unavailable song bars inside
+  table folders even while HTTP downloads are enabled. Ordinary folders,
+  searches, and Arena candidate lists keep their existing visibility behavior.
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
   playable key through the DECIDE-to-READY transition to place the first source
   key on that destination. Once READY is visible the input has been captured
@@ -882,7 +892,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.43-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.45-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -903,7 +913,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.43-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.45-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -919,7 +929,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.43-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.45-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
