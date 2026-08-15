@@ -1,5 +1,6 @@
 package bms.player.beatoraja;
 
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.arena.bmsir.BMSIRJudgeTimingRestore;
@@ -45,6 +47,8 @@ import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.result.CourseResult;
 import bms.player.beatoraja.result.MusicResult;
 import bms.player.beatoraja.select.MusicSelector;
+import bms.player.beatoraja.select.DifferenceChartDropImporter;
+import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.select.bar.TableBar;
 import bms.player.beatoraja.skin.SkinLoader;
 import bms.player.beatoraja.skin.SkinObject.SkinOffset;
@@ -1491,6 +1495,40 @@ public class MainController {
 
 	private UpdateThread updateSong;
 
+	/** Handles loose chart files dropped onto the game window. */
+	public void handleFilesDropped(String[] files) {
+		if (files == null || files.length == 0) {
+			return;
+		}
+		if (selector == null || current != selector) {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"差分譜面のD&D登録は選曲画面でのみ使用できます",
+					"Difference charts can only be dropped in Music Select"), 5000);
+			return;
+		}
+		if (BMSIRArenaClient.isNominationOpen() || BMSIRArenaClient.isSelectionBlocked()) {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"Arenaの対戦準備中は差分譜面を登録できません",
+					"Difference charts cannot be imported while Arena is preparing a match"), 5000);
+			return;
+		}
+		if (!(selector.getSelectedBar() instanceof SongBar songBar) || !songBar.existsSong()) {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"通常フォルダ内の曲にカーソルを合わせてください",
+					"Select a song in a normal folder before dropping a difference chart"), 5000);
+			return;
+		}
+		if (updateSong != null && updateSong.isAlive()) {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"楽曲データベースを更新中です。完了後にもう一度D&Dしてください",
+					"The song database is being updated. Drop the files again after it finishes"), 5000);
+			return;
+		}
+
+		updateSong = new DifferenceChartImportThread(songBar.getSongData().getPath(), files.clone());
+		updateSong.start();
+	}
+
 	public void updateSong(String path) {
 		updateSong(path, false);
 	}
@@ -1566,6 +1604,76 @@ public class MainController {
 				}
 			}
 		}
+	}
+
+	/** Copies loose difference charts and rescans only the selected song folder. */
+	class DifferenceChartImportThread extends UpdateThread {
+
+		private final String selectedChartPath;
+		private final String[] droppedFiles;
+
+		DifferenceChartImportThread(String selectedChartPath, String[] droppedFiles) {
+			super("importing dropped difference charts");
+			this.selectedChartPath = selectedChartPath;
+			this.droppedFiles = droppedFiles;
+		}
+
+		@Override
+		public void run() {
+			try {
+				List<Path> sources = Arrays.stream(droppedFiles).map(Paths::get).toList();
+				DifferenceChartDropImporter.ImportResult result =
+						DifferenceChartDropImporter.importCharts(Paths.get(selectedChartPath), sources);
+				SongDatabaseUpdateListener listener = new SongDatabaseUpdateListener();
+				getSongDatabase().updateSongDatas(result.targetDirectory().toString(), config.getBmsroot(), false,
+						false, getInfoDatabase(), listener);
+				ImGuiNotify.info(BMSIRArenaI18n.text(
+						String.format("差分譜面を%dファイル登録しました", result.importedFiles().size()),
+						String.format("Imported %d difference chart(s)", result.importedFiles().size())), 5000);
+			} catch (DifferenceChartDropImporter.ImportException exception) {
+				ImGuiNotify.warning(differenceChartImportFailureMessage(exception), 7000);
+			} catch (InvalidPathException exception) {
+				ImGuiNotify.warning(BMSIRArenaI18n.text(
+						"D&Dされたファイルのパスを読み取れませんでした",
+						"A dropped file path could not be read"), 7000);
+			} catch (RuntimeException exception) {
+				logger.error("差分譜面のD&D登録に失敗しました", exception);
+				ImGuiNotify.error(BMSIRArenaI18n.text(
+						"差分譜面の登録中にエラーが発生しました",
+						"An error occurred while importing difference charts"));
+			}
+		}
+	}
+
+	private String differenceChartImportFailureMessage(DifferenceChartDropImporter.ImportException exception) {
+		String name = exception.subject() == null || exception.subject().getFileName() == null
+				? "" : " (" + exception.subject().getFileName() + ")";
+		return switch (exception.failure()) {
+		case NO_FILES -> BMSIRArenaI18n.text(
+				"差分譜面ファイルがD&Dされていません", "No difference-chart files were dropped");
+		case SELECTED_CHART_UNAVAILABLE -> BMSIRArenaI18n.text(
+				"選択中の曲の保存先を確認できません", "The selected song folder is unavailable");
+		case ARCHIVE_SELECTED -> BMSIRArenaI18n.text(
+				"ZIP/RAR/7z内の曲への差分追加には対応していません",
+				"Adding differences to songs inside ZIP/RAR/7z archives is not supported");
+		case TARGET_NOT_WRITABLE -> BMSIRArenaI18n.text(
+				"選択中の曲フォルダへ書き込めません", "The selected song folder is not writable");
+		case SOURCE_NOT_FILE -> BMSIRArenaI18n.text(
+				"フォルダや存在しないファイルは登録できません" + name,
+				"Folders and unavailable files cannot be imported" + name);
+		case UNSUPPORTED_TYPE -> BMSIRArenaI18n.text(
+				"BMS/BME/BML/PMS/BMSON形式の差分譜面だけを登録できます" + name,
+				"Only BMS/BME/BML/PMS/BMSON difference charts can be imported" + name);
+		case DESTINATION_EXISTS -> BMSIRArenaI18n.text(
+				"同名ファイルが曲フォルダにあるため上書きしません" + name,
+				"A same-named file already exists; it was not overwritten" + name);
+		case DUPLICATE_FILENAME -> BMSIRArenaI18n.text(
+				"同名のファイルが複数D&Dされました" + name,
+				"Multiple dropped files have the same name" + name);
+		case IO_FAILURE -> BMSIRArenaI18n.text(
+				"曲フォルダへのコピーに失敗しました。追加途中のファイルは取り消しました",
+				"Copying failed; files created by this import were rolled back");
+		};
 	}
 
 	/**

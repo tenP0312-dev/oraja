@@ -1,5 +1,11 @@
 # Unreleased
 
+- Music Select accepts loose BMS/BME/BML/PMS/BMSON difference-chart files
+  dropped onto a selected physical song. The source files are copied into that
+  song folder without overwriting, only that folder is rescanned, and the song
+  list refreshes when the update finishes. Folder/package drops, ZIP/RAR/7z
+  files, and archive-backed selected songs are rejected without changing them.
+
 # Arena oraja 0.4.14.45
 
 - Added one default-OFF BMS-IR-specific startup setting that hides unavailable

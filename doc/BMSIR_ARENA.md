@@ -207,6 +207,21 @@ operation; `Load from URL` handles custom tables separately. Existing table
 URLs, active ordering, BMS roots, and archive-scanning settings remain
 compatible with saved profiles.
 
+## Difference-chart drag and drop
+
+While Music Select is showing an ordinary physical song, loose `.bms`, `.bme`,
+`.bml`, `.pms`, and `.bmson` difference-chart files can be dropped onto the
+game window. The client copies every accepted file into the selected chart's
+physical folder, rescans only that folder into the song database, and refreshes
+the current song list after the update completes. Source files are never moved.
+
+The whole batch is checked before copying. Existing or duplicate destination
+names are not overwritten, and a failed copy removes files created earlier by
+that batch. Drops are rejected while another song update is running or Arena is
+preparing a match. Directories, full song packages, ZIP/RAR/7z files, arbitrary
+assets, and archive-backed selected songs are outside this feature and remain
+unchanged.
+
 ## ZIP/RAR/7z song archives
 
 Version `0.4.14.38` added the opt-in archive scanner and version `0.4.14.41`
