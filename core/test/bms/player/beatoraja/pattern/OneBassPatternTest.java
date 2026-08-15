@@ -8,6 +8,7 @@ import bms.player.beatoraja.pattern.LaneShuffleModifier.LaneRandomShuffleModifie
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -114,6 +115,147 @@ class OneBassPatternTest {
     }
 
     @Test
+    void borrowedPlacementIsPreservedExceptForTheRequiredTwoLaneSwap() {
+        for (Mode mode : new Mode[]{
+                Mode.BEAT_5K,
+                Mode.BEAT_7K,
+                Mode.BEAT_10K,
+                Mode.BEAT_14K,
+                Mode.POPN_9K
+        }) {
+            for (int player = 0; player < mode.player; player++) {
+                int[] keys = PatternModifier.getKeysForPlayer(mode, player, false);
+                long borrowedSeed = player == 0 ? 123456L : 654321L;
+                int[] borrowed = OneBassPattern.standardPermutation(
+                        mode,
+                        player,
+                        borrowedSeed
+                );
+                for (int targetIndex = 0; targetIndex < keys.length; targetIndex++) {
+                    int[] expected = borrowed.clone();
+                    int sourceIndex = indexOf(expected, keys[0]);
+                    int swap = expected[targetIndex];
+                    expected[targetIndex] = expected[sourceIndex];
+                    expected[sourceIndex] = swap;
+
+                    long selectedSeed = OneBassPattern.selectBorrowedReplayableSeed(
+                            mode,
+                            player,
+                            keys[targetIndex],
+                            borrowedSeed
+                    );
+
+                    assertTrue(
+                            selectedSeed >= 0
+                                    && selectedSeed < OneBassPattern.RANDOM_SEED_BOUND
+                    );
+                    assertArrayEquals(
+                            expected,
+                            OneBassPattern.standardPermutation(
+                                    mode,
+                                    player,
+                                    selectedSeed
+                            ),
+                            "mode=" + mode + " player=" + player
+                                    + " target=" + keys[targetIndex]
+                    );
+                    assertTrue(differenceCount(borrowed, expected) <= 2);
+                }
+            }
+        }
+    }
+
+    @Test
+    void borrowedSeedAlreadyPlacingOneBassIsRetained() {
+        Mode mode = Mode.BEAT_14K;
+        int player = 1;
+        long borrowedSeed = 7654321L;
+        int[] keys = PatternModifier.getKeysForPlayer(mode, player, false);
+        int[] borrowed = OneBassPattern.standardPermutation(
+                mode,
+                player,
+                borrowedSeed
+        );
+        int target = keys[indexOf(borrowed, keys[0])];
+
+        assertEquals(
+                borrowedSeed,
+                OneBassPattern.selectBorrowedReplayableSeed(
+                        mode,
+                        player,
+                        target,
+                        borrowedSeed
+                )
+        );
+    }
+
+    @Test
+    void zeroIsAValidBorrowed24BitSeed() {
+        Mode mode = Mode.BEAT_7K;
+        int[] keys = PatternModifier.getKeysForPlayer(mode, 0, false);
+        int[] borrowed = OneBassPattern.standardPermutation(mode, 0, 0);
+        int target = keys[indexOf(borrowed, keys[0])];
+
+        assertEquals(0, OneBassPattern.selectBorrowedReplayableSeed(
+                mode,
+                0,
+                target,
+                0
+        ));
+    }
+
+    @Test
+    void everySupportedSidePermutationHasAStandard24BitSeed() {
+        assertTrue(OneBassPattern.hasCompleteStandardSeedCoverage(5));
+        assertTrue(OneBassPattern.hasCompleteStandardSeedCoverage(7));
+        assertTrue(OneBassPattern.hasCompleteStandardSeedCoverage(9));
+    }
+
+    @Test
+    void allocationFreePermutationRankMatchesJavaRandom() {
+        for (int laneCount : new int[]{5, 7, 9}) {
+            for (long seed : new long[]{0L, 1L, 123456L, 7654321L}) {
+                Random random = new Random(seed);
+                int expected = 0;
+                for (int remaining = laneCount; remaining > 1; remaining--) {
+                    expected = expected * remaining + random.nextInt(remaining);
+                }
+                assertEquals(
+                        expected,
+                        OneBassPattern.javaRandomPermutationRank(laneCount, seed)
+                );
+            }
+        }
+    }
+
+    @Test
+    void invalidBorrowedSeedsAndUnsupportedModesFailClosed() {
+        int target = PatternModifier.getKeysForPlayer(
+                Mode.BEAT_7K,
+                0,
+                false
+        )[0];
+        assertEquals(-1, OneBassPattern.selectBorrowedReplayableSeed(
+                Mode.BEAT_7K,
+                0,
+                target,
+                -1
+        ));
+        assertEquals(-1, OneBassPattern.selectBorrowedReplayableSeed(
+                Mode.BEAT_7K,
+                0,
+                target,
+                OneBassPattern.RANDOM_SEED_BOUND
+        ));
+        assertEquals(-1, OneBassPattern.selectBorrowedReplayableSeed(
+                Mode.KEYBOARD_24K,
+                0,
+                0,
+                123456L
+        ));
+    }
+
+    @Test
     void captureRequiresStartAndExactlyOnePlayableKeyPerSide() {
         assertEquals(-1, OneBassPattern.captureTarget(
                 Mode.BEAT_14K, 0, false, lane -> lane == 3
@@ -150,6 +292,25 @@ class OneBassPatternTest {
         model.setMode(mode);
         model.setAllTimeLine(new TimeLine[0]);
         return model;
+    }
+
+    private static int indexOf(int[] values, int target) {
+        for (int index = 0; index < values.length; index++) {
+            if (values[index] == target) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static int differenceCount(int[] left, int[] right) {
+        int differences = 0;
+        for (int index = 0; index < left.length; index++) {
+            if (left[index] != right[index]) {
+                differences++;
+            }
+        }
+        return differences;
     }
 
     private static void assertPermutationForSide(

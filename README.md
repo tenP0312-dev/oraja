@@ -15,7 +15,10 @@ setting hides unavailable songs across every difficulty table without changing
 ordinary folders, searches, or Arena candidate lists. The current development
 source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
 FIX values remain available. Entering READY after the first-timing preview now
-preserves the live fixed HI-SPEED and cover settings. In Music Select, loose
+preserves the live fixed HI-SPEED and cover settings. Applying one-bass to a
+borrowed standard RANDOM now retains its placement except for the required
+two-lane swap and re-encodes the result as an ordinary 24-bit seed. In Music
+Select, loose
 BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto a selected
 physical song to copy them beside that song and refresh only that folder.
 Reviewed Windows and macOS packages are distributed from the

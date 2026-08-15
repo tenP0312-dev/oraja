@@ -818,6 +818,12 @@ make chart note counts and submitted scores disagree.
   ordinary play. New plays choose an ordinary 24-bit RANDOM seed that already places
   the first source key at the requested destination, so replay-chart and IR
   rival-chart borrowing reproduce the final placement from the seed alone.
+  When one-bass is applied while borrowing a standard RANDOM, the borrowed
+  placement is used as the base: only the first source key and requested
+  destination are swapped. The complete result is then re-encoded as another
+  ordinary 24-bit RANDOM seed, so replay and later IR borrowing need no extra
+  one-bass metadata. A borrowed seed that already satisfies the request is
+  retained unchanged, and DP encodes each side independently.
   Replay files retain the destination to reproduce the pre-0.4.3 swap-based
   format as well.
 - `bmsir-helper/random_pattern_dp.html` is extracted next to the atomic

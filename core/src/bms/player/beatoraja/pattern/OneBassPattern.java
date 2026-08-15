@@ -2,7 +2,10 @@ package bms.player.beatoraja.pattern;
 
 import bms.model.Mode;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntPredicate;
 
@@ -12,6 +15,11 @@ import java.util.function.IntPredicate;
 public final class OneBassPattern {
     static final long RANDOM_SEED_BOUND = 65536L * 256L;
     private static final int RANDOM_SEED_ATTEMPTS = 4096;
+    private static final long JAVA_RANDOM_MULTIPLIER = 0x5DEECE66DL;
+    private static final long JAVA_RANDOM_ADDEND = 0xBL;
+    private static final long JAVA_RANDOM_MASK = (1L << 48) - 1;
+    private static final Map<Integer, long[]> STANDARD_SEEDS_BY_RANK =
+            new ConcurrentHashMap<>();
 
     private OneBassPattern() {
     }
@@ -93,13 +101,52 @@ public final class OneBassPattern {
         return -1;
     }
 
+    /**
+     * 借用した通常RANDOM配置を基準に元1鍵と指定先だけを交換し、その完成配置を
+     * 通常の24bit seedだけで再現できるseedへ再符号化する。
+     */
+    public static long selectBorrowedReplayableSeed(
+            Mode mode,
+            int player,
+            int targetLane,
+            long borrowedSeed
+    ) {
+        if (
+                !isValidTarget(mode, player, targetLane)
+                        || borrowedSeed < 0
+                        || borrowedSeed >= RANDOM_SEED_BOUND
+        ) {
+            return -1;
+        }
+
+        int[] keys = PatternModifier.getKeysForPlayer(mode, player, false);
+        int[] finalSources = standardPermutation(keys, borrowedSeed);
+        int targetIndex = indexOf(keys, targetLane);
+        int sourceIndex = indexOf(finalSources, keys[0]);
+        if (targetIndex < 0 || sourceIndex < 0) {
+            return -1;
+        }
+        if (sourceIndex == targetIndex) {
+            return borrowedSeed;
+        }
+
+        int swap = finalSources[targetIndex];
+        finalSources[targetIndex] = finalSources[sourceIndex];
+        finalSources[sourceIndex] = swap;
+        return standardSeedForPermutation(keys, finalSources);
+    }
+
     static boolean seedPlacesFirstSourceAtTarget(
             Mode mode,
             int player,
             int targetLane,
             long seed
     ) {
-        if (!isValidTarget(mode, player, targetLane) || seed < 0) {
+        if (
+                !isValidTarget(mode, player, targetLane)
+                        || seed < 0
+                        || seed >= RANDOM_SEED_BOUND
+        ) {
             return false;
         }
         int[] keys = PatternModifier.getKeysForPlayer(mode, player, false);
@@ -122,6 +169,163 @@ public final class OneBassPattern {
             remainingCount--;
         }
         return false;
+    }
+
+    static int[] standardPermutation(Mode mode, int player, long seed) {
+        if (
+                !isSupportedMode(mode)
+                        || player < 0
+                        || player >= mode.player
+                        || seed < 0
+                        || seed >= RANDOM_SEED_BOUND
+        ) {
+            return new int[0];
+        }
+        return standardPermutation(
+                PatternModifier.getKeysForPlayer(mode, player, false),
+                seed
+        );
+    }
+
+    private static int[] standardPermutation(int[] keys, long seed) {
+        int[] remaining = keys.clone();
+        int[] sources = new int[keys.length];
+        int remainingCount = remaining.length;
+        Random random = new Random(seed);
+        for (int destination = 0; destination < keys.length; destination++) {
+            int selectedIndex = random.nextInt(remainingCount);
+            sources[destination] = remaining[selectedIndex];
+            System.arraycopy(
+                    remaining,
+                    selectedIndex + 1,
+                    remaining,
+                    selectedIndex,
+                    remainingCount - selectedIndex - 1
+            );
+            remainingCount--;
+        }
+        return sources;
+    }
+
+    private static long standardSeedForPermutation(
+            int[] keys,
+            int[] sources
+    ) {
+        int rank = permutationRank(keys, sources);
+        if (rank < 0) {
+            return -1;
+        }
+        long[] seeds = STANDARD_SEEDS_BY_RANK.computeIfAbsent(
+                keys.length,
+                OneBassPattern::buildStandardSeedLookup
+        );
+        return seeds[rank];
+    }
+
+    private static int permutationRank(int[] keys, int[] sources) {
+        if (keys.length == 0 || keys.length != sources.length) {
+            return -1;
+        }
+        int[] remaining = keys.clone();
+        int remainingCount = remaining.length;
+        int rank = 0;
+        for (int source : sources) {
+            int selectedIndex = indexOf(remaining, remainingCount, source);
+            if (selectedIndex < 0) {
+                return -1;
+            }
+            rank = rank * remainingCount + selectedIndex;
+            System.arraycopy(
+                    remaining,
+                    selectedIndex + 1,
+                    remaining,
+                    selectedIndex,
+                    remainingCount - selectedIndex - 1
+            );
+            remainingCount--;
+        }
+        return rank;
+    }
+
+    private static long[] buildStandardSeedLookup(int laneCount) {
+        int permutationCount = factorial(laneCount);
+        long[] seeds = new long[permutationCount];
+        Arrays.fill(seeds, -1L);
+        int missing = permutationCount;
+        for (long seed = 0; seed < RANDOM_SEED_BOUND && missing > 0; seed++) {
+            int rank = javaRandomPermutationRank(laneCount, seed);
+            if (seeds[rank] < 0) {
+                seeds[rank] = seed;
+                missing--;
+            }
+        }
+        return seeds;
+    }
+
+    static int javaRandomPermutationRank(int laneCount, long seed) {
+        if (laneCount <= 0) {
+            return -1;
+        }
+        long state = (seed ^ JAVA_RANDOM_MULTIPLIER) & JAVA_RANDOM_MASK;
+        int rank = 0;
+        for (int remaining = laneCount; remaining > 1; remaining--) {
+            int selected;
+            if ((remaining & -remaining) == remaining) {
+                state = nextJavaRandomState(state);
+                int bits = (int) (state >>> 17);
+                selected = (int) ((remaining * (long) bits) >> 31);
+            } else {
+                int bits;
+                int value;
+                do {
+                    state = nextJavaRandomState(state);
+                    bits = (int) (state >>> 17);
+                    value = bits % remaining;
+                } while (bits - value + (remaining - 1) < 0);
+                selected = value;
+            }
+            rank = rank * remaining + selected;
+        }
+        return rank;
+    }
+
+    static boolean hasCompleteStandardSeedCoverage(int laneCount) {
+        long[] seeds = STANDARD_SEEDS_BY_RANK.computeIfAbsent(
+                laneCount,
+                OneBassPattern::buildStandardSeedLookup
+        );
+        for (long seed : seeds) {
+            if (seed < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static long nextJavaRandomState(long state) {
+        return (state * JAVA_RANDOM_MULTIPLIER + JAVA_RANDOM_ADDEND)
+                & JAVA_RANDOM_MASK;
+    }
+
+    private static int factorial(int value) {
+        int result = 1;
+        for (int factor = 2; factor <= value; factor++) {
+            result *= factor;
+        }
+        return result;
+    }
+
+    private static int indexOf(int[] values, int target) {
+        return indexOf(values, values.length, target);
+    }
+
+    private static int indexOf(int[] values, int length, int target) {
+        for (int index = 0; index < length; index++) {
+            if (values[index] == target) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private static boolean isValidTarget(Mode mode, int player, int targetLane) {
