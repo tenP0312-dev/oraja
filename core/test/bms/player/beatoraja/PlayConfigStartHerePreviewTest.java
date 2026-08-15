@@ -8,6 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlayConfigStartHerePreviewTest {
     @Test
+    void removedIidxFhsSelectionMigratesToStartBpm() {
+        PlayConfig config = new PlayConfig();
+        config.setFixhispeed(5);
+
+        config.validate();
+
+        assertEquals(PlayConfig.FIX_HISPEED_STARTBPM, config.getFixhispeed());
+    }
+
+    @Test
     void previewDefaultsAndValidationAreBackwardCompatible() {
         PlayConfig config = new PlayConfig();
         assertTrue(config.isStartHerePreviewEnabled());

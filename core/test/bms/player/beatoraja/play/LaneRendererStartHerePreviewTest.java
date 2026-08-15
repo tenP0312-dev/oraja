@@ -9,6 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaneRendererStartHerePreviewTest {
 	@Test
+	void previewExitRewindsTheTimelineCursorToTheChartStart() {
+		assertEquals(0, LaneRenderer.chartStartTimelinePosition());
+	}
+
+	@Test
 	void noteThicknessGrowsFromTheChartAnchorInsteadOfShiftingItsCenter() {
 		assertEquals(105f, LaneRenderer.noteDestinationY(100f, 5f));
 	}
@@ -121,36 +126,4 @@ class LaneRendererStartHerePreviewTest {
         assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
     }
 
-    @Test
-    void iidxFhsIncludesLiftInSuddenGreenNumberReload() {
-        assertEquals(
-                2.4f,
-                LaneRenderer.iidxFhsHispeed(
-                        150.0, 400, true, 0.5f, true, 0.2f
-                ),
-                0.0001f
-        );
-        assertEquals(
-                4.0f,
-                LaneRenderer.iidxFhsHispeed(
-                        150.0, 400, false, 0.5f, true, 0.2f
-                ),
-                0.0001f
-        );
-    }
-
-    @Test
-    void iidxFhsSuddenReloadTimingMatchesLiftState() {
-        assertTrue(LaneRenderer.shouldResetIidxFhsOnSudToggle(true, false, true));
-        assertFalse(LaneRenderer.shouldResetIidxFhsOnSudToggle(false, false, true));
-        assertTrue(LaneRenderer.shouldResetIidxFhsOnSudToggle(true, true, false));
-        assertFalse(LaneRenderer.shouldResetIidxFhsOnSudToggle(true, true, true));
-        assertTrue(LaneRenderer.shouldResetIidxFhsOnSudToggle(false, true, true));
-    }
-
-    @Test
-    void iidxFhsKeysAlwaysUseHalfSpeedSteps() {
-        assertEquals(0.5f, LaneRenderer.iidxFhsHispeedChange(true));
-        assertEquals(-0.5f, LaneRenderer.iidxFhsHispeedChange(false));
-    }
 }

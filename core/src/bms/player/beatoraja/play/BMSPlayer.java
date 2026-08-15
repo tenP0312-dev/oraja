@@ -834,7 +834,7 @@ public class BMSPlayer extends MainState {
 				if(config.isChartPreview()) {
 					if(timer.isTimerOn(141) && micronow > startpressedtime) {
 						timer.setTimerOff(141);
-						lanerender.init(model);
+						lanerender.resetTimelinePosition();
 					} else if(!timer.isTimerOn(141) && micronow == startpressedtime){
 						timer.setMicroTimer(141, micronow - starttimeoffset * 1000);
 					}
@@ -844,7 +844,7 @@ public class BMSPlayer extends MainState {
 						&& micronow - startpressedtime > 1000000) {
 					if(config.isChartPreview()) {
 						timer.setTimerOff(141);
-						lanerender.init(model);
+						lanerender.resetTimelinePosition();
 					}
 
 					// Wait for the analysis to complete

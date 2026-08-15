@@ -135,7 +135,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private void resetPreviewCycle(Skin skin) {
 		timer.resetSkinPreviewCycle();
 		skin.resetSkinPreviewCycle();
-		previewLaneRenderer.resetSkinPreviewTimeline();
+		previewLaneRenderer.resetTimelinePosition();
 		Arrays.fill(previewPastNotesByPlayer, 0);
 		clearPlayEffects();
 	}

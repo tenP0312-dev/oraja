@@ -5,6 +5,13 @@
   song folder without overwriting, only that folder is rescanned, and the song
   list refreshes when the update finishes. Folder/package drops, ZIP/RAR/7z
   files, and archive-backed selected songs are rejected without changing them.
+- Fixed the loading-to-READY transition restoring saved lane-renderer settings.
+  Manual and natural first-timing preview completion now rewind only the chart
+  timeline, preserving the live fixed HI-SPEED, green number, and covers.
+- Removed the standalone optional IIDX FHS while its replacement behavior is
+  unspecified. Music Select again cycles only the five legacy HI-SPEED FIX
+  values, and a saved former FHS value migrates to START BPM. Judge-rank sort
+  remains independently configurable.
 
 # Arena oraja 0.4.14.45
 

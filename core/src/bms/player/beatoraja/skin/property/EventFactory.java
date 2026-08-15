@@ -233,16 +233,7 @@ public class EventFactory {
 			if(state instanceof MusicSelector selector) {
 	            PlayConfig pc = selector.getSelectedBarPlayConfig();
 	            if (pc != null) {
-	                int fix = BMSIRSelectOptionCompatibility.cycleHsFix(
-						pc,
-						selector.resource.getPlayerConfig(),
-						arg1
-	                );
-	                if (fix == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-						BMSIRSelectOptionCompatibility.notifyIidxFhsIfEnabled(
-								selector.resource.getPlayerConfig()
-						);
-	                }
+	                pc.setFixhispeed((pc.getFixhispeed() + (arg1 >= 0 ? 1 : 4)) % 5);
 	                state.play(OPTION_CHANGE);
 	            }				
 			}

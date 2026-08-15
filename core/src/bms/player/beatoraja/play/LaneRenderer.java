@@ -49,7 +49,6 @@ public class LaneRenderer {
 	private final PlaySkin skin;
 
 	private final PlayerConfig config;
-	private final PlayConfig storedPlayConfig;
 	private PlayConfig playconfig;
 	private StartHerePreviewData startHerePreview;
 	private final Rectangle startHerePreviewDestination = new Rectangle();
@@ -95,8 +94,7 @@ public class LaneRenderer {
 		this.config = main.resource.getPlayerConfig();
 		BMSIRManiacPlayContext maniacContext = main.resource.getManiacPlayContext();
 		this.maniacSettings = maniacContext == null ? null : maniacContext.settings();
-		this.storedPlayConfig = config.getPlayConfig(model.getMode()).getPlayconfig();
-		this.playconfig = storedPlayConfig.clone();
+		this.playconfig = config.getPlayConfig(model.getMode()).getPlayconfig().clone();
 
 		init(model);
 
@@ -112,7 +110,7 @@ public class LaneRenderer {
 	}
 
 	public void init(BMSModel model) {
-		pos = 0;
+		pos = chartStartTimelinePosition();
 		this.model = model;
 		BMSIRManiacPlayContext maniacContext = main.resource.getManiacPlayContext();
 		this.maniacSettings = maniacContext == null ? null : maniacContext.settings();
@@ -153,7 +151,6 @@ public class LaneRenderer {
 		basebpm = switch (playconfig.getFixhispeed()) {
 			case PlayConfig.FIX_HISPEED_OFF -> basebpm;
 			case PlayConfig.FIX_HISPEED_STARTBPM -> model.getBpm();
-			case PlayConfig.FIX_HISPEED_IIDX_FHS -> model.getBpm();
 			case PlayConfig.FIX_HISPEED_MINBPM -> minbpm;
 			case PlayConfig.FIX_HISPEED_MAXBPM -> maxbpm;
 			case PlayConfig.FIX_HISPEED_MAINBPM -> mainbpm;
@@ -169,9 +166,13 @@ public class LaneRenderer {
 		updateStartHerePreviewMetrics();
 	}
 
-	/** Restarts the monotonic timeline scan when an isolated skin preview loops. */
-	public void resetSkinPreviewTimeline() {
-		pos = 0;
+	/** Restarts the monotonic timeline scan without restoring saved play settings. */
+	public void resetTimelinePosition() {
+		pos = chartStartTimelinePosition();
+	}
+
+	static int chartStartTimelinePosition() {
+		return 0;
 	}
 
 	public float getHispeed() {
@@ -221,17 +222,14 @@ public class LaneRenderer {
 	}
 
 	public void resetHispeed(double targetbpm) {
-		if (playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-			resetIidxFhs(targetbpm, playconfig.isEnablelanecover());
-		} else if (playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
+		if (playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
 			playconfig.setHispeed((float) ((2400f / (targetbpm / 100) / playconfig.getDuration()) * (1 - (playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0))));
 		}
 	}
 	
 	public void setLanecover(float lanecover) {
 		setLanecoverWithoutHispeedReset(lanecover);
-		resetHispeed(playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS
-				&& nowbpm > 0 ? nowbpm : basebpm);
+		resetHispeed(basebpm);
 	}
 
 	void setLanecoverWithoutHispeedReset(float lanecover) {
@@ -239,36 +237,7 @@ public class LaneRenderer {
 	}
 
 	public void setEnableLanecover(boolean b) {
-		boolean wasEnabled = playconfig.isEnablelanecover();
-		if (wasEnabled == b) {
-			return;
-		}
-		if (playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-			boolean activated = wasEnabled
-					|| playconfig.isIidxFhsSudActivated()
-					|| storedPlayConfig.isIidxFhsSudActivated();
-			boolean shouldReset = shouldResetIidxFhsOnSudToggle(
-					b,
-					playconfig.isEnablelift(),
-					activated
-			);
-			if (b && playconfig.isEnablelift() && !activated) {
-				playconfig.setLanecover(0.125f);
-			}
-			if (!b && shouldReset) {
-				resetIidxFhs(currentIidxFhsBpm(), true);
-			}
-			playconfig.setEnablelanecover(b);
-			if (b) {
-				playconfig.markIidxFhsSudActivated();
-				storedPlayConfig.markIidxFhsSudActivated();
-				if (shouldReset) {
-					resetIidxFhs(currentIidxFhsBpm(), true);
-				}
-			}
-		} else {
-			playconfig.setEnablelanecover(b);
-		}
+		playconfig.setEnablelanecover(b);
 		updateStartHerePreviewMetrics();
 	}
 
@@ -294,9 +263,7 @@ public class LaneRenderer {
 
 	public void changeHispeed(boolean b) {
 		float f;
-		if (playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS) {
-			f = iidxFhsHispeedChange(b);
-		} else if (playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
+		if (playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
 			f = basehispeed * hispeedmargin * (b ? 1 : -1);
 		} else {
 			f = hispeedmargin * (b ? 1 : -1);
@@ -307,63 +274,6 @@ public class LaneRenderer {
 		}
 	}
 
-	private double currentIidxFhsBpm() {
-		return nowbpm > 0 ? nowbpm : basebpm;
-	}
-
-	private void resetIidxFhs(double targetBpm, boolean useSudCover) {
-		float hispeed = iidxFhsHispeed(
-				targetBpm,
-				playconfig.getDuration(),
-				useSudCover,
-				playconfig.getLanecover(),
-				playconfig.isEnablelift(),
-				playconfig.getLift()
-		);
-		if (Float.isFinite(hispeed)) {
-			playconfig.setHispeed(Math.max(
-					PlayConfig.HISPEED_MIN,
-					Math.min(PlayConfig.HISPEED_MAX, hispeed)
-			));
-			updateStartHerePreviewMetrics();
-		}
-	}
-
-	static float iidxFhsHispeed(
-			double bpm,
-			int duration,
-			boolean suddenEnabled,
-			float laneCover,
-			boolean liftEnabled,
-			float lift
-	) {
-		if (!Double.isFinite(bpm) || bpm <= 0 || duration <= 0) {
-			return Float.NaN;
-		}
-		double effectiveCover = effectiveLaneCover(
-				suddenEnabled,
-				laneCover,
-				liftEnabled,
-				lift
-		);
-		return (float) (240000.0 / bpm / duration * (1.0 - effectiveCover));
-	}
-
-	static boolean shouldResetIidxFhsOnSudToggle(
-			boolean enabling,
-			boolean liftEnabled,
-			boolean alreadyActivated
-	) {
-		if (enabling) {
-			return !liftEnabled || !alreadyActivated;
-		}
-		return liftEnabled && alreadyActivated;
-	}
-
-	static float iidxFhsHispeedChange(boolean increase) {
-		return increase ? 0.5f : -0.5f;
-	}
-	
 	public PlayConfig getPlayConfig() {
 		return playconfig;
 	}
@@ -402,7 +312,7 @@ public class LaneRenderer {
 			(main.timer.isTimerOn(141) ? time - main.timer.getTimer(141) : 0)) + config.getJudgetiming();
 		if (main.getState() == BMSPlayer.STATE_PRACTICE) {
 			time = main.getPracticeConfiguration().getPracticeProperty().starttime;
-			pos = 0;
+			pos = chartStartTimelinePosition();
 		}
 		final long microtime = time * 1000;
 		final boolean showTimeline = (main.getState() == BMSPlayer.STATE_PRACTICE);
@@ -426,15 +336,7 @@ public class LaneRenderer {
 		double y = hl;
 
 		final float lanecover = playconfig.isEnablelanecover() ? playconfig.getLanecover() : 0;
-		double durationCover = playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_IIDX_FHS
-				? effectiveLaneCover(
-						playconfig.isEnablelanecover(),
-						playconfig.getLanecover(),
-						playconfig.isEnablelift(),
-						playconfig.getLift()
-				)
-				: lanecover;
-		currentduration = (int) Math.round(region * (1 - durationCover));
+		currentduration = (int) Math.round(region * (1 - lanecover));
 		
 		main.main.getOffset(OFFSET_LIFT).y = (float) (hl - lanes[0].region.y);
 		main.main.getOffset(OFFSET_LANECOVER).y = (float) ((hl - hu) * lanecover);

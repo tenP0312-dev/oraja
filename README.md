@@ -12,7 +12,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 The current client source version is **0.4.14.45**. One default-OFF BMS-IR
 setting hides unavailable songs across every difficulty table without changing
-ordinary folders, searches, or Arena candidate lists. In Music Select, loose
+ordinary folders, searches, or Arena candidate lists. The current development
+source also removes the standalone optional IIDX FHS; the five legacy HI-SPEED
+FIX values remain available. Entering READY after the first-timing preview now
+preserves the live fixed HI-SPEED and cover settings. In Music Select, loose
 BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto a selected
 physical song to copy them beside that song and refresh only that folder.
 Reviewed Windows and macOS packages are distributed from the
