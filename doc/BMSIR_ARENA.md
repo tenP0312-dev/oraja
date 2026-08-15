@@ -50,9 +50,12 @@ text field places an
 IME-capable OS text control directly over the same field. Japanese conversion
 text is therefore visible in its normal input position before it is committed,
 without a separate dialog. These fields reserve UTF-8 capacity by the
-documented Unicode-character limit. The underlying field remains editable as
-a fallback, so an OS editor that cannot take focus never disables ordinary
-half-width input. While an ImGui item or the inline editor
+documented Unicode-character limit. On macOS the Swing control runs in a
+short-lived helper JVM, keeping its AppKit event loop separate from the
+JavaFX/LWJGL body. If that helper does not become ready within five seconds,
+exits, or returns invalid protocol data, the underlying field and body input
+are unlocked automatically. Other platforms retain the in-process control
+with the same startup fail-safe. While an ImGui item or the inline editor
 owns input, keyboard, NUMPAD shortcuts, mouse scratch, scroll, clicks, and
 drags are discarded before the underlying game or skin can consume them.
 

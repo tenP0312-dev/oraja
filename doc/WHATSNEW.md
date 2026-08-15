@@ -1,5 +1,9 @@
 # Unreleased
 
+- Fixed macOS Arena text fields leaving the body input-locked while audio and
+  rendering continued. The IME-capable Swing control now runs in a short-lived
+  helper JVM on macOS, and startup failure, helper exit, or protocol failure
+  always releases keyboard and mouse capture.
 - One-bass applied to a borrowed standard RANDOM now preserves the borrowed
   placement except for its required two-lane swap, then re-encodes the complete
   result as an ordinary 24-bit seed for replay and later IR borrowing.

@@ -4,27 +4,31 @@ import bms.player.beatoraja.modmenu.ImGuiInputCapture;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import com.badlogic.gdx.Gdx;
 import imgui.type.ImString;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.swing.BorderFactory;
-import javax.swing.JDialog;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
-import javax.swing.border.CompoundBorder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Places an IME-capable native editor directly over an Arena ImGui field. */
 final class ArenaInlineTextEditor {
     private static final Logger logger = LoggerFactory.getLogger(ArenaInlineTextEditor.class);
-    private static final AtomicReference<ImString> ACTIVE_TARGET = new AtomicReference<>();
+    private static final long STARTUP_TIMEOUT_SECONDS = 5;
+    private static final AtomicReference<Session> ACTIVE_SESSION = new AtomicReference<>();
+    private static final ExecutorService HELPER_EXECUTOR =
+            Executors.newSingleThreadExecutor(new EditorThreadFactory("bmsir-ime-helper"));
+    private static final ScheduledExecutorService WATCHDOG =
+            Executors.newSingleThreadScheduledExecutor(new EditorThreadFactory("bmsir-ime-watchdog"));
 
     private ArenaInlineTextEditor() {
     }
@@ -37,152 +41,54 @@ final class ArenaInlineTextEditor {
             float itemWidth,
             float itemHeight
     ) {
-        if (!ACTIVE_TARGET.compareAndSet(null, target)) {
+        Session session = new Session(target, maxCodePoints);
+        if (!ACTIVE_SESSION.compareAndSet(null, session)) {
             return;
         }
         ImGuiInputCapture.setExternalEditorOpen(true);
-        String initialValue = target.get();
-        SwingUtilities.invokeLater(() -> showEditor(
-                initialValue,
-                target,
-                maxCodePoints,
-                Math.round(itemX),
-                Math.round(itemY),
-                Math.max(120, Math.round(itemWidth)),
-                Math.max(24, Math.round(itemHeight))
+        session.setStartupTimeout(WATCHDOG.schedule(
+                () -> startupTimedOut(session),
+                STARTUP_TIMEOUT_SECONDS,
+                TimeUnit.SECONDS
         ));
-    }
 
-    private static void showEditor(
-            String initialValue,
-            ImString target,
-            int maxCodePoints,
-            int itemX,
-            int itemY,
-            int itemWidth,
-            int itemHeight
-    ) {
-        try {
-            JDialog window = new JDialog((java.awt.Frame) null);
-            JTextField editor = new JTextField(initialValue);
-            AtomicBoolean finished = new AtomicBoolean();
-            AtomicBoolean focusAcquired = new AtomicBoolean();
-            editor.setBackground(new Color(41, 41, 41));
-            editor.setForeground(new Color(245, 245, 245));
-            editor.setCaretColor(Color.WHITE);
-            editor.setSelectionColor(new Color(65, 105, 160));
-            editor.setSelectedTextColor(Color.WHITE);
-            editor.setFont(new Font(
-                    Font.SANS_SERIF,
-                    Font.PLAIN,
-                    Math.max(13, itemHeight - 9)
-            ));
-            editor.setBorder(new CompoundBorder(
-                    BorderFactory.createLineBorder(new Color(110, 110, 110)),
-                    BorderFactory.createEmptyBorder(1, 5, 1, 5)
-            ));
-
-            window.setUndecorated(true);
-            window.setAlwaysOnTop(true);
-            window.setFocusableWindowState(true);
-            window.setAutoRequestFocus(true);
-            window.setContentPane(editor);
-            window.setSize(itemWidth, itemHeight);
-            position(window, itemX, itemY);
-
-            Timer followWindow = new Timer(
-                    50,
-                    event -> position(window, itemX, itemY)
-            );
-            Runnable accept = () -> finish(
-                    window,
-                    followWindow,
-                    finished,
-                    target,
-                    limitCodePoints(editor.getText(), maxCodePoints)
-            );
-            Runnable cancel = () -> finish(
-                    window,
-                    followWindow,
-                    finished,
-                    target,
-                    null
-            );
-            editor.addActionListener(event -> accept.run());
-            editor.addKeyListener(new KeyAdapter() {
-                @Override
-                public void keyPressed(KeyEvent event) {
-                    if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                        event.consume();
-                        cancel.run();
-                    }
-                }
-            });
-            editor.addFocusListener(new FocusAdapter() {
-                @Override
-                public void focusGained(FocusEvent event) {
-                    focusAcquired.set(true);
-                }
-
-                @Override
-                public void focusLost(FocusEvent event) {
-                    if (focusAcquired.get()) {
-                        accept.run();
-                    }
-                }
-            });
-
-            window.setVisible(true);
-            followWindow.start();
-            window.toFront();
-            window.requestFocus();
-            SwingUtilities.invokeLater(() -> {
-                editor.requestFocusInWindow();
-                editor.setCaretPosition(editor.getText().length());
-            });
-        } catch (RuntimeException error) {
-            logger.warn("Arena inline IME editor could not be opened", error);
-            ACTIVE_TARGET.compareAndSet(target, null);
-            ImGuiInputCapture.setExternalEditorOpen(false);
+        String initialValue = target.get();
+        int relativeX = Math.round(itemX);
+        int relativeY = Math.round(itemY);
+        int width = Math.max(120, Math.round(itemWidth));
+        int height = Math.max(24, Math.round(itemHeight));
+        if (isMacOs(System.getProperty("os.name", ""))) {
+            ArenaInlineTextEditorProtocol.Request request =
+                    new ArenaInlineTextEditorProtocol.Request(
+                            ProcessHandle.current().pid(),
+                            initialValue,
+                            maxCodePoints,
+                            ImGuiRenderer.getWindowScreenX() + relativeX,
+                            ImGuiRenderer.getWindowScreenY() + relativeY,
+                            width,
+                            height
+                    );
+            HELPER_EXECUTOR.execute(() -> runMacOsHelper(session, request));
+            return;
         }
-    }
 
-    static boolean isOpenFor(ImString target) {
-        return ACTIVE_TARGET.get() == target;
-    }
-
-    private static void position(JDialog window, int itemX, int itemY) {
-        window.setLocation(
-                ImGuiRenderer.getWindowScreenX() + itemX,
-                ImGuiRenderer.getWindowScreenY() + itemY
+        ArenaInlineTextEditorWindow.openEmbedded(
+                initialValue,
+                maxCodePoints,
+                relativeX,
+                relativeY,
+                width,
+                height,
+                () -> !session.isCompleted(),
+                session::markReady,
+                result -> complete(session, result),
+                error -> fail(session, "embedded", error)
         );
     }
 
-    private static void finish(
-            JDialog window,
-            Timer followWindow,
-            AtomicBoolean finished,
-            ImString target,
-            String result
-    ) {
-        if (!finished.compareAndSet(false, true)) {
-            return;
-        }
-        followWindow.stop();
-        window.setVisible(false);
-        window.dispose();
-        Runnable complete = () -> {
-            if (result != null) {
-                target.set(result);
-            }
-            ACTIVE_TARGET.compareAndSet(target, null);
-            ImGuiInputCapture.setExternalEditorOpen(false);
-        };
-        if (Gdx.app != null) {
-            Gdx.app.postRunnable(complete);
-        } else {
-            complete.run();
-        }
+    static boolean isOpenFor(ImString target) {
+        Session session = ACTIVE_SESSION.get();
+        return session != null && session.target == target;
     }
 
     static String limitCodePoints(String value, int maxCodePoints) {
@@ -193,5 +99,198 @@ final class ArenaInlineTextEditor {
             return text;
         }
         return text.substring(0, text.offsetByCodePoints(0, limit));
+    }
+
+    static boolean isMacOs(String osName) {
+        return osName != null && osName.toLowerCase(Locale.ROOT).contains("mac");
+    }
+
+    static List<String> helperCommand(String javaHome, String classPath) {
+        String executable = Path.of(javaHome, "bin", "java").toString();
+        return List.of(
+                executable,
+                "-Dapple.awt.UIElement=true",
+                "-cp",
+                classPath,
+                ArenaInlineTextEditorHelper.class.getName()
+        );
+    }
+
+    private static void runMacOsHelper(
+            Session session,
+            ArenaInlineTextEditorProtocol.Request request
+    ) {
+        Process process = null;
+        try {
+            process = new ProcessBuilder(helperCommand(
+                    System.getProperty("java.home"),
+                    System.getProperty("java.class.path")
+            ))
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
+                    .start();
+            if (!session.attachProcess(process)) {
+                return;
+            }
+            try (
+                    DataOutputStream output = new DataOutputStream(process.getOutputStream());
+                    DataInputStream input = new DataInputStream(process.getInputStream())
+            ) {
+                ArenaInlineTextEditorProtocol.writeRequest(output, request);
+                output.flush();
+                output.close();
+
+                int signal = ArenaInlineTextEditorProtocol.readSignal(input);
+                if (signal != ArenaInlineTextEditorProtocol.SIGNAL_READY) {
+                    throw new IllegalStateException("IME helper did not become ready");
+                }
+                if (!session.markReady()) {
+                    return;
+                }
+
+                signal = ArenaInlineTextEditorProtocol.readSignal(input);
+                if (signal == ArenaInlineTextEditorProtocol.SIGNAL_ACCEPT) {
+                    complete(
+                            session,
+                            ArenaInlineTextEditorProtocol.readAcceptedText(input)
+                    );
+                } else if (signal == ArenaInlineTextEditorProtocol.SIGNAL_CANCEL) {
+                    complete(session, null);
+                } else {
+                    throw new IllegalStateException("IME helper failed while editing");
+                }
+            }
+        } catch (Exception error) {
+            fail(session, "macos_helper", error);
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroy();
+            }
+        }
+    }
+
+    private static void startupTimedOut(Session session) {
+        if (session.isReady() || session.isCompleted()) {
+            return;
+        }
+        logger.warn("Arena inline IME editor startup timed out");
+        complete(session, null);
+    }
+
+    private static void fail(Session session, String mode, Throwable error) {
+        if (session.isCompleted()) {
+            return;
+        }
+        logger.warn("Arena inline IME editor could not be opened ({})", mode, error);
+        complete(session, null);
+    }
+
+    private static void complete(Session session, String result) {
+        if (!session.tryComplete()) {
+            return;
+        }
+        session.cancelStartupTimeout();
+        session.destroyProcess();
+        String limitedResult = result == null
+                ? null
+                : limitCodePoints(result, session.maxCodePoints);
+        Runnable apply = () -> {
+            if (!ACTIVE_SESSION.compareAndSet(session, null)) {
+                return;
+            }
+            if (limitedResult != null) {
+                session.target.set(limitedResult);
+            }
+            ImGuiInputCapture.setExternalEditorOpen(false);
+        };
+        if (Gdx.app != null) {
+            try {
+                Gdx.app.postRunnable(apply);
+                return;
+            } catch (RuntimeException error) {
+                logger.warn("Arena inline IME result could not be queued", error);
+            }
+        }
+        apply.run();
+    }
+
+    static final class Session {
+        private final ImString target;
+        private final int maxCodePoints;
+        private final AtomicBoolean ready = new AtomicBoolean();
+        private final AtomicBoolean completed = new AtomicBoolean();
+        private final AtomicReference<Process> process = new AtomicReference<>();
+        private volatile ScheduledFuture<?> startupTimeout;
+
+        Session(ImString target, int maxCodePoints) {
+            this.target = target;
+            this.maxCodePoints = maxCodePoints;
+        }
+
+        boolean markReady() {
+            if (completed.get()) {
+                return false;
+            }
+            ready.set(true);
+            cancelStartupTimeout();
+            return !completed.get();
+        }
+
+        boolean isReady() {
+            return ready.get();
+        }
+
+        boolean tryComplete() {
+            return completed.compareAndSet(false, true);
+        }
+
+        boolean isCompleted() {
+            return completed.get();
+        }
+
+        boolean attachProcess(Process launchedProcess) {
+            process.set(launchedProcess);
+            if (!completed.get()) {
+                return true;
+            }
+            destroyProcess();
+            return false;
+        }
+
+        void destroyProcess() {
+            Process launchedProcess = process.getAndSet(null);
+            if (launchedProcess != null && launchedProcess.isAlive()) {
+                launchedProcess.destroy();
+            }
+        }
+
+        void setStartupTimeout(ScheduledFuture<?> timeout) {
+            startupTimeout = timeout;
+            if (ready.get() || completed.get()) {
+                cancelStartupTimeout();
+            }
+        }
+
+        void cancelStartupTimeout() {
+            ScheduledFuture<?> timeout = startupTimeout;
+            if (timeout != null) {
+                timeout.cancel(false);
+                startupTimeout = null;
+            }
+        }
+    }
+
+    private static final class EditorThreadFactory implements ThreadFactory {
+        private final String name;
+
+        private EditorThreadFactory(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public Thread newThread(Runnable task) {
+            Thread thread = new Thread(task, name);
+            thread.setDaemon(true);
+            return thread;
+        }
     }
 }
