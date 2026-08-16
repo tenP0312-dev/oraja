@@ -221,6 +221,41 @@ operation; `Load from URL` handles custom tables separately. Existing table
 URLs, active ordering, BMS roots, and archive-scanning settings remain
 compatible with saved profiles.
 
+### Test-play folder
+
+Right-clicking a configured BMS root also offers
+`Create/open _BMSIR_TESTPLAY` / `"_BMSIR_TESTPLAY"を作成・開く`. The action
+creates that exact child directory under the selected existing root and opens
+it; it never moves or deletes source files. After charts are added, the normal
+song-library update indexes them.
+
+Any BMS/BMSON whose path contains `_BMSIR_TESTPLAY` as a complete directory
+component is treated as disposable authoring content. Matching is
+case-insensitive, applies to descendant directories and archive virtual paths,
+and does not match a filename or a longer directory name that merely contains
+the text. Such a play keeps its on-screen result but does not write the local
+score, lamp, play/clear count, score history, or replay. It also cannot submit
+to ordinary IR or MANIAC IR and is excluded from Arena possession and
+nomination paths.
+
+設定済みBMSルートを右クリックし、`"_BMSIR_TESTPLAY"を作成・開く` を選ぶと、
+そのルート直下に同名の予約フォルダを作成して開きます。この操作は既存ファイルを
+移動・削除しません。譜面を入れた後、通常の楽曲更新を実行してください。
+
+パス中の完全なフォルダ名が `_BMSIR_TESTPLAY` と一致するBMS/BMSONは、作りかけ
+譜面用の破棄可能なテストプレイとして扱います。大文字・小文字は区別せず、下位
+フォルダとアーカイブ内の仮想パスにも適用します。ファイル名や、文字列を一部に
+含むだけの長いフォルダ名には適用しません。リザルト自体は表示しますが、スコア、
+ランプ、プレイ／クリア回数、スコア履歴、リプレイは保存せず、通常IR、MANIAC IR、
+Arenaにも送信・候補登録しません。
+
+If any chart in a course is below the reserved folder, the aggregate course
+score, course replay, and course IR submission are disabled. Ordinary charts
+elsewhere in that course retain their existing per-chart save behavior. The
+same rule applies in Japanese: コース内に予約フォルダの譜面が1つでもある場合は、
+コース全体のスコア・リプレイ・IR送信を無効にし、それ以外の通常譜面の単曲保存は
+従来どおりです。
+
 ## Difference-chart drag and drop
 
 While Music Select is showing an ordinary physical song, loose `.bms`, `.bme`,

@@ -12,6 +12,7 @@ import bms.player.beatoraja.SystemSoundManager;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.TableDataAccessor;
 import bms.player.beatoraja.Version;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import bms.player.beatoraja.arena.client.Client;
 import bms.player.beatoraja.modmenu.ArenaMenu;
 import bms.player.beatoraja.modmenu.FreqTrainerMenu;
@@ -1528,7 +1529,8 @@ public final class BMSIRArenaClient {
             return SongData.EMPTY;
         }
         for (SongData song : songs) {
-            if (song == null || song.getPath() == null || song.getPath().isBlank()) {
+            if (song == null || song.getPath() == null || song.getPath().isBlank()
+                    || BMSIRTestPlayFolder.contains(song)) {
                 continue;
             }
             String sha256 = song.getSha256();
@@ -1724,6 +1726,13 @@ public final class BMSIRArenaClient {
             ImGuiNotify.warning(t(
                     "Arena選曲: 通常の楽曲譜面を選んでください",
                     "Arena selection: Select a regular song chart"
+            ));
+            return;
+        }
+        if (BMSIRTestPlayFolder.contains(song)) {
+            ImGuiNotify.warning(t(
+                    "Arena選曲: テストプレイ用フォルダの譜面は選べません",
+                    "Arena selection: Test-play folder charts cannot be nominated"
             ));
             return;
         }
@@ -2602,6 +2611,14 @@ public final class BMSIRArenaClient {
         return deadlineMillis > 0L && serverNowMillis >= deadlineMillis;
     }
 
+    static boolean activeChartIsTestPlay() {
+        return main != null
+                && main.getPlayerResource() != null
+                && BMSIRTestPlayFolder.contains(
+                        main.getPlayerResource().getBMSModel()
+                );
+    }
+
     static long interRoundResultExitDeadlineMillis(JsonNode message) {
         if (message == null) {
             return 0L;
@@ -2621,7 +2638,8 @@ public final class BMSIRArenaClient {
     }
 
     public static void onJudge(ScoreData score) {
-        if (!arenaPlayActive || score == null || currentMatchId.isBlank()) {
+        if (!arenaPlayActive || score == null || currentMatchId.isBlank()
+                || activeChartIsTestPlay()) {
             return;
         }
         long now = System.nanoTime();
@@ -2646,7 +2664,8 @@ public final class BMSIRArenaClient {
     }
 
     public static void onMusicResultPrepared(ScoreData score, boolean hardFail) {
-        if (!arenaPlayActive || score == null || currentMatchId.isBlank()) {
+        if (!arenaPlayActive || score == null || currentMatchId.isBlank()
+                || activeChartIsTestPlay()) {
             return;
         }
         ObjectNode message = baseMatchMessage("final");
@@ -3788,8 +3807,10 @@ public final class BMSIRArenaClient {
         String md5 = chart.path("md5").asText();
         int expectedTotalNotes = Math.max(0, chart.path("totalnotes").asInt());
         Gdx.app.postRunnable(() -> {
-            SongData[] songs = main.getSongDatabase().getSongDatas(new String[]{md5});
-            SongData song = songs != null && songs.length > 0 ? songs[0] : null;
+            SongData[] songs = playableOwnedSongs(
+                    main.getSongDatabase().getSongDatas(new String[]{md5})
+            );
+            SongData song = songs.length > 0 ? songs[0] : null;
             /*
              * Existing songdata.db files may contain a CN/HCN-scale note
              * count from before this dedicated client normalized its catalog.

@@ -16,6 +16,7 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.MainController.IRStatus;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.skin.SkinType;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
@@ -27,6 +28,10 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
  */
 public class CourseResult extends AbstractResult {
 	private static final Logger logger = LoggerFactory.getLogger(CourseResult.class);
+
+	static boolean shouldPersistScore(BMSModel[] models) {
+		return !BMSIRTestPlayFolder.containsAny(models);
+	}
 
 	private List<IRSendStatus> irSendStatus = new ArrayList<IRSendStatus>();
 
@@ -250,6 +255,11 @@ public class CourseResult extends AbstractResult {
 	public void updateScoreDatabase() {
 		final PlayerConfig config = resource.getPlayerConfig();
 		BMSModel[] models = resource.getCourseBMSModels();
+		final boolean persistScore = shouldPersistScore(models);
+		if (!persistScore) {
+			resource.setUpdateCourseScore(false);
+			resource.setForceNoIRSend(true);
+		}
 		final ScoreData newscore = getNewScore();
 		if (newscore == null) {
 			return;
@@ -277,11 +287,13 @@ public class CourseResult extends AbstractResult {
 				Arrays.asList(resource.getCourseData().getSong()).stream().mapToInt(sd -> sd.getNotes()).sum());
 		getScoreDataProperty().update(newscore);
 
-		main.getPlayDataAccessor().writeScoreData(newscore, models, config.getLnmode(),
-				random, resource.getConstraint(), resource.isUpdateCourseScore());
-
-
-		logger.info("スコアデータベース更新完了 ");
+		if (persistScore) {
+			main.getPlayDataAccessor().writeScoreData(newscore, models, config.getLnmode(),
+					random, resource.getConstraint(), resource.isUpdateCourseScore());
+			logger.info("スコアデータベース更新完了 ");
+		} else {
+			logger.info("テストプレイ用フォルダの譜面を含むため、コーススコアとリプレイは保存されません");
+		}
 	}
 
 	public int getJudgeCount(int judge, boolean fast) {
