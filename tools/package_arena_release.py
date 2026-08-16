@@ -22,9 +22,9 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.14.38"
+VERSION = "0.4.14.47"
 BODY_FILENAME = "Arena-oraja.jar"
-PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.69.jar"
+PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.72.jar"
 PLATFORM_SPECS = {
     "windows-x86-64": {
         "runtime_os": ("windows",),

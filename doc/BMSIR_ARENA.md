@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.46`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.47`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -923,12 +923,12 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.46-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.47-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
 
-- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.71.jar`;
+- non-bundled: the platform JAR plus `bms_ir_arena_oraja_0.0.72.jar`;
 - Java-bundled: a ready-to-extract ZIP containing the same two reviewed JARs,
   a Java 21 runtime, distribution-cleared base assets, and launch scripts. The
   Windows package contains the portable launcher EXE and the macOS package
@@ -944,8 +944,8 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.46-macos-aarch64.jar \
-  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.47-macos-aarch64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
   --launcher-app "/reviewed/BMS-IR Arena.app" \
@@ -960,8 +960,8 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.46-windows-x86-64.jar \
-  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.71.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.47-windows-x86-64.jar \
+  --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
   --launcher-exe /reviewed/BMS-IR-Arena-launcher.exe \

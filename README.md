@@ -10,18 +10,12 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.46**. One default-OFF BMS-IR
-setting hides unavailable songs across every difficulty table without changing
-ordinary folders, searches, or Arena candidate lists. This release also removes
-the standalone optional IIDX FHS; the five legacy HI-SPEED FIX values remain
-available. Entering READY after the first-timing preview now
-preserves the live fixed HI-SPEED and cover settings. Applying one-bass to a
-borrowed standard RANDOM now retains its placement except for the required
-two-lane swap and re-encodes the result as an ordinary 24-bit seed. In Music
-Select, loose BMS/BME/BML/PMS/BMSON difference charts can also be dropped onto
-a selected physical song to copy them beside that song and refresh only that
-folder. On macOS, Arena overlay IME fields use an isolated helper JVM so native
-text entry cannot lock the JavaFX/LWJGL body input.
+The current client source version is **0.4.14.47**. One-bass now works after
+every borrowed standard-RANDOM path. Seedless RIVALOPTION/REPLAYOPTION
+borrowing selects a new replayable seed, LR2IR G-BATTLE preserves the borrowed
+lane order except for the required two-lane swap, and DP keeps missing seeds
+independent on both sides. The paired BMS-IR plugin 0.0.72 also accepts the
+server's explicit replayable-seed family for exact LR2/oraja SP conversion.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -34,9 +28,9 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
-## Unreleased
+## Arena oraja 0.4.14.47
 
-One-bass now handles every borrowed standard-RANDOM entry path. Seedless
+One-bass handles every borrowed standard-RANDOM entry path. Seedless
 RIVALOPTION/REPLAYOPTION borrowing selects a new replayable seed instead of
 disabling one-bass, LR2IR G-BATTLE resolves its borrowed lane order before the
 two-lane swap, and DP keeps missing-seed state independent on each side.
