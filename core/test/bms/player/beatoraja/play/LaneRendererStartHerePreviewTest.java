@@ -126,4 +126,20 @@ class LaneRendererStartHerePreviewTest {
         assertEquals(1, LaneRenderer.startHerePreviewDuration(0.0, 1.0, 2.0f, false, 0.0f, false, 0.0f));
     }
 
+    @Test
+    void derivesPersistentFixedDurationFromTheLiveHispeedAndCover() {
+        assertEquals(800, LaneRenderer.fixedDurationForHispeed(
+                150.0, 2.0f, false, 0.0f
+        ));
+        assertEquals(400, LaneRenderer.fixedDurationForHispeed(
+                150.0, 2.0f, true, 0.5f
+        ));
+        assertEquals(1, LaneRenderer.fixedDurationForHispeed(
+                0.0, 2.0f, true, 0.5f
+        ));
+        assertEquals(1, LaneRenderer.fixedDurationForHispeed(
+                150.0, 2.0f, true, 1.0f
+        ));
+    }
+
 }

@@ -228,16 +228,71 @@ public class LaneRenderer {
 	}
 	
 	public void setLanecover(float lanecover) {
-		setLanecoverWithoutHispeedReset(lanecover);
+		setLanecoverValue(lanecover);
 		resetHispeed(basebpm);
+		updateStartHerePreviewMetrics();
 	}
 
-	void setLanecoverWithoutHispeedReset(float lanecover) {
+	void changeLanecover(
+			float lanecover,
+			boolean recalculateHispeed,
+			double targetBpm
+	) {
+		setLanecoverValue(lanecover);
+		if (recalculateHispeed && Double.isFinite(targetBpm) && targetBpm > 0.0) {
+			resetHispeed(targetBpm);
+		} else {
+			syncFixedDurationToHispeed();
+		}
+		updateStartHerePreviewMetrics();
+	}
+
+	private void setLanecoverValue(float lanecover) {
 		playconfig.setLanecover(lanecover < 0 ? 0 : (lanecover > 1 ? 1 : lanecover));
+	}
+
+	private void syncFixedDurationToHispeed() {
+		if (playconfig.getFixhispeed() == PlayConfig.FIX_HISPEED_OFF
+				|| !Double.isFinite(basebpm)
+				|| basebpm <= 0.0
+				|| !Float.isFinite(playconfig.getHispeed())
+				|| playconfig.getHispeed() <= 0f) {
+			return;
+		}
+		playconfig.setDuration(fixedDurationForHispeed(
+				basebpm,
+				playconfig.getHispeed(),
+				playconfig.isEnablelanecover(),
+				playconfig.getLanecover()
+		));
+	}
+
+	static int fixedDurationForHispeed(
+			double bpm,
+			float hispeed,
+			boolean laneCoverEnabled,
+			float laneCover
+	) {
+		if (!Double.isFinite(bpm) || bpm <= 0.0
+				|| !Float.isFinite(hispeed) || hispeed <= 0f) {
+			return PlayConfig.DURATION_MIN;
+		}
+		double visible = laneCoverEnabled
+				? 1.0 - Math.max(0f, Math.min(1f, laneCover))
+				: 1.0;
+		double duration = 240000.0 / bpm / hispeed * visible;
+		if (!Double.isFinite(duration)) {
+			return PlayConfig.DURATION_MIN;
+		}
+		return Math.max(
+				PlayConfig.DURATION_MIN,
+				Math.min(PlayConfig.DURATION_MAX, (int) Math.round(duration))
+		);
 	}
 
 	public void setEnableLanecover(boolean b) {
 		playconfig.setEnablelanecover(b);
+		syncFixedDurationToHispeed();
 		updateStartHerePreviewMetrics();
 	}
 
@@ -270,6 +325,7 @@ public class LaneRenderer {
 		}
 		if (playconfig.getHispeed() + f > 0 && playconfig.getHispeed() + f < 20) {
 			playconfig.setHispeed(playconfig.getHispeed() + f);
+			syncFixedDurationToHispeed();
 			updateStartHerePreviewMetrics();
 		}
 	}

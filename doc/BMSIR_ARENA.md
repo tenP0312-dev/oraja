@@ -11,6 +11,10 @@ window is unfocused. Keyboard, mouse, and mouse-scratch input remain
 focus-bound, so a player can work in another application between songs without
 letting ordinary typing operate Arena oraja.
 
+The same version keeps HI-SPEED, green number, SUD+, LIFT, and HIDDEN live
+through PRELOAD and READY. The final pre-start lane-setting state becomes the
+next chart's initial state.
+
 This release adds the default-OFF
 `高レート基準の選曲を許可` setting. Rated selection keeps every level reached
 by the player's active-season peak rating. Players who enable the setting no
@@ -862,7 +866,16 @@ make chart note counts and submitted scores disagree.
   once when loaded, so a silent opening longer than two measures is supported.
   Ending the loading preview rewinds only that scan position before READY; it
   does not restore saved HI-SPEED, green number, lane cover, LIFT, or HIDDEN
-  values over adjustments made on the loading screen.
+  values over adjustments made on the loading screen. PRELOAD and READY share
+  one live lane-setting state until the chart actually starts. HI-SPEED, green
+  number, SUD+, LIFT, and HIDDEN changes are applied immediately, and the final
+  values at PLAY entry become the next chart's initial per-mode settings.
+  With HI-SPEED FIX enabled, a manual HI-SPEED change updates its persistent
+  fixed duration. Ordinary scratch, mouse-wheel, and cursor cover movement
+  preserves that manual HI-SPEED while ordinary auto recalculation is OFF;
+  when it is ON, the cover change recalculates at the current BPM. START+6/7
+  keeps its stricter existing rule and recalculates only when both the ordinary
+  and BMS-IR-specific cover-recalculation switches are ON.
   PlayConfig keeps `startHerePreviewEnabled`. The former measure-count and
   per-side note-cap fields remain readable for 0.4.0-dev configuration
   compatibility but no longer alter this first-timing marker.
