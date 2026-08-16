@@ -10,15 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.48**. The Input tab can opt in to
-reading dedicated game-controller/HID buttons, hats, and axes while Arena
-oraja is unfocused. Keyboard, mouse, and mouse-scratch input remain
-focus-bound, and existing installations keep the option off until the player
-enables it.
-This release also keeps HI-SPEED, green number, SUD+, LIFT,
-and HIDDEN live through PRELOAD and READY. Cover movement preserves a manually
-adjusted HI-SPEED unless its applicable auto-recalculation setting is enabled,
-and the final pre-start state becomes the next chart's initial state.
+The current client source version is **0.4.14.49**. The Resource tab can create
+and open a disposable work folder below the selected BMS Path. Charts below
+the reserved `_BMSIR_TESTPLAY` directory keep their on-screen result but never
+save local records and are never submitted to IR or Arena.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -30,6 +25,14 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.49
+
+The Resource tab adds `Work folder` / `作業フォルダ` below
+`Set DL Directory`. It creates and opens `_BMSIR_TESTPLAY` under the selected
+BMS Path. Charts anywhere below that directory do not save scores, lamps,
+play counts, histories, or replays, and are not submitted to ordinary IR,
+MANIAC IR, course IR, or Arena.
 
 ## Arena oraja 0.4.14.48
 
@@ -229,7 +232,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.48
+  --output-dir /release/build-0.4.14.49
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
