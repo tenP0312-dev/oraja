@@ -181,6 +181,24 @@ Build the client for the target platform:
 ./gradlew core:shadowJar -Dplatform=macos -Darch=aarch64
 ```
 
+For the final internal-release pass, keep two clean worktrees at the same
+reviewed commit with submodules initialized, then run both platform lanes in
+parallel. The helper validates the commit, version constants, submodules, and
+JDK 17 once; each lane runs in its own worktree to avoid Gradle output races.
+
+```sh
+python3 tools/build_arena_release.py \
+  --windows-worktree /release/oraja-windows \
+  --macos-worktree /release/oraja-macos \
+  --java-home /release/jdk-17 \
+  --output-dir /release/build-0.4.14.48
+```
+
+`build-state.json` records both commands, durations, logs, source commit, and
+artifact hashes. Do not recreate the worktrees, download the JDK, or initialize
+submodules during every release; refresh the prepared worktrees to the reviewed
+commit before invoking the helper.
+
 On Windows, use `gradlew.bat` instead of `./gradlew`. Generated jars are
 written under `dist/`.
 
