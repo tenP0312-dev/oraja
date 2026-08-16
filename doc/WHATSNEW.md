@@ -1,3 +1,12 @@
+# Arena oraja 0.4.14.49
+
+- Added `Work folder` / `作業フォルダ` below `Set DL Directory` in the
+  Resource tab. It creates and opens `_BMSIR_TESTPLAY` below the selected BMS
+  Path.
+- Charts below the reserved directory keep their on-screen result but do not
+  save scores, lamps, play counts, histories, or replays, and are not submitted
+  to ordinary IR, MANIAC IR, course IR, or Arena.
+
 # Arena oraja 0.4.14.48
 
 - Added a default-OFF Input-tab setting that keeps dedicated
