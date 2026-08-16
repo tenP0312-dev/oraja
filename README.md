@@ -10,12 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.47**. One-bass now works after
-every borrowed standard-RANDOM path. Seedless RIVALOPTION/REPLAYOPTION
-borrowing selects a new replayable seed, LR2IR G-BATTLE preserves the borrowed
-lane order except for the required two-lane swap, and DP keeps missing seeds
-independent on both sides. The paired BMS-IR plugin 0.0.72 also accepts the
-server's explicit replayable-seed family for exact LR2/oraja SP conversion.
+The current client source version is **0.4.14.48**. The Input tab can opt in to
+reading dedicated game-controller/HID buttons, hats, and axes while Arena
+oraja is unfocused. Keyboard, mouse, and mouse-scratch input remain
+focus-bound, and existing installations keep the option off until the player
+enables it.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -28,7 +27,7 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
-## Unreleased
+## Arena oraja 0.4.14.48
 
 The Input tab can opt in to reading dedicated game-controller/HID buttons,
 hats, and axes while the Arena oraja window is unfocused. Keyboard, mouse, and

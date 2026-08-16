@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.48
+
+- Added a default-OFF Input-tab setting that keeps dedicated
+  game-controller/HID buttons, hats, and axes active while Arena oraja is
+  unfocused. Keyboard, mouse, and mouse-scratch input remain focus-bound.
+
 # Arena oraja 0.4.14.47
 
 - Fixed one-bass after every borrowed standard-RANDOM path. Seedless
