@@ -1,3 +1,11 @@
+# Unreleased
+
+- Made PRELOAD and READY lane settings one live pre-start state. HI-SPEED,
+  green number, SUD+, LIFT, and HIDDEN remain adjustable until play starts;
+  moving SUD+ preserves a manual HI-SPEED when auto recalculation is OFF, and
+  the final fixed-HI-SPEED duration and complete cover state carry into the
+  next chart.
+
 # Arena oraja 0.4.14.47
 
 - Fixed one-bass after every borrowed standard-RANDOM path. Seedless

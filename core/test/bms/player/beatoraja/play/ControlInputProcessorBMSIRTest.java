@@ -84,4 +84,20 @@ class ControlInputProcessorBMSIRTest {
                 true, true, 150.0
         ));
     }
+
+    @Test
+    void ordinaryCoverRecalculationRequiresItsSwitchAndUsableCurrentBpm() {
+        assertFalse(ControlInputProcessor.shouldRecalculateCoverHispeed(
+                false, 150.0
+        ));
+        assertFalse(ControlInputProcessor.shouldRecalculateCoverHispeed(
+                true, 0.0
+        ));
+        assertFalse(ControlInputProcessor.shouldRecalculateCoverHispeed(
+                true, Double.NaN
+        ));
+        assertTrue(ControlInputProcessor.shouldRecalculateCoverHispeed(
+                true, 150.0
+        ));
+    }
 }
