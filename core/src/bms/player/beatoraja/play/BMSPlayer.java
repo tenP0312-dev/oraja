@@ -150,7 +150,8 @@ public class BMSPlayer extends MainState {
 		RandomTrainer randomtrainer = new RandomTrainer();
         Optional<GhostBattlePlay.Settings> ghostBattle = GhostBattlePlay.consume();
 		final ReplayData borrowedChartOption = resource.getChartOption();
-		boolean borrowedChartOptionApplied = false;
+		boolean borrowedRandomPlacement1P = false;
+		boolean borrowedRandomPlacement2P = false;
 
 		ReplayData HSReplay = null;
 
@@ -174,15 +175,31 @@ public class BMSPlayer extends MainState {
                     break;
                 }
             }
+			if (playinfo.randomoption
+					== bms.player.beatoraja.pattern.Random.RANDOM.ordinal()) {
+				long ghostSeed = OneBassPattern.borrowedSeedForLaneOrder(
+						RandomTrainer.getRandomSeedMap(),
+						ghostBattle.get().lanes()
+				);
+				if (ghostSeed >= 0) {
+					playinfo.randomoptionseed = ghostSeed;
+					borrowedRandomPlacement1P = true;
+				}
+			}
         }
 		else if(borrowedChartOption != null) {
-			borrowedChartOptionApplied = true;
 			playinfo.randomoption = borrowedChartOption.randomoption;
 			playinfo.randomoptionseed = borrowedChartOption.randomoptionseed;
 			playinfo.randomoption2 = borrowedChartOption.randomoption2;
 			playinfo.randomoption2seed = borrowedChartOption.randomoption2seed;
 			playinfo.doubleoption = normalDoubleOption(borrowedChartOption.doubleoption);
 			playinfo.rand = borrowedChartOption.rand;
+			borrowedRandomPlacement1P = OneBassPattern.isStandardRandomSeed(
+					playinfo.randomoptionseed
+			);
+			borrowedRandomPlacement2P = OneBassPattern.isStandardRandomSeed(
+					playinfo.randomoption2seed
+			);
 		}
 		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 			if (resource.getCourseBMSModels() != null) {
@@ -461,19 +478,13 @@ public class BMSPlayer extends MainState {
 				playinfo.oneBassTarget2 = -1;
 			}
 			if (rd == null && playinfo.oneBassTarget >= 0) {
-				long selectedSeed = borrowedChartOptionApplied
-						? OneBassPattern.selectBorrowedReplayableSeed(
-								model.getMode(),
-								0,
-								playinfo.oneBassTarget,
-								playinfo.randomoptionseed
-						)
-						: OneBassPattern.selectReplayableSeed(
-								model.getMode(),
-								0,
-								playinfo.oneBassTarget,
-								playinfo.randomoptionseed
-						);
+				long selectedSeed = OneBassPattern.selectReplayableSeed(
+						model.getMode(),
+						0,
+						playinfo.oneBassTarget,
+						playinfo.randomoptionseed,
+						borrowedRandomPlacement1P
+				);
 				if (selectedSeed >= 0) {
 					playinfo.randomoptionseed = selectedSeed;
 					logger.info(
@@ -482,24 +493,18 @@ public class BMSPlayer extends MainState {
 							playinfo.randomoptionseed
 					);
 				} else {
-					logger.warn("LR2ワンバス(1P) : 借用RANDOM seedを再符号化できないため無効化");
+					logger.warn("LR2ワンバス(1P) : 再生可能な通常RANDOM seedを選択できないため無効化");
 					playinfo.oneBassTarget = -1;
 				}
 			}
 			if (rd == null && playinfo.oneBassTarget2 >= 0) {
-				long selectedSeed = borrowedChartOptionApplied
-						? OneBassPattern.selectBorrowedReplayableSeed(
-								model.getMode(),
-								1,
-								playinfo.oneBassTarget2,
-								playinfo.randomoption2seed
-						)
-						: OneBassPattern.selectReplayableSeed(
-								model.getMode(),
-								1,
-								playinfo.oneBassTarget2,
-								playinfo.randomoption2seed
-						);
+				long selectedSeed = OneBassPattern.selectReplayableSeed(
+						model.getMode(),
+						1,
+						playinfo.oneBassTarget2,
+						playinfo.randomoption2seed,
+						borrowedRandomPlacement2P
+				);
 				if (selectedSeed >= 0) {
 					playinfo.randomoption2seed = selectedSeed;
 					logger.info(
@@ -508,7 +513,7 @@ public class BMSPlayer extends MainState {
 							playinfo.randomoption2seed
 					);
 				} else {
-					logger.warn("LR2ワンバス(2P) : 借用RANDOM seedを再符号化できないため無効化");
+					logger.warn("LR2ワンバス(2P) : 再生可能な通常RANDOM seedを選択できないため無効化");
 					playinfo.oneBassTarget2 = -1;
 				}
 			}
@@ -586,10 +591,17 @@ public class BMSPlayer extends MainState {
                     }
 					pm.setSeed(rajaSeed);
 				} else if (ghostBattle.isPresent()) {
-					HashMap<Integer, Long> seedmap = RandomTrainer.getRandomSeedMap();
 					Integer pattern = ghostBattle.get().lanes();
 					logger.info("Ghost battle - fixing lane pattern to {}", pattern);
-					pm.setSeed(seedmap.get(pattern));
+					long ghostSeed = OneBassPattern.borrowedSeedForLaneOrder(
+							RandomTrainer.getRandomSeedMap(),
+							pattern
+					);
+					if (ghostSeed >= 0) {
+						pm.setSeed(ghostSeed);
+					} else {
+						logger.warn("Ghost battle - replayable lane seed is unavailable for {}", pattern);
+					}
 				} else {
 					if (RandomTrainer.isActive()
 							&& (model.getMode() == Mode.BEAT_7K

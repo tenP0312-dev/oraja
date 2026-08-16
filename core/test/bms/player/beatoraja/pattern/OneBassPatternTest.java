@@ -8,6 +8,7 @@ import bms.player.beatoraja.pattern.LaneShuffleModifier.LaneRandomShuffleModifie
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -201,6 +202,50 @@ class OneBassPatternTest {
                 0,
                 target,
                 0
+        ));
+    }
+
+    @Test
+    void seedlessBorrowedOptionFallsBackToANewReplayableSeed() {
+        Mode mode = Mode.BEAT_14K;
+        for (int player = 0; player < mode.player; player++) {
+            int target = PatternModifier.getKeysForPlayer(
+                    mode,
+                    player,
+                    false
+            )[player == 0 ? 2 : 4];
+            long selected = OneBassPattern.selectReplayableSeed(
+                    mode,
+                    player,
+                    target,
+                    -1,
+                    true
+            );
+
+            assertTrue(selected > 0 && selected < OneBassPattern.RANDOM_SEED_BOUND);
+            assertTrue(OneBassPattern.seedPlacesFirstSourceAtTarget(
+                    mode,
+                    player,
+                    target,
+                    selected
+            ));
+        }
+    }
+
+    @Test
+    void borrowedLaneOrderResolvesToItsStandardSeedForGhostBattle() {
+        assertEquals(1917L, OneBassPattern.borrowedSeedForLaneOrder(
+                Map.of(4375162, 1917L),
+                4375162
+        ));
+        assertEquals(-1L, OneBassPattern.borrowedSeedForLaneOrder(null, 4375162));
+        assertEquals(-1L, OneBassPattern.borrowedSeedForLaneOrder(
+                Map.of(4375162, -1L),
+                4375162
+        ));
+        assertEquals(-1L, OneBassPattern.borrowedSeedForLaneOrder(
+                Map.of(1234567, 1917L),
+                4375162
         ));
     }
 

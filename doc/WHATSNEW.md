@@ -1,5 +1,10 @@
 # Unreleased
 
+- Fixed one-bass after every borrowed standard-RANDOM path. Seedless
+  RIVALOPTION/REPLAYOPTION borrowing now chooses a new replayable seed, LR2IR
+  G-BATTLE preserves its borrowed lane order except for the required two-lane
+  swap, and DP keeps missing seeds independent on both sides.
+
 # Arena oraja 0.4.14.46
 
 - Fixed macOS Arena text fields leaving the body input-locked while audio and
