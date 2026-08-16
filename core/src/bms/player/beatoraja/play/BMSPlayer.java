@@ -23,6 +23,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.OneBassLaneRandomShuffleModifier;
 import bms.player.beatoraja.pattern.OneBassPattern;
 import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
@@ -721,11 +722,22 @@ public class BMSPlayer extends MainState {
 			gaugelog[i] = new FloatArray(playtime / 500 + 2);
 		}
 
+		final boolean testPlay = autoplay.mode == BMSPlayerMode.Mode.PLAY
+				&& BMSIRTestPlayFolder.contains(model);
+		if (testPlay) {
+			score = false;
+			forceNoIRSend = true;
+		}
+
 		if (assist != 0) {
 			ImGuiNotify.warning("Assist options enabled. Next play will be saved as an assist clear");
 		}
 		if (!score) {
-			ImGuiNotify.warning("Score nullifying options enabled. Next play will not be saved");
+			ImGuiNotify.warning(testPlay
+					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+							"テストプレイ用フォルダ: スコア保存とIR送信は無効です",
+							"Test-play folder: score saving and IR submission are disabled")
+					: "Score nullifying options enabled. Next play will not be saved");
 		}
 		// No on-screen notice here: forceNoIRSend already follows directly from
 		// options the player themselves turned on (freq trainer, MANIAC), so

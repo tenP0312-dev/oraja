@@ -24,6 +24,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.skin.SkinType;
@@ -36,6 +37,10 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
  */
 public class MusicResult extends AbstractResult {
 	private static final Logger logger = LoggerFactory.getLogger(MusicResult.class);
+
+	static boolean shouldPersistScore(BMSModel model) {
+		return !BMSIRTestPlayFolder.contains(model);
+	}
 
 	private ResultKeyProperty property;
 
@@ -391,6 +396,12 @@ public class MusicResult extends AbstractResult {
 			}
 			return;
 		}
+		final boolean persistScore = shouldPersistScore(resource.getBMSModel());
+		if (!persistScore) {
+			resource.setUpdateScore(false);
+			resource.setUpdateCourseScore(false);
+			resource.setForceNoIRSend(true);
+		}
 		final ScoreData oldsc = main.getPlayDataAccessor().readScoreData(resource.getBMSModel(),
 				resource.getPlayerConfig().getLnmode());
 		oldscore = oldsc != null ? oldsc : new ScoreData();
@@ -502,9 +513,12 @@ public class MusicResult extends AbstractResult {
 			resource.getScoreData().setClear(NoPlay.id);
 		}
 
-		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !(isFreqTrainerEnabled() && isFreqNegative())) {
+		if (persistScore && resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
+				&& !(isFreqTrainerEnabled() && isFreqNegative())) {
 			main.getPlayDataAccessor().writeScoreData(resource.getScoreData(), resource.getBMSModel(),
 					resource.getPlayerConfig().getLnmode(), resource.isUpdateScore());
+		} else if (!persistScore) {
+			logger.info("テストプレイ用フォルダのため、スコアとリプレイは保存されません");
 		} else {
 			logger.info("プレイモードが{}のため、スコア登録はされません", resource.getPlayMode().mode.name());
 		}

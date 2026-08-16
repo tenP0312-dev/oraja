@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.TableDataAccessor;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
@@ -61,11 +62,13 @@ public class ResourceConfigurationView implements Initializable {
 			public ListCell<String> call(ListView<String> param) {
 				return new ListCell<>() {
 					private final MenuItem updateItem = menuItem("BMS_PATH_UPDATE_SELECTED", () -> updateSongPath(getItem()));
+					private final MenuItem testPlayItem = menuItem("BMS_PATH_CREATE_TESTPLAY", () -> createTestPlayPath(getItem()));
 					private final MenuItem openItem = menuItem("BMS_PATH_OPEN", () -> openSongPath(getItem()));
 					private final MenuItem copyItem = menuItem("BMS_PATH_COPY", () -> copySongPath(getItem()));
 					private final MenuItem removeItem = menuItem("BMS_PATH_REMOVE", () -> removeSongPath(getItem()));
 					private final ContextMenu contextMenu = new ContextMenu(
-							updateItem, openItem, copyItem, new SeparatorMenuItem(), removeItem);
+							updateItem, testPlayItem, new SeparatorMenuItem(), openItem, copyItem,
+							new SeparatorMenuItem(), removeItem);
 
 					{
 						setOnContextMenuRequested(event -> {
@@ -631,6 +634,23 @@ public class ResourceConfigurationView implements Initializable {
 		main.loadBMSPath(path);
 	}
 
+	private void createTestPlayPath(String path) {
+		if (path == null || !bmsroot.getItems().contains(path)) {
+			return;
+		}
+		try {
+			Path directory = BMSIRTestPlayFolder.createUnder(Path.of(path));
+			showInformation(
+					"BMS_PATH_CREATE_TESTPLAY_SUCCESS",
+					resources.getString("BMS_PATH_CREATE_TESTPLAY_DESCRIPTION")
+							+ "\n\n" + directory
+			);
+			openSongPath(directory.toString());
+		} catch (IOException | SecurityException e) {
+			showWarning("BMS_PATH_CREATE_TESTPLAY_FAILED", path);
+		}
+	}
+
 	private void openSongPath(String path) {
 		if (path == null) {
 			return;
@@ -683,6 +703,14 @@ public class ResourceConfigurationView implements Initializable {
 
 	private void showWarning(String resourceKey, String detail) {
 		Alert alert = new Alert(Alert.AlertType.WARNING);
+		alert.setTitle(resources.getString("RESOURCE_SETTINGS_TITLE"));
+		alert.setHeaderText(resources.getString(resourceKey));
+		alert.setContentText(detail);
+		alert.showAndWait();
+	}
+
+	private void showInformation(String resourceKey, String detail) {
+		Alert alert = new Alert(Alert.AlertType.INFORMATION);
 		alert.setTitle(resources.getString("RESOURCE_SETTINGS_TITLE"));
 		alert.setHeaderText(resources.getString(resourceKey));
 		alert.setContentText(detail);
