@@ -179,15 +179,17 @@ configuration details.
 
 ## テストプレイ用フォルダ / Test-play folder
 
-BMSルートを右クリックして `"_BMSIR_TESTPLAY"を作成・開く` を選ぶと、その
-ルート直下に作りかけ譜面用の予約フォルダを作成できます。このフォルダ以下の
+BMS Pathからルートを選択し、`Set DL Directory` の下にある `作業フォルダ` を
+押すと、そのルート直下に作りかけ譜面用の予約フォルダ `_BMSIR_TESTPLAY` を
+作成して開けます。このフォルダ以下の
 BMS/BMSONは、スコア、ランプ、プレイ回数、履歴、リプレイを保存せず、通常IR、
 MANIAC IR、コースIR、Arenaにも送信されません。譜面を入れた後は通常の楽曲更新を
 実行してください。フォルダ名の判定は大文字・小文字を区別せず、さらに下の
 サブフォルダにも適用されます。
 
-Right-click a configured BMS root and choose `Create/open _BMSIR_TESTPLAY`
-to create the reserved authoring folder below that root. BMS/BMSON charts
+Select a configured BMS root and click `Work folder` below
+`Set DL Directory` to create and open the reserved `_BMSIR_TESTPLAY` authoring
+folder below that root. BMS/BMSON charts
 anywhere below it do not save scores, lamps, play counts, histories, or
 replays, and are not submitted to ordinary IR, MANIAC IR, course IR, or Arena.
 Run a normal song-library update after adding charts. The reserved directory

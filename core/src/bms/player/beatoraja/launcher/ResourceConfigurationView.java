@@ -62,12 +62,11 @@ public class ResourceConfigurationView implements Initializable {
 			public ListCell<String> call(ListView<String> param) {
 				return new ListCell<>() {
 					private final MenuItem updateItem = menuItem("BMS_PATH_UPDATE_SELECTED", () -> updateSongPath(getItem()));
-					private final MenuItem testPlayItem = menuItem("BMS_PATH_CREATE_TESTPLAY", () -> createTestPlayPath(getItem()));
 					private final MenuItem openItem = menuItem("BMS_PATH_OPEN", () -> openSongPath(getItem()));
 					private final MenuItem copyItem = menuItem("BMS_PATH_COPY", () -> copySongPath(getItem()));
 					private final MenuItem removeItem = menuItem("BMS_PATH_REMOVE", () -> removeSongPath(getItem()));
 					private final ContextMenu contextMenu = new ContextMenu(
-							updateItem, testPlayItem, new SeparatorMenuItem(), openItem, copyItem,
+							updateItem, new SeparatorMenuItem(), openItem, copyItem,
 							new SeparatorMenuItem(), removeItem);
 
 					{
@@ -634,12 +633,18 @@ public class ResourceConfigurationView implements Initializable {
 		main.loadBMSPath(path);
 	}
 
-	private void createTestPlayPath(String path) {
-		if (path == null || !bmsroot.getItems().contains(path)) {
+	@FXML
+	public void createTestPlayPath() {
+		String selected = bmsroot.getSelectionModel().getSelectedItem();
+		if (selected == null || !bmsroot.getItems().contains(selected)) {
+			showWarning(
+					"BMS_PATH_CREATE_TESTPLAY_SELECT_ROOT",
+					resources.getString("BMS_PATH_CREATE_TESTPLAY_SELECT_ROOT_DESCRIPTION")
+			);
 			return;
 		}
 		try {
-			Path directory = BMSIRTestPlayFolder.createUnder(Path.of(path));
+			Path directory = BMSIRTestPlayFolder.createUnder(Path.of(selected));
 			showInformation(
 					"BMS_PATH_CREATE_TESTPLAY_SUCCESS",
 					resources.getString("BMS_PATH_CREATE_TESTPLAY_DESCRIPTION")
@@ -647,7 +652,7 @@ public class ResourceConfigurationView implements Initializable {
 			);
 			openSongPath(directory.toString());
 		} catch (IOException | SecurityException e) {
-			showWarning("BMS_PATH_CREATE_TESTPLAY_FAILED", path);
+			showWarning("BMS_PATH_CREATE_TESTPLAY_FAILED", selected);
 		}
 	}
 
