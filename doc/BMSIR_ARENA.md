@@ -223,11 +223,11 @@ compatible with saved profiles.
 
 ### Test-play folder
 
-Right-clicking a configured BMS root also offers
-`Create/open _BMSIR_TESTPLAY` / `"_BMSIR_TESTPLAY"を作成・開く`. The action
-creates that exact child directory under the selected existing root and opens
-it; it never moves or deletes source files. After charts are added, the normal
-song-library update indexes them.
+Select a configured BMS root and click `Work folder` / `作業フォルダ` below
+`Set DL Directory`. The action creates the exact `_BMSIR_TESTPLAY` child
+directory under the selected existing root and opens it; it never moves or
+deletes source files. After charts are added, the normal song-library update
+indexes them.
 
 Any BMS/BMSON whose path contains `_BMSIR_TESTPLAY` as a complete directory
 component is treated as disposable authoring content. Matching is
@@ -238,9 +238,10 @@ score, lamp, play/clear count, score history, or replay. It also cannot submit
 to ordinary IR or MANIAC IR and is excluded from Arena possession and
 nomination paths.
 
-設定済みBMSルートを右クリックし、`"_BMSIR_TESTPLAY"を作成・開く` を選ぶと、
-そのルート直下に同名の予約フォルダを作成して開きます。この操作は既存ファイルを
-移動・削除しません。譜面を入れた後、通常の楽曲更新を実行してください。
+設定済みBMSルートを選択し、`Set DL Directory` の下にある `作業フォルダ` を
+押すと、そのルート直下に `_BMSIR_TESTPLAY` 予約フォルダを作成して開きます。
+この操作は既存ファイルを移動・削除しません。譜面を入れた後、通常の楽曲更新を
+実行してください。
 
 パス中の完全なフォルダ名が `_BMSIR_TESTPLAY` と一致するBMS/BMSONは、作りかけ
 譜面用の破棄可能なテストプレイとして扱います。大文字・小文字は区別せず、下位
