@@ -1,15 +1,19 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.47`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.48`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
-The current development source adds a default-OFF Input-tab setting that keeps
+Version `0.4.14.48` adds a default-OFF Input-tab setting that keeps
 dedicated game-controller/HID buttons, hats, and axes active while the game
 window is unfocused. Keyboard, mouse, and mouse-scratch input remain
 focus-bound, so a player can work in another application between songs without
 letting ordinary typing operate Arena oraja.
+
+The same version keeps HI-SPEED, green number, SUD+, LIFT, and HIDDEN live
+through PRELOAD and READY. The final pre-start lane-setting state becomes the
+next chart's initial state.
 
 This release adds the default-OFF
 `高レート基準の選曲を許可` setting. Rated selection keeps every level reached
@@ -945,7 +949,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.47-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.48-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -966,7 +970,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.47-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.48-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -982,7 +986,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.47-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.48-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

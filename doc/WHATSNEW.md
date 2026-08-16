@@ -1,5 +1,8 @@
-# Unreleased
+# Arena oraja 0.4.14.48
 
+- Added a default-OFF Input-tab setting that keeps dedicated
+  game-controller/HID buttons, hats, and axes active while Arena oraja is
+  unfocused. Keyboard, mouse, and mouse-scratch input remain focus-bound.
 - Made PRELOAD and READY lane settings one live pre-start state. HI-SPEED,
   green number, SUD+, LIFT, and HIDDEN remain adjustable until play starts;
   moving SUD+ preserves a manual HI-SPEED when auto recalculation is OFF, and
