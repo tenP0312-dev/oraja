@@ -917,7 +917,7 @@ public class PlayConfigurationView implements Initializable {
 		playconfig.setValue(PlayMode.BEAT_7K);
 		updatePlayConfig();
 
-		inputController.update(player);
+		inputController.update(config, player);
 		skinController.update(player);
 	}
 

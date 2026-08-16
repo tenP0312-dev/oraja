@@ -1,6 +1,7 @@
 package bms.player.beatoraja.launcher;
 
 import bms.model.Mode;
+import bms.player.beatoraja.Config;
 import bms.player.beatoraja.PlayModeConfig;
 import bms.player.beatoraja.PlayerConfig;
 import javafx.beans.property.SimpleStringProperty;
@@ -34,6 +35,8 @@ public class InputConfigurationView implements Initializable {
 
     @FXML
     private Spinner<Integer> inputduration;
+	@FXML
+	private CheckBox backgroundControllerInput;
     @FXML
     private CheckBox jkoc_hack;
     @FXML
@@ -57,7 +60,8 @@ public class InputConfigurationView implements Initializable {
     @FXML
     private ComboBox<Integer> mouseScratchMode;
 
-    private PlayerConfig player;
+	private Config config;
+	private PlayerConfig player;
 
     private PlayConfigurationView.PlayMode mode;
     
@@ -73,16 +77,21 @@ public class InputConfigurationView implements Initializable {
         updateMode(inputconfig.getValue());
     }
 
-    public void update(PlayerConfig player) {
-        commitMode();
-        this.player = player;
-        updateMode(PlayConfigurationView.PlayMode.BEAT_7K);
+	public void update(Config config, PlayerConfig player) {
+		commitMode();
+		this.config = config;
+		this.player = player;
+		backgroundControllerInput.setSelected(config.isBackgroundControllerInputEnabled());
+		updateMode(PlayConfigurationView.PlayMode.BEAT_7K);
         inputconfig.setValue(PlayConfigurationView.PlayMode.BEAT_7K);
     }
 
-    public void commit() {
-        commitMode();
-    }
+	public void commit() {
+		if (config != null) {
+			config.setBackgroundControllerInputEnabled(backgroundControllerInput.isSelected());
+		}
+		commitMode();
+	}
 
     public void updateMode(PlayConfigurationView.PlayMode mode) {
 	this.mode = mode;

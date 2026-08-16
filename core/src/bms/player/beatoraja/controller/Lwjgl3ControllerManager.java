@@ -14,24 +14,35 @@ public class Lwjgl3ControllerManager implements ControllerManager {
 
 	private final long windowHandle = ((Lwjgl3Graphics) Gdx.graphics).getWindow().getWindowHandle();
 
-	private boolean focused = true;
+	private static volatile boolean backgroundControllerInputEnabled;
 	final Array<Controller> controllers = new Array<Controller>();
 	final Array<Integer> blacklistedControllers = new Array<Integer>();
 	final Array<Controller> polledControllers = new Array<Controller>();
 	final Array<ControllerListener> listeners = new Array<ControllerListener>();
 	
 	public Lwjgl3ControllerManager() {
-		GLFW.glfwSetWindowFocusCallback(windowHandle, this::setUnfocused);
 		pollState();
 		Gdx.app.postRunnable(new Runnable() {
 			@Override
 			public void run () {
-				if (focused) {
+				boolean windowFocused = GLFW.glfwGetWindowAttrib(
+						windowHandle,
+						GLFW.GLFW_FOCUSED
+				) == GLFW.GLFW_TRUE;
+				if (shouldPollControllerState(windowFocused, backgroundControllerInputEnabled)) {
 					pollState();
 				}
 				Gdx.app.postRunnable(this);
 			}
 		});
+	}
+
+	public static void setBackgroundControllerInputEnabled(boolean enabled) {
+		backgroundControllerInputEnabled = enabled;
+	}
+
+	static boolean shouldPollControllerState(boolean windowFocused, boolean backgroundInputEnabled) {
+		return windowFocused || backgroundInputEnabled;
 	}
 	
 	void pollState() {
@@ -134,7 +145,4 @@ public class Lwjgl3ControllerManager implements ControllerManager {
 		return listeners;
 	}
 
-	void setUnfocused (long win, boolean isFocused) {
-		this.focused = isFocused;
-	}
 }

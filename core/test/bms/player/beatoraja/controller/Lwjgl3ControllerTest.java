@@ -7,6 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Lwjgl3ControllerTest {
+	@Test
+	void pollsOnlyWhenFocusedUnlessBackgroundInputIsEnabled() {
+		assertTrue(Lwjgl3ControllerManager.shouldPollControllerState(true, false));
+		assertTrue(Lwjgl3ControllerManager.shouldPollControllerState(true, true));
+		assertTrue(Lwjgl3ControllerManager.shouldPollControllerState(false, true));
+		assertFalse(Lwjgl3ControllerManager.shouldPollControllerState(false, false));
+	}
 
 	@Test
 	void mapsFirstHatCardinalAndDiagonalDirectionsToButtons29Through32() {

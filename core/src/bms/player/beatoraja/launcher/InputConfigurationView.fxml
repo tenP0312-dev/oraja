@@ -16,6 +16,16 @@
         <Label prefHeight="24.0" prefWidth="68.0" text="%MODE" />
         <ComboBox fx:id="inputconfig" onAction="#changeMode" prefWidth="150.0" />
     </HBox>
+	<HBox prefHeight="32.0" prefWidth="740.0">
+		<VBox.margin>
+			<Insets left="10.0" top="10.0" />
+		</VBox.margin>
+		<CheckBox fx:id="backgroundControllerInput" mnemonicParsing="false" text="%BACKGROUND_CONTROLLER_INPUT">
+			<tooltip>
+				<Tooltip text="%BACKGROUND_CONTROLLER_INPUT_TOOLTIP" textAlignment="CENTER" wrapText="true" />
+			</tooltip>
+		</CheckBox>
+	</HBox>
     <HBox prefHeight="22.0" prefWidth="740.0">
         <VBox.margin>
             <Insets left="10.0" top="10.0"  />
