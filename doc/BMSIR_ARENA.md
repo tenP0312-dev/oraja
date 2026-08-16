@@ -5,6 +5,12 @@ Status: BMS-IR Arena v1 release branch. This source prepares the unified
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
+The current development source adds a default-OFF Input-tab setting that keeps
+dedicated game-controller/HID buttons, hats, and axes active while the game
+window is unfocused. Keyboard, mouse, and mouse-scratch input remain
+focus-bound, so a player can work in another application between songs without
+letting ordinary typing operate Arena oraja.
+
 This release adds the default-OFF
 `高レート基準の選曲を許可` setting. Rated selection keeps every level reached
 by the player's active-season peak rating. Players who enable the setting no
@@ -790,6 +796,13 @@ first-timing preview default to ON and may be changed there. `全ロングノー
 LONG NOTEとして扱う` is shown as an always-ON compatibility rule rather than
 an editable switch: BMS-IR rejects CN/HCN results, so disabling the rule would
 make chart note counts and submitted scores disagree.
+
+- The Input tab option `非アクティブ時も専用コントローラー入力を受け付ける` is OFF by
+  default. When enabled, GLFW game controllers continue to drive Music Select,
+  READY, PLAY, and RESULT while another application has focus. PC keyboard,
+  mouse, and mouse-scratch input remain tied to the Arena oraja window. A
+  controller that emulates keyboard keys is therefore outside this feature;
+  use its HID/joystick mode instead.
 
 - Music Select START and SELECT independently assign their short press to
   `なし` / `難易度変更` / `鍵盤数変更`. With `なし`, the corresponding option

@@ -28,6 +28,13 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Unreleased
+
+The Input tab can opt in to reading dedicated game-controller/HID buttons,
+hats, and axes while the Arena oraja window is unfocused. Keyboard, mouse, and
+mouse-scratch input remain focus-bound, and existing installations keep the
+option off until the player enables it.
+
 ## Arena oraja 0.4.14.47
 
 One-bass handles every borrowed standard-RANDOM entry path. Seedless

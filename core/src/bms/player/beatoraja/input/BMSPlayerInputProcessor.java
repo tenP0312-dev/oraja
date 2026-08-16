@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import bms.player.beatoraja.PlayModeConfig.*;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
+import bms.player.beatoraja.controller.Lwjgl3ControllerManager;
 import bms.player.beatoraja.input.BMSPlayerInputDevice.Type;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
@@ -46,6 +47,9 @@ public class BMSPlayerInputProcessor {
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
 		// Gdx.input.setInputProcessor(kbinput);
 		Controllers.preferredManager = "bms.player.beatoraja.controller.Lwjgl3ControllerManager";
+		Lwjgl3ControllerManager.setBackgroundControllerInputEnabled(
+				config.isBackgroundControllerInputEnabled()
+		);
 
 		Array<BMControllerInputProcessor> bminput = new Array<BMControllerInputProcessor>();
 		for (Controller controller : Controllers.getControllers()) {

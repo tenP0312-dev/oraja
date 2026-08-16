@@ -106,6 +106,11 @@ public class Config implements Validatable {
 	 */
 	private boolean analogScroll = true;
 	/**
+	 * Whether game-controller input remains active while the game window is unfocused.
+	 * Keyboard and mouse input remain focus-bound.
+	 */
+	private boolean backgroundControllerInputEnabled = false;
+	/**
 	 * 選曲バー移動速度に関連（アナログスクロール）
 	 */
 	private int analogTicksPerScroll = 3;
@@ -502,6 +507,14 @@ public class Config implements Validatable {
     public void setAnalogScroll(boolean analogScroll) {
         this.analogScroll = analogScroll;
     }
+
+	public boolean isBackgroundControllerInputEnabled() {
+		return backgroundControllerInputEnabled;
+	}
+
+	public void setBackgroundControllerInputEnabled(boolean enabled) {
+		this.backgroundControllerInputEnabled = enabled;
+	}
 
     public int getAnalogTicksPerScroll() {
         return analogTicksPerScroll;
