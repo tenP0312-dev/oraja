@@ -826,7 +826,11 @@ make chart note counts and submitted scores disagree.
   destination are swapped. The complete result is then re-encoded as another
   ordinary 24-bit RANDOM seed, so replay and later IR borrowing need no extra
   one-bass metadata. A borrowed seed that already satisfies the request is
-  retained unchanged, and DP encodes each side independently.
+  retained unchanged. Seedless RIVALOPTION/REPLAYOPTION borrowing chooses a
+  new replayable seed instead of treating the missing seed as an invalid
+  borrowed placement. LR2IR G-BATTLE resolves its borrowed lane order to a
+  standard seed before the same two-lane swap. DP encodes each side
+  independently and keeps a missing packed seed missing on both sides.
   Replay files retain the destination to reproduce the pre-0.4.3 swap-based
   format as well.
 - `bmsir-helper/random_pattern_dp.html` is extracted next to the atomic

@@ -25,6 +25,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
  * @author exch
  */
 public final class ReplayData implements Validatable {
+	private static final long RANDOM_SEED_BASE = 65536L * 256L;
 
 	/**
 	 * プレイヤー名
@@ -77,6 +78,20 @@ public final class ReplayData implements Validatable {
 	public int randomoption2 = 0;
 	
 	public long randomoption2seed = -1;
+
+	/**
+	 * ScoreDataの結合RANDOM seedを片側ごとに展開する。
+	 * 欠損値は両側とも-1のままにし、DPの2P側だけseed 0に見えることを防ぐ。
+	 */
+	public void setRandomOptionSeeds(long packedSeed) {
+		if (packedSeed < 0) {
+			randomoptionseed = -1;
+			randomoption2seed = -1;
+			return;
+		}
+		randomoptionseed = packedSeed % RANDOM_SEED_BASE;
+		randomoption2seed = packedSeed / RANDOM_SEED_BASE;
+	}
 	/**
 	 * DP用オプション
 	 */

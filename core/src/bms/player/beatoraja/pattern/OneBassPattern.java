@@ -102,6 +102,43 @@ public final class OneBassPattern {
     }
 
     /**
+     * 借用配置が実在する時だけそれを2レーン交換の基準にし、seedのない
+     * option-only借用では新しい通常RANDOM seedを選ぶ。
+     */
+    public static long selectReplayableSeed(
+            Mode mode,
+            int player,
+            int targetLane,
+            long preferredSeed,
+            boolean preserveBorrowedPlacement
+    ) {
+        if (preserveBorrowedPlacement && isStandardRandomSeed(preferredSeed)) {
+            return selectBorrowedReplayableSeed(
+                    mode,
+                    player,
+                    targetLane,
+                    preferredSeed
+            );
+        }
+        return selectReplayableSeed(mode, player, targetLane, preferredSeed);
+    }
+
+    public static boolean isStandardRandomSeed(long seed) {
+        return seed >= 0 && seed < RANDOM_SEED_BOUND;
+    }
+
+    public static long borrowedSeedForLaneOrder(
+            Map<Integer, Long> seedByLaneOrder,
+            int laneOrder
+    ) {
+        if (seedByLaneOrder == null) {
+            return -1;
+        }
+        Long seed = seedByLaneOrder.get(laneOrder);
+        return seed != null && isStandardRandomSeed(seed) ? seed : -1;
+    }
+
+    /**
      * 借用した通常RANDOM配置を基準に元1鍵と指定先だけを交換し、その完成配置を
      * 通常の24bit seedだけで再現できるseedへ再符号化する。
      */
@@ -113,8 +150,7 @@ public final class OneBassPattern {
     ) {
         if (
                 !isValidTarget(mode, player, targetLane)
-                        || borrowedSeed < 0
-                        || borrowedSeed >= RANDOM_SEED_BOUND
+                        || !isStandardRandomSeed(borrowedSeed)
         ) {
             return -1;
         }

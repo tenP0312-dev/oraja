@@ -34,6 +34,13 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Unreleased
+
+One-bass now handles every borrowed standard-RANDOM entry path. Seedless
+RIVALOPTION/REPLAYOPTION borrowing selects a new replayable seed instead of
+disabling one-bass, LR2IR G-BATTLE resolves its borrowed lane order before the
+two-lane swap, and DP keeps missing-seed state independent on each side.
+
 ## Arena oraja 0.4.14.46
 
 This release removes the standalone optional IIDX FHS while its replacement
