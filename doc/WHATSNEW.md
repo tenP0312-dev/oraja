@@ -1,4 +1,4 @@
-# Unreleased
+# Arena oraja 0.4.14.47
 
 - Fixed one-bass after every borrowed standard-RANDOM path. Seedless
   RIVALOPTION/REPLAYOPTION borrowing now chooses a new replayable seed, LR2IR
