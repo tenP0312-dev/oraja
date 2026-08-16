@@ -1039,6 +1039,7 @@ public class BMSPlayer extends MainState {
 				if (timer.getNowTime(TIMER_READY) > skin.getPlaystart()
 						&& BMSIRArenaClient.isArenaStartReleased()) {
 					replayConfig = lanerender.getPlayConfig().clone();
+					saveConfig();
 					state = STATE_PLAY;
 					timer.setMicroTimer(TIMER_PLAY, micronow - starttimeoffset * 1000);
 					timer.setMicroTimer(TIMER_RHYTHM, micronow - starttimeoffset * 1000);
@@ -1288,22 +1289,29 @@ public class BMSPlayer extends MainState {
 			}
 		}
 		PlayConfig pc = resource.getPlayerConfig().getPlayConfig(model.getMode()).getPlayconfig();
-		if (pc.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
-			pc.setDuration(lanerender.getDuration());
+		copyLiveLaneSettings(pc, lanerender.getPlayConfig());
+	}
+
+	static void copyLiveLaneSettings(PlayConfig target, PlayConfig live) {
+		if (target.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
+			target.setDuration(live.getDuration());
 		} else {
-			pc.setHispeed(lanerender.getHispeed());
+			target.setHispeed(live.getHispeed());
 		}
-		pc.setLanecover(lanerender.getLanecover());
-		pc.setLift(lanerender.getLiftRegion());
-		pc.setHidden(lanerender.getHiddenCover());
-		pc.setStartHerePreviewEnabled(
-				lanerender.getPlayConfig().isStartHerePreviewEnabled()
+		target.setLanecover(live.getLanecover());
+		target.setEnablelanecover(live.isEnablelanecover());
+		target.setLift(live.getLift());
+		target.setEnablelift(live.isEnablelift());
+		target.setHidden(live.getHidden());
+		target.setEnablehidden(live.isEnablehidden());
+		target.setStartHerePreviewEnabled(
+				live.isStartHerePreviewEnabled()
 		);
-		pc.setStartHerePreviewMeasures(
-				lanerender.getPlayConfig().getStartHerePreviewMeasures()
+		target.setStartHerePreviewMeasures(
+				live.getStartHerePreviewMeasures()
 		);
-		pc.setStartHerePreviewMaxNotes(
-				lanerender.getPlayConfig().getStartHerePreviewMaxNotes()
+		target.setStartHerePreviewMaxNotes(
+				live.getStartHerePreviewMaxNotes()
 		);
 	}
 

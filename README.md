@@ -16,6 +16,10 @@ borrowing selects a new replayable seed, LR2IR G-BATTLE preserves the borrowed
 lane order except for the required two-lane swap, and DP keeps missing seeds
 independent on both sides. The paired BMS-IR plugin 0.0.72 also accepts the
 server's explicit replayable-seed family for exact LR2/oraja SP conversion.
+The current development source also keeps HI-SPEED, green number, SUD+, LIFT,
+and HIDDEN live through PRELOAD and READY. Cover movement preserves a manually
+adjusted HI-SPEED unless its applicable auto-recalculation setting is enabled,
+and the final pre-start state becomes the next chart's initial state.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 

@@ -178,16 +178,28 @@ public final class ControlInputProcessor {
 			delta = -delta;
 		}
 
+		boolean recalculateHispeed = shouldRecalculateSixSevenHispeed(
+				config.isBmsirCoverHispeedAutoAdjustEnabled(),
+				hispeedAutoAdjust,
+				laneRenderer.getNowBPM()
+		);
+		boolean laneCoverChanged = false;
 		if (PlayerConfig.BMSIR_COVER_CONTROL_LR2.equals(
 				config.getBmsirCoverControlMode()
 		)) {
-			laneRenderer.setLanecoverWithoutHispeedReset(
-					laneRenderer.getLanecover() + delta
+			laneRenderer.changeLanecover(
+					laneRenderer.getLanecover() + delta,
+					recalculateHispeed,
+					laneRenderer.getNowBPM()
 			);
+			laneCoverChanged = true;
 		} else if (laneRenderer.isEnableLanecover()) {
-			laneRenderer.setLanecoverWithoutHispeedReset(
-					laneRenderer.getLanecover() + delta
+			laneRenderer.changeLanecover(
+					laneRenderer.getLanecover() + delta,
+					recalculateHispeed,
+					laneRenderer.getNowBPM()
 			);
+			laneCoverChanged = true;
 		} else if (laneRenderer.isEnableHidden() && laneRenderer.isEnableLift()) {
 			if (isChangeLift) {
 				laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
@@ -200,11 +212,7 @@ public final class ControlInputProcessor {
 			laneRenderer.setLiftRegion(laneRenderer.getLiftRegion() - delta);
 		}
 
-		if (shouldRecalculateSixSevenHispeed(
-				config.isBmsirCoverHispeedAutoAdjustEnabled(),
-				hispeedAutoAdjust,
-				laneRenderer.getNowBPM()
-		)) {
+		if (recalculateHispeed && !laneCoverChanged) {
 			laneRenderer.resetHispeed(laneRenderer.getNowBPM());
 		}
 	}
@@ -214,7 +222,15 @@ public final class ControlInputProcessor {
 			boolean playAutoAdjust,
 			double nowBpm
 	) {
-		return bmsirAutoAdjust && playAutoAdjust && nowBpm > 0;
+		return bmsirAutoAdjust
+				&& shouldRecalculateCoverHispeed(playAutoAdjust, nowBpm);
+	}
+
+	static boolean shouldRecalculateCoverHispeed(
+			boolean playAutoAdjust,
+			double nowBpm
+	) {
+		return playAutoAdjust && Double.isFinite(nowBpm) && nowBpm > 0.0;
 	}
 
 	public void setEnableControl(boolean b) {
@@ -338,8 +354,18 @@ public final class ControlInputProcessor {
 	 */
 	private void setCoverValue(float value) {
 		final LaneRenderer lanerender = player.getLanerender();
+		boolean recalculateHispeed = shouldRecalculateCoverHispeed(
+				hispeedAutoAdjust,
+				lanerender.getNowBPM()
+		);
+		boolean laneCoverChanged = false;
 		if(lanerender.isEnableLanecover() || (!lanerender.isEnableLift() && !lanerender.isEnableHidden())) {
-			lanerender.setLanecover(lanerender.getLanecover() + value);
+			lanerender.changeLanecover(
+					lanerender.getLanecover() + value,
+					recalculateHispeed,
+					lanerender.getNowBPM()
+			);
+			laneCoverChanged = true;
 
 		} else if(lanerender.isEnableHidden()) {
 			lanerender.setHiddenCover(lanerender.getHiddenCover() - value);
@@ -348,7 +374,7 @@ public final class ControlInputProcessor {
 			lanerender.setLiftRegion(lanerender.getLiftRegion() - value);
 		}
 
-		if (hispeedAutoAdjust && lanerender.getNowBPM() > 0) {
+		if (recalculateHispeed && !laneCoverChanged) {
 			lanerender.resetHispeed(lanerender.getNowBPM());
 		}
 	}
