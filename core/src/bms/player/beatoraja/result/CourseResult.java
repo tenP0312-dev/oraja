@@ -29,8 +29,8 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
 public class CourseResult extends AbstractResult {
 	private static final Logger logger = LoggerFactory.getLogger(CourseResult.class);
 
-	static boolean shouldPersistScore(BMSModel[] models) {
-		return !BMSIRTestPlayFolder.containsAny(models);
+	static boolean shouldPersistScore(BMSModel[] models, String workDirectory) {
+		return !BMSIRTestPlayFolder.containsAny(models, workDirectory);
 	}
 
 	private List<IRSendStatus> irSendStatus = new ArrayList<IRSendStatus>();
@@ -255,7 +255,8 @@ public class CourseResult extends AbstractResult {
 	public void updateScoreDatabase() {
 		final PlayerConfig config = resource.getPlayerConfig();
 		BMSModel[] models = resource.getCourseBMSModels();
-		final boolean persistScore = shouldPersistScore(models);
+		final boolean persistScore = shouldPersistScore(
+				models, resource.getConfig().getWorkDirectory());
 		if (!persistScore) {
 			resource.setUpdateCourseScore(false);
 			resource.setForceNoIRSend(true);
@@ -292,7 +293,7 @@ public class CourseResult extends AbstractResult {
 					random, resource.getConstraint(), resource.isUpdateCourseScore());
 			logger.info("スコアデータベース更新完了 ");
 		} else {
-			logger.info("テストプレイ用フォルダの譜面を含むため、コーススコアとリプレイは保存されません");
+			logger.info("作業フォルダの譜面を含むため、コーススコアとリプレイは保存されません");
 		}
 	}
 

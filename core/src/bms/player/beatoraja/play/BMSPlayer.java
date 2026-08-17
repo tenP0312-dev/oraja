@@ -723,7 +723,7 @@ public class BMSPlayer extends MainState {
 		}
 
 		final boolean testPlay = autoplay.mode == BMSPlayerMode.Mode.PLAY
-				&& BMSIRTestPlayFolder.contains(model);
+				&& BMSIRTestPlayFolder.contains(model, main.getConfig().getWorkDirectory());
 		if (testPlay) {
 			score = false;
 			forceNoIRSend = true;
@@ -735,8 +735,8 @@ public class BMSPlayer extends MainState {
 		if (!score) {
 			ImGuiNotify.warning(testPlay
 					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
-							"テストプレイ用フォルダ: スコア保存とIR送信は無効です",
-							"Test-play folder: score saving and IR submission are disabled")
+							"作業フォルダ: スコア保存とIR送信は無効です",
+							"Work folder: score saving and IR submission are disabled")
 					: "Score nullifying options enabled. Next play will not be saved");
 		}
 		// No on-screen notice here: forceNoIRSend already follows directly from

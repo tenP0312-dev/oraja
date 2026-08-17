@@ -1524,13 +1524,17 @@ public final class BMSIRArenaClient {
     }
 
     static SongData[] playableOwnedSongs(SongData[] songs) {
+        return playableOwnedSongs(songs, configuredWorkDirectory());
+    }
+
+    static SongData[] playableOwnedSongs(SongData[] songs, String workDirectory) {
         Map<String, SongData> playable = new LinkedHashMap<>();
         if (songs == null) {
             return SongData.EMPTY;
         }
         for (SongData song : songs) {
             if (song == null || song.getPath() == null || song.getPath().isBlank()
-                    || BMSIRTestPlayFolder.contains(song)) {
+                    || BMSIRTestPlayFolder.contains(song, workDirectory)) {
                 continue;
             }
             String sha256 = song.getSha256();
@@ -1729,10 +1733,10 @@ public final class BMSIRArenaClient {
             ));
             return;
         }
-        if (BMSIRTestPlayFolder.contains(song)) {
+        if (BMSIRTestPlayFolder.contains(song, configuredWorkDirectory())) {
             ImGuiNotify.warning(t(
-                    "Arena選曲: テストプレイ用フォルダの譜面は選べません",
-                    "Arena selection: Test-play folder charts cannot be nominated"
+                    "Arena選曲: 作業フォルダの譜面は選べません",
+                    "Arena selection: Work-folder charts cannot be nominated"
             ));
             return;
         }
@@ -2615,8 +2619,15 @@ public final class BMSIRArenaClient {
         return main != null
                 && main.getPlayerResource() != null
                 && BMSIRTestPlayFolder.contains(
-                        main.getPlayerResource().getBMSModel()
+                        main.getPlayerResource().getBMSModel(),
+                        configuredWorkDirectory()
                 );
+    }
+
+    private static String configuredWorkDirectory() {
+        return main == null || main.getConfig() == null
+                ? ""
+                : main.getConfig().getWorkDirectory();
     }
 
     static long interRoundResultExitDeadlineMillis(JsonNode message) {

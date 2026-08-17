@@ -41,7 +41,7 @@
                 <tooltip><Tooltip text="%MARK_AS_DOWNLOAD_DIRECTORY_HINT" /></tooltip>
             </Button>
             <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
-                    onAction="#createTestPlayPath" prefHeight="31.0"
+                    onAction="#markAsWorkDirectory" prefHeight="31.0"
                     text="%BMS_PATH_WORK_FOLDER">
                 <tooltip><Tooltip text="%BMS_PATH_WORK_FOLDER_HINT" /></tooltip>
             </Button>

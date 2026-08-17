@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.TableDataAccessor;
-import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
@@ -53,6 +52,7 @@ public class ResourceConfigurationView implements Initializable {
 	private final LinkedHashSet<String> availableTableUrls = new LinkedHashSet<>();
 	private PlayConfigurationView main;
 	private String downloadDirectory;
+	private String workDirectory;
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -81,15 +81,14 @@ public class ResourceConfigurationView implements Initializable {
 					protected void updateItem(String item, boolean empty) {
 						super.updateItem(item, empty);
 						if (item != null && !empty) {
-							setText(item);
-							String entryAbsolutePath = Path.of(item).toAbsolutePath().toString();
-							String downloadDirectoryAbsolutePath = downloadDirectory == null
-									? ""
-									: Path.of(downloadDirectory).toAbsolutePath().toString();
-							if (!downloadDirectoryAbsolutePath.isEmpty()
-									&& entryAbsolutePath.equals(downloadDirectoryAbsolutePath)) {
-								setText(item + " " + resources.getString("BMS_PATH_DOWNLOAD_DIRECTORY_SUFFIX"));
+							StringBuilder label = new StringBuilder(item);
+							if (samePath(item, downloadDirectory)) {
+								label.append(' ').append(resources.getString("BMS_PATH_DOWNLOAD_DIRECTORY_SUFFIX"));
 							}
+							if (samePath(item, workDirectory)) {
+								label.append(' ').append(resources.getString("BMS_PATH_WORK_DIRECTORY_SUFFIX"));
+							}
+							setText(label.toString());
 							setStyle("");
 							setContextMenu(contextMenu);
 						} else {
@@ -166,6 +165,7 @@ public class ResourceConfigurationView implements Initializable {
     public void update(Config config) {
     	this.config = config;
 		this.downloadDirectory = config.getDownloadDirectory();
+		this.workDirectory = config.getWorkDirectory();
 		bmsroot.getItems().setAll(config.getBmsroot());
 		updatesong.setSelected(config.isUpdatesong());
 		scanSongArchives.setSelected(config.isScanSongArchives());
@@ -187,6 +187,7 @@ public class ResourceConfigurationView implements Initializable {
 		config.setTableURL(TableInfo.toUrlArray(tableurl.getItems()));
 		config.setAvailableURL(availableTableUrls.toArray(new String[0]));
 		config.setDownloadDirectory(downloadDirectory);
+		config.setWorkDirectory(workDirectory);
 	}
 
     @FXML
@@ -528,6 +529,16 @@ public class ResourceConfigurationView implements Initializable {
 	}
 
 	@FXML
+	public void markAsWorkDirectory() {
+		String selected = bmsroot.getSelectionModel().getSelectedItem();
+		if (selected == null) {
+			return;
+		}
+		workDirectory = selected;
+		bmsroot.refresh();
+	}
+
+	@FXML
 	public void showAvailableTables() {
 		Dialog<ButtonType> dialog = new Dialog<>();
 		dialog.setTitle(resources.getString("CHOOSE_EXISTING_TABLES"));
@@ -633,29 +644,6 @@ public class ResourceConfigurationView implements Initializable {
 		main.loadBMSPath(path);
 	}
 
-	@FXML
-	public void createTestPlayPath() {
-		String selected = bmsroot.getSelectionModel().getSelectedItem();
-		if (selected == null || !bmsroot.getItems().contains(selected)) {
-			showWarning(
-					"BMS_PATH_CREATE_TESTPLAY_SELECT_ROOT",
-					resources.getString("BMS_PATH_CREATE_TESTPLAY_SELECT_ROOT_DESCRIPTION")
-			);
-			return;
-		}
-		try {
-			Path directory = BMSIRTestPlayFolder.createUnder(Path.of(selected));
-			showInformation(
-					"BMS_PATH_CREATE_TESTPLAY_SUCCESS",
-					resources.getString("BMS_PATH_CREATE_TESTPLAY_DESCRIPTION")
-							+ "\n\n" + directory
-			);
-			openSongPath(directory.toString());
-		} catch (IOException | SecurityException e) {
-			showWarning("BMS_PATH_CREATE_TESTPLAY_FAILED", selected);
-		}
-	}
-
 	private void openSongPath(String path) {
 		if (path == null) {
 			return;
@@ -689,6 +677,10 @@ public class ResourceConfigurationView implements Initializable {
 			showWarning("BMS_PATH_DOWNLOAD_REMOVE_BLOCKED", path);
 			return;
 		}
+		if (samePath(path, workDirectory)) {
+			showWarning("BMS_PATH_WORK_REMOVE_BLOCKED", path);
+			return;
+		}
 		Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
 		confirm.setTitle(resources.getString("BMS_PATH_REMOVE_TITLE"));
 		confirm.setHeaderText(resources.getString("BMS_PATH_REMOVE_HEADER"));
@@ -698,7 +690,7 @@ public class ResourceConfigurationView implements Initializable {
 		}
 	}
 
-	private boolean samePath(String left, String right) {
+	private static boolean samePath(String left, String right) {
 		if (left == null || right == null) {
 			return false;
 		}
@@ -708,14 +700,6 @@ public class ResourceConfigurationView implements Initializable {
 
 	private void showWarning(String resourceKey, String detail) {
 		Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.setTitle(resources.getString("RESOURCE_SETTINGS_TITLE"));
-		alert.setHeaderText(resources.getString(resourceKey));
-		alert.setContentText(detail);
-		alert.showAndWait();
-	}
-
-	private void showInformation(String resourceKey, String detail) {
-		Alert alert = new Alert(Alert.AlertType.INFORMATION);
 		alert.setTitle(resources.getString("RESOURCE_SETTINGS_TITLE"));
 		alert.setHeaderText(resources.getString(resourceKey));
 		alert.setContentText(detail);

@@ -4,21 +4,13 @@ import bms.model.BMSModel;
 import bms.model.ChartInformation;
 import bms.player.beatoraja.song.SongData;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRTestPlayFolderTest {
-    @TempDir
-    Path temporaryDirectory;
-
     @Test
     void matchesAnExactDirectoryComponentAcrossSupportedPathShapes() {
         assertTrue(BMSIRTestPlayFolder.contains(
@@ -36,34 +28,39 @@ class BMSIRTestPlayFolderTest {
     }
 
     @Test
-    void recognizesSongAndModelPathsAndAnyTestChartInACourse() {
-        SongData song = new SongData();
-        song.setPath("/songs/_BMSIR_TESTPLAY/chart.bms");
+    void matchesTheConfiguredWorkRootAndDescendantsWithoutPrefixCollisions() {
+        String workDirectory = "/songs/authoring";
 
-        BMSModel normal = model("/songs/released/chart.bms");
-        BMSModel test = model("/songs/_BMSIR_TESTPLAY/chart.bms");
-
-        assertTrue(BMSIRTestPlayFolder.contains(song));
-        assertFalse(BMSIRTestPlayFolder.contains(normal));
-        assertTrue(BMSIRTestPlayFolder.contains(test));
-        assertTrue(BMSIRTestPlayFolder.containsAny(new BMSModel[]{normal, test}));
-        assertFalse(BMSIRTestPlayFolder.containsAny(new BMSModel[]{normal}));
+        assertTrue(BMSIRTestPlayFolder.contains(
+                "/songs/authoring/chart.bms", workDirectory));
+        assertTrue(BMSIRTestPlayFolder.contains(
+                "/songs/authoring/nested/chart.bmson", workDirectory));
+        assertTrue(BMSIRTestPlayFolder.contains(
+                "/songs/authoring/pack.zip!/chart.bms", workDirectory));
+        assertFalse(BMSIRTestPlayFolder.contains(
+                "/songs/authoring-old/chart.bms", workDirectory));
+        assertFalse(BMSIRTestPlayFolder.contains(
+                "/songs/released/chart.bms", workDirectory));
+        assertFalse(BMSIRTestPlayFolder.contains(
+                "/songs/authoring/chart.bms", ""));
     }
 
     @Test
-    void createsOneIdempotentChildOnlyBelowAnExistingRoot() throws Exception {
-        Path created = BMSIRTestPlayFolder.createUnder(temporaryDirectory);
+    void recognizesSongAndModelPathsAndAnyConfiguredWorkChartInACourse() {
+        String workDirectory = "/songs/authoring";
+        SongData song = new SongData();
+        song.setPath("/songs/authoring/chart.bms");
 
-        assertEquals(
-                temporaryDirectory.resolve(BMSIRTestPlayFolder.DIRECTORY_NAME),
-                created
-        );
-        assertTrue(Files.isDirectory(created));
-        assertEquals(created, BMSIRTestPlayFolder.createUnder(temporaryDirectory));
+        BMSModel normal = model("/songs/released/chart.bms");
+        BMSModel test = model("/songs/authoring/chart.bms");
 
-        Path missing = temporaryDirectory.resolve("missing");
-        assertThrows(IOException.class, () -> BMSIRTestPlayFolder.createUnder(missing));
-        assertFalse(Files.exists(missing));
+        assertTrue(BMSIRTestPlayFolder.contains(song, workDirectory));
+        assertFalse(BMSIRTestPlayFolder.contains(normal, workDirectory));
+        assertTrue(BMSIRTestPlayFolder.contains(test, workDirectory));
+        assertTrue(BMSIRTestPlayFolder.containsAny(
+                new BMSModel[]{normal, test}, workDirectory));
+        assertFalse(BMSIRTestPlayFolder.containsAny(
+                new BMSModel[]{normal}, workDirectory));
     }
 
     private static BMSModel model(String path) {

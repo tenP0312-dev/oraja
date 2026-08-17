@@ -196,6 +196,7 @@ public class Config implements Validatable {
 	private String overrideDownloadURL = "";
 	private String downloadDirectory = DEFAULT_DOWNLOAD_DIRECTORY;
 	public static final String DEFAULT_DOWNLOAD_DIRECTORY = "http_download";
+	private String workDirectory = "";
 
 	private int irSendCount = 5;
 
@@ -667,6 +668,14 @@ public class Config implements Validatable {
 		this.downloadDirectory = downloadDirectory;
 	}
 
+	public String getWorkDirectory() {
+		return workDirectory;
+	}
+
+	public void setWorkDirectory(String workDirectory) {
+		this.workDirectory = workDirectory;
+	}
+
 	public String getIpfsUrl() {
 		return ipfsurl;
 	}
@@ -894,6 +903,7 @@ public class Config implements Validatable {
 		playerpath = playerpath != null ? playerpath : PLAYERPATH_DEFAULT;
 		skinpath = skinpath != null ? skinpath : SKINPATH_DEFAULT;
 		downloadDirectory = validatePath(downloadDirectory) ? downloadDirectory : DEFAULT_DOWNLOAD_DIRECTORY;
+		workDirectory = validatePath(workDirectory) ? workDirectory : "";
 		return true;
 	}
 
