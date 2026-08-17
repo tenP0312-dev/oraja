@@ -10,12 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.52**. Startup configuration uses
-a consistent left sidebar across its settings tabs. Difficulty-table folders
-show the integer level assigned by the table, including aggregate folders such
-as `全曲`. The Resource tab offers 109 grouped built-in table presets and lets
-players apply additions and removals together without touching custom URL
-tables.
+The current client source version is **0.4.14.53**. The native game-window
+title stays stable for OBS, play skins can read the resolved RANDOM placement,
+and grouped song rows can open their retained charts as separate entries. Skin
+Select play previews now expose the normal-play, BGA, score-graph, and gauge
+state expected by skins such as WMII.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -49,6 +48,23 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.53
+
+The native LibGDX game-window title remains exactly `Arena oraja` across body
+updates so OBS capture rules do not need a version-specific title. Play skins
+can read the resolved fixed lane placement during READY and PLAY through the
+existing RANDOM refs.
+
+On an LR2-style grouped song row, the configurable `Show All Charts` action
+opens the retained variants as separate chart entries. It is available from a
+physical NUMPAD shortcut and the song context menu without changing the global
+difficulty-display setting or sending Arena selection traffic.
+
+Skin Select play previews present their deterministic session as ordinary
+play, declare a silent BGA, and drive gauge-increase and gauge-max timers. WMII
+can therefore construct its score graph, BGA frame, and gauge effects in the
+preview.
 
 ## Arena oraja 0.4.14.52
 
@@ -318,7 +334,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.52
+  --output-dir /release/build-0.4.14.53
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

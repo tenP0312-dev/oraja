@@ -1,3 +1,18 @@
+# Arena oraja 0.4.14.53
+
+- Kept the native LibGDX game-window title exactly `Arena oraja` across body
+  versions so OBS capture rules remain stable, while retaining versioned
+  display, configuration, and wire identities.
+- Exposed the already-resolved fixed lane placement to play skins through the
+  existing RANDOM refs during READY and PLAY.
+- Added a configurable `Show All Charts` action for LR2-style grouped song
+  rows. It opens the retained variants as separate entries from a physical
+  NUMPAD shortcut or the song context menu without changing global grouping or
+  sending Arena selection traffic.
+- Presented Skin Select play previews as ordinary play with a deterministic
+  silent BGA and note-driven gauge-increase/gauge-max timers, allowing WMII to
+  construct its score graph, BGA frame, and gauge effects.
+
 # Arena oraja 0.4.14.52
 
 - Reorganized startup configuration into one left sidebar across every
