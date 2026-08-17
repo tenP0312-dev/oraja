@@ -3,6 +3,7 @@ package bms.player.beatoraja.launcher;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -337,6 +338,10 @@ public class PlayConfigurationView implements Initializable {
 	private TextField bgmpath;
 	@FXML
 	private TextField soundpath;
+	@FXML
+	private Button addBgmPathButton;
+	@FXML
+	private Button addSoundPathButton;
 
 	@FXML
 	private NumericSpinner<Integer> notesdisplaytiming;
@@ -442,6 +447,8 @@ public class PlayConfigurationView implements Initializable {
 	private TextField defaultDownloadURL;
 	@FXML
 	private TextField overrideDownloadURL;
+	@FXML
+	private Button importScoreButton;
 
 	@FXML
 	private VBox skin;
@@ -2103,23 +2110,44 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private Node requireNode(Tab tab, String id) {
-		Node node = findNodeById(tab.getContent(), id);
-		if (node == null) {
-			throw new IllegalStateException("Missing Sidebar source #" + id + " in tab " + tab.getText());
+		for (Object controller : sidebarSourceControllers(tab)) {
+			Node node = injectedFxmlNode(controller, id);
+			if (node != null) {
+				return node;
+			}
 		}
-		return node;
+		throw new IllegalStateException("Missing injected Sidebar source #" + id + " in tab " + tab.getText());
 	}
 
-	private static Node findNodeById(Node node, String id) {
-		if (id.equals(node.getId())) {
-			return node;
-		}
-		if (node instanceof Parent parent) {
-			for (Node child : parent.getChildrenUnmodifiable()) {
-				Node match = findNodeById(child, id);
-				if (match != null) {
-					return match;
+	private List<Object> sidebarSourceControllers(Tab tab) {
+		if (tab == videoTab) return List.of(videoController);
+		if (tab == audioTab) return List.of(audioController);
+		if (tab == inputTab) return List.of(inputController);
+		if (tab == resourceTab) return List.of(resourceController);
+		if (tab == musicselectTab) return List.of(musicselectController);
+		if (tab == skinTab) return List.of(skinController, this);
+		if (tab == irTab) return List.of(irController);
+		if (tab == tableTab) return List.of(tableController);
+		if (tab == streamTab) return List.of(streamController);
+		if (tab == discordTab) return List.of(discordController);
+		if (tab == obsTab) return List.of(obsController);
+		return List.of(this);
+	}
+
+	private static Node injectedFxmlNode(Object controller, String id) {
+		for (Class<?> type = controller.getClass(); type != null; type = type.getSuperclass()) {
+			try {
+				Field field = type.getDeclaredField(id);
+				if (!field.isAnnotationPresent(FXML.class)) {
+					return null;
 				}
+				field.setAccessible(true);
+				Object value = field.get(controller);
+				return value instanceof Node node ? node : null;
+			} catch (NoSuchFieldException ignored) {
+				// Continue through the controller hierarchy.
+			} catch (IllegalAccessException e) {
+				throw new IllegalStateException("Unable to read injected FXML source #" + id, e);
 			}
 		}
 		return null;
