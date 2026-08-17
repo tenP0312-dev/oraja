@@ -1,3 +1,19 @@
+# Arena oraja 0.4.14.52
+
+- Reorganized startup configuration into one left sidebar across every
+  settings tab, with consistently aligned labels and controls while preserving
+  the existing settings and controller behavior.
+- Difficulty-table folders now display the first decimal integer assigned by
+  each table entry as the Music Select level, including aggregate folders such
+  as `全曲`. Ordinary folders and stored `#PLAYLEVEL` values are unchanged.
+- Expanded the Resource built-in-table picker to 109 presets grouped into
+  `Beginner-friendly`, `BMS-IR supported`, and `Other`, with one shared search.
+  The beginner group contains the BMS-IR cross-game master and 36 game-specific
+  tables; the BMS-IR group adds 13 supported presets missing from the old list.
+- Configured built-in tables appear checked and can be unchecked to remove them
+  from Resource. New checks add tables, additions and removals apply together,
+  and custom URL tables remain untouched.
+
 # Arena oraja 0.4.14.51
 
 - Added Shared / Exclusive selection for Windows WASAPI output devices.
