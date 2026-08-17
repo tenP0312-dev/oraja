@@ -14,11 +14,12 @@ import java.util.stream.Stream;
 public class HashBar extends DirectoryBar {
     private final String title;
     private final Integer folderTableLevel;
+    private final boolean tableLevelDisplayEnabled;
     private SongData[] elements;
     private String[] elementsHash;
 
     public HashBar(MusicSelector selector, String title, SongData[] elements) {
-        this(selector, title, elements, null);
+        this(selector, title, elements, null, true);
     }
 
     public HashBar(
@@ -27,9 +28,20 @@ public class HashBar extends DirectoryBar {
             SongData[] elements,
             Integer folderTableLevel
     ) {
+        this(selector, title, elements, folderTableLevel, true);
+    }
+
+    public HashBar(
+            MusicSelector selector,
+            String title,
+            SongData[] elements,
+            Integer folderTableLevel,
+            boolean tableLevelDisplayEnabled
+    ) {
         super(selector);
         this.title = title;
         this.folderTableLevel = folderTableLevel;
+        this.tableLevelDisplayEnabled = tableLevelDisplayEnabled;
         setElements(elements);;
     }
 
@@ -52,7 +64,8 @@ public class HashBar extends DirectoryBar {
         return SongBar.toSongBarArray(
                 selector.getSongDatabase().getSongDatas(elementsHash),
                 elements,
-                folderTableLevel
+                folderTableLevel,
+                tableLevelDisplayEnabled
         );
     }
 

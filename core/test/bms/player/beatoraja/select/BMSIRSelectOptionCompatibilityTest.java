@@ -14,11 +14,26 @@ class BMSIRSelectOptionCompatibilityTest {
         PlayerConfig player = new PlayerConfig();
 
         assertFalse(player.isBmsirHideMissingTableSongs());
+        assertTrue(player.isBmsirTableLevelDisplayEnabled());
         assertTrue(player.isBmsirJudgeRankSortEnabled());
         assertTrue(player.isBmsirJudgeRankSortSkinNoticeEnabled());
 
         player.setBmsirJudgeRankSortSkinNoticeEnabled(false);
         assertFalse(player.isBmsirJudgeRankSortSkinNoticeEnabled());
+    }
+
+    @Test
+    void tableLevelDisplaySettingDefaultsOnAndPersistsInPlayerConfig() {
+        PlayerConfig player = new PlayerConfig();
+
+        assertTrue(player.isBmsirTableLevelDisplayEnabled());
+        player.setBmsirTableLevelDisplayEnabled(false);
+
+        PlayerConfig restored = new Json().fromJson(
+                PlayerConfig.class,
+                PlayerConfig.getConfigJson(player)
+        );
+        assertFalse(restored.isBmsirTableLevelDisplayEnabled());
     }
 
     @Test

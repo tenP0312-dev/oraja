@@ -199,6 +199,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirSelectMode24kDp;
 	@FXML
+	private CheckBox bmsirTableLevelDisplayEnabled;
+	@FXML
 	private CheckBox bmsirHideMissingTableSongs;
 	@FXML
 	private CheckBox bmsirLongNoteFixed;
@@ -1429,6 +1431,9 @@ public class PlayConfigurationView implements Initializable {
 								"選曲画面へ表示し、鍵盤数変更で巡回するモードを選びます。少なくとも1つは有効にしてください。",
 								"Choose modes shown in Music Select and included in key-mode cycling; keep at least one enabled.",
 								keyModes),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirTableLevelDisplayEnabled", "難易度表の難易度をLEVEL表示に使う", "Use difficulty-table levels for LEVEL",
+								"ONでは表エントリーの最初の整数を曲バー、選択曲LEVEL、LEVELソートに使います。OFFでは譜面本来の#PLAYLEVELを使います。",
+								"When enabled, use the first integer from each table entry for song bars, selected-song LEVEL, and LEVEL sorting. Disable it to use the chart's #PLAYLEVEL."),
 						sidebarSettingRow(bmsirSpecificTab, "bmsirHideMissingTableSongs", "全難易度表で未所持曲を隠す", "Hide missing songs in every table",
 								"難易度表フォルダーでは、ローカルに所持していない曲を一覧から隠します。通常フォルダーや検索には影響しません。",
 								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches.")
@@ -2792,6 +2797,9 @@ public class PlayConfigurationView implements Initializable {
 					selectModes.contains(selectableModes[index].id())
 			);
 		}
+		bmsirTableLevelDisplayEnabled.setSelected(
+				player.isBmsirTableLevelDisplayEnabled()
+		);
 		bmsirHideMissingTableSongs.setSelected(
 				player.isBmsirHideMissingTableSongs()
 		);
@@ -2991,6 +2999,9 @@ public class PlayConfigurationView implements Initializable {
 			}
 		}
 		player.setBmsirSelectKeyModes(selectModes.toArray(String[]::new));
+		player.setBmsirTableLevelDisplayEnabled(
+				bmsirTableLevelDisplayEnabled.isSelected()
+		);
 		player.setBmsirHideMissingTableSongs(
 				bmsirHideMissingTableSongs.isSelected()
 		);

@@ -506,7 +506,9 @@ detailed logs. SP TO DP upgrades the sidecar to schema 11, SELECT actions to
 schema 12, the difficulty display choice to schema 13, and independent
 START/SELECT actions plus the shared difficulty stage to schema 14. The
 judge-rank sort cycle and its skin notice upgrade it to schema 15. Historic
-schema-15 IIDX FHS keys are ignored and removed on the next sidecar save.
+schema-15 IIDX FHS keys are ignored and removed on the next sidecar save. The
+missing-table-song filter upgrades the sidecar to schema 16, and the
+difficulty-table LEVEL display switch upgrades it to schema 17.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -983,14 +985,17 @@ make chart note counts and submitted scores disagree.
   modes are hidden throughout Music Select and are omitted from every mode
   cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
   retains all concrete modes. An empty allow-list is normalized to 7K.
-- Inside a difficulty table, each song bar and the selected-song LEVEL display
-  prefer the first contiguous decimal integer in that table entry's level.
+- `難易度表の難易度をLEVEL表示に使う` is a per-player, default-ON switch.
+  When enabled, each song bar and the selected-song LEVEL display inside a
+  difficulty table prefer the first contiguous decimal integer in that table
+  entry's level.
   `発狂6`, `★06`, and `01.1` therefore display as `6`, `6`, and `1`.
   The same per-entry value follows a chart into a server-declared aggregate
   folder such as `全曲`, drives LEVEL sorting, survives LR2-style grouped
   difficulty cycling, and remains visible for unavailable table charts. A
   label without a representable integer falls back to the chart's local
-  `#PLAYLEVEL`. Ordinary folders, searches, favorites, Primary IR selection
+  `#PLAYLEVEL`. Disabling the switch restores local `#PLAYLEVEL` display and
+  LEVEL sorting. Ordinary folders, searches, favorites, Primary IR selection
   tables, chart identity, score storage, and IR payloads remain unchanged.
 - `全難易度表で未所持曲を隠す` is a single per-player, default-OFF switch for
   every difficulty table. When enabled it hides unavailable song bars inside

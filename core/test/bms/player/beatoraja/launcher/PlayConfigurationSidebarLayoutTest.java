@@ -126,7 +126,8 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirNumpad9", "bmsirNumpadJudgeTimingStep", "bmsirOneBassEnabled", "bmsirSelectButtonAction",
 				"bmsirSelectDifficultyDisplay", "bmsirSelectMode10k", "bmsirSelectMode14k", "bmsirSelectMode24k",
 				"bmsirSelectMode24kDp", "bmsirSelectMode5k", "bmsirSelectMode7k", "bmsirSelectMode9k",
-				"bmsirSelectModeAll", "bmsirStartButtonAction", "bmsirStartHerePreviewEnabled");
+				"bmsirSelectModeAll", "bmsirStartButtonAction", "bmsirStartHerePreviewEnabled",
+				"bmsirTableLevelDisplayEnabled");
 	}
 
 	private Document loadFxml(String name) throws Exception {

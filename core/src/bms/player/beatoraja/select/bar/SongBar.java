@@ -265,6 +265,15 @@ public class SongBar extends SelectableBar {
             SongData[] elements,
             Integer folderTableLevel
     ) {
+        return toSongBarArray(songs, elements, folderTableLevel, true);
+    }
+
+    protected static SongBar[] toSongBarArray(
+            SongData[] songs,
+            SongData[] elements,
+            Integer folderTableLevel,
+            boolean tableLevelDisplayEnabled
+    ) {
         // 重複除外
         int count = songs.length;
         int noexistscount = elements.length;
@@ -289,11 +298,14 @@ public class SongBar extends SelectableBar {
                         || (element.getSha256().length() > 0 && element.getSha256().equals(songs[i].getSha256()))) {
                     element.setPath(songs[i].getPath());
                     songs[i].merge(element);
-                    Integer tableLevel = element.getTableLevel() != null
-                            ? element.getTableLevel()
-                            : folderTableLevel;
-                    if (tableLevel != null) {
-                        tableLevels.put(songs[i], tableLevel);
+                    if (tableLevelDisplayEnabled) {
+                        Integer tableLevel = tableDisplayLevel(
+                                element,
+                                folderTableLevel
+                        );
+                        if (tableLevel != null) {
+                            tableLevels.put(songs[i], tableLevel);
+                        }
                     }
                     noexistscount--;
                     break;
@@ -304,9 +316,9 @@ public class SongBar extends SelectableBar {
         noexistscount--;
         for(int i = 0;i < elements.length;i++) {
             if(elements[i].getPath() == null) {
-                Integer tableLevel = elements[i].getTableLevel() != null
-                        ? elements[i].getTableLevel()
-                        : folderTableLevel;
+                Integer tableLevel = tableLevelDisplayEnabled
+                        ? tableDisplayLevel(elements[i], folderTableLevel)
+                        : null;
                 result[count + (noexistscount--)] = new SongBar(elements[i], tableLevel);
             }
         }
@@ -317,5 +329,14 @@ public class SongBar extends SelectableBar {
             }
         }
         return result;
+    }
+
+    private static Integer tableDisplayLevel(
+            SongData tableEntry,
+            Integer folderTableLevel
+    ) {
+        return tableEntry.getTableLevel() != null
+                ? tableEntry.getTableLevel()
+                : folderTableLevel;
     }
 }

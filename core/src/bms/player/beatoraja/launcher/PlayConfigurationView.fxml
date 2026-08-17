@@ -566,6 +566,8 @@
 	                        <CheckBox fx:id="bmsirSelectMode24kDp" mnemonicParsing="false" text="24K DP" />
 	                    </FlowPane>
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_SELECT_KEY_MODES_DESCRIPTION" wrapText="true" />
+	                    <CheckBox fx:id="bmsirTableLevelDisplayEnabled" mnemonicParsing="false" text="%BMSIR_TABLE_LEVEL_DISPLAY_ENABLED" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_TABLE_LEVEL_DISPLAY_DESCRIPTION" wrapText="true" />
 	                    <CheckBox fx:id="bmsirHideMissingTableSongs" mnemonicParsing="false" text="%BMSIR_HIDE_MISSING_TABLE_SONGS" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_HIDE_MISSING_TABLE_SONGS_DESCRIPTION" wrapText="true" />
 	                    <Separator />
