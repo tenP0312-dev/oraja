@@ -38,6 +38,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -47,9 +48,12 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
@@ -86,15 +90,29 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private HBox playerPanel;
 	@FXML
+	private StackPane playerPanelHost;
+	@FXML
+	private VBox configurationContent;
+	@FXML
 	private TabPane configurationTabs;
 	@FXML
 	private VBox sidebarRail;
 	@FXML
 	private ListView<Tab> sidebarNavigation;
 	@FXML
+	private TextField sidebarSearch;
+	@FXML
 	private ToggleButton sidebarPlayerSummary;
 	@FXML
-	private HBox contextHelpPanel;
+	private Label sidebarPlayerInitial;
+	@FXML
+	private Label sidebarPlayerId;
+	@FXML
+	private Label sidebarPlayerDetail;
+	@FXML
+	private Label sidebarPlayerDisclosure;
+	@FXML
+	private VBox contextHelpPanel;
 	@FXML
 	private Canvas contextHelpGraphic;
 	@FXML
@@ -218,8 +236,12 @@ public class PlayConfigurationView implements Initializable {
 	private List<ComboBox<String>> bmsirNumpadCombos;
 	private List<CheckBox> bmsirSelectModeChecks;
 	private List<Tab> configurationTabOrder = List.of();
+	private List<Node> classicPlayerPanelNodes = List.of();
 	private final Map<Tab, ContextHelp> tabContextHelp = new IdentityHashMap<>();
 	private final Map<String, ContextHelp> controlContextHelp = new HashMap<>();
+	private GridPane sidebarPlayerEditor;
+	private Label sidebarDisplayNameLabel;
+	private boolean playerEditorUsesSidebarLayout;
 	private boolean englishUi;
 
 	@FXML
@@ -645,13 +667,13 @@ public class PlayConfigurationView implements Initializable {
 
 		configurationTabOrder = List.copyOf(configurationTabs.getTabs());
 		sidebarNavigation.getItems().setAll(configurationTabOrder);
-		sidebarNavigation.setCellFactory(list -> new ListCell<>() {
-			@Override
-			protected void updateItem(Tab item, boolean empty) {
-				super.updateItem(item, empty);
-				setText(empty || item == null ? null : item.getText());
-			}
-		});
+		sidebarNavigation.setPlaceholder(new Label(
+				englishUi ? "No matching settings" : "一致する設定はありません"
+		));
+		sidebarNavigation.setCellFactory(list -> configurationTabCell());
+		sidebarSearch.textProperty().addListener(
+				(observable, oldValue, newValue) -> updateSidebarNavigationItems(newValue)
+		);
 		sidebarNavigation.getSelectionModel().selectedItemProperty().addListener(
 				(observable, oldTab, newTab) -> {
 					if (newTab != null && configurationTabs.getSelectionModel().getSelectedItem() != newTab) {
@@ -678,8 +700,112 @@ public class PlayConfigurationView implements Initializable {
 		playername.textProperty().addListener((observable, oldValue, newValue) -> updateSidebarPlayerSummary());
 		bmsirRulesetProfile.valueProperty().addListener((observable, oldValue, newValue) -> updateSidebarPlayerSummary());
 
+		initializeSidebarPlayerEditor();
 		initializeContextHelp();
+		sidebarNavigation.refresh();
 		configurationLayout.setValue(Config.ConfigurationLayout.CLASSIC);
+	}
+
+	private ListCell<Tab> configurationTabCell() {
+		return new ListCell<>() {
+			private final Canvas icon = new Canvas(24, 22);
+			private final Label label = new Label();
+			private final HBox row = new HBox(10, icon, label);
+
+			{
+				row.setAlignment(Pos.CENTER_LEFT);
+				row.setMouseTransparent(true);
+				label.getStyleClass().add("sidebar-nav-label");
+			}
+
+			@Override
+			protected void updateItem(Tab item, boolean empty) {
+				super.updateItem(item, empty);
+				refreshGraphic();
+			}
+
+			@Override
+			public void updateSelected(boolean selected) {
+				super.updateSelected(selected);
+				refreshGraphic();
+			}
+
+			private void refreshGraphic() {
+				Tab item = getItem();
+				if (isEmpty() || item == null) {
+					setText(null);
+					setGraphic(null);
+					return;
+				}
+				label.setText(item.getText());
+				HelpGraphic graphic = Optional.ofNullable(tabContextHelp.get(item))
+						.map(ContextHelp::graphic)
+						.orElse(HelpGraphic.OTHER);
+				drawSidebarGraphic(icon, graphic, isSelected());
+				setText(null);
+				setGraphic(row);
+				setAccessibleText(item.getText());
+			}
+		};
+	}
+
+	private void updateSidebarNavigationItems(String query) {
+		String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+		List<Tab> filtered = configurationTabOrder.stream()
+				.filter(tab -> normalized.isEmpty()
+						|| tab.getText().toLowerCase(Locale.ROOT).contains(normalized))
+				.toList();
+		sidebarNavigation.getItems().setAll(filtered);
+		Tab current = configurationTabs.getSelectionModel().getSelectedItem();
+		if (filtered.contains(current)) {
+			sidebarNavigation.getSelectionModel().select(current);
+		}
+	}
+
+	private void initializeSidebarPlayerEditor() {
+		classicPlayerPanelNodes = List.copyOf(playerPanel.getChildren());
+		sidebarDisplayNameLabel = new Label(englishUi ? "Display name" : "表示名");
+		sidebarPlayerEditor = new GridPane();
+		sidebarPlayerEditor.getStyleClass().add("sidebar-player-editor");
+
+		ColumnConstraints playerColumn = new ColumnConstraints();
+		playerColumn.setPercentWidth(30);
+		playerColumn.setHgrow(Priority.ALWAYS);
+		ColumnConstraints nameColumn = new ColumnConstraints();
+		nameColumn.setPercentWidth(62);
+		nameColumn.setHgrow(Priority.ALWAYS);
+		ColumnConstraints addColumn = new ColumnConstraints();
+		addColumn.setPercentWidth(8);
+		sidebarPlayerEditor.getColumnConstraints().setAll(playerColumn, nameColumn, addColumn);
+	}
+
+	private void useSidebarPlayerEditor(boolean sidebar) {
+		if (playerEditorUsesSidebarLayout == sidebar) {
+			return;
+		}
+		if (sidebar) {
+			playerPanel.getChildren().clear();
+			sidebarPlayerEditor.getChildren().clear();
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(0), 0, 0);
+			sidebarPlayerEditor.add(sidebarDisplayNameLabel, 1, 0);
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(1), 0, 1);
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(2), 1, 1);
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(3), 2, 1);
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(4), 0, 2, 3, 1);
+			sidebarPlayerEditor.add(classicPlayerPanelNodes.get(5), 0, 3, 3, 1);
+			for (int index : List.of(1, 2, 5)) {
+				if (classicPlayerPanelNodes.get(index) instanceof Control control) {
+					control.setMaxWidth(Double.MAX_VALUE);
+					GridPane.setHgrow(control, Priority.ALWAYS);
+				}
+			}
+			playerPanelHost.getChildren().setAll(sidebarPlayerEditor);
+		} else {
+			sidebarPlayerEditor.getChildren().removeAll(classicPlayerPanelNodes);
+			playerPanel.getChildren().setAll(classicPlayerPanelNodes);
+			playerPanelHost.getChildren().setAll(playerPanel);
+		}
+		playerEditorUsesSidebarLayout = sidebar;
 	}
 
 	private ListCell<Config.ConfigurationLayout> configurationLayoutCell(ResourceBundle bundle) {
@@ -698,9 +824,13 @@ public class PlayConfigurationView implements Initializable {
 
 	private void applyConfigurationLayout(Config.ConfigurationLayout layout) {
 		boolean sidebar = layout == Config.ConfigurationLayout.SIDEBAR;
+		useSidebarPlayerEditor(sidebar);
 		setManagedVisible(sidebarRail, sidebar);
 		setManagedVisible(contextHelpPanel, sidebar);
 		if (sidebar) {
+			if (!configurationContent.getStyleClass().contains("sidebar-mode")) {
+				configurationContent.getStyleClass().add("sidebar-mode");
+			}
 			if (!configurationTabs.getStyleClass().contains("sidebar-content-tabs")) {
 				configurationTabs.getStyleClass().add("sidebar-content-tabs");
 			}
@@ -709,6 +839,7 @@ public class PlayConfigurationView implements Initializable {
 			);
 			showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
 		} else {
+			configurationContent.getStyleClass().remove("sidebar-mode");
 			configurationTabs.getStyleClass().remove("sidebar-content-tabs");
 			sidebarPlayerSummary.setSelected(false);
 		}
@@ -722,7 +853,7 @@ public class PlayConfigurationView implements Initializable {
 
 	private void updatePlayerPanelVisibility() {
 		boolean sidebar = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR;
-		setManagedVisible(playerPanel, !sidebar || sidebarPlayerSummary.isSelected());
+		setManagedVisible(playerPanelHost, !sidebar || sidebarPlayerSummary.isSelected());
 	}
 
 	private void updateSidebarPlayerSummary() {
@@ -738,12 +869,21 @@ public class PlayConfigurationView implements Initializable {
 		String ruleset = bmsirRulesetProfile.getValue() == null
 				? "LR2"
 				: bmsirRulesetProfile.getValue();
-		String summary = playerId + "\n" + displayName + " · " + ruleset;
-		sidebarPlayerSummary.setText(summary);
+		sidebarPlayerInitial.setText(playerInitial(playerId));
+		sidebarPlayerId.setText(playerId);
+		sidebarPlayerDetail.setText(displayName + " · " + ruleset);
 		sidebarPlayerSummary.setAccessibleText(
 				(englishUi ? "Player settings: " : "プレイヤー設定: ")
 						+ playerId + ", " + displayName + ", " + ruleset
 		);
+	}
+
+	private static String playerInitial(String playerId) {
+		if (playerId.matches("(?i)player\\d+")) {
+			return "P" + playerId.replaceAll("\\D", "");
+		}
+		String compact = playerId.replaceAll("\\s+", "");
+		return compact.substring(0, Math.min(2, compact.length())).toUpperCase(Locale.ROOT);
 	}
 
 	private void initializeContextHelp() {
@@ -941,15 +1081,34 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private void drawContextHelpGraphic(HelpGraphic graphic) {
-		GraphicsContext gc = contextHelpGraphic.getGraphicsContext2D();
-		double width = contextHelpGraphic.getWidth();
-		double height = contextHelpGraphic.getHeight();
+		drawHelpGraphic(contextHelpGraphic, graphic, Color.web("#1976d2"), 2.2);
+	}
+
+	private void drawSidebarGraphic(Canvas canvas, HelpGraphic graphic, boolean selected) {
+		drawHelpGraphic(canvas, graphic,
+				selected ? Color.WHITE : Color.web("#617084"), 1.7);
+	}
+
+	private void drawHelpGraphic(Canvas canvas, HelpGraphic graphic, Color color, double strokeWidth) {
+		GraphicsContext gc = canvas.getGraphicsContext2D();
+		double width = canvas.getWidth();
+		double height = canvas.getHeight();
 		gc.clearRect(0, 0, width, height);
-		gc.setFill(Color.web("#e8f2ff"));
-		gc.fillRoundRect(2, 2, width - 4, height - 4, 14, 14);
-		gc.setStroke(Color.web("#2b6cb0"));
-		gc.setFill(Color.web("#2b6cb0"));
-		gc.setLineWidth(2.2);
+
+		final double graphicX = 16;
+		final double graphicY = 10;
+		final double graphicWidth = 100;
+		final double graphicHeight = 66;
+		double scale = Math.min(width / graphicWidth, height / graphicHeight);
+		double offsetX = (width - graphicWidth * scale) / 2 - graphicX * scale;
+		double offsetY = (height - graphicHeight * scale) / 2 - graphicY * scale;
+
+		gc.save();
+		gc.translate(offsetX, offsetY);
+		gc.scale(scale, scale);
+		gc.setStroke(color);
+		gc.setFill(color);
+		gc.setLineWidth(strokeWidth / scale);
 		switch (graphic) {
 			case DISPLAY -> {
 				gc.strokeRoundRect(25, 17, 82, 47, 6, 6);
@@ -1042,6 +1201,7 @@ public class PlayConfigurationView implements Initializable {
 				gc.strokeArc(48, 23, 32, 32, 255, 95, javafx.scene.shape.ArcType.OPEN);
 			}
 		}
+		gc.restore();
 	}
 
 	private record ContextHelp(String title, String description, HelpGraphic graphic) {
@@ -1651,7 +1811,7 @@ public class PlayConfigurationView implements Initializable {
     @FXML
 	public void start() {
 		commit();
-		playerPanel.setDisable(true);
+		playerPanelHost.setDisable(true);
 		videoTab.setDisable(true);
 		audioTab.setDisable(true);
 		inputTab.setDisable(true);
