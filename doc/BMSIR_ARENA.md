@@ -254,13 +254,18 @@ ID plus display name and LR2/oraja rule profile, and expands the existing player
 controls into the right pane on demand. A separate card above the selected page
 shows the page overview by default. Pointing at a setting or moving keyboard
 focus to it changes that card to the setting name, an explanation, and a
-category diagram. Leaving the setting restores the page overview. Most pages
-present the existing setting view on a second card. Play Options additionally
-uses a sidebar-specific set of grouped row cards: every setting has a visible
-name, editor or switch, and persistent explanation. These row editors are
-bidirectionally bound to the existing Play Options controls, including play-
-mode changes, so the original controls remain the single configuration state
-used by Classic and by the existing save path.
+category diagram. Leaving the setting restores the page overview. Every
+Sidebar destination uses grouped row cards: scalar settings have a visible
+name, one wide editor or ON/OFF switch, and a persistent plain-language
+explanation. Complex editors keep their useful shape instead of being
+compressed into scalar rows. Controller tables, BMS roots, difficulty tables,
+skin options/previews, local-table editors, Discord Webhook destinations, and
+OBS scene mappings appear as full-width workspace cards with an explanation
+above them. Scalar Sidebar controls stay bound to the original controls.
+Complex editor nodes move into their Sidebar card only while Sidebar is active
+and return to their exact original parent and position when Classic is
+selected. The original controllers and controls therefore remain the single
+configuration state used by Classic and by the existing save path.
 
 The layout choice applies immediately so it can be previewed before leaving
 the `Other` page, then persists with the normal configuration save. Classic

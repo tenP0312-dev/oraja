@@ -33,14 +33,14 @@
                    text="%BMS_PATH_CONTEXT_HINT" wrapText="true" />
         </VBox>
         <VBox prefWidth="155.0" spacing="7.0">
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="addSongPathButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#addSongPath" prefHeight="31.0" text="%ADD_SONG_PATH" />
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="downloadDirectoryButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#markAsDownloadDirectory" prefHeight="31.0"
                     text="%MARK_AS_DOWNLOAD_DIRECTORY">
                 <tooltip><Tooltip text="%MARK_AS_DOWNLOAD_DIRECTORY_HINT" /></tooltip>
             </Button>
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="workDirectoryButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#markAsWorkDirectory" prefHeight="31.0"
                     text="%BMS_PATH_WORK_FOLDER">
                 <tooltip><Tooltip text="%BMS_PATH_WORK_FOLDER_HINT" /></tooltip>
@@ -64,10 +64,10 @@
         </VBox>
         <VBox prefWidth="175.0" spacing="7.0">
             <Region VBox.vgrow="ALWAYS" />
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="chooseTablesButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#showAvailableTables" prefHeight="31.0"
                     text="%CHOOSE_EXISTING_TABLES" />
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="addTableUrlButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#showAddTableUrlDialog" prefHeight="31.0"
                     text="%ADD_TABLE_FROM_URL" />
         </VBox>
@@ -83,10 +83,10 @@
         </VBox>
         <Region HBox.hgrow="ALWAYS" />
         <VBox prefWidth="310.0" spacing="3.0">
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="updateDatabaseButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#loadDiffBMS" prefHeight="28.0" text="%UPDATE_DATABASE" />
             <Label maxWidth="310.0" text="%UPDATE_DATABASE_DESCRIPTION" wrapText="true" />
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+            <Button fx:id="rebuildDatabaseButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#loadAllBMS" prefHeight="28.0" text="%REBUILD_DATABASE">
                 <VBox.margin>
                     <Insets top="3.0" />

@@ -36,7 +36,7 @@
         <VBox prefHeight="100.0" prefWidth="536.0" HBox.hgrow="ALWAYS">
             <HBox>
                 <TextField fx:id="url" prefHeight="28.0" prefWidth="500.0" HBox.hgrow="ALWAYS"/>
-                <Button mnemonicParsing="false" onAction="#addWebhookURL" prefHeight="28.0" prefWidth="80.0"
+                <Button fx:id="addWebhookButton" mnemonicParsing="false" onAction="#addWebhookURL" prefHeight="28.0" prefWidth="80.0"
                         text="%+">
                     <HBox.margin>
                         <Insets left="10.0" right="10.0"/>
@@ -50,19 +50,19 @@
                     </HBox.margin>
                 </EditableTableView>
                 <VBox prefHeight="185.0" prefWidth="100.0">
-                    <Button mnemonicParsing="false" onAction="#removeWebhookURL"
+                    <Button fx:id="removeWebhookButton" mnemonicParsing="false" onAction="#removeWebhookURL"
                             prefHeight="28.0" prefWidth="80.0" text="%-">
                         <VBox.margin>
                             <Insets left="10.0" right="10.0" top="10.0"/>
                         </VBox.margin>
                     </Button>
-                    <Button mnemonicParsing="false" onAction="#moveWebhookURLUp"
+                    <Button fx:id="moveWebhookUpButton" mnemonicParsing="false" onAction="#moveWebhookURLUp"
                             prefHeight="28.0" prefWidth="80.0" text="↑">
                         <VBox.margin>
                             <Insets left="10.0" right="10.0" top="10.0"/>
                         </VBox.margin>
                     </Button>
-                    <Button mnemonicParsing="false" onAction="#moveWebhookURLDown"
+                    <Button fx:id="moveWebhookDownButton" mnemonicParsing="false" onAction="#moveWebhookURLDown"
                             prefHeight="28.0" prefWidth="80.0" text="↓">
                         <VBox.margin>
                             <Insets left="10.0" right="10.0" top="10.0"/>

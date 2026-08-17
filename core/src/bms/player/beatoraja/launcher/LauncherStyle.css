@@ -221,16 +221,21 @@
 
 .sidebar-play-options-scroll,
 .sidebar-play-options-scroll > .viewport,
-.sidebar-play-options-scroll > .corner {
+.sidebar-play-options-scroll > .corner,
+.sidebar-settings-scroll,
+.sidebar-settings-scroll > .viewport,
+.sidebar-settings-scroll > .corner {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
 }
 
-.sidebar-play-options-scroll {
+.sidebar-play-options-scroll,
+.sidebar-settings-scroll {
     -fx-padding: 0 0 0 0;
 }
 
-.sidebar-play-options {
+.sidebar-play-options,
+.sidebar-settings-page {
     -fx-background-color: transparent;
 }
 
@@ -268,6 +273,34 @@
     -fx-font-size: 12.5px;
     -fx-text-fill: #626c7c;
     -fx-line-spacing: 2px;
+}
+
+.sidebar-workspace-row {
+    -fx-min-height: 150px;
+}
+
+.sidebar-workspace {
+    -fx-min-width: 0;
+    -fx-background-color: #f8f9fb;
+    -fx-background-radius: 9px;
+    -fx-border-color: #d7dce4;
+    -fx-border-radius: 9px;
+    -fx-padding: 8px;
+}
+
+.sidebar-workspace .list-view,
+.sidebar-workspace .table-view,
+.sidebar-workspace .scroll-pane,
+.sidebar-workspace .tab-pane {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cbd1da;
+    -fx-border-radius: 7px;
+    -fx-background-radius: 7px;
+}
+
+.sidebar-key-mode-list {
+    -fx-min-width: 310px;
+    -fx-pref-wrap-length: 420px;
 }
 
 .settings-content.sidebar-mode .sidebar-setting-control {

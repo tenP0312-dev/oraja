@@ -425,7 +425,7 @@
                                 <Insets top="10.0" />
                             </HBox.margin>
                         </TextField>
-                        <Button mnemonicParsing="false" onAction="#addBGMPath" prefHeight="28.0" prefWidth="29.0" text="...">
+                        <Button fx:id="addBgmPathButton" mnemonicParsing="false" onAction="#addBGMPath" prefHeight="28.0" prefWidth="29.0" text="...">
                             <HBox.margin>
                                 <Insets left="10.0" top="10.0" />
                             </HBox.margin>
@@ -445,7 +445,7 @@
                                 <Insets top="10.0" />
                             </HBox.margin>
                         </TextField>
-                        <Button mnemonicParsing="false" onAction="#addSoundPath" prefHeight="28.0" prefWidth="29.0" text="...">
+                        <Button fx:id="addSoundPathButton" mnemonicParsing="false" onAction="#addSoundPath" prefHeight="28.0" prefWidth="29.0" text="...">
                             <HBox.margin>
                                 <Insets left="10.0" top="10.0" />
                             </HBox.margin>
@@ -471,7 +471,7 @@
                     <CheckBox fx:id="usecim" mnemonicParsing="false" prefHeight="25.0" text="%CACHE_SKIN_IMAGE" />
                     <CheckBox fx:id="clipboardScreenshot" mnemonicParsing="false" prefHeight="25.0" text="%CLIPBOARD_SCREENSHOT" />
 
-                    <Button mnemonicParsing="false" onAction="#importScoreDataFromLR2" text="%IMPORT_LR2_SCORE">
+                    <Button fx:id="importScoreButton" mnemonicParsing="false" onAction="#importScoreDataFromLR2" text="%IMPORT_LR2_SCORE">
                         <VBox.margin>
                             <Insets top="10.0" />
                         </VBox.margin>
