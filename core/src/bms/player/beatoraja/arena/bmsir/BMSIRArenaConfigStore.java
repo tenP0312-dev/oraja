@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 16;
+        private int schemaVersion = 17;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -143,6 +143,7 @@ public final class BMSIRArenaConfigStore {
         private String selectDifficultyDisplay;
         private Integer selectDifficultyStage;
         private String[] selectKeyModes;
+        private Boolean tableLevelDisplayEnabled;
         private Boolean hideMissingTableSongs;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
@@ -203,6 +204,8 @@ public final class BMSIRArenaConfigStore {
             settings.selectDifficultyStage =
                     player.getBmsirSelectDifficultyStage();
             settings.selectKeyModes = player.getBmsirSelectKeyModes();
+            settings.tableLevelDisplayEnabled =
+                    player.isBmsirTableLevelDisplayEnabled();
             settings.hideMissingTableSongs =
                     player.isBmsirHideMissingTableSongs();
             settings.enabled = player.isBmsirArenaEnabled();
@@ -289,6 +292,9 @@ public final class BMSIRArenaConfigStore {
             }
             if (selectKeyModes != null) {
                 player.setBmsirSelectKeyModes(selectKeyModes);
+            }
+            if (tableLevelDisplayEnabled != null) {
+                player.setBmsirTableLevelDisplayEnabled(tableLevelDisplayEnabled);
             }
             if (hideMissingTableSongs != null) {
                 player.setBmsirHideMissingTableSongs(hideMissingTableSongs);

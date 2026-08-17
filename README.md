@@ -18,10 +18,11 @@ state expected by skins such as WMII.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-The current development source also uses each difficulty-table entry's first
-decimal integer as its Music Select display level inside that table. This
-applies to ordinary level folders and aggregate folders such as `全曲`, while
-ordinary folders and the chart's stored `#PLAYLEVEL` remain unchanged.
+The current development source adds a default-ON per-player switch for using
+each difficulty-table entry's first decimal integer as its Music Select display
+level inside that table. Disabling it restores the chart's stored `#PLAYLEVEL`
+for display and LEVEL sorting. The switch applies to ordinary level folders and
+aggregate folders such as `全曲`; ordinary folders remain unchanged.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in

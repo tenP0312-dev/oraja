@@ -67,11 +67,14 @@ public class TableBar extends DirectoryBar {
 
     public void setTableData(TableData td) {
     	this.td = td;
+		boolean tableLevelDisplayEnabled = difficultyLevelFolders
+				&& selector.main.getPlayerConfig().isBmsirTableLevelDisplayEnabled();
 		levels = Stream.of(td.getFolder()).map(folder -> new HashBar(
 				selector,
 				folder.getName(),
 				folder.getSong(),
-				difficultyLevelFolders ? legacyFolderTableLevel(td, folder) : null
+				tableLevelDisplayEnabled ? legacyFolderTableLevel(td, folder) : null,
+				tableLevelDisplayEnabled
 		)).toArray(HashBar[]::new);
 		final CourseData[] courses = td.getCourse();
 		Set<String> hashset = Stream.of(courses).flatMap(course -> Stream.of(course.getSong()))

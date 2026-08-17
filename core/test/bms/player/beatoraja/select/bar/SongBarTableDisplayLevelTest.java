@@ -63,6 +63,27 @@ class SongBarTableDisplayLevelTest {
         assertEquals(4, legacyBar.getDisplayLevel());
     }
 
+    @Test
+    void disabledTableLevelDisplayUsesTheLocalPlayLevel() {
+        SongData local = localSong("local", 12);
+        SongBar localBar = SongBar.toSongBarArray(
+                new SongData[]{local},
+                new SongData[]{tableEntry("local", 6)},
+                null,
+                false
+        )[0];
+        SongBar missingBar = SongBar.toSongBarArray(
+                SongData.EMPTY,
+                new SongData[]{tableEntry("missing", 9)},
+                null,
+                false
+        )[0];
+
+        assertEquals(12, localBar.getDisplayLevel());
+        assertFalse(localBar.hasTableDisplayLevel());
+        assertFalse(missingBar.hasTableDisplayLevel());
+    }
+
     private static int displayLevelFor(SongBar[] bars, String sha256) {
         for (SongBar bar : bars) {
             if (sha256.equals(bar.getSongData().getSha256())) {
