@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.51
+
+- Added Shared / Exclusive selection for Windows WASAPI output devices.
+  Existing configurations default to Shared; Exclusive requests direct access
+  through the bundled PortAudio WASAPI backend and requires a supported sample
+  rate.
+- Added `ASIO` as an independent Windows audio driver. Its list contains only
+  ASIO Host API output devices, persists the selected device and Host API, and
+  disables the WASAPI mode control.
+- Missing ASIO support, no connected ASIO output, and invalid Host API choices
+  are reported distinctly. An ASIO startup failure does not silently rewrite
+  the configured output to OpenAL or WASAPI.
+
 # Arena oraja 0.4.14.50
 
 - `Set Work Directory` / `作業フォルダに設定` now makes the selected BMS Path
