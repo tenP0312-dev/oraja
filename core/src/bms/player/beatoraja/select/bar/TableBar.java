@@ -34,10 +34,21 @@ public class TableBar extends DirectoryBar {
      */
     private Bar[] children;
     private final TableDataAccessor.TableAccessor tr;
+    private final boolean difficultyLevelFolders;
 
     public TableBar(MusicSelector selector, TableData td, TableDataAccessor.TableAccessor tr) {
+		this(selector, td, tr, false);
+	}
+
+    public TableBar(
+            MusicSelector selector,
+            TableData td,
+            TableDataAccessor.TableAccessor tr,
+            boolean difficultyLevelFolders
+    ) {
     	super(selector);
         this.tr = tr;
+        this.difficultyLevelFolders = difficultyLevelFolders;
         setTableData(td);
     }
 
@@ -56,7 +67,12 @@ public class TableBar extends DirectoryBar {
 
     public void setTableData(TableData td) {
     	this.td = td;
-		levels = Stream.of(td.getFolder()).map(folder -> new HashBar(selector, folder.getName(), folder.getSong())).toArray(HashBar[]::new);
+		levels = Stream.of(td.getFolder()).map(folder -> new HashBar(
+				selector,
+				folder.getName(),
+				folder.getSong(),
+				difficultyLevelFolders ? legacyFolderTableLevel(td, folder) : null
+		)).toArray(HashBar[]::new);
 		final CourseData[] courses = td.getCourse();
 		Set<String> hashset = Stream.of(courses).flatMap(course -> Stream.of(course.getSong()))
 				.map(song -> song.getSha256().length() > 0 ? song.getSha256() : song.getMd5()).collect(Collectors.toSet());
@@ -79,6 +95,15 @@ public class TableBar extends DirectoryBar {
 
 		children = Stream.concat(Stream.of(levels), Stream.of(grades)).toArray(Bar[]::new);
     }
+
+	private static Integer legacyFolderTableLevel(TableData table, TableData.TableFolder folder) {
+		String level = folder.getName();
+		String tag = table.getTag();
+		if (tag != null && !tag.isEmpty() && level.startsWith(tag)) {
+			level = level.substring(tag.length());
+		}
+		return TableData.parseDisplayLevel(level);
+	}
 
     public HashBar[] getLevels() {
         return levels;

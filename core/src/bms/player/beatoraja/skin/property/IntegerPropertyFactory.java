@@ -23,6 +23,7 @@ import bms.player.beatoraja.result.CourseResult;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
+import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.skin.*;
 import bms.player.beatoraja.song.SongData;
 
@@ -152,9 +153,15 @@ public class IntegerPropertyFactory {
 		case NUMBER_FOLDER_HYPER:
 		case NUMBER_FOLDER_ANOTHER:
 		case NUMBER_FOLDER_INSANE:
-			return (state) -> (state.resource.getSongdata() != null
-					? state.resource.getSongdata().getLevel()
-					: Integer.MIN_VALUE);
+			return (state) -> {
+				if (state instanceof MusicSelector selector
+						&& selector.getSelectedBar() instanceof SongBar songBar) {
+					return songBar.getDisplayLevel();
+				}
+				return state.resource.getSongdata() != null
+						? state.resource.getSongdata().getLevel()
+						: Integer.MIN_VALUE;
+			};
 		case NUMBER_POINT:
 			return (state) -> (state.getScoreDataProperty().getNowScore());
 		case NUMBER_MAXSCORE:

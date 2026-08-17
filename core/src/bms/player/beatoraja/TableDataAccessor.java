@@ -246,6 +246,7 @@ public class TableDataAccessor {
 		song.setOrg_md5(te.getParentHash());
 		if(te instanceof DifficultyTableElement) {
 			DifficultyTableElement dte = (DifficultyTableElement) te;
+			song.setTableLevel(TableData.parseDisplayLevel(dte.getLevel()));
 			song.setAppendurl(dte.getAppendURL());
 			song.setAppendIpfs(dte.getAppendIPFS());
 		}

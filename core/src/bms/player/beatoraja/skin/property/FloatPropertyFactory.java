@@ -557,7 +557,8 @@ public class FloatPropertyFactory {
 			if (state instanceof MusicSelector) {
 				final Bar selected = ((MusicSelector) state).getBarManager().getSelected();
 				if (selected instanceof SongBar && ((SongBar) selected).getSongData() != null) {
-					SongData sd = ((SongBar) selected).getSongData();
+					SongBar songBar = (SongBar) selected;
+					SongData sd = songBar.getSongData();
 					if (difficulty >= 0 && sd.getDifficulty() != difficulty) {
 						return 0;
 					}
@@ -576,7 +577,7 @@ public class FloatPropertyFactory {
 						maxLevel = 10;
 					}
 					if (maxLevel > 0) {
-						return 1.0f * sd.getLevel() / maxLevel;
+						return 1.0f * songBar.getDisplayLevel() / maxLevel;
 					}
 				}
 			}

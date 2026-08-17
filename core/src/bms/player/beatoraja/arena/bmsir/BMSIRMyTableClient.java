@@ -465,6 +465,7 @@ final class BMSIRMyTableClient {
                     }
                 }
                 String level = limited(entry.path("level").asText("-"), 32).trim();
+                song.setTableLevel(TableData.parseDisplayLevel(level));
                 levels.computeIfAbsent(level.isEmpty() ? "-" : level, ignored -> new ArrayList<>())
                         .add(song);
                 allSongs.add(song);

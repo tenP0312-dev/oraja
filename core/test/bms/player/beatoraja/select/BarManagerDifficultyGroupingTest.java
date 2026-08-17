@@ -130,6 +130,25 @@ class BarManagerDifficultyGroupingTest {
         assertSame(normal, ((SongBar) stageOne[0]).getSongData());
     }
 
+    @Test
+    void groupedDifficultyKeepsTheActiveVariantsTableLevel() {
+        SongData normal = song("normal", "folder", Mode.BEAT_7K.id, 2, 5);
+        SongData hyper = song("hyper", "folder", Mode.BEAT_7K.id, 3, 9);
+
+        Bar[] grouped = BarManager.groupDifficultyBars(
+                new Bar[]{new SongBar(normal, 4), new SongBar(hyper, 6)},
+                null,
+                2
+        );
+        SongBar bar = (SongBar) grouped[0];
+
+        assertSame(normal, bar.getSongData());
+        assertEquals(4, bar.getDisplayLevel());
+        bar.cycleDifficulty();
+        assertSame(hyper, bar.getSongData());
+        assertEquals(6, bar.getDisplayLevel());
+    }
+
     private static SongData song(
             String hash,
             String folder,

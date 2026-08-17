@@ -934,6 +934,15 @@ make chart note counts and submitted scores disagree.
   modes are hidden throughout Music Select and are omitted from every mode
   cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
   retains all concrete modes. An empty allow-list is normalized to 7K.
+- Inside a difficulty table, each song bar and the selected-song LEVEL display
+  prefer the first contiguous decimal integer in that table entry's level.
+  `発狂6`, `★06`, and `01.1` therefore display as `6`, `6`, and `1`.
+  The same per-entry value follows a chart into a server-declared aggregate
+  folder such as `全曲`, drives LEVEL sorting, survives LR2-style grouped
+  difficulty cycling, and remains visible for unavailable table charts. A
+  label without a representable integer falls back to the chart's local
+  `#PLAYLEVEL`. Ordinary folders, searches, favorites, Primary IR selection
+  tables, chart identity, score storage, and IR payloads remain unchanged.
 - `全難易度表で未所持曲を隠す` is a single per-player, default-OFF switch for
   every difficulty table. When enabled it hides unavailable song bars inside
   table folders even while HTTP downloads are enabled. Ordinary folders,

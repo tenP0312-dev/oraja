@@ -16,6 +16,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,6 +88,7 @@ class BarManagerPrimaryIrTableTest {
         assertEquals("", converted.getUrl());
         assertEquals("level", converted.getFolder()[0].getName());
         assertEquals("sha256", converted.getFolder()[0].getSong()[0].getSha256());
+        assertNull(converted.getFolder()[0].getSong()[0].getTableLevel());
         assertEquals("subtitle", converted.getFolder()[0].getSong()[0].getSubtitle());
         assertEquals("subartist", converted.getFolder()[0].getSong()[0].getSubartist());
         assertEquals(Mode.BEAT_14K, chart.mode);
