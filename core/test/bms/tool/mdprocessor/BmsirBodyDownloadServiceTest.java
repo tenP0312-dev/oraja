@@ -64,10 +64,83 @@ class BmsirBodyDownloadServiceTest {
 
 		assertEquals(temporary.resolve("bmsir-" + md5 + ".zip"), result.archive());
 		assertFalse(result.wayback());
+		assertFalse(result.landingPage());
 		assertEquals(0, waybackRequests.get());
 		assertTrue(Files.isRegularFile(result.archive()));
 		assertFalse(Files.exists(temporary.resolve("Pack")));
 		assertEquals(archive.length, Files.size(result.archive()));
+	}
+
+	@Test
+	void resolvesArchiveLinkFromHtmlLandingPage() throws Exception {
+		byte[] chart = "#TITLE Landing page\n".getBytes(StandardCharsets.UTF_8);
+		byte[] archive = zip("Pack/chart.bms", chart);
+		server.createContext("/entry", exchange -> respond(exchange, 200, "text/html; charset=UTF-8",
+				("<!doctype html><html><body>"
+						+ "<a href=\"/information\">Details</a>"
+						+ "<a href=\"downloads/song.zip\">Download</a>"
+						+ "</body></html>").getBytes(StandardCharsets.UTF_8)));
+		server.createContext("/downloads/song.zip",
+				exchange -> respond(exchange, 200, "application/zip", archive));
+		server.createContext("/available", exchange -> {
+			waybackRequests.incrementAndGet();
+			respond(exchange, 200, "application/json", "{}".getBytes(StandardCharsets.UTF_8));
+		});
+
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task(base.resolve("/entry"), md5(chart)));
+
+		assertEquals(base.resolve("/downloads/song.zip"), result.source());
+		assertFalse(result.wayback());
+		assertTrue(result.landingPage());
+		assertEquals(0, waybackRequests.get());
+		assertTrue(Files.isRegularFile(result.archive()));
+	}
+
+	@Test
+	void triesLaterArchiveLinkWhenAnEarlierPackageHasTheWrongChart() throws Exception {
+		byte[] chart = "#TITLE Requested\n".getBytes(StandardCharsets.UTF_8);
+		byte[] wrongArchive = zip("wrong.bms", "#TITLE Wrong\n".getBytes(StandardCharsets.UTF_8));
+		byte[] correctArchive = zip("requested.bms", chart);
+		server.createContext("/entry", exchange -> respond(exchange, 200, "text/html",
+				("<a href=\"/wrong.zip\">Old package</a>"
+						+ "<a href=\"/correct.7z\">Current package</a>").getBytes(StandardCharsets.UTF_8)));
+		server.createContext("/wrong.zip", exchange -> respond(exchange, 200, "application/zip", wrongArchive));
+		server.createContext("/correct.7z", exchange -> respond(exchange, 200, "application/octet-stream", correctArchive));
+		server.createContext("/available", exchange -> respond(exchange, 200, "application/json",
+				"{}".getBytes(StandardCharsets.UTF_8)));
+
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task(base.resolve("/entry"), md5(chart)));
+
+		assertEquals(base.resolve("/correct.7z"), result.source());
+		assertTrue(result.landingPage());
+		assertEquals(correctArchive.length, Files.size(result.archive()));
+	}
+
+	@Test
+	void resolvesArchiveLinkFromArchivedHtmlLandingPage() throws Exception {
+		byte[] chart = "#TITLE Archived landing page\n".getBytes(StandardCharsets.UTF_8);
+		byte[] archive = zip("chart.bms", chart);
+		server.createContext("/gone", exchange -> respond(exchange, 404, "text/plain", new byte[0]));
+		server.createContext("/snapshot-page", exchange -> respond(exchange, 200, "text/html",
+				"<a href=\"/snapshot/song.rar\">Archived package</a>".getBytes(StandardCharsets.UTF_8)));
+		server.createContext("/snapshot/song.rar",
+				exchange -> respond(exchange, 200, "application/octet-stream", archive));
+		server.createContext("/available", exchange -> {
+			waybackRequests.incrementAndGet();
+			String json = "{\"archived_snapshots\":{\"closest\":{\"available\":true,"
+					+ "\"status\":\"200\",\"url\":\"" + base.resolve("/snapshot-page") + "\"}}}";
+			respond(exchange, 200, "application/json", json.getBytes(StandardCharsets.UTF_8));
+		});
+
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task(base.resolve("/gone"), md5(chart)));
+
+		assertEquals(base.resolve("/snapshot/song.rar"), result.source());
+		assertTrue(result.wayback());
+		assertTrue(result.landingPage());
+		assertEquals(1, waybackRequests.get());
 	}
 
 	@Test
@@ -120,6 +193,38 @@ class BmsirBodyDownloadServiceTest {
 	}
 
 	@Test
+	void rejectsOversizedHtmlLandingPages() throws Exception {
+		server.createContext("/large-page", exchange -> respond(exchange, 200, "text/html",
+				new byte[2 * 1024 * 1024 + 1]));
+		server.createContext("/available", exchange -> respond(exchange, 200, "application/json",
+				"{}".getBytes(StandardCharsets.UTF_8)));
+
+		IOException error = assertThrows(IOException.class,
+				() -> service(4 * 1024 * 1024).install(task(base.resolve("/large-page"), "0".repeat(32))));
+
+		assertTrue(error.getMessage().contains("HTML landing page exceeds the size limit"));
+		try (var files = Files.list(temporary)) {
+			assertEquals(0, files.count());
+		}
+	}
+
+	@Test
+	void rejectsLandingPagesWithoutArchiveLinks() throws Exception {
+		server.createContext("/page", exchange -> respond(exchange, 200, "text/html",
+				"<a href=\"/readme\">Read me</a>".getBytes(StandardCharsets.UTF_8)));
+		server.createContext("/available", exchange -> respond(exchange, 200, "application/json",
+				"{}".getBytes(StandardCharsets.UTF_8)));
+
+		IOException error = assertThrows(IOException.class,
+				() -> service(1024 * 1024).install(task(base.resolve("/page"), "0".repeat(32))));
+
+		assertTrue(error.getMessage().contains("contains no ZIP, RAR, or 7z links"));
+		try (var files = Files.list(temporary)) {
+			assertEquals(0, files.count());
+		}
+	}
+
+	@Test
 	void rejectsUnsafeEntryPathsAndDoesNotExtractThem() throws Exception {
 		byte[] chart = "#TITLE Escape\n".getBytes(StandardCharsets.UTF_8);
 		byte[] archive = zip("../chart.bms", chart);
@@ -159,10 +264,26 @@ class BmsirBodyDownloadServiceTest {
 	@Test
 	void acceptsOnlyHttpArchiveCandidatesAndSkipsBmsirSongPages() {
 		assertTrue(BmsirBodyDownloadService.isEligibleBodyUrl("https://example.com/song.zip"));
+		assertTrue(BmsirBodyDownloadService.isEligibleBodyUrl("https://example.com/distribution-page"));
 		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("file:///tmp/song.zip"));
 		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("https://www.bms-ir.org/new/song?md5=abc"));
 		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("https://bms-ir.org/new/songs/123"));
 		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("https://user@example.com/song.zip"));
+		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("http://127.0.0.1/song.zip"));
+		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("http://localhost/song.zip"));
+		assertFalse(BmsirBodyDownloadService.isEligibleBodyUrl("http://[::1]/song.zip"));
+	}
+
+	@Test
+	void blocksPrivateNetworkTargetsOutsideTheTestPolicy() throws Exception {
+		server.createContext("/body", exchange -> respond(exchange, 200, "application/zip", new byte[0]));
+		BmsirBodyDownloadService service = new BmsirBodyDownloadService(
+				temporary, base.resolve("/available"), 1024 * 1024, false);
+
+		IOException error = assertThrows(IOException.class,
+				() -> service.install(task(base.resolve("/body"), "0".repeat(32))));
+
+		assertTrue(error.getMessage().contains("Local or private network download targets are not allowed"));
 	}
 
 	private BmsirBodyDownloadService service(long maxSize) {

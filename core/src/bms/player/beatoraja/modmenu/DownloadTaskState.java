@@ -16,6 +16,8 @@ public class DownloadTaskState {
 
     public static void initialize(HttpDownloadProcessor httpDownloadProcessor) {
         DownloadTaskState.httpDownloadProcessor = httpDownloadProcessor;
+        runningDownloadTasks.clear();
+        expiredTasks.clear();
         lastSnapshot = System.nanoTime();
     }
 
@@ -29,20 +31,13 @@ public class DownloadTaskState {
         }
         lastSnapshot = now;
 
-        Map<Integer, DownloadTask> tasks = httpDownloadProcessor.getAllTasks();
-        if (tasks.size() == expiredTasks.size()) {
-            return;
-        }
+        reconcile(httpDownloadProcessor.getAllTasks(), now);
+    }
 
+    static void reconcile(Map<Integer, DownloadTask> tasks, long now) {
         for (var taskEntry : tasks.entrySet()) {
             int id = taskEntry.getKey();
             DownloadTask task = taskEntry.getValue();
-            if (expiredTasks.containsKey(id)) {
-                continue;
-            }
-
-
-            DownloadTask.DownloadTaskStatus state = task.getDownloadTaskStatus();
             boolean finished = task.getDownloadTaskStatus().getValue() >=
                                DownloadTask.DownloadTaskStatus.Extracted.getValue();
             boolean expired = finished && (5000000000L < now - task.getTimeFinished());
@@ -52,6 +47,7 @@ public class DownloadTaskState {
                 expiredTasks.put(id, task);
             }
             else {
+                expiredTasks.remove(id);
                 runningDownloadTasks.put(id, task);
             }
         }

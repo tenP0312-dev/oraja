@@ -153,12 +153,20 @@ public class HttpDownloadProcessor {
         // NOTE: The reason of using executor instead of using 'synchronized' on tasks directly is forcing
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
         // Alternative way is providing a wait queue and an extra thread polling submit request routinely
-        Future<DownloadTask> submit = submitter.submit(() -> {
+        Future<TaskSubmission> submit = submitter.submit(() -> {
             synchronized (tasks) {
-                // NOTE: This reject strategy works for Konmai because the download url could be considered as a unique
-                // info, but not wriggle since it doesn't offer a meta query api.
-                if (tasks.values().stream().anyMatch(task -> task.getUrl().equals(downloadURL))) {
-                    logger.error("[HttpDownloadProcessor] Rejecting download task[{}] because duplication has been found", downloadURL);
+                DownloadTask existing = tasks.values().stream()
+                        .filter(task -> hasSameTaskIdentity(task, downloadURL, md5))
+                        .findFirst()
+                        .orElse(null);
+                if (claimFailedTaskForRetry(existing)) {
+                    logger.info("[HttpDownloadProcessor] Retrying failed download task[{}]({})", displayName, downloadURL);
+                    ImGuiNotify.info(String.format("Retrying download task[%s]", displayName));
+                    return new TaskSubmission(existing, true);
+                }
+                if (existing != null) {
+                    logger.info("[HttpDownloadProcessor] Rejecting active or completed duplicate task[{}]({})",
+                            displayName, downloadURL);
                     ImGuiNotify.warning("Already submitted");
                     return null;
                 }
@@ -166,24 +174,32 @@ public class HttpDownloadProcessor {
                 DownloadTask downloadTask = new DownloadTask(taskId, downloadURL, displayName, md5, mode);
                 tasks.put(taskId, downloadTask);
                 ImGuiNotify.info(String.format("New download task[%s] submitted", displayName));
-                return downloadTask;
+                return new TaskSubmission(downloadTask, false);
             }
         });
 
-        DownloadTask downloadTask;
+        TaskSubmission submission;
         try {
-            downloadTask = submit.get();
-        } catch (ExecutionException | InterruptedException e) {
+            submission = submit.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted while submitting a download task", e);
+            return;
+        } catch (ExecutionException e) {
             e.printStackTrace();
 			logger.error("Unexpected error from submitting download task: {}", e.getMessage());
             return;
         }
 
-        if (downloadTask == null) {
+        if (submission == null) {
             return;
         }
 
-        executeDownloadTask(downloadTask);
+        if (submission.retry()) {
+            retryDownloadTask(submission.task());
+        } else {
+            executeDownloadTask(submission.task());
+        }
     }
 
     /**
@@ -257,7 +273,9 @@ public class HttpDownloadProcessor {
             try {
                 BmsirBodyDownloadService.InstallResult result = bmsirBodyDownloadService.install(downloadTask);
                 downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Extracted);
-                String source = result.wayback() ? "Wayback snapshot" : "registered body URL";
+                String source = result.wayback()
+                        ? (result.landingPage() ? "archive link from a Wayback page" : "Wayback snapshot")
+                        : (result.landingPage() ? "archive link from the registered page" : "registered body URL");
                 ImGuiNotify.info(String.format(
                         "Archive saved without extraction from %s: %s", source, result.archive().getFileName()));
                 main.updateSong(downloadDirectory, true);
@@ -280,6 +298,22 @@ public class HttpDownloadProcessor {
         downloadTask.setDownloadSize(0);
         downloadTask.setContentLength(0);
         executeDownloadTask(downloadTask);
+    }
+
+    private record TaskSubmission(DownloadTask task, boolean retry) {
+    }
+
+    static boolean hasSameTaskIdentity(DownloadTask task, String downloadURL, String md5) {
+        return task != null && task.getUrl().equals(downloadURL) && task.getHash().equalsIgnoreCase(md5);
+    }
+
+    static boolean claimFailedTaskForRetry(DownloadTask task) {
+        if (task == null || task.getDownloadTaskStatus() != DownloadTask.DownloadTaskStatus.Error) {
+            return false;
+        }
+        // Reserve the retry while tasks is locked so rapid repeated submissions cannot start it twice.
+        task.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Prepare);
+        return true;
     }
 
     /**
