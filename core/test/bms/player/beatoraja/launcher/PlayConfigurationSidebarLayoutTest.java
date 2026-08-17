@@ -31,6 +31,12 @@ class PlayConfigurationSidebarLayoutTest {
 		assertEquals("220.0", sidebar.getAttribute("maxWidth"));
 		assertEquals("TextField", elementWithFxId(document, "sidebarSearch").getTagName());
 		assertEquals("VBox", elementWithFxId(document, "contextHelpPanel").getTagName());
+		assertEquals("VBox", elementWithFxId(document, "classicPlayOptionContent").getTagName());
+		Element sidebarPlayOptions = elementWithFxId(document, "sidebarPlayOptionScroll");
+		assertEquals("ScrollPane", sidebarPlayOptions.getTagName());
+		assertEquals("false", sidebarPlayOptions.getAttribute("managed"));
+		assertEquals("false", sidebarPlayOptions.getAttribute("visible"));
+		assertEquals("VBox", elementWithFxId(document, "sidebarPlayOptionGroups").getTagName());
 	}
 
 	private static Element elementWithFxId(Document document, String id) {

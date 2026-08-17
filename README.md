@@ -214,7 +214,11 @@ pointer hover or keyboard focus. The player ID, display name, and active rule
 profile are collapsed into a sidebar summary and can be expanded when needed.
 The navigation rail has a stable width, searchable destinations, restrained
 single-color icons, and separate explanation and settings cards so changing
-pages does not shift the content boundary.
+pages does not shift the content boundary. In Sidebar, Play Options is also
+reflowed into grouped cards with one editor or switch and a persistent plain-
+language explanation per setting. Those editors stay bidirectionally synced
+with the existing controls, so Classic layout and configuration persistence
+remain unchanged.
 
 ## 作業フォルダ / Work folder
 

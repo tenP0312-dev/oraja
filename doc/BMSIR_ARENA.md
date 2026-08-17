@@ -254,9 +254,13 @@ ID plus display name and LR2/oraja rule profile, and expands the existing player
 controls into the right pane on demand. A separate card above the selected page
 shows the page overview by default. Pointing at a setting or moving keyboard
 focus to it changes that card to the setting name, an explanation, and a
-category diagram. Leaving the setting restores the page overview. The existing
-setting view is presented on a second card without cloning or replacing its
-controls.
+category diagram. Leaving the setting restores the page overview. Most pages
+present the existing setting view on a second card. Play Options additionally
+uses a sidebar-specific set of grouped row cards: every setting has a visible
+name, editor or switch, and persistent explanation. These row editors are
+bidirectionally bound to the existing Play Options controls, including play-
+mode changes, so the original controls remain the single configuration state
+used by Classic and by the existing save path.
 
 The layout choice applies immediately so it can be previewed before leaving
 the `Other` page, then persists with the normal configuration save. Classic
