@@ -80,6 +80,7 @@ import twitter4j.conf.ConfigurationBuilder;
 public class PlayConfigurationView implements Initializable {
 	private static final Logger logger = LoggerFactory.getLogger(PlayConfigurationView.class);
 	static final double SIDEBAR_EDITOR_COLUMN_WIDTH = 480.0;
+	static final Pos SIDEBAR_STANDALONE_TOGGLE_ALIGNMENT = Pos.CENTER_RIGHT;
     // TODO スキンプレビュー機能
 	private String dbUpdateCheckDialogMessage;
 
@@ -2044,7 +2045,7 @@ public class PlayConfigurationView implements Initializable {
 		state.getStyleClass().add("sidebar-switch-state");
 		state.textProperty().bind(Bindings.when(toggle.selectedProperty()).then("ON").otherwise("OFF"));
 		HBox result = new HBox(8, toggle, state);
-		result.setAlignment(Pos.CENTER_LEFT);
+		result.setAlignment(SIDEBAR_STANDALONE_TOGGLE_ALIGNMENT);
 		result.getStyleClass().add("sidebar-toggle-control");
 		return result;
 	}

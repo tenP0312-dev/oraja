@@ -256,7 +256,8 @@ its setting cards because each setting carries its own persistent explanation.
 Every Sidebar destination uses grouped row cards. Scalar settings use one
 stable two-column layout: the visible name remains left-aligned and one wide
 editor or ON/OFF switch occupies the shared trailing column, with a persistent
-plain-language explanation below. Complex editors keep their useful shape
+plain-language explanation below. A standalone switch and its ON/OFF label sit
+at the far-right edge of that column. Complex editors keep their useful shape
 instead of being compressed into scalar rows. Controller tables, BMS roots,
 difficulty tables,
 skin options/previews, local-table editors, Discord Webhook destinations, and

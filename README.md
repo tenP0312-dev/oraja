@@ -216,7 +216,8 @@ The navigation rail has a stable width, searchable destinations, restrained
 single-color icons, and grouped settings cards so changing pages does not shift
 the content boundary. Every scalar row uses one stable two-column layout: its
 label stays at the left and its editor or ON/OFF switch uses the same trailing
-column, with a persistent plain-language explanation below. Folder lists,
+column. Standalone switches sit at the row's far-right edge, with a persistent
+plain-language explanation below. Folder lists,
 tables, skin previews, Webhook lists, and OBS scene mappings keep their useful
 shape inside full-width explained workspace cards. Sidebar editors remain
 connected to the original controls, so Classic layout, controller behavior,
