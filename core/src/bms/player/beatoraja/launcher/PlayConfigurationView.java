@@ -53,12 +53,15 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.web.WebView;
 import javafx.stage.*;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.util.Callback;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
@@ -119,6 +122,12 @@ public class PlayConfigurationView implements Initializable {
 	private Label contextHelpTitle;
 	@FXML
 	private Label contextHelpDescription;
+	@FXML
+	private VBox classicPlayOptionContent;
+	@FXML
+	private ScrollPane sidebarPlayOptionScroll;
+	@FXML
+	private VBox sidebarPlayOptionGroups;
 	@FXML
 	private ComboBox<Config.ConfigurationLayout> configurationLayout;
 	@FXML
@@ -242,6 +251,7 @@ public class PlayConfigurationView implements Initializable {
 	private GridPane sidebarPlayerEditor;
 	private Label sidebarDisplayNameLabel;
 	private boolean playerEditorUsesSidebarLayout;
+	private boolean sidebarPlayOptionsInitialized;
 	private boolean englishUi;
 
 	@FXML
@@ -686,6 +696,7 @@ public class PlayConfigurationView implements Initializable {
 					if (newTab != null) {
 						sidebarNavigation.getSelectionModel().select(newTab);
 						showTabContextHelp(newTab);
+						updateSidebarTabPresentation(newTab);
 					}
 				}
 		);
@@ -702,6 +713,7 @@ public class PlayConfigurationView implements Initializable {
 
 		initializeSidebarPlayerEditor();
 		initializeContextHelp();
+		initializeSidebarPlayOptions();
 		sidebarNavigation.refresh();
 		configurationLayout.setValue(Config.ConfigurationLayout.CLASSIC);
 	}
@@ -827,6 +839,8 @@ public class PlayConfigurationView implements Initializable {
 		useSidebarPlayerEditor(sidebar);
 		setManagedVisible(sidebarRail, sidebar);
 		setManagedVisible(contextHelpPanel, sidebar);
+		setManagedVisible(classicPlayOptionContent, !sidebar);
+		setManagedVisible(sidebarPlayOptionScroll, sidebar);
 		if (sidebar) {
 			if (!configurationContent.getStyleClass().contains("sidebar-mode")) {
 				configurationContent.getStyleClass().add("sidebar-mode");
@@ -841,9 +855,23 @@ public class PlayConfigurationView implements Initializable {
 		} else {
 			configurationContent.getStyleClass().remove("sidebar-mode");
 			configurationTabs.getStyleClass().remove("sidebar-content-tabs");
+			configurationTabs.getStyleClass().remove("sidebar-form-tab");
 			sidebarPlayerSummary.setSelected(false);
 		}
+		updateSidebarTabPresentation(configurationTabs.getSelectionModel().getSelectedItem());
 		updatePlayerPanelVisibility();
+	}
+
+	private void updateSidebarTabPresentation(Tab tab) {
+		boolean sidebarPlayOptions = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR
+				&& tab == optionTab;
+		if (sidebarPlayOptions) {
+			if (!configurationTabs.getStyleClass().contains("sidebar-form-tab")) {
+				configurationTabs.getStyleClass().add("sidebar-form-tab");
+			}
+		} else {
+			configurationTabs.getStyleClass().remove("sidebar-form-tab");
+		}
 	}
 
 	private static void setManagedVisible(Node node, boolean visible) {
@@ -897,7 +925,7 @@ public class PlayConfigurationView implements Initializable {
 		registerTabHelp(inputTab, "入力", "鍵盤モード、コントローラー、スクラッチ入力を設定します。", "Input", "Configure key mode, controllers, and scratch input.", HelpGraphic.INPUT);
 		registerTabHelp(resourceTab, "リソース", "BMSフォルダ、難易度表、楽曲データベースの更新方法を管理します。", "Resources", "Manage BMS folders, difficulty tables, and song database updates.", HelpGraphic.RESOURCE);
 		registerTabHelp(musicselectTab, "選曲", "選曲画面の移動、プレビュー、検索と表示方法を調整します。", "Music Select", "Adjust navigation, previews, search, and presentation in Music Select.", HelpGraphic.MUSIC);
-		registerTabHelp(optionTab, "プレイオプション", "譜面の見え方、譜面オプション、ゲージとアシスト機能を設定します。", "Play Options", "Configure note visibility, chart options, gauges, and assists.", HelpGraphic.PLAY);
+		registerTabHelp(optionTab, "プレイ OP", "プレイ中の見え方・譜面オプション・ゲージを設定します。本体と同じ項目順のまま、各設定の説明を追加しています。", "Play Options", "Configure note visibility, chart options, and gauges in the original order, with an explanation for every setting.", HelpGraphic.PLAY);
 		registerTabHelp(skinTab, "スキン", "使用するスキンとスキン固有の項目、BGM・効果音フォルダを選びます。", "Skin", "Choose skins, skin-specific values, BGM, and sound folders.", HelpGraphic.SKIN);
 		registerTabHelp(otherTab, "その他", "設定画面の表示方式、キャッシュ、ダウンロードなどの補助設定です。", "Other", "Auxiliary settings for the configuration layout, cache, and downloads.", HelpGraphic.OTHER);
 		registerTabHelp(bmsirSpecificTab, "BMS-IR固有設定", "BMS-IR向けの操作、表示、同期、ショートカットを設定します。", "BMS-IR Features", "Configure BMS-IR controls, presentation, synchronization, and shortcuts.", HelpGraphic.BMSIR);
@@ -932,6 +960,442 @@ public class PlayConfigurationView implements Initializable {
 			installContextHelp(tab, tab.getContent());
 		}
 		showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
+	}
+
+	private void initializeSidebarPlayOptions() {
+		if (sidebarPlayOptionsInitialized) {
+			return;
+		}
+
+		VBox visibility = sidebarSettingCard(
+				sidebarSettingRow("設定対象モード", "Mode",
+						"7K、14Kなど、どのプレイモードの設定を編集するかを選びます。",
+						"Choose which play mode, such as 7K or 14K, you are editing.",
+						sidebarCombo(playconfig)),
+				sidebarSettingRow("HI-SPEED", "HI-SPEED",
+						"ノーツのスクロール速度倍率です。",
+						"Sets the note scroll-speed multiplier.",
+						sidebarSpinner(hispeed)),
+				sidebarSettingRow("ノーツ表示時間", "Note display time",
+						"ノーツが判定位置へ届くまでの表示時間（いわゆる緑数字）です。単位は ms です。",
+						"Time until notes reach the judgment line, commonly called the green number. The unit is ms.",
+						sidebarSpinner(gvalue)),
+				sidebarSettingRow("レーンカバー", "Lane Cover",
+						"ONにするとレーン上部を隠します。右の数値が隠す量です。",
+						"When ON, hides the upper part of the lane. The value on the right is the cover amount.",
+						sidebarToggleWithValue(enableLanecover, sidebarSpinner(lanecover))),
+				sidebarSettingRow("変化間隔（低速）", "Change step (low)",
+						"低いHI-SPEED帯で、カバー操作1回あたりに変える量です。",
+						"Amount changed by one cover operation in the lower HI-SPEED range.",
+						sidebarSpinner(lanecovermarginlow)),
+				sidebarSettingRow("変化間隔（高速）", "Change step (high)",
+						"高いHI-SPEED帯で、カバー操作1回あたりに変える量です。",
+						"Amount changed by one cover operation in the higher HI-SPEED range.",
+						sidebarSpinner(lanecovermarginhigh)),
+				sidebarSettingRow("変化速度切り替え時間", "Change-speed switch time",
+						"カバー操作を長押ししたとき、低速から高速変更へ切り替わるまでの時間です。単位は ms です。",
+						"Time before a held cover operation switches from slow to fast changes, in ms.",
+						sidebarSpinner(lanecoverswitchduration)),
+				sidebarSettingRow("LIFT", "LIFT",
+						"ONにすると判定位置を上へ持ち上げます。右の数値が持ち上げる量です。",
+						"When ON, raises the judgment line. The value on the right is the lift amount.",
+						sidebarToggleWithValue(enableLift, sidebarSpinner(lift))),
+				sidebarSettingRow("HIDDEN", "HIDDEN",
+						"ONにするとレーン下側でノーツを隠します。右の数値が隠す量です。",
+						"When ON, hides notes near the bottom of the lane. The value on the right is the hidden amount.",
+						sidebarToggleWithValue(enableHidden, sidebarSpinner(hidden))),
+				sidebarSettingRow("ノーツ表示タイミング", "Note display timing",
+						"ノーツ描画だけを前後にずらします。音・判定タイミングは変わりません。",
+						"Offsets note drawing only. Audio and judgment timing do not change.",
+						sidebarSpinner(notesdisplaytiming)),
+				sidebarSettingRow("ノーツ表示タイミング自動調整", "Auto-adjust note display timing",
+						"プレイ結果に合わせてノーツ表示タイミングを自動調整します。",
+						"Automatically adjusts note display timing from play results.",
+						sidebarToggle(notesdisplaytimingautoadjust)),
+				sidebarSettingRow("ハイスピード固定", "HI-SPEED fix",
+						"BPMが変化する譜面で、どのBPMを基準にスクロール速度を固定するかを選びます。",
+						"Choose which BPM is used to keep scroll speed stable on charts with BPM changes.",
+						sidebarCombo(fixhispeed)),
+				sidebarSettingRow("HI-SPEED変化間隔", "HI-SPEED change step",
+						"プレイ中にHI-SPEEDを変更するときの1回あたりの変化量です。",
+						"Amount changed by one HI-SPEED operation during play.",
+						sidebarSpinner(hispeedmargin)),
+				sidebarSettingRow("HI-SPEED固定自動調整", "Auto-adjust HI-SPEED fix",
+						"レーンカバー変更時に、現在のBPMへHI-SPEED固定を自動で合わせます。",
+						"Automatically updates the HI-SPEED fix for the current BPM when Lane Cover changes.",
+						sidebarToggle(hispeedautoadjust))
+		);
+
+		VBox chart = sidebarSettingCard(
+				sidebarSettingRow("譜面オプション", "Note modifier",
+						"1P側のノーツ配置を変更します。OFF、MIRROR、RANDOMなどから選びます。",
+						"Changes the 1P note layout. Choose OFF, MIRROR, RANDOM, and other modifiers.",
+						sidebarCombo(scoreop)),
+				sidebarSettingRow("譜面オプション（2P）", "Note modifier (2P)",
+						"DP時の2P側ノーツ配置を変更します。",
+						"Changes the 2P note layout in DP play.",
+						sidebarCombo(scoreop2)),
+				sidebarSettingRow("DPオプション", "DP option",
+						"DP譜面の左右を入れ替えるFLIPを設定します。",
+						"Enables FLIP to swap the two sides of a DP chart.",
+						sidebarCombo(doubleop)),
+				sidebarSettingRow("ゲージ", "Gauge",
+						"プレイに使用するグルーブゲージの種類を選びます。",
+						"Choose the groove gauge used for play.",
+						sidebarCombo(gaugeop)),
+				sidebarSettingRow("ロングノート種類", "Long-note type",
+						"ロングノートの判定方式を選びます。通常は譜面側の指定を使用します。",
+						"Choose the long-note judgment type. Normally the chart definition is used.",
+						sidebarCombo(lntype)),
+				sidebarSettingRow("CN終端をLN上に置く", "CN endings on LNs",
+						"CNの終端が別のLNと重なる配置を許可します。",
+						"Allows CN endings to overlap another long note.",
+						sidebarToggle(forcedcnendings)),
+				sidebarSettingRow("H-RAN連打BPM（16分）", "H-RANDOM threshold BPM",
+						"H-RANDOMが連打とみなす16分間隔の基準BPMです。",
+						"Threshold BPM used by H-RANDOM to recognize 16th-note repetitions.",
+						sidebarSpinner(hranthresholdbpm)),
+				sidebarSettingRow("ノーツ表示時間固定", "CONSTANT",
+						"ONにすると譜面のBPM変化にかかわらずノーツの表示時間を一定にします。右はフェードイン時間です。",
+						"Keeps note display time constant through BPM changes. The value on the right is the fade-in time.",
+						sidebarToggleWithValue(enableConstant, sidebarSpinner(constFadeinTime)))
+		);
+
+		VBox assist = sidebarSettingCard(
+				sidebarSettingRow("EXPAND JUDGE", "EXPAND JUDGE",
+						"鍵盤とスクラッチの判定幅を個別に拡大・縮小できるようにします。",
+						"Enables separate scaling of key and scratch judgment windows.",
+						sidebarToggle(customjudge)),
+				sidebarSettingRow("鍵盤の判定幅", "Key judgment windows",
+						"鍵盤のPG・GR・GD判定幅を標準値に対する百分率で設定します。",
+						"Sets key PG, GR, and GD windows as percentages of the standard values.",
+						sidebarLabeledInputs(
+								new String[] { "PG", "GR", "GD" },
+								sidebarSpinner(njudgepg), sidebarSpinner(njudgegr), sidebarSpinner(njudgegd))),
+				sidebarSettingRow("スクラッチの判定幅", "Scratch judgment windows",
+						"スクラッチのPG・GR・GD判定幅を標準値に対する百分率で設定します。",
+						"Sets scratch PG, GR, and GD windows as percentages of the standard values.",
+						sidebarLabeledInputs(
+								new String[] { "PG", "GR", "GD" },
+								sidebarSpinner(sjudgepg), sidebarSpinner(sjudgegr), sidebarSpinner(sjudgegd))),
+				sidebarSettingRow("BPMガイド", "BPM guide",
+						"プレイ中にBPM変化の目安を表示します。",
+						"Shows guidance for BPM changes during play.",
+						sidebarToggle(bpmguide)),
+				sidebarSettingRow("判定エリア表示", "Show judgment area",
+						"判定が有効になる範囲をレーン上に表示します。",
+						"Shows the active judgment area on the lane.",
+						sidebarToggle(judgeregion)),
+				sidebarSettingRow("不可視ノーツ表示", "Show hidden notes",
+						"通常は見えないノーツを補助表示します。",
+						"Displays notes that are normally invisible.",
+						sidebarToggle(showhiddennote)),
+				sidebarSettingRow("処理済ノーツ別表示", "Mark processed notes",
+						"判定済みのノーツを区別して表示します。",
+						"Visually distinguishes notes that have already been judged.",
+						sidebarToggle(markprocessednote)),
+				sidebarSettingRow("GUIDE SE", "GUIDE SE",
+						"プレイを補助するガイド音を有効にします。",
+						"Enables guide sound effects during play.",
+						sidebarToggle(guidese)),
+				sidebarSettingRow("WINDOW HOLD", "WINDOW HOLD",
+						"ウィンドウのフォーカス状態を保持する補助機能です。",
+						"Keeps the game window focus behavior active as an assist.",
+						sidebarToggle(windowhold)),
+				sidebarSettingRow("過去のメモを表示", "Show past notes",
+						"判定位置を通過したノーツを残して表示します。",
+						"Keeps notes visible after they pass the judgment line.",
+						sidebarToggle(showpastnote)),
+				sidebarSettingRow("LR2 EXTRA MODE", "LR2 EXTRA MODE",
+						"LR2互換の追加ノーツ生成レベルを選びます。0は無効です。",
+						"Selects the LR2-compatible extra-note generation level. 0 disables it.",
+						sidebarSpinner(extranotedepth)),
+				sidebarSettingRow("Mine Modify Mode", "Mine Modify Mode",
+						"地雷ノーツを削除・追加する変換方法を選びます。",
+						"Choose how mine notes are removed or generated.",
+						sidebarCombo(minemode)),
+				sidebarSettingRow("Scroll Modify Mode", "Scroll Modify Mode",
+						"スクロール速度変化を削除・追加する変換方法を選びます。",
+						"Choose how scroll-speed changes are removed or generated.",
+						sidebarCombo(scrollmode)),
+				sidebarSettingRow("Long Note Modify Mode", "Long Note Modify Mode",
+						"通常ノーツとロングノートを変換する方法を選びます。",
+						"Choose how normal notes and long notes are converted.",
+						sidebarCombo(longnotemode)),
+				sidebarSettingRow("Long Note Modify Rate", "Long Note Modify Rate",
+						"ロングノート変換を適用する割合です。",
+						"Sets the proportion of notes affected by long-note conversion.",
+						sidebarSlider(longnoterate))
+		);
+
+		VBox result = sidebarSettingCard(
+				sidebarSettingRow("ターゲットスコア", "Target score",
+						"プレイ中の比較対象として表示するスコアを選びます。",
+						"Choose the score used as the in-play comparison target.",
+						sidebarCombo(target)),
+				sidebarSettingRow("判定アルゴリズム", "Judgment algorithm",
+						"同時入力付近で、どのノーツを優先して判定するかを選びます。",
+						"Choose which notes receive priority around simultaneous inputs.",
+						sidebarCombo(judgealgorithm)),
+				sidebarSettingRow("Gauge Auto Shift", "Gauge Auto Shift",
+						"ゲージ失敗時に別のゲージへ移行する方法を選びます。",
+						"Choose how the gauge changes after a gauge failure.",
+						sidebarCombo(gaugeautoshift)),
+				sidebarSettingRow("ゲージ遷移の下限", "Bottom shiftable gauge",
+						"Gauge Auto Shiftで移行できる最も低いゲージを選びます。",
+						"Choose the lowest gauge that Gauge Auto Shift may reach.",
+						sidebarCombo(bottomshiftablegauge)),
+				sidebarSettingRow("リプレイ自動保存 1", "Auto-save Replay 1",
+						"リプレイスロット1を自動保存する条件を選びます。",
+						"Choose when Replay slot 1 is saved automatically.",
+						sidebarCombo(autosavereplay1)),
+				sidebarSettingRow("リプレイ自動保存 2", "Auto-save Replay 2",
+						"リプレイスロット2を自動保存する条件を選びます。",
+						"Choose when Replay slot 2 is saved automatically.",
+						sidebarCombo(autosavereplay2)),
+				sidebarSettingRow("リプレイ自動保存 3", "Auto-save Replay 3",
+						"リプレイスロット3を自動保存する条件を選びます。",
+						"Choose when Replay slot 3 is saved automatically.",
+						sidebarCombo(autosavereplay3)),
+				sidebarSettingRow("リプレイ自動保存 4", "Auto-save Replay 4",
+						"リプレイスロット4を自動保存する条件を選びます。",
+						"Choose when Replay slot 4 is saved automatically.",
+						sidebarCombo(autosavereplay4)),
+				sidebarSettingRow("7 to 9", "7 to 9",
+						"7鍵譜面を9鍵へ割り当てるパターンを選びます。",
+						"Choose how a 7-key chart is mapped to 9 keys.",
+						sidebarCombo(seventoninepattern)),
+				sidebarSettingRow("SCタイプ", "SC type",
+						"7鍵から9鍵へ変換したときのスクラッチ配置方法を選びます。",
+						"Choose the scratch placement used for 7-to-9 conversion.",
+						sidebarCombo(seventoninetype)),
+				sidebarSettingRow("START+SELECT終了まで時間", "START+SELECT exit delay",
+						"STARTとSELECTを押してからプレイを終了するまでの時間です。単位は ms です。",
+						"Time START and SELECT must be held before exiting play, in ms.",
+						sidebarSpinner(exitpressduration)),
+				sidebarSettingRow("チャートプレビュー", "Chart Preview",
+						"楽曲ロード中にSTARTまたはSELECTを押している間、プレイ画面で譜面の流れを先行表示します。選曲時の試聴ではありません。",
+						"While loading, hold START or SELECT to preview chart movement on the play field. This is not Music Select audio preview.",
+						sidebarToggle(chartpreview))
+		);
+
+		sidebarPlayOptionGroups.getChildren().setAll(visibility, chart, assist, result);
+		sidebarPlayOptionsInitialized = true;
+	}
+
+	private VBox sidebarSettingCard(VBox... rows) {
+		VBox card = new VBox();
+		card.getStyleClass().add("sidebar-settings-card");
+		card.getChildren().setAll(rows);
+		return card;
+	}
+
+	private VBox sidebarSettingRow(String jaTitle, String enTitle,
+			String jaDescription, String enDescription, Node editorNode) {
+		String title = uiText(jaTitle, enTitle);
+		String description = uiText(jaDescription, enDescription);
+		Label titleLabel = new Label(title);
+		titleLabel.setWrapText(true);
+		titleLabel.getStyleClass().add("sidebar-setting-title");
+		HBox.setHgrow(titleLabel, Priority.ALWAYS);
+
+		HBox editor = new HBox(editorNode);
+		editor.setAlignment(Pos.CENTER_LEFT);
+		editor.getStyleClass().add("sidebar-setting-editor");
+		if (editorNode instanceof Region region) {
+			region.setMaxWidth(Double.MAX_VALUE);
+			HBox.setHgrow(region, Priority.ALWAYS);
+		}
+
+		HBox main = new HBox(18, titleLabel, editor);
+		main.setAlignment(Pos.CENTER_LEFT);
+		main.getStyleClass().add("sidebar-setting-main");
+
+		Label descriptionLabel = new Label(description);
+		descriptionLabel.setWrapText(true);
+		descriptionLabel.getStyleClass().add("sidebar-setting-row-description");
+
+		VBox row = new VBox(8, main, descriptionLabel);
+		row.getStyleClass().add("sidebar-setting-row");
+		row.setAccessibleText(title + ". " + description);
+		Control firstControl = firstControl(editorNode);
+		if (firstControl != null) {
+			titleLabel.setLabelFor(firstControl);
+			firstControl.setAccessibleText(title + ". " + description);
+		}
+		installSidebarRowHelp(row, new ContextHelp(title, description, HelpGraphic.PLAY));
+		return row;
+	}
+
+	private String uiText(String japanese, String english) {
+		return englishUi ? english : japanese;
+	}
+
+	private <T> ComboBox<T> sidebarCombo(ComboBox<T> source) {
+		ComboBox<T> mirror = new ComboBox<>();
+		mirror.setItems(source.getItems());
+		mirror.setConverter(source.getConverter());
+		Callback<ListView<T>, ListCell<T>> cellFactory = source.getCellFactory();
+		if (cellFactory != null) {
+			mirror.setCellFactory(cellFactory);
+			mirror.setButtonCell(cellFactory.call(new ListView<>()));
+		}
+		mirror.setValue(source.getValue());
+		mirror.valueProperty().bindBidirectional(source.valueProperty());
+		mirror.disableProperty().bind(source.disableProperty());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	private <T> Spinner<T> sidebarSpinner(Spinner<T> source) {
+		NumericSpinner<T> mirror = new NumericSpinner<>();
+		mirror.setEditable(source.isEditable());
+		SpinnerValueFactory<T> valueFactory = copySpinnerValueFactory(source.getValueFactory());
+		mirror.setValueFactory(valueFactory);
+		valueFactory.valueProperty().bindBidirectional(source.getValueFactory().valueProperty());
+		mirror.disableProperty().bind(source.disableProperty());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> SpinnerValueFactory<T> copySpinnerValueFactory(SpinnerValueFactory<T> original) {
+		if (original instanceof SpinnerValueFactory.IntegerSpinnerValueFactory integerFactory) {
+			return (SpinnerValueFactory<T>) new SpinnerValueFactory.IntegerSpinnerValueFactory(
+					integerFactory.getMin(), integerFactory.getMax(), integerFactory.getValue(),
+					integerFactory.getAmountToStepBy()
+			);
+		}
+		if (original instanceof SpinnerValueFactory.DoubleSpinnerValueFactory doubleFactory) {
+			return (SpinnerValueFactory<T>) new SpinnerValueFactory.DoubleSpinnerValueFactory(
+					doubleFactory.getMin(), doubleFactory.getMax(), doubleFactory.getValue(),
+					doubleFactory.getAmountToStepBy()
+			);
+		}
+		throw new IllegalArgumentException("Unsupported spinner value factory: " + original.getClass().getName());
+	}
+
+	private HBox sidebarToggle(CheckBox source) {
+		ToggleButton toggle = new ToggleButton();
+		toggle.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+		toggle.setGraphic(new Circle(8, Color.WHITE));
+		toggle.getStyleClass().add("sidebar-switch");
+		toggle.selectedProperty().bindBidirectional(source.selectedProperty());
+		toggle.disableProperty().bind(source.disableProperty());
+		Label state = new Label();
+		state.getStyleClass().add("sidebar-switch-state");
+		state.textProperty().bind(Bindings.when(toggle.selectedProperty()).then("ON").otherwise("OFF"));
+		HBox result = new HBox(8, toggle, state);
+		result.setAlignment(Pos.CENTER_LEFT);
+		result.getStyleClass().add("sidebar-toggle-control");
+		return result;
+	}
+
+	private HBox sidebarToggleWithValue(CheckBox source, Node valueControl) {
+		HBox result = new HBox(12, sidebarToggle(source), valueControl);
+		result.setAlignment(Pos.CENTER_LEFT);
+		result.getStyleClass().add("sidebar-compound-control");
+		if (valueControl instanceof Control control) {
+			control.disableProperty().unbind();
+			control.disableProperty().bind(source.disableProperty().or(source.selectedProperty().not()));
+		}
+		if (valueControl instanceof Region region) {
+			region.setMaxWidth(Double.MAX_VALUE);
+			HBox.setHgrow(region, Priority.ALWAYS);
+		}
+		return result;
+	}
+
+	private Slider sidebarSlider(Slider source) {
+		Slider mirror = new Slider(source.getMin(), source.getMax(), source.getValue());
+		mirror.setBlockIncrement(source.getBlockIncrement());
+		mirror.setMajorTickUnit(source.getMajorTickUnit());
+		mirror.setMinorTickCount(source.getMinorTickCount());
+		mirror.valueProperty().bindBidirectional(source.valueProperty());
+		mirror.disableProperty().bind(source.disableProperty());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	private HBox sidebarLabeledInputs(String[] labels, Node... controls) {
+		HBox result = new HBox(8);
+		result.setAlignment(Pos.CENTER_LEFT);
+		result.getStyleClass().add("sidebar-compact-inputs");
+		for (int index = 0; index < controls.length; index++) {
+			Label label = new Label(labels[index]);
+			label.getStyleClass().add("sidebar-compact-label");
+			VBox item = new VBox(3, label, controls[index]);
+			item.getStyleClass().add("sidebar-compact-input");
+			if (controls[index] instanceof Region region) {
+				region.setMaxWidth(Double.MAX_VALUE);
+				VBox.setVgrow(region, Priority.ALWAYS);
+			}
+			HBox.setHgrow(item, Priority.ALWAYS);
+			result.getChildren().add(item);
+		}
+		return result;
+	}
+
+	private void installSidebarRowHelp(VBox row, ContextHelp help) {
+		row.addEventHandler(MouseEvent.MOUSE_ENTERED, event -> showContextHelp(help));
+		row.addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
+			if (!containsFocusedControl(row)) {
+				showTabContextHelp(optionTab);
+			}
+		});
+		forEachControl(row, control -> control.focusedProperty().addListener(
+				(observable, oldValue, focused) -> {
+					if (focused) {
+						showContextHelp(help);
+					} else {
+						Platform.runLater(() -> {
+							if (!row.isHover() && !containsFocusedControl(row)) {
+								showTabContextHelp(optionTab);
+							}
+						});
+					}
+				}
+		));
+	}
+
+	private static void forEachControl(Node node, java.util.function.Consumer<Control> consumer) {
+		if (node instanceof Control control) {
+			consumer.accept(control);
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				forEachControl(child, consumer);
+			}
+		}
+	}
+
+	private static boolean containsFocusedControl(Node node) {
+		if (node instanceof Control control && control.isFocused()) {
+			return true;
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				if (containsFocusedControl(child)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static Control firstControl(Node node) {
+		if (node instanceof Control control) {
+			return control;
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				Control control = firstControl(child);
+				if (control != null) {
+					return control;
+				}
+			}
+		}
+		return null;
 	}
 
 	private void registerTabHelp(Tab tab, String jaTitle, String jaDescription,

@@ -210,6 +210,140 @@
     -fx-effect: dropshadow(gaussian, rgba(29, 39, 54, 0.06), 8, 0, 0, 2);
 }
 
+.sidebar-content-tabs.sidebar-form-tab > .tab-content-area {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-padding: 0;
+    -fx-effect: null;
+}
+
+.sidebar-play-options-scroll,
+.sidebar-play-options-scroll > .viewport,
+.sidebar-play-options-scroll > .corner {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.sidebar-play-options-scroll {
+    -fx-padding: 0 0 0 0;
+}
+
+.sidebar-play-options {
+    -fx-background-color: transparent;
+}
+
+.sidebar-settings-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 14px;
+    -fx-border-color: #dfe3e9;
+    -fx-border-radius: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(29, 39, 54, 0.06), 8, 0, 0, 2);
+}
+
+.sidebar-setting-row {
+    -fx-padding: 14 18 14 18;
+    -fx-border-color: transparent transparent #e4e7eb transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.sidebar-setting-main {
+    -fx-min-height: 38px;
+}
+
+.sidebar-setting-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #1f2733;
+}
+
+.sidebar-setting-editor {
+    -fx-min-width: 310px;
+    -fx-pref-width: 360px;
+    -fx-max-width: 430px;
+}
+
+.sidebar-setting-row-description {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #626c7c;
+    -fx-line-spacing: 2px;
+}
+
+.settings-content.sidebar-mode .sidebar-setting-control {
+    -fx-min-height: 36px;
+    -fx-pref-height: 36px;
+}
+
+.sidebar-toggle-control {
+    -fx-min-height: 36px;
+}
+
+.sidebar-switch {
+    -fx-alignment: center-left;
+    -fx-min-width: 46px;
+    -fx-pref-width: 46px;
+    -fx-max-width: 46px;
+    -fx-min-height: 26px;
+    -fx-pref-height: 26px;
+    -fx-max-height: 26px;
+    -fx-padding: 3px;
+    -fx-background-color: #aeb4bd;
+    -fx-background-radius: 13px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 13px;
+    -fx-cursor: hand;
+}
+
+.sidebar-switch:hover {
+    -fx-background-color: #969da8;
+}
+
+.sidebar-switch:selected {
+    -fx-alignment: center-right;
+    -fx-background-color: #28bf5b;
+}
+
+.sidebar-switch:selected:hover {
+    -fx-background-color: #20aa4e;
+}
+
+.sidebar-switch:focused {
+    -fx-border-color: #1976d2;
+    -fx-border-width: 2px;
+}
+
+.sidebar-switch:disabled {
+    -fx-opacity: 0.48;
+}
+
+.sidebar-switch-state {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6c7480;
+}
+
+.sidebar-compound-control {
+    -fx-min-width: 310px;
+}
+
+.sidebar-compact-inputs {
+    -fx-min-width: 310px;
+}
+
+.sidebar-compact-input {
+    -fx-min-width: 0;
+}
+
+.sidebar-compact-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: #6c7480;
+}
+
+.sidebar-compact-input .spinner {
+    -fx-min-width: 0;
+    -fx-pref-width: 100px;
+}
+
 .settings-content.sidebar-mode .combo-box,
 .settings-content.sidebar-mode .text-field,
 .settings-content.sidebar-mode .password-field,

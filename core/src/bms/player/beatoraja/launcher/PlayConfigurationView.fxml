@@ -136,7 +136,7 @@
          <content>
             <AnchorPane prefHeight="200.0" prefWidth="200.0">
                <children>
-                  <VBox prefHeight="190.0" prefWidth="112.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <VBox fx:id="classicPlayOptionContent" prefHeight="190.0" prefWidth="112.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                      <children>
                             <HBox prefHeight="18.0" prefWidth="703.0">
                                 <VBox.margin>
@@ -390,6 +390,15 @@
                         <Insets top="10.0" />
                      </padding>
                   </VBox>
+                  <ScrollPane fx:id="sidebarPlayOptionScroll" fitToWidth="true" hbarPolicy="NEVER" managed="false" styleClass="sidebar-play-options-scroll" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                     <content>
+                        <VBox fx:id="sidebarPlayOptionGroups" spacing="14.0" styleClass="sidebar-play-options">
+                           <padding>
+                              <Insets bottom="16.0" left="2.0" right="2.0" top="2.0" />
+                           </padding>
+                        </VBox>
+                     </content>
+                  </ScrollPane>
                </children>
             </AnchorPane>
          </content>
