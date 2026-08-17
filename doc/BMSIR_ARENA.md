@@ -1,9 +1,15 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.52`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.53`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.53` keeps the native game-window title stable for OBS, exposes
+the resolved RANDOM lane placement to play skins during READY/PLAY, opens the
+retained variants of an LR2-style grouped song row as separate entries, and
+restores the ordinary-play/BGA/gauge state required by WMII and similar Skin
+Select previews.
 
 Version `0.4.14.52` reorganizes startup configuration into one left sidebar,
 uses difficulty-table entry levels in Music Select, and expands the Resource
@@ -1111,7 +1117,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.52-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.53-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1132,7 +1138,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.52-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.53-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1148,7 +1154,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.52-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.53-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
