@@ -10,13 +10,12 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.51**. Windows PortAudio users can
-select WASAPI Shared or Exclusive mode in the Audio tab; Shared remains the
-default and the selector is available only for a Windows WASAPI device.
-Windows users can also choose `ASIO` as a separate driver that lists only ASIO
-output devices, persists the exact selection, and never silently changes an
-unavailable ASIO path to another audio driver. Existing generic PortAudio and
-OpenAL choices remain available.
+The current client source version is **0.4.14.52**. Startup configuration uses
+a consistent left sidebar across its settings tabs. Difficulty-table folders
+show the integer level assigned by the table, including aggregate folders such
+as `全曲`. The Resource tab offers 109 grouped built-in table presets and lets
+players apply additions and removals together without touching custom URL
+tables.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -45,6 +44,25 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.52
+
+Startup configuration now uses one left sidebar across every settings tab,
+with aligned labels and controls while preserving the existing settings and
+controller behavior.
+
+Inside difficulty-table folders, Music Select displays the first decimal
+integer from each table entry as the chart level. This also applies to
+aggregate folders such as `全曲`; ordinary folders and the chart's stored
+`#PLAYLEVEL` remain unchanged.
+
+The Resource built-in-table picker contains 109 presets grouped into
+`Beginner-friendly`, `BMS-IR supported`, and `Other`. The beginner group is the
+BMS-IR cross-game master plus 36 game-specific tables, and the BMS-IR group
+includes 13 supported presets that were missing from the previous client list.
+Configured built-in tables are checked and can be unchecked to remove them;
+new checks add tables, all changes apply together, and custom URL tables are
+left untouched.
 
 ## Arena oraja 0.4.14.51
 
@@ -295,7 +313,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.51
+  --output-dir /release/build-0.4.14.52
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
