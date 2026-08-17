@@ -1,17 +1,20 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.55`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.56`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
-Version `0.4.14.55` adds a default-OFF path for missing difficulty-table songs
-to download the HTTP(S) archive registered with BMS-IR, then try one Wayback
-snapshot if the live response cannot be installed. Accepted ZIP, RAR4/RAR5,
-and 7z packages remain compressed and must pass bounded archive checks plus
-the requested chart MD5. The current development source also resolves bounded
-archive links from registered HTML distribution pages. These checks are not
-antivirus scanning.
+Version `0.4.14.56` resolves bounded ZIP/RAR/7z candidates from registered HTML
+distribution pages, including through one Wayback snapshot, while retaining
+the requested-chart-MD5 and archive checks. It also loads generated in-memory
+WAV previews correctly and applies explicit source, decode, and retained-memory
+limits without changing ordinary gameplay key-sound allocation.
+
+Version `0.4.14.55` adds the default-OFF direct HTTP(S) archive path for missing
+difficulty-table songs. Accepted ZIP, RAR4/RAR5, and 7z packages remain
+compressed and must pass bounded archive checks plus the requested chart MD5.
+These checks are not antivirus scanning.
 
 The current development source persists the last non-fullscreen WINDOW or
 BORDERLESS mode independently from fullscreen. A client that enters
@@ -455,7 +458,8 @@ Version `0.4.14.55` adds an independent, default-off
 `Download from BMS-IR body URLs` option under Other settings. When a
 missing difficulty-table chart carries an HTTP(S) body URL, selecting or batch
 filling that chart uses the registered URL. A direct ZIP/RAR/7z response keeps
-the original path. A response recognized as HTML is limited to 2 MiB and may
+the original path. Version `0.4.14.56` additionally recognizes bounded HTML
+distribution pages. A response recognized as HTML is limited to 2 MiB and may
 contribute at most 12 HTTP(S) ZIP/RAR/7z anchor links in document order. Each
 candidate is downloaded and independently validated; scripts, forms, browser
 automation, nested landing pages, and non-archive links are ignored. If the
@@ -1213,7 +1217,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.55-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.56-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1234,7 +1238,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.55-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.56-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1250,7 +1254,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.55-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.56-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

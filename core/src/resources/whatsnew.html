@@ -28,16 +28,27 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.56</h1>
+        <h2>Resolve archive links from distribution pages</h2>
+        <ul>
+        <li>The default-OFF BMS-IR body URL downloader can try up to 12 ZIP/RAR/7z links from a bounded HTML distribution page in document order, including through one Wayback snapshot.</li>
+        <li>Every candidate still needs the requested chart MD5 and all existing archive checks before it is retained compressed. Failed tasks can be selected again safely.</li>
+        </ul>
+        <h2>Load generated previews within explicit memory limits</h2>
+        <ul>
+        <li>Generated Music Select previews now pass their in-memory WAV to the WAV decoder.</li>
+        <li>Preview-only decoding uses GC-managed buffers and limits of 256 sounds, 16 MiB per source, 64 MiB cumulative source data, 32 MiB decode/PCM per sound, and 96 MiB retained PCM. An over-limit chart keeps the normal Music Select BGM without caching a partial preview.</li>
+        <li>Ordinary gameplay key-sound allocation is unchanged.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.55</h1>
         <h2>Opt-in downloads from BMS-IR body URLs</h2>
         <ul>
-        <li>The default-OFF <code>Download from BMS-IR body URLs</code> setting lets a missing difficulty-table song try its registered HTTP(S) URL, resolve bounded ZIP/RAR/7z links from an HTML distribution page, and then try one Wayback snapshot when the live route cannot be installed.</li>
+        <li>The default-OFF <code>Download from BMS-IR body URLs</code> setting lets a missing difficulty-table song try its registered HTTP(S) archive, then one Wayback snapshot when the live download cannot be installed.</li>
         <li>Existing IPFS, configured HTTP-provider, and browser-page behavior remain unchanged.</li>
         </ul>
         <h2>Retain and validate archives without extraction</h2>
         <ul>
         <li>Accepted ZIP, RAR4/RAR5, and 7z packages stay compressed in <code>http_download</code>. The client applies a 2 GiB limit, bounded archive checks, and the requested chart MD5 before installing without overwrite.</li>
-        <li>HTML pages are limited to 2 MiB and 12 archive links, local/private network targets are rejected, and failed tasks can be retried while active and completed duplicates remain protected.</li>
         <li>These checks are not antivirus scanning. Leave the option off unless you accept the risk of processing an untrusted archive and its media.</li>
         </ul>
         <h1>Arena oraja 0.4.14.54</h1>
