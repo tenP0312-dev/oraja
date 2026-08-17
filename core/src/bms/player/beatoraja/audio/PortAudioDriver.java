@@ -4,6 +4,9 @@ import java.nio.ByteBuffer;
 import java.nio.file.*;
 
 import com.portaudio.*;
+import bms.player.beatoraja.AudioConfig;
+import bms.player.beatoraja.AudioConfig.DriverType;
+import bms.player.beatoraja.AudioConfig.WasapiMode;
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.song.SongResource;
 
@@ -15,8 +18,9 @@ import bms.player.beatoraja.song.SongResource;
 public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnable {
 
 	private static DeviceInfo[] devices;
+	private static DeviceOption[] deviceOptions;
 	
-	private BlockingStream stream;
+	private PortAudioOutputStream stream;
 
 	/**
 	 * ミキサー入力
@@ -43,20 +47,83 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		return devices;
 	}
 
-	public PortAudioDriver(Config config) {
-		super(config.getSongResourceGen());
-		DeviceInfo[] devices = getDevices();
-		// Get the default device and setup the stream parameters.
-		int deviceId = 0;
-		for(int i = 0;i < devices.length;i++) {
-			if(devices[i].name.equals(config.getAudioConfig().getDriverName())) {
-				deviceId = i;
-				break;
+	public static DeviceOption[] getDeviceOptions() {
+		if (deviceOptions == null) {
+			DeviceInfo[] availableDevices = getDevices();
+			deviceOptions = new DeviceOption[availableDevices.length];
+			for (int i = 0; i < availableDevices.length; i++) {
+				DeviceInfo device = availableDevices[i];
+				HostApiInfo hostApi = PortAudio.getHostApiInfo(device.hostApi);
+				deviceOptions[i] = new DeviceOption(
+						i,
+						device.name,
+						hostApi.type,
+						hostApi.name);
 			}
 		}
-		DeviceInfo deviceInfo = devices[ deviceId ];
+		return deviceOptions;
+	}
+
+	public static DeviceOption findDeviceOption(
+			DeviceOption[] options,
+			String name,
+			int hostApiType) {
+		if (options.length == 0) {
+			throw new IllegalStateException("PortAudio output device is not available");
+		}
+		if (name != null && hostApiType >= 0) {
+			for (DeviceOption option : options) {
+				if (name.equals(option.name()) && hostApiType == option.hostApiType()) {
+					return option;
+				}
+			}
+		}
+		if (name != null) {
+			for (DeviceOption option : options) {
+				if (name.equals(option.name())) {
+					return option;
+				}
+			}
+		}
+		return options[0];
+	}
+
+	public static boolean isWasapiModeSelectable(
+			DriverType driver,
+			DeviceOption option,
+			boolean windows) {
+		return driver == DriverType.PortAudio
+				&& option != null
+				&& option.isWasapi()
+				&& windows;
+	}
+
+	public static boolean shouldUseWasapiExclusive(
+			WasapiMode mode,
+			DeviceOption option,
+			boolean windows) {
+		return mode == WasapiMode.EXCLUSIVE
+				&& isWasapiModeSelectable(DriverType.PortAudio, option, windows);
+	}
+
+	public static boolean isWindows() {
+		String osName = System.getProperty("os.name", "");
+		return osName.toLowerCase().contains("win");
+	}
+
+	public PortAudioDriver(Config config) {
+		super(config.getSongResourceGen());
+		AudioConfig audioConfig = config.getAudioConfig();
+		DeviceOption deviceOption = findDeviceOption(
+				getDeviceOptions(),
+				audioConfig.getDriverName(),
+				audioConfig.getDriverHostApi());
+		int deviceId = deviceOption.index();
+		DeviceInfo deviceInfo = getDevices()[deviceId];
 		
-		setSampleRate(config.getAudioConfig().getSampleRate() <= 0 ? (int)deviceInfo.defaultSampleRate : config.getAudioConfig().getSampleRate());
+		setSampleRate(audioConfig.getSampleRate() <= 0
+				? (int) deviceInfo.defaultSampleRate
+				: audioConfig.getSampleRate());
 		channels = 2;
 //		System.out.println( "  deviceId    = " + deviceId );
 //		System.out.println( "  sampleRate  = " + sampleRate );
@@ -65,20 +132,41 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		StreamParameters streamParameters = new StreamParameters();
 		streamParameters.channelCount = channels;
 		streamParameters.device = deviceId;
-		int framesPerBuffer = config.getAudioConfig().getDeviceBufferSize();
+		int framesPerBuffer = audioConfig.getDeviceBufferSize();
 		streamParameters.suggestedLatency = ((double)framesPerBuffer) / getSampleRate();
 //		System.out.println( "  suggestedLatency = " + streamParameters.suggestedLatency );
 
 		int flags = 0;
 		
-		// Open a stream for output.
-		stream = PortAudio.openStream( null, streamParameters, getSampleRate(), framesPerBuffer, flags );
+		// JPortAudio cannot pass WASAPI host-specific stream information. Keep it
+		// for shared/non-WASAPI output and use JNA only for explicit exclusive mode.
+		if (shouldUseWasapiExclusive(audioConfig.getWasapiMode(), deviceOption, isWindows())) {
+			stream = new WasapiExclusivePortAudioStream(
+					deviceId,
+					channels,
+					getSampleRate(),
+					framesPerBuffer,
+					streamParameters.suggestedLatency);
+		} else {
+			stream = new JPortAudioOutputStream(PortAudio.openStream(
+					null,
+					streamParameters,
+					getSampleRate(),
+					framesPerBuffer,
+					flags));
+		}
 
-		stream.start();
+		try {
+			stream.start();
+		} catch (RuntimeException | Error error) {
+			stream.close();
+			stream = null;
+			throw error;
+		}
 
 		mixer = new Thread(this);
 		buffer = new float[framesPerBuffer * channels];
-		inputs = new MixerInput[config.getAudioConfig().getDeviceSimultaneousSources()];
+		inputs = new MixerInput[audioConfig.getDeviceSimultaneousSources()];
 		for (int i = 0; i < inputs.length; i++) {
 			inputs[i] = new MixerInput();
 		}
@@ -265,5 +353,48 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		public boolean loop;
 		public long id;
 		public int channel = -1;
+	}
+
+	public record DeviceOption(
+			int index,
+			String name,
+			int hostApiType,
+			String hostApiName) {
+		public boolean isWasapi() {
+			return hostApiType == PortAudio.HOST_API_TYPE_WASAPI;
+		}
+
+		@Override
+		public String toString() {
+			return hostApiName + ": " + name;
+		}
+	}
+
+	private static final class JPortAudioOutputStream implements PortAudioOutputStream {
+		private final BlockingStream stream;
+
+		private JPortAudioOutputStream(BlockingStream stream) {
+			this.stream = stream;
+		}
+
+		@Override
+		public void start() {
+			stream.start();
+		}
+
+		@Override
+		public boolean write(float[] buffer, int frames) {
+			return stream.write(buffer, frames);
+		}
+
+		@Override
+		public void stop() {
+			stream.stop();
+		}
+
+		@Override
+		public void close() {
+			stream.close();
+		}
 	}
 }

@@ -31,8 +31,19 @@
 		</VBox.margin>
 		<Label prefHeight="31.0" prefWidth="150.0"
 			text="Audio Driver Name" />
-		<ComboBox fx:id="audioname" prefHeight="24.0"
+		<ComboBox fx:id="audioname" onAction="#updateWasapiModeAvailability" prefHeight="24.0"
 			prefWidth="261.0" />
+	</HBox>
+	<HBox prefHeight="30.0" prefWidth="730.0">
+		<VBox.margin>
+			<Insets bottom="10.0" />
+		</VBox.margin>
+		<Label prefHeight="25.0" prefWidth="150.0" text="%WASAPI_MODE" />
+		<ComboBox fx:id="wasapiMode" prefHeight="24.0" prefWidth="150.0">
+			<tooltip>
+				<Tooltip text="%WASAPI_MODE_TOOLTIP" />
+			</tooltip>
+		</ComboBox>
 	</HBox>
 	<HBox prefHeight="40.0" prefWidth="730.0">
 		<Label prefHeight="25.0" prefWidth="150.0"
@@ -106,4 +117,3 @@
 	<CheckBox fx:id="loopResultSound" prefHeight="24.0" prefWidth="300.0" text="%LOOP_RESULT_SOUND"/>
 	<CheckBox fx:id="loopCourseResultSound" prefHeight="24.0" prefWidth="300.0" text="%LOOP_COURSE_RESULT_SOUND"/>
 </VBox>
-
