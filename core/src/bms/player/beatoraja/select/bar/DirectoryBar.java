@@ -81,6 +81,14 @@ public abstract class DirectoryBar extends Bar {
 	public boolean usesTableFolderStyle() {
 		return false;
 	}
+
+	/**
+	 * Whether this directory requires its exact child song bars to remain
+	 * unchanged by list-level grouping and random-entry injection.
+	 */
+	public boolean preservesChildSongBars() {
+		return false;
+	}
 	
 	public void setSortable(boolean val) {
         isSortable = val;

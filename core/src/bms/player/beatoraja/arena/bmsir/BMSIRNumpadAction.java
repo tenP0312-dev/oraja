@@ -15,7 +15,8 @@ public enum BMSIRNumpadAction {
     SORT("sort", "ソート変更", "Change sort"),
     REPLAY("replay", "リプレイ切替", "Change replay"),
     RIVAL("rival", "ライバル変更", "Change rival"),
-    SAME_FOLDER("same_folder", "同一フォルダ譜面表示", "Show charts in the same folder"),
+    // Keep the old stored ID so existing shortcut assignments migrate in place.
+    SHOW_ALL_CHARTS("same_folder", "選択曲の全譜面表示", "Show all charts for selected song"),
     OPEN_DOCUMENT("open_document", "同梱テキスト表示", "Show included text"),
     OPEN_IR("open_ir", "IR表示", "Open IR"),
     FAVORITE_SONG("favorite_song", "曲のお気に入り", "Toggle song favorite"),
@@ -65,6 +66,12 @@ public enum BMSIRNumpadAction {
     }
 
     public static String[] defaultIds() {
+        String[] defaults = legacyDefaultIds();
+        defaults[8] = SHOW_ALL_CHARTS.id;
+        return defaults;
+    }
+
+    private static String[] legacyDefaultIds() {
         String[] defaults = new String[KEY_COUNT];
         Arrays.fill(defaults, NONE.id);
         defaults[0] = JUDGE_AUTO.id;
@@ -82,6 +89,22 @@ public enum BMSIRNumpadAction {
         for (int index = 0; index < Math.min(ids.length, KEY_COUNT); index++) {
             normalized[index] = fromId(ids[index]).id;
         }
+        if (matchesLegacyDefaults(ids)) {
+            normalized[8] = SHOW_ALL_CHARTS.id;
+        }
         return normalized;
+    }
+
+    private static boolean matchesLegacyDefaults(String[] ids) {
+        if (ids.length != KEY_COUNT) {
+            return false;
+        }
+        String[] legacyDefaults = legacyDefaultIds();
+        for (int index = 0; index < KEY_COUNT; index++) {
+            if (!fromId(ids[index]).id.equals(legacyDefaults[index])) {
+                return false;
+            }
+        }
+        return true;
     }
 }

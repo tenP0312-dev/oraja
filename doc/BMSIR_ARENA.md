@@ -12,6 +12,19 @@ supported, and Other. Configured built-ins can be unchecked and removed in the
 same transactional apply operation that adds new tables; custom URL tables are
 not changed.
 
+The current development source assigns `選択曲の全譜面表示` / `Show all charts
+for selected song` to physical NUMPAD 8 by default. Like the other physical
+NUMPAD shortcuts, it can be reassigned or cleared in the startup configuration.
+An unchanged legacy default shortcut map gains this NUMPAD 8 assignment on
+load, while customized maps retain their stored assignments.
+On an LR2-style grouped song row it opens a local virtual folder containing
+only that row's retained difficulty variants as separate charts; it does not
+query every chart in the physical folder, regroup the result, change the global
+difficulty-display setting, or send Arena selection traffic. The song context
+menu exposes the same operation as `全譜面を表示` / `Show All Charts`. Closing
+the virtual folder returns to the original grouped song. The existing
+`Related` physical-folder action and course component expansion remain intact.
+
 Version `0.4.14.51` adds Windows WASAPI Shared/Exclusive selection and a
 separate ASIO audio-driver choice. Existing configurations remain on WASAPI
 Shared or their former non-WASAPI path. ASIO lists only Host API type 3 output

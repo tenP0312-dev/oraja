@@ -357,6 +357,7 @@ public class BarManager {
 		Array<Bar> l = new Array<Bar>();
 		boolean showInvisibleCharts = false;
 		boolean isSortable = true;
+		boolean preservesChildSongBars = false;
 		boolean removedExistingDirectory = false;
 
 		if (MainLoader.getIllegalSongCount() > 0) {
@@ -382,7 +383,9 @@ public class BarManager {
 			l.addAll(search);
 			l.addAll(arenaBars);
 		} else if (bar instanceof DirectoryBar) {
-			showInvisibleCharts = ((DirectoryBar)bar).isShowInvisibleChart();
+			DirectoryBar directoryBar = (DirectoryBar) bar;
+			showInvisibleCharts = directoryBar.isShowInvisibleChart();
+			preservesChildSongBars = directoryBar.preservesChildSongBars();
 			if(dir.indexOf((DirectoryBar) bar, true) != -1) {
 				while(dir.last() != bar) {
 					prevbar = dir.removeLast();
@@ -391,10 +394,12 @@ public class BarManager {
 				dir.removeLast();
 				removedExistingDirectory = true;
 			}
-			l.addAll(((DirectoryBar) bar).getChildren());
-			isSortable = ((DirectoryBar) bar).isSortable();
+			l.addAll(directoryBar.getChildren());
+			isSortable = directoryBar.isSortable();
 
-			if (bar instanceof ContainerBar && randomCourseResult.size > 0) {
+			if (!preservesChildSongBars
+					&& bar instanceof ContainerBar
+					&& randomCourseResult.size > 0) {
 				StringBuilder str = new StringBuilder();
 				for (Bar b : dir) {
 					str.append(b.getTitle()).append(" > ");
@@ -475,7 +480,8 @@ public class BarManager {
 			}
 
 			Bar[] newcurrentsongs = l.toArray(Bar.class);
-			if (PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+			if (!preservesChildSongBars
+					&& PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
 					config.getBmsirSelectDifficultyDisplay()
 			)) {
 				String preferredSha256 = prevbar instanceof SongBar
@@ -505,8 +511,9 @@ public class BarManager {
 			}
 
 			Array<Bar> bars = new Array<Bar>();
-			if (select.main.getPlayerConfig().isRandomSelect()
-				&& !(bar instanceof ContextMenuBar)) {
+			if (!preservesChildSongBars
+					&& select.main.getPlayerConfig().isRandomSelect()
+					&& !(bar instanceof ContextMenuBar)) {
 				try {
 					for (RandomFolder randomFolder : randomFolderList) {
 						SongData[] randomTargets = Stream.of(newcurrentsongs)

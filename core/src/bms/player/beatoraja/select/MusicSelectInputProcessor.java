@@ -444,9 +444,6 @@ public final class MusicSelectInputProcessor {
             if (input.isControlKeyPressed(ControlKeys.NUM7)) {
                 select.executeEvent(EventType.rival);
             }
-            if (input.isControlKeyPressed(ControlKeys.NUM8)) {
-                select.execute(MusicSelectCommand.SHOW_SONGS_ON_SAME_FOLDER);
-            }
             if (input.isControlKeyPressed(ControlKeys.NUM9)) {
                 select.executeEvent(EventType.open_document);
             }

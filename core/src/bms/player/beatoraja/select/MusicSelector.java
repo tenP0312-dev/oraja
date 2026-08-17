@@ -872,8 +872,8 @@ public final class MusicSelector extends MainState {
 		case RIVAL:
 			executeEvent(EventType.rival);
 			break;
-		case SAME_FOLDER:
-			execute(MusicSelectCommand.SHOW_SONGS_ON_SAME_FOLDER);
+		case SHOW_ALL_CHARTS:
+			execute(MusicSelectCommand.SHOW_ALL_CHARTS);
 			break;
 		case OPEN_DOCUMENT:
 			executeEvent(EventType.open_document);
