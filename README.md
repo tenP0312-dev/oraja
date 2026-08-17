@@ -27,6 +27,15 @@ and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
 
+The current development source also fixes generated Music Select previews so
+their in-memory WAV reaches the WAV decoder. Preview-only source decoding uses
+GC-managed buffers and stops before decoding when more than 256 sounds, 16 MiB
+for one source, or 64 MiB of cumulative source data would be required. Each
+sound has a 32 MiB decode/PCM budget, and all retained decoded samples together
+may use at most 96 MiB; an over-limit chart keeps the normal
+Music Select BGM instead of publishing a partial preview. Ordinary gameplay
+key-sound allocation is unchanged.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is
