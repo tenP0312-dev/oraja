@@ -896,6 +896,23 @@ class BMSIRArenaClientTest {
     }
 
     @Test
+    void configuredWorkFolderChartsAreNotArenaPossessions() {
+        SongData released = song("released-md5");
+        released.setSha256("a".repeat(64));
+        released.setPath("/songs/released/chart.bms");
+        SongData work = song("work-md5");
+        work.setSha256("b".repeat(64));
+        work.setPath("/songs/authoring/nested/chart.bms");
+
+        SongData[] playable = BMSIRArenaClient.playableOwnedSongs(
+                new SongData[]{work, released},
+                "/songs/authoring"
+        );
+
+        assertArrayEquals(new SongData[]{released}, playable);
+    }
+
+    @Test
     void cpuChoosesAcrossTheInclusiveSixBandRange() {
         SongData below = song("below");
         SongData floor = song("floor");

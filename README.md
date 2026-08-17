@@ -180,29 +180,32 @@ read correctly.
 See [the Arena client documentation](doc/BMSIR_ARENA.md) for behavior and
 configuration details.
 
-## テストプレイ用フォルダ / Test-play folder
+## 作業フォルダ / Work folder
 
-BMS Pathからルートを選択し、`Set DL Directory` の下にある `作業フォルダ` を
-押すと、そのルート直下に作りかけ譜面用の予約フォルダ `_BMSIR_TESTPLAY` を
-作成して開けます。このフォルダ以下の
+BMS Pathから作りかけ譜面用のルートを選択し、`Set DL Directory` の下にある
+`作業フォルダに設定` を押すと、選んだルートそのものが作業フォルダになります。
+フォルダの作成・移動・削除は行いません。開く場合はBMS Pathを右クリックして
+`フォルダを開く` を使います。このフォルダ以下の
 BMS/BMSONは、スコア、ランプ、プレイ回数、履歴、リプレイを保存せず、通常IR、
-MANIAC IR、コースIR、Arenaにも送信されません。譜面を入れた後は通常の楽曲更新を
-実行してください。フォルダ名の判定は大文字・小文字を区別せず、さらに下の
-サブフォルダにも適用されます。
+MANIAC IR、コースIR、Arenaにも送信されません。さらに下のサブフォルダにも適用
+されます。
 
-Select a configured BMS root and click `Work folder` below
-`Set DL Directory` to create and open the reserved `_BMSIR_TESTPLAY` authoring
-folder below that root. BMS/BMSON charts
+Select the authoring root in BMS Path and click `Set Work Directory` below
+`Set DL Directory`. The selected root itself becomes the work folder; the
+action does not create, move, delete, or open a directory. Use the existing
+right-click `Open folder` action when needed. BMS/BMSON charts
 anywhere below it do not save scores, lamps, play counts, histories, or
 replays, and are not submitted to ordinary IR, MANIAC IR, course IR, or Arena.
-Run a normal song-library update after adding charts. The reserved directory
-component is case-insensitive and applies to all descendants.
 
-If a course contains a test-play chart, its aggregate course record is also
-discarded. Released charts elsewhere in that course keep their existing
-per-chart behavior. This source feature becomes available in a distributed
-client only after a separately reviewed release; merging it does not publish a
-new binary.
+For compatibility with 0.4.14.49, an exact `_BMSIR_TESTPLAY` directory
+component remains a case-insensitive no-save/no-submit safety marker even when
+another root is selected as the work folder.
+
+If a course contains a work-folder chart (including one matched by the legacy
+marker), its aggregate course record is also discarded. Released charts
+elsewhere in that course keep their existing per-chart behavior. This source
+feature becomes available in a distributed client only after a separately
+reviewed release; merging it does not publish a new binary.
 
 ## Building
 

@@ -11,20 +11,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRTestPlayResultPolicyTest {
     @Test
-    void singleResultPersistsOnlyOutsideTheReservedFolder() {
+    void singleResultPersistsOnlyOutsideTheConfiguredWorkFolder() {
         assertTrue(MusicResult.shouldPersistScore(
-                model("/songs/released/chart.bms")));
+                model("/songs/released/chart.bms"), "/songs/authoring"));
         assertFalse(MusicResult.shouldPersistScore(
-                model("/songs/_BMSIR_TESTPLAY/work/chart.bms")));
+                model("/songs/authoring/work/chart.bms"), "/songs/authoring"));
     }
 
     @Test
     void courseResultIsDisposableWhenAnyChartIsInTheReservedFolder() {
         BMSModel normal = model("/songs/released/chart.bms");
-        BMSModel test = model("/songs/_BMSIR_TESTPLAY/work/chart.bms");
+        BMSModel test = model("/songs/authoring/work/chart.bms");
 
-        assertTrue(CourseResult.shouldPersistScore(new BMSModel[]{normal}));
-        assertFalse(CourseResult.shouldPersistScore(new BMSModel[]{normal, test}));
+        assertTrue(CourseResult.shouldPersistScore(
+                new BMSModel[]{normal}, "/songs/authoring"));
+        assertFalse(CourseResult.shouldPersistScore(
+                new BMSModel[]{normal, test}, "/songs/authoring"));
     }
 
     private static BMSModel model(String path) {

@@ -3,16 +3,16 @@ package bms.player.beatoraja.bmsir;
 import bms.model.BMSModel;
 import bms.player.beatoraja.song.SongData;
 
-import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 /**
- * Reserved folder policy for authoring and other disposable test plays.
+ * Work-folder policy for authoring and other disposable test plays.
  *
- * <p>The comparison is deliberately based on path components rather than the
- * host file system. Song paths can use Windows separators while running on
- * another platform, and archive-backed charts use virtual path components.
+ * <p>The legacy marker comparison is based on path components so that both
+ * separators and archive virtual paths are supported. The configured work
+ * directory uses normalized native paths, matching the platform where the
+ * launcher selected and stored the BMS root.
  */
 public final class BMSIRTestPlayFolder {
     public static final String DIRECTORY_NAME = "_BMSIR_TESTPLAY";
@@ -21,6 +21,10 @@ public final class BMSIRTestPlayFolder {
     }
 
     public static boolean contains(String path) {
+        return contains(path, "");
+    }
+
+    public static boolean contains(String path, String workDirectory) {
         if (path == null || path.isBlank()) {
             return false;
         }
@@ -30,46 +34,51 @@ public final class BMSIRTestPlayFolder {
                 return true;
             }
         }
-        return false;
+        return isBelowConfiguredWorkDirectory(path, workDirectory);
     }
 
     public static boolean contains(BMSModel model) {
         return model != null && contains(model.getPath());
     }
 
+    public static boolean contains(BMSModel model, String workDirectory) {
+        return model != null && contains(model.getPath(), workDirectory);
+    }
+
     public static boolean contains(SongData song) {
         return song != null && contains(song.getPath());
     }
 
+    public static boolean contains(SongData song, String workDirectory) {
+        return song != null && contains(song.getPath(), workDirectory);
+    }
+
     public static boolean containsAny(BMSModel[] models) {
+        return containsAny(models, "");
+    }
+
+    public static boolean containsAny(BMSModel[] models, String workDirectory) {
         if (models == null) {
             return false;
         }
         for (BMSModel model : models) {
-            if (contains(model)) {
+            if (contains(model, workDirectory)) {
                 return true;
             }
         }
         return false;
     }
 
-    /**
-     * Creates the reserved child below an existing configured BMS root.
-     * Existing test-play directories are accepted unchanged.
-     */
-    public static Path createUnder(Path root) throws IOException {
-        if (root == null) {
-            throw new IOException("BMS root is not configured");
+    static boolean isBelowConfiguredWorkDirectory(String path, String workDirectory) {
+        if (workDirectory == null || workDirectory.isBlank()) {
+            return false;
         }
-        Path normalizedRoot = root.toAbsolutePath().normalize();
-        if (!Files.isDirectory(normalizedRoot)) {
-            throw new IOException("BMS root is not an existing directory: " + normalizedRoot);
+        try {
+            Path chart = Path.of(path).toAbsolutePath().normalize();
+            Path configured = Path.of(workDirectory).toAbsolutePath().normalize();
+            return chart.startsWith(configured);
+        } catch (InvalidPathException exception) {
+            return false;
         }
-        Path testPlayDirectory = normalizedRoot.resolve(DIRECTORY_NAME);
-        Files.createDirectories(testPlayDirectory);
-        if (!Files.isDirectory(testPlayDirectory)) {
-            throw new IOException("Test-play path is not a directory: " + testPlayDirectory);
-        }
-        return testPlayDirectory;
     }
 }

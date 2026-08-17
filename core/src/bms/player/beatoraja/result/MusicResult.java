@@ -38,8 +38,8 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
 public class MusicResult extends AbstractResult {
 	private static final Logger logger = LoggerFactory.getLogger(MusicResult.class);
 
-	static boolean shouldPersistScore(BMSModel model) {
-		return !BMSIRTestPlayFolder.contains(model);
+	static boolean shouldPersistScore(BMSModel model, String workDirectory) {
+		return !BMSIRTestPlayFolder.contains(model, workDirectory);
 	}
 
 	private ResultKeyProperty property;
@@ -396,7 +396,8 @@ public class MusicResult extends AbstractResult {
 			}
 			return;
 		}
-		final boolean persistScore = shouldPersistScore(resource.getBMSModel());
+		final boolean persistScore = shouldPersistScore(
+				resource.getBMSModel(), resource.getConfig().getWorkDirectory());
 		if (!persistScore) {
 			resource.setUpdateScore(false);
 			resource.setUpdateCourseScore(false);
@@ -518,7 +519,7 @@ public class MusicResult extends AbstractResult {
 			main.getPlayDataAccessor().writeScoreData(resource.getScoreData(), resource.getBMSModel(),
 					resource.getPlayerConfig().getLnmode(), resource.isUpdateScore());
 		} else if (!persistScore) {
-			logger.info("テストプレイ用フォルダのため、スコアとリプレイは保存されません");
+			logger.info("作業フォルダのため、スコアとリプレイは保存されません");
 		} else {
 			logger.info("プレイモードが{}のため、スコア登録はされません", resource.getPlayMode().mode.name());
 		}

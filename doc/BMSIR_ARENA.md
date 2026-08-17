@@ -226,41 +226,43 @@ operation; `Load from URL` handles custom tables separately. Existing table
 URLs, active ordering, BMS roots, and archive-scanning settings remain
 compatible with saved profiles.
 
-### Test-play folder
+### Work folder
 
-Select a configured BMS root and click `Work folder` / `作業フォルダ` below
-`Set DL Directory`. The action creates the exact `_BMSIR_TESTPLAY` child
-directory under the selected existing root and opens it; it never moves or
-deletes source files. After charts are added, the normal song-library update
-indexes them.
+Select a configured BMS root and click `Set Work Directory` /
+`作業フォルダに設定` below `Set DL Directory`. The selected BMS Path itself and
+all descendants become disposable authoring content. The action persists only
+the selected path; it does not create, move, delete, or open a directory. Use
+the existing BMS Path context-menu action to open it.
 
-Any BMS/BMSON whose path contains `_BMSIR_TESTPLAY` as a complete directory
-component is treated as disposable authoring content. Matching is
-case-insensitive, applies to descendant directories and archive virtual paths,
-and does not match a filename or a longer directory name that merely contains
-the text. Such a play keeps its on-screen result but does not write the local
+Such a play keeps its on-screen result but does not write the local
 score, lamp, play/clear count, score history, or replay. It also cannot submit
 to ordinary IR or MANIAC IR and is excluded from Arena possession and
-nomination paths.
+nomination paths. The same rule applies to archive virtual paths below the
+selected work root.
 
-設定済みBMSルートを選択し、`Set DL Directory` の下にある `作業フォルダ` を
-押すと、そのルート直下に `_BMSIR_TESTPLAY` 予約フォルダを作成して開きます。
-この操作は既存ファイルを移動・削除しません。譜面を入れた後、通常の楽曲更新を
-実行してください。
+設定済みBMSルートを選択し、`Set DL Directory` の下にある
+`作業フォルダに設定` を押すと、選んだBMS Pathそのものと下位フォルダが作業対象に
+なります。この操作は選択したパスだけを保存し、フォルダの作成・移動・削除・表示は
+行いません。開く場合はBMS Pathの右クリックメニューを使います。
 
-パス中の完全なフォルダ名が `_BMSIR_TESTPLAY` と一致するBMS/BMSONは、作りかけ
-譜面用の破棄可能なテストプレイとして扱います。大文字・小文字は区別せず、下位
-フォルダとアーカイブ内の仮想パスにも適用します。ファイル名や、文字列を一部に
-含むだけの長いフォルダ名には適用しません。リザルト自体は表示しますが、スコア、
+リザルト自体は表示しますが、スコア、
 ランプ、プレイ／クリア回数、スコア履歴、リプレイは保存せず、通常IR、MANIAC IR、
 Arenaにも送信・候補登録しません。
 
-If any chart in a course is below the reserved folder, the aggregate course
-score, course replay, and course IR submission are disabled. Ordinary charts
-elsewhere in that course retain their existing per-chart save behavior. The
-same rule applies in Japanese: コース内に予約フォルダの譜面が1つでもある場合は、
-コース全体のスコア・リプレイ・IR送信を無効にし、それ以外の通常譜面の単曲保存は
-従来どおりです。
+Version 0.4.14.49 compatibility is retained: `_BMSIR_TESTPLAY` as an exact,
+case-insensitive directory component remains a no-save/no-submit safety marker
+for every descendant and archive virtual path. A filename or longer directory
+name that merely contains the text does not match. 0.4.14.49との互換性のため、
+完全なフォルダ名 `_BMSIR_TESTPLAY` も引き続き大文字・小文字を区別しない安全用
+マーカーとして扱います。
+
+If any chart in a course is below the configured work folder or matches the
+legacy marker, the aggregate course score, course replay, and course IR
+submission are disabled. Ordinary charts elsewhere in that course retain
+their existing per-chart save behavior. The same rule applies in Japanese:
+コース内に作業フォルダ（互換マーカーを含む）の譜面が1つでもある場合は、コース
+全体のスコア・リプレイ・IR送信を無効にし、それ以外の通常譜面の単曲保存は従来
+どおりです。
 
 ## Difference-chart drag and drop
 
