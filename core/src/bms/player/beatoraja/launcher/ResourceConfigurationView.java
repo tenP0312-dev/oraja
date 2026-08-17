@@ -557,9 +557,9 @@ public class ResourceConfigurationView implements Initializable {
 		Dialog<ButtonType> dialog = new Dialog<>();
 		dialog.setTitle(resources.getString("CHOOSE_EXISTING_TABLES"));
 		dialog.setHeaderText(null);
-		ButtonType addButtonType = new ButtonType(
-				resources.getString("ADD_SELECTED_TABLES"), ButtonBar.ButtonData.OK_DONE);
-		dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+		ButtonType applyButtonType = new ButtonType(
+				resources.getString("APPLY_TABLE_SELECTION"), ButtonBar.ButtonData.OK_DONE);
+		dialog.getDialogPane().getButtonTypes().addAll(applyButtonType, ButtonType.CANCEL);
 
 		Label instructions = new Label(resources.getString("CHOOSE_EXISTING_TABLES_DESCRIPTION"));
 		instructions.setWrapText(true);
@@ -572,14 +572,18 @@ public class ResourceConfigurationView implements Initializable {
 		List<String> configuredTableUrls = tableurl.getItems().stream()
 				.map(TableInfo::getUrl)
 				.toList();
-		for (TableChoice choiceState : tableChoices(availableTableUrls, configuredTableUrls)) {
+		List<TableChoice> choices = tableChoices(availableTableUrls, configuredTableUrls);
+		List<String> initiallySelectedTableUrls = choices.stream()
+				.filter(TableChoice::alreadyAdded)
+				.map(TableChoice::url)
+				.toList();
+		for (TableChoice choiceState : choices) {
 			String tableUrl = choiceState.url();
 			TableInfo info = new TableInfo(tableUrl);
 			String name = info.getNameStatus().isBlank() ? tableUrl : info.getNameStatus();
 			CheckBox selector = new CheckBox(name);
 			selector.setUserData(tableUrl);
 			selector.setSelected(choiceState.alreadyAdded());
-			selector.setDisable(choiceState.alreadyAdded());
 			selector.setMinWidth(280);
 			selector.setPrefWidth(300);
 			selector.setMaxWidth(320);
@@ -676,23 +680,35 @@ public class ResourceConfigurationView implements Initializable {
 		dialog.getDialogPane().setContent(content);
 		dialog.getDialogPane().setPrefWidth(720);
 
-		Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
-		Runnable updateAddButton = () -> addButton.setDisable(selectors.stream()
-				.noneMatch(selector -> selector.isSelected() && !selector.isDisabled()));
-		updateAddButton.run();
+		Node applyButton = dialog.getDialogPane().lookupButton(applyButtonType);
+		Runnable updateApplyButton = () -> {
+			List<String> selectedTableUrls = selectors.stream()
+					.filter(CheckBox::isSelected)
+					.map(selector -> (String) selector.getUserData())
+					.toList();
+			applyButton.setDisable(!tableSelectionChanges(
+					initiallySelectedTableUrls, selectedTableUrls).hasChanges());
+		};
+		updateApplyButton.run();
 		selectors.forEach(selector -> selector.selectedProperty().addListener((observable, oldValue, newValue) ->
-				updateAddButton.run()));
+				updateApplyButton.run()));
 
-		if (dialog.showAndWait().orElse(ButtonType.CANCEL) != addButtonType) {
+		if (dialog.showAndWait().orElse(ButtonType.CANCEL) != applyButtonType) {
 			return;
 		}
 
+		List<String> selectedTableUrls = selectors.stream()
+				.filter(CheckBox::isSelected)
+				.map(selector -> (String) selector.getUserData())
+				.toList();
+		TableSelectionChanges changes = tableSelectionChanges(
+				initiallySelectedTableUrls, selectedTableUrls);
+		Set<String> removedUrls = new HashSet<>(changes.removedUrls());
+		tableurl.getItems().removeIf(info -> removedUrls.contains(info.getUrl()));
+		availableTableUrls.addAll(changes.removedUrls());
+
 		List<TableInfo> added = new ArrayList<>();
-		for (CheckBox selector : selectors) {
-			if (!selector.isSelected() || selector.isDisabled()) {
-				continue;
-			}
-			String tableUrl = (String) selector.getUserData();
+		for (String tableUrl : changes.addedUrls()) {
 			if (hasTableUrl(tableUrl)) {
 				continue;
 			}
@@ -883,6 +899,20 @@ public class ResourceConfigurationView implements Initializable {
 				.toList();
 	}
 
+	static TableSelectionChanges tableSelectionChanges(
+			Collection<String> initiallySelectedUrls,
+			Collection<String> selectedUrls) {
+		LinkedHashSet<String> initial = new LinkedHashSet<>(initiallySelectedUrls);
+		LinkedHashSet<String> selected = new LinkedHashSet<>(selectedUrls);
+		List<String> added = selected.stream()
+				.filter(url -> !initial.contains(url))
+				.toList();
+		List<String> removed = initial.stream()
+				.filter(url -> !selected.contains(url))
+				.toList();
+		return new TableSelectionChanges(added, removed);
+	}
+
 	private VBox choiceRows(List<TableChoiceRow> rows, Boolean crossGameSpecific) {
 		VBox choices = new VBox(1);
 		rows.stream()
@@ -924,6 +954,12 @@ public class ResourceConfigurationView implements Initializable {
 			boolean alreadyAdded,
 			Config.AvailableTableGroup group,
 			boolean crossGameSpecific) {
+	}
+
+	record TableSelectionChanges(List<String> addedUrls, List<String> removedUrls) {
+		boolean hasChanges() {
+			return !addedUrls.isEmpty() || !removedUrls.isEmpty();
+		}
 	}
 
 	private record TableChoiceRow(

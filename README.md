@@ -25,10 +25,10 @@ decimal integer as its Music Select display level inside that table. This
 applies to ordinary level folders and aggregate folders such as `全曲`, while
 ordinary folders and the chart's stored `#PLAYLEVEL` remain unchanged.
 
-The Resource built-in-table picker now keeps configured built-in tables
-visible as checked, read-only choices. The add action becomes available only
-after selecting at least one new table, so the picker reflects the saved
-configuration without duplicating or removing an active table.
+The Resource built-in-table picker keeps configured built-in tables visible as
+checked choices. Players can check new tables or uncheck configured built-in
+tables, then apply both additions and removals together. The apply action is
+available only when the selection changes; custom URL tables remain untouched.
 
 The same picker now organizes 109 presets into `Beginner-friendly`, `BMS-IR
 supported`, and `Other` sections with one shared search field. The beginner
