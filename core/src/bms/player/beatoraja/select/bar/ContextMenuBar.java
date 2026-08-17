@@ -29,8 +29,6 @@ import java.awt.Desktop;
 
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
-import bms.tool.mdprocessor.HttpDownloadProcessor;
-import bms.tool.util.Pair;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Clipboard;
 
 public class ContextMenuBar extends DirectoryBar {
@@ -433,7 +431,10 @@ public class ContextMenuBar extends DirectoryBar {
                 Logger.getGlobal().info("Nothing to fill, it's anything went wrong?");
             }
         }, "Fill Missing Charts", STYLE_SPECIAL, STYLE_TEXT_NEW);
-        if (selector.main.getConfig().isEnableHttp()) { options.add(fillMissingCharts); }
+        if (selector.main.getConfig().isEnableHttp()
+                || selector.main.getConfig().isEnableBmsirBodyDownload()) {
+            options.add(fillMissingCharts);
+        }
 
         return options.toArray(new Bar[0]);
     }
@@ -442,8 +443,7 @@ public class ContextMenuBar extends DirectoryBar {
         ArrayList<Bar> options = new ArrayList<>();
         options.add(folder);
 
-        // if you ever add anything here, don't forget to go to SHOW_CONTEXT_MENU
-        // in MusicSelectCommand and remove the check for isEnableHttp
+        // If another entry is added here, update the SHOW_CONTEXT_MENU gate too.
 
         var fillMissingCharts = new FunctionBar((selector, self) -> {
             SongData[] want = folder.getElements();
@@ -452,7 +452,10 @@ public class ContextMenuBar extends DirectoryBar {
                 Logger.getGlobal().info("Nothing to fill, it's anything went wrong?");
             }
         }, "Fill Missing Charts", STYLE_SPECIAL, STYLE_TEXT_NEW);
-        if (selector.main.getConfig().isEnableHttp()) { options.add(fillMissingCharts); }
+        if (selector.main.getConfig().isEnableHttp()
+                || selector.main.getConfig().isEnableBmsirBodyDownload()) {
+            options.add(fillMissingCharts);
+        }
 
         return options.toArray(new Bar[0]);
     }
@@ -466,24 +469,22 @@ public class ContextMenuBar extends DirectoryBar {
      * any error
      */
     private int fillMissingCharts(SongData[] want, MainController main) {
-        List<Pair<String, String>> md5AndNames = Arrays.stream(want)
-                .map(sd -> Pair.of(sd.getMd5(), sd.getTitle()))
-                .filter(p -> !p.getFirst().isEmpty() && !p.getSecond().isEmpty())
+        List<SongData> downloadable = Arrays.stream(want)
+                .filter(sd -> sd.getMd5() != null && !sd.getMd5().isEmpty()
+                        && sd.getTitle() != null && !sd.getTitle().isEmpty())
                 .toList();
-        if (md5AndNames.isEmpty()) {
+        if (downloadable.isEmpty()) {
             return 0;
         }
-        String[] md5Array = Pair.projectFirst(md5AndNames).toArray(String[]::new);
+        String[] md5Array = downloadable.stream().map(SongData::getMd5).toArray(String[]::new);
         SongDatabaseAccessor songDatabaseAccessor = selector.main.getSongDatabase();
         SongData[] inHandSongdatas = songDatabaseAccessor.getSongDatas(md5Array);
         Set<String> inHandMd5s = Arrays.stream(inHandSongdatas).map(SongData::getMd5).collect(Collectors.toSet());
-        List<Pair<String, String>> missingCharts = md5AndNames.stream()
-                .filter(p -> !inHandMd5s.contains(p.getFirst()))
+        List<SongData> missingCharts = downloadable.stream()
+                .filter(song -> !inHandMd5s.contains(song.getMd5()))
+                .filter(selector.main.getHttpDownloadProcessor()::canDownloadSong)
                 .toList();
-        missingCharts.forEach(p -> selector.main.getHttpDownloadProcessor().submitMD5Task(
-                p.getFirst(),
-                p.getSecond()
-        ));
+        missingCharts.forEach(selector.main.getHttpDownloadProcessor()::submitSongTask);
         return missingCharts.size();
     }
 }

@@ -49,7 +49,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 
 	private final QueryRunner qr;
 
-	private final boolean scanSongArchives;
+	private volatile boolean scanSongArchives;
 	
 	private List<SongDatabaseAccessorPlugin> plugins = new ArrayList();
 	/**
@@ -127,6 +127,11 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 		
 	public void addPlugin(SongDatabaseAccessorPlugin plugin) {
 		plugins.add(plugin);
+	}
+
+	/** Updates archive scanning when the launcher changes the opt-in before play starts. */
+	public void setScanSongArchives(boolean scanSongArchives) {
+		this.scanSongArchives = scanSongArchives;
 	}
 	
 	/**

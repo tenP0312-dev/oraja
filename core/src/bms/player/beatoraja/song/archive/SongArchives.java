@@ -39,6 +39,27 @@ public final class SongArchives {
 		return hasSupportedExtension(path) && Files.isRegularFile(path);
 	}
 
+	/**
+	 * Detects the archive format from its content signature and returns the
+	 * canonical filename extension. Unlike {@link #isSupportedArchive(Path)},
+	 * this never trusts an untrusted download's filename.
+	 */
+	public static String detectedExtension(Path path) throws IOException {
+		if (!Files.isRegularFile(path)) {
+			return null;
+		}
+		byte[] signature;
+		try (InputStream input = Files.newInputStream(path)) {
+			signature = input.readNBytes(SIGNATURE_SIZE);
+		}
+		for (SongArchive archive : ARCHIVES) {
+			if (archive.matchesSignature(signature, signature.length)) {
+				return archive.extensions().get(0);
+			}
+		}
+		return null;
+	}
+
 	/** Converts a local or virtual archive path into a resource abstraction. */
 	public static SongResource resource(Path path) {
 		ArchivePath archivePath = parse(path);
@@ -257,6 +278,11 @@ public final class SongArchives {
 		}
 		return archiveForRequired(archivePath.archive()).readEntry(
 				archivePath.archive(), canonicalEntryName(archivePath.archive(), archivePath.entryName()));
+	}
+
+	/** Reads a named entry from an archive whose temporary filename may have no archive suffix. */
+	public static byte[] readEntry(Path archive, String entryName) throws IOException {
+		return archiveForRequired(archive).readEntry(archive, canonicalEntryName(archive, entryName));
 	}
 
 	private static String canonicalEntryName(Path archive, String entryName) throws IOException {

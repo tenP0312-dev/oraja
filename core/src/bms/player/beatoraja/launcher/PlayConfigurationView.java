@@ -446,6 +446,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox enableHttp;
 	@FXML
+	private CheckBox enableBmsirBodyDownload;
+	@FXML
 	private ComboBox<String> httpDownloadSource;
 	@FXML
 	private TextField defaultDownloadURL;
@@ -1367,6 +1369,9 @@ public class PlayConfigurationView implements Initializable {
 						sidebarSettingRow(otherTab, "enableHttp", "HTTPによるBMS自動ダウンロード", "Automatic BMS download via HTTP",
 								"対応する楽曲を選択したHTTP配布元から自動取得できるようにします。",
 								"Allow supported songs to be downloaded automatically from the selected HTTP provider."),
+						sidebarSettingRow(otherTab, "enableBmsirBodyDownload", "BMS-IR本体URLから取得", "Download from BMS-IR body URLs",
+								"既定OFF。登録URLを直接試し、失敗時はWaybackを参照します。圧縮は展開せず、形式・構造・対象譜面MD5だけを検査します。ウイルス検査ではありません。",
+								"Off by default. Try the registered URL and then Wayback, retaining the archive. Format, structure, and chart MD5 checks are not antivirus scanning."),
 						sidebarSettingRow(otherTab, "httpDownloadSource", "HTTP配布元", "HTTP provider",
 								"自動ダウンロードで使用する既定の配布サービスを選びます。",
 								"Choose the default provider used for automatic HTTP downloads."),
@@ -2717,6 +2722,7 @@ public class PlayConfigurationView implements Initializable {
 		ipfsurl.setText(config.getIpfsUrl());
 
 		enableHttp.setSelected(config.isEnableHttp());
+		enableBmsirBodyDownload.setSelected(config.isEnableBmsirBodyDownload());
 		httpDownloadSource.setValue(config.getDownloadSource());
 		defaultDownloadURL.setText(config.getDefaultDownloadURL());
 		overrideDownloadURL.setText(config.getOverrideDownloadURL());
@@ -2944,6 +2950,7 @@ public class PlayConfigurationView implements Initializable {
 		config.setIpfsUrl(ipfsurl.getText());
 
 		config.setEnableHttp(enableHttp.isSelected());
+		config.setEnableBmsirBodyDownload(enableBmsirBodyDownload.isSelected());
 		config.setDownloadSource(httpDownloadSource.getValue());
 		config.setOverrideDownloadURL(overrideDownloadURL.getText());
 

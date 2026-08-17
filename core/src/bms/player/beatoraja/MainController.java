@@ -168,6 +168,8 @@ public class MainController {
 		this.auto = auto;
 		this.config = config;
 		this.songUpdated = songUpdated;
+		MainLoader.configureSongArchiveScanning(
+				config.isScanSongArchives() || config.isEnableBmsirBodyDownload());
 
 		for(int i = 0;i < offset.length;i++) {
 			offset[i] = new SkinOffset();
@@ -888,7 +890,7 @@ public class MainController {
 		if (config.isEnableIpfs()) {
 			addDownloadRoot(Paths.get("ipfs").toAbsolutePath());
 		}
-		if (config.isEnableHttp()) {
+		if (config.isEnableHttp() || config.isEnableBmsirBodyDownload()) {
 			addDownloadRoot(Paths.get(config.getDownloadDirectory()).toAbsolutePath());
 		}
 	}
@@ -995,14 +997,15 @@ public class MainController {
 			});
 			download.start(null);
 		}
-		if (config.isEnableHttp()) {
-			HttpDownloadSource source = HttpDownloadProcessor.DOWNLOAD_SOURCES
-					.get(config.getDownloadSource())
-					.build(config);
+		if (config.isEnableHttp() || config.isEnableBmsirBodyDownload()) {
+			HttpDownloadSource source = config.isEnableHttp()
+					? HttpDownloadProcessor.DOWNLOAD_SOURCES.get(config.getDownloadSource()).build(config)
+					: null;
 			httpDownloadProcessor = new HttpDownloadProcessor(
 					this,
 					source,
-					config.getDownloadDirectory()
+					config.getDownloadDirectory(),
+					config.isEnableBmsirBodyDownload()
 			);
 			DownloadTaskState.initialize(httpDownloadProcessor);
 			DownloadTaskMenu.setProcessor(httpDownloadProcessor);

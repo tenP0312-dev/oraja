@@ -485,6 +485,8 @@
                      </HBox>
 
                     <CheckBox fx:id="enableHttp" mnemonicParsing="false" prefHeight="18.0" text="%ENABLE_HTTP" />
+                    <CheckBox fx:id="enableBmsirBodyDownload" mnemonicParsing="false" prefHeight="18.0" text="%ENABLE_BMSIR_BODY_DOWNLOAD" />
+                    <Label maxWidth="680.0" styleClass="configuration-description" text="%BMSIR_BODY_DOWNLOAD_WARNING" wrapText="true" />
                     <ComboBox fx:id="httpDownloadSource" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <GridPane hgap="10" vgap="5">
                         <children>

@@ -268,12 +268,18 @@ public class MainLoader extends Application {
 				Config config = Config.read();
 				Class.forName("org.sqlite.JDBC");
 				songdb = new SQLiteSongDatabaseAccessor(config.getSongpath(), config.getBmsroot(),
-						config.isScanSongArchives());
+						config.isScanSongArchives() || config.isEnableBmsirBodyDownload());
 			} catch (ClassNotFoundException | PlayerConfigException e) {
 				logger.error("Failed to access score database: {}", e.getLocalizedMessage());
 			}
         }
 		return songdb;
+	}
+
+	public static void configureSongArchiveScanning(boolean enabled) {
+		if (songdb instanceof SQLiteSongDatabaseAccessor accessor) {
+			accessor.setScanSongArchives(enabled);
+		}
 	}
 
 	public static VersionChecker getVersionChecker() {

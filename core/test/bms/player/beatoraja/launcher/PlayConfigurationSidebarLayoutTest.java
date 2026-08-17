@@ -8,6 +8,8 @@ import org.w3c.dom.NodeList;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 import javafx.geometry.Pos;
 
@@ -43,6 +45,15 @@ class PlayConfigurationSidebarLayoutTest {
 	void sidebarScalarRowsUseOneTrailingEditorColumn() {
 		assertEquals(480.0, PlayConfigurationView.SIDEBAR_EDITOR_COLUMN_WIDTH);
 		assertEquals(Pos.CENTER_RIGHT, PlayConfigurationView.SIDEBAR_STANDALONE_TOGGLE_ALIGNMENT);
+	}
+
+	@Test
+	void bodyDownloadWarningIsAvailableInEnglishAndJapanese() {
+		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
+		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
+		assertTrue(english.getString("BMSIR_BODY_DOWNLOAD_WARNING")
+				.toLowerCase(Locale.ROOT).contains("not antivirus"));
+		assertTrue(japanese.getString("BMSIR_BODY_DOWNLOAD_WARNING").contains("ウイルス検査ではありません"));
 	}
 
 	@Test
@@ -115,7 +126,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"obsWsRecMode", "obsWsRecStopWait");
 		assertInjectedNodes("PlayConfigurationView.fxml", PlayConfigurationView.class,
 				"addBgmPathButton", "addSoundPathButton", "bgmpath", "clipboardScreenshot", "configurationLayout",
-				"defaultDownloadURL", "enableHttp", "enableIpfs", "httpDownloadSource", "importScoreButton",
+				"defaultDownloadURL", "enableBmsirBodyDownload", "enableHttp", "enableIpfs", "httpDownloadSource", "importScoreButton",
 				"ipfsurl", "overrideDownloadURL", "soundpath", "usecim",
 				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",

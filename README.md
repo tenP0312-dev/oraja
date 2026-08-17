@@ -258,6 +258,15 @@ continue to use the decoded chart identity. Archive content signatures select
 the reader, so a ZIP/RAR/7z file with another supported archive suffix is still
 read correctly.
 
+Missing difficulty-table songs can also opt in to direct archive downloads
+from their BMS-IR-registered HTTP(S) body URL, with a Wayback snapshot fallback
+when the live URL fails. The switch is off by default. Accepted ZIP/RAR/7z
+packages remain compressed in `http_download`; the client applies bounded
+archive-structure checks and requires the requested chart MD5 before saving
+without overwrite. These checks are not antivirus scanning. See
+[`doc/BMSIR_ARENA.md`](doc/BMSIR_ARENA.md#bms-ir-body-url-downloads) for the
+complete behavior and security boundary.
+
 ## Repository Scope
 
 - Client source, launcher source, client Issues, and client pull requests live

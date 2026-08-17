@@ -203,6 +203,8 @@ public class Config implements Validatable {
 	private String ipfsurl = "https://gateway.ipfs.io/";
 
 	private boolean enableHttp = true;
+	/** Opt-in direct downloads from body URLs carried by BMS-IR table entries. */
+	private boolean enableBmsirBodyDownload = false;
 	private String downloadSource = HttpDownloadProcessor.getDefaultDownloadSource().getName();
 	// Only for passing parameter, not used as a config option
 	private String defaultDownloadURL = HttpDownloadProcessor.getDefaultDownloadSource().getDefaultURL();
@@ -804,6 +806,14 @@ public class Config implements Validatable {
 
 	public void setEnableHttp(boolean enableHttp) {
 		this.enableHttp = enableHttp;
+	}
+
+	public boolean isEnableBmsirBodyDownload() {
+		return enableBmsirBodyDownload;
+	}
+
+	public void setEnableBmsirBodyDownload(boolean enableBmsirBodyDownload) {
+		this.enableBmsirBodyDownload = enableBmsirBodyDownload;
 	}
 
 	public String getDownloadSource() {
