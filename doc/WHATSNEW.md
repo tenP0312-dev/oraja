@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.54
+
+- Added a per-player switch for difficulty-table display levels. Disabling it
+  restores stored `#PLAYLEVEL` display and sorting without changing table data
+  or ordinary folders.
+- Added bounded 18-second in-memory preview generation for charts without a
+  readable preview. One low-priority latest-request worker and an eight-entry
+  LRU cache preserve explicit-preview priority and existing preview modes.
+- Added default-OFF bounded JSONL timing diagnostics for render, input-to-judge
+  dispatch, BGA decode/upload, OpenAL/PortAudio activity, GC, and memory.
+- Kept gameplay scheduling, input polling, judgement, keysound delivery, audio
+  buffering, and BGA fallback behavior unchanged when diagnostics are enabled.
+
 # Arena oraja 0.4.14.53
 
 - Kept the native LibGDX game-window title exactly `Arena oraja` across body

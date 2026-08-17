@@ -28,6 +28,21 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.54</h1>
+        <h2>Optional difficulty-table display levels</h2>
+        <ul>
+        <li>A per-player switch can restore stored <code>#PLAYLEVEL</code> display and sorting inside difficulty tables without changing table assignments or ordinary folders.</li>
+        </ul>
+        <h2>Generated previews for charts without preview audio</h2>
+        <ul>
+        <li>Music Select can generate a bounded 18-second in-memory preview when no readable explicit or automatically discovered preview exists.</li>
+        <li>One low-priority latest-request worker and an eight-entry LRU cache preserve explicit-preview priority and the existing preview modes.</li>
+        </ul>
+        <h2>Opt-in gameplay timing diagnostics</h2>
+        <ul>
+        <li>Default-OFF bounded JSONL summaries separate render, input dispatch, BGA decode/upload, audio, GC, and memory pressure.</li>
+        <li>The diagnostics do not change input, judgement, keysound, BGA fallback, audio-buffer, or gameplay scheduling policy.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.53</h1>
         <h2>Stable capture title and play-skin RANDOM refs</h2>
         <ul>
