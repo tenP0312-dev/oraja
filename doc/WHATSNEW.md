@@ -1,10 +1,26 @@
+# Arena oraja 0.4.14.56
+
+- Resolved up to 12 ZIP/RAR/7z links in document order when the default-OFF
+  BMS-IR body URL downloader receives a bounded HTML distribution page,
+  including from one archived Wayback page.
+- Kept every candidate behind the existing archive structure, path, count,
+  expanded-size, and requested-chart-MD5 checks before retaining it compressed.
+  Failed download tasks can be selected again without weakening duplicate
+  protection for active or completed tasks.
+- Fixed generated Music Select previews so their in-memory WAV reaches the WAV
+  decoder.
+- Moved preview-only source decoding to GC-managed buffers and enforced limits
+  of 256 sounds, 16 MiB per source, 64 MiB cumulative source data, 32 MiB
+  decode/PCM per sound, and 96 MiB retained PCM. An over-limit chart keeps the
+  normal Music Select BGM without caching a partial preview; ordinary gameplay
+  key-sound allocation is unchanged.
+
 # Arena oraja 0.4.14.55
 
 - Added the default-OFF `BMS-IR本体URLから取得` / `Download from BMS-IR body
   URLs` setting for missing difficulty-table songs. It tries the registered
-  HTTP(S) URL, resolves bounded ZIP/RAR/7z links from an HTML distribution
-  page, and then tries one Wayback snapshot when the live route cannot be
-  installed.
+  HTTP(S) archive URL and then tries one Wayback snapshot when the live
+  download cannot be installed.
 - Retained accepted ZIP, RAR4/RAR5, and 7z packages compressed in
   `http_download` instead of extracting them. Existing IPFS, configured HTTP
   providers, and browser-page behavior remain unchanged.
@@ -12,9 +28,6 @@
   expanded-size checks, and the requested chart MD5 before installing without
   overwrite. These checks are not antivirus scanning; the option remains off
   until the player accepts the untrusted-archive and media-decoder risk.
-- Limited HTML pages to 2 MiB and 12 archive links, rejected local/private
-  network targets, and made a failed task retryable while keeping active and
-  completed identical tasks duplicate-protected.
 
 # Arena oraja 0.4.14.54
 

@@ -10,13 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.55**. Missing difficulty-table
-songs can opt in to downloading the archive registered with BMS-IR, with one
-Wayback snapshot fallback when the live URL fails. Accepted packages stay
-compressed and must contain the requested chart before they are retained.
-The current development source also resolves bounded ZIP/RAR/7z links from
-registered HTML distribution pages, so event pages do not have to be replaced
-with direct archive URLs.
+The current client source version is **0.4.14.56**. Registered HTML
+distribution pages can supply bounded ZIP/RAR/7z candidates for a missing
+difficulty-table song, including through one Wayback snapshot. Generated
+Music Select previews now load their in-memory WAV correctly and stop at
+explicit source, decode, and retained-memory limits.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -26,15 +24,6 @@ returns to the same window style even when fullscreen was saved on shutdown
 and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
-
-The current development source also fixes generated Music Select previews so
-their in-memory WAV reaches the WAV decoder. Preview-only source decoding uses
-GC-managed buffers and stops before decoding when more than 256 sounds, 16 MiB
-for one source, or 64 MiB of cumulative source data would be required. Each
-sound has a 32 MiB decode/PCM budget, and all retained decoded samples together
-may use at most 96 MiB; an over-limit chart keeps the normal
-Music Select BGM instead of publishing a partial preview. Ordinary gameplay
-key-sound allocation is unchanged.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
@@ -62,25 +51,34 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Arena oraja 0.4.14.56
+
+When the default-OFF BMS-IR body URL option encounters an HTML distribution
+page, it can try up to 12 ZIP/RAR/7z links in document order. The same bounded
+resolution applies to one archived Wayback page. Every candidate still has to
+pass the existing archive checks and contain the requested chart MD5 before it
+is retained compressed; failed tasks can be selected again safely.
+
+Generated Music Select previews now pass their in-memory WAV to the WAV
+decoder. Preview-only source decoding uses GC-managed buffers and explicit
+limits of 256 sounds, 16 MiB per source, 64 MiB cumulative source data, 32 MiB
+decode/PCM per sound, and 96 MiB retained PCM. A chart that exceeds a limit
+keeps the normal Music Select BGM without caching a partial preview, while
+ordinary gameplay key-sound allocation is unchanged.
+
 ## Arena oraja 0.4.14.55
 
 The Other settings add `BMS-IR本体URLから取得` / `Download from BMS-IR body
 URLs`. It is off by default. When enabled, a missing difficulty-table song can
-try its BMS-IR-registered HTTP(S) URL. A direct archive is handled immediately;
-a bounded HTML distribution page may contribute up to 12 ZIP/RAR/7z links in
-document order. If the live route cannot be installed, one Wayback snapshot of
-the registered URL is tried and an archived page may resolve its rewritten
-archive link. Existing IPFS, configured HTTP-provider, and browser-page
-behavior remain unchanged.
+try its BMS-IR-registered HTTP(S) archive URL, then one Wayback snapshot if the
+live download cannot be installed. Existing IPFS, configured HTTP-provider,
+and browser-page behavior remain unchanged.
 
 Accepted ZIP, RAR4/RAR5, and 7z packages remain compressed in `http_download`.
 The client enforces the 2 GiB download limit, archive structure/path/expanded-
 size checks, and the requested chart MD5 before a no-overwrite install. These
 checks are not antivirus scanning, so leave the setting off unless you accept
-the risk of processing an untrusted archive and its media. HTML pages are
-limited to 2 MiB, local/private-network targets are rejected, and a failed task
-can be retried without disabling duplicate protection for active or completed
-tasks.
+the risk of processing an untrusted archive and its media.
 
 ## Arena oraja 0.4.14.54
 
@@ -395,7 +393,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.55
+  --output-dir /release/build-0.4.14.56
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
