@@ -289,9 +289,11 @@ unrelated roots are neither rescanned nor deleted.
 Difficulty tables are shown in one active list. A row context menu can update
 one table, edit a custom URL, change its order, or remove it. `Choose built-in`
 opens a compact checkbox list and can add several non-duplicate tables in one
-operation; `Load from URL` handles custom tables separately. Existing table
-URLs, active ordering, BMS roots, and archive-scanning settings remain
-compatible with saved profiles.
+operation. Configured built-in tables stay visible there as checked, read-only
+entries, and the add action is enabled only when a new table is selected.
+`Load from URL` handles custom tables separately. Existing table URLs, active
+ordering, BMS roots, and archive-scanning settings remain compatible with
+saved profiles.
 
 ### Work folder
 
