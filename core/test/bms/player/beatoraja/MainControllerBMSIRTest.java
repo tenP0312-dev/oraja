@@ -4,6 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import bms.player.beatoraja.AudioConfig.DriverType;
 
 class MainControllerBMSIRTest {
 
@@ -35,6 +39,12 @@ class MainControllerBMSIRTest {
 				Config.DisplayMode.WINDOW,
 				MainController.rememberedWindowedMode(Config.DisplayMode.FULLSCREEN)
 		);
+	}
+
+	@Test
+	void asioStartupFailureDoesNotSilentlyRewriteTheSelectedDriver() {
+		assertTrue(MainController.shouldFallbackToOpenAlOnPortAudioFailure(DriverType.PortAudio));
+		assertFalse(MainController.shouldFallbackToOpenAlOnPortAudioFailure(DriverType.ASIO));
 	}
 
     private static IRConfig ir(String name, String userId) {

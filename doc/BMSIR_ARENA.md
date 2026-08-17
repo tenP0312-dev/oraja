@@ -21,6 +21,17 @@ device default is used. An unsupported device or format follows the existing
 PortAudio startup-failure path and falls back to OpenAL. OpenAL, other
 PortAudio host APIs, macOS, Linux, and existing configurations are unchanged.
 
+The same Audio tab exposes `ASIO` as an independent Windows output driver.
+Selecting it filters the device list to PortAudio Host API type 3 (ASIO) and
+to devices with at least one output channel. The exact device name and Host
+API are stored, the WASAPI mode control is disabled, and startup rejects a
+non-ASIO or unavailable selection instead of silently rewriting it to OpenAL.
+The selected mode, device, Host API, sample rate, and buffer size are logged.
+The bundled Windows PortAudio DLL already contains the ASIO backend and the
+basic implementation uses its existing blocking-stream path; no new ASIO SDK
+binary or library is added by this change. Driver-specific buffer-size lists
+and the ASIO control-panel button remain optional follow-up work.
+
 Version `0.4.14.49` adds the Resource-tab `Work folder` / `作業フォルダ`
 button and the reserved `_BMSIR_TESTPLAY` authoring directory. Charts below
 that directory do not save local records and are never submitted to IR or

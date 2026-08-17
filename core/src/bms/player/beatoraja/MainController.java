@@ -302,16 +302,27 @@ public class MainController {
 			return StartupTask.Result.ok(rivals.getRivalCount() + "人");
 		}));
 
-		tasks.add(StartupTask.optional("PortAudio初期化", () -> {
-			if (config.getAudioConfig().getDriver() != DriverType.PortAudio) {
+		DriverType configuredAudioDriver = config.getAudioConfig().getDriver();
+		boolean asioConfigured = configuredAudioDriver == DriverType.ASIO;
+		tasks.add(new StartupTask(
+				asioConfigured ? "ASIO初期化" : "PortAudio初期化",
+				asioConfigured,
+				() -> {
+			DriverType driver = config.getAudioConfig().getDriver();
+			if (driver != DriverType.PortAudio && driver != DriverType.ASIO) {
 				return StartupTask.Result.skip("OpenALを使用");
 			}
 			try {
 				audio = new PortAudioDriver(config);
-				return StartupTask.Result.ok();
+				return StartupTask.Result.ok(driver.name());
 			} catch (Throwable error) {
+				if (!shouldFallbackToOpenAlOnPortAudioFailure(driver)) {
+					throw new IllegalStateException(
+							"ASIO初期化に失敗しました: " + startupErrorMessage(error),
+							error);
+				}
 				config.getAudioConfig().setDriver(DriverType.OpenAL);
-				return StartupTask.Result.skip("OpenALへ切替");
+				return StartupTask.Result.skip("PortAudio起動失敗・OpenALへ切替");
 			}
 		}));
 		tasks.add(StartupTask.required("タイマー", () -> {
@@ -363,6 +374,9 @@ public class MainController {
 		tasks.add(StartupTask.required("オーディオ", () -> {
 			if (config.getAudioConfig().getDriver() == DriverType.OpenAL) {
 				audio = new GdxSoundDriver(config);
+			}
+			if (audio == null) {
+				throw new IllegalStateException("選択したオーディオドライバーを初期化できません");
 			}
 			loudnessAnalyzer = new BMSLoudnessAnalyzer(config);
 			return StartupTask.Result.ok(config.getAudioConfig().getDriver().name());
@@ -416,6 +430,17 @@ public class MainController {
 			return StartupTask.Result.ok();
 		}));
 		return tasks;
+	}
+
+	static boolean shouldFallbackToOpenAlOnPortAudioFailure(DriverType driver) {
+		return driver == DriverType.PortAudio;
+	}
+
+	private static String startupErrorMessage(Throwable error) {
+		String message = error.getLocalizedMessage();
+		return message == null || message.isBlank()
+				? error.getClass().getSimpleName()
+				: message;
 	}
 
 	static IRConfig[] uniqueIrConfigs(IRConfig[] configs) {
