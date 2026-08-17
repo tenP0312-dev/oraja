@@ -38,6 +38,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
@@ -49,6 +50,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -248,11 +250,34 @@ public class PlayConfigurationView implements Initializable {
 	private List<Node> classicPlayerPanelNodes = List.of();
 	private final Map<Tab, ContextHelp> tabContextHelp = new IdentityHashMap<>();
 	private final Map<String, ContextHelp> controlContextHelp = new HashMap<>();
+	private final Map<Tab, Node> classicTabContents = new IdentityHashMap<>();
+	private final Map<Tab, ScrollPane> sidebarTabContents = new IdentityHashMap<>();
+	private final List<SidebarNodePlacement> sidebarNodePlacements = new ArrayList<>();
 	private GridPane sidebarPlayerEditor;
 	private Label sidebarDisplayNameLabel;
 	private boolean playerEditorUsesSidebarLayout;
 	private boolean sidebarPlayOptionsInitialized;
+	private boolean sidebarPagesInitialized;
+	private boolean sidebarNodesMoved;
 	private boolean englishUi;
+
+	private static final class SidebarNodePlacement {
+		private final Node node;
+		private final Pane originalParent;
+		private final int originalIndex;
+		private final StackPane sidebarHost;
+		private final double originalMaxWidth;
+		private final double originalMaxHeight;
+
+		private SidebarNodePlacement(Node node, Pane originalParent, int originalIndex, StackPane sidebarHost) {
+			this.node = node;
+			this.originalParent = originalParent;
+			this.originalIndex = originalIndex;
+			this.sidebarHost = sidebarHost;
+			this.originalMaxWidth = node instanceof Region region ? region.getMaxWidth() : Double.NaN;
+			this.originalMaxHeight = node instanceof Region region ? region.getMaxHeight() : Double.NaN;
+		}
+	}
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -714,6 +739,7 @@ public class PlayConfigurationView implements Initializable {
 		initializeSidebarPlayerEditor();
 		initializeContextHelp();
 		initializeSidebarPlayOptions();
+		initializeSidebarPages();
 		sidebarNavigation.refresh();
 		configurationLayout.setValue(Config.ConfigurationLayout.CLASSIC);
 	}
@@ -841,6 +867,14 @@ public class PlayConfigurationView implements Initializable {
 		setManagedVisible(contextHelpPanel, sidebar);
 		setManagedVisible(classicPlayOptionContent, !sidebar);
 		setManagedVisible(sidebarPlayOptionScroll, sidebar);
+		moveSidebarNodes(sidebar);
+		for (Map.Entry<Tab, Node> entry : classicTabContents.entrySet()) {
+			setManagedVisible(entry.getValue(), !sidebar);
+			ScrollPane sidebarPage = sidebarTabContents.get(entry.getKey());
+			if (sidebarPage != null) {
+				setManagedVisible(sidebarPage, sidebar);
+			}
+		}
 		if (sidebar) {
 			if (!configurationContent.getStyleClass().contains("sidebar-mode")) {
 				configurationContent.getStyleClass().add("sidebar-mode");
@@ -863,9 +897,9 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private void updateSidebarTabPresentation(Tab tab) {
-		boolean sidebarPlayOptions = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR
-				&& tab == optionTab;
-		if (sidebarPlayOptions) {
+		boolean sidebarForm = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR
+				&& (tab == optionTab || sidebarTabContents.containsKey(tab));
+		if (sidebarForm) {
 			if (!configurationTabs.getStyleClass().contains("sidebar-form-tab")) {
 				configurationTabs.getStyleClass().add("sidebar-form-tab");
 			}
@@ -960,6 +994,656 @@ public class PlayConfigurationView implements Initializable {
 			installContextHelp(tab, tab.getContent());
 		}
 		showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
+	}
+
+	private void initializeSidebarPages() {
+		if (sidebarPagesInitialized) {
+			return;
+		}
+		initializeSidebarVideo();
+		initializeSidebarAudio();
+		initializeSidebarInput();
+		initializeSidebarResource();
+		initializeSidebarMusicSelect();
+		initializeSidebarSkin();
+		initializeSidebarOther();
+		initializeSidebarBmsir();
+		initializeSidebarIr();
+		initializeSidebarTable();
+		initializeSidebarStream();
+		initializeSidebarDiscord();
+		initializeSidebarObs();
+		sidebarPagesInitialized = true;
+	}
+
+	private void installSidebarPage(Tab tab, VBox... cards) {
+		Node classic = tab.getContent();
+		VBox page = new VBox(14, cards);
+		page.setPadding(new Insets(2, 2, 16, 2));
+		page.getStyleClass().add("sidebar-settings-page");
+
+		ScrollPane sidebar = new ScrollPane(page);
+		sidebar.setFitToWidth(true);
+		sidebar.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+		sidebar.getStyleClass().add("sidebar-settings-scroll");
+		setManagedVisible(sidebar, false);
+
+		StackPane host = new StackPane(classic, sidebar);
+		classicTabContents.put(tab, classic);
+		sidebarTabContents.put(tab, sidebar);
+		tab.setContent(host);
+	}
+
+	private void moveSidebarNodes(boolean sidebar) {
+		if (sidebarNodesMoved == sidebar) {
+			return;
+		}
+		if (sidebar) {
+			for (SidebarNodePlacement placement : sidebarNodePlacements) {
+				placement.originalParent.getChildren().remove(placement.node);
+				placement.sidebarHost.getChildren().setAll(placement.node);
+				if (placement.node instanceof Region region) {
+					region.setMaxWidth(Double.MAX_VALUE);
+					region.setMaxHeight(Double.MAX_VALUE);
+				}
+			}
+		} else {
+			Map<Pane, List<SidebarNodePlacement>> byParent = new IdentityHashMap<>();
+			for (SidebarNodePlacement placement : sidebarNodePlacements) {
+				placement.sidebarHost.getChildren().remove(placement.node);
+				byParent.computeIfAbsent(placement.originalParent, unused -> new ArrayList<>()).add(placement);
+			}
+			for (List<SidebarNodePlacement> placements : byParent.values()) {
+				placements.sort(Comparator.comparingInt(placement -> placement.originalIndex));
+				for (SidebarNodePlacement placement : placements) {
+					int index = Math.min(placement.originalIndex, placement.originalParent.getChildren().size());
+					placement.originalParent.getChildren().add(index, placement.node);
+					if (placement.node instanceof Region region) {
+						region.setMaxWidth(placement.originalMaxWidth);
+						region.setMaxHeight(placement.originalMaxHeight);
+					}
+				}
+			}
+		}
+		sidebarNodesMoved = sidebar;
+	}
+
+	private void initializeSidebarVideo() {
+		installSidebarPage(videoTab,
+				sidebarSettingCard(
+						sidebarSettingRow(videoTab, "displayMode", "画面モード", "Display Mode",
+								"ウィンドウ、ボーダーレス、フルスクリーンのどれで起動するかを選びます。",
+								"Choose Window, Borderless, or Fullscreen startup."),
+						sidebarSettingRow(videoTab, "resolution", "解像度", "Resolution",
+								"ゲーム画面の幅と高さです。ディスプレイとスキンに合う値を選びます。",
+								"Choose the game width and height to match the display and skin."),
+						sidebarSettingRow(videoTab, "monitor", "表示モニター", "Monitor",
+								"複数画面を使用している場合の起動先を選びます。",
+								"Choose which display receives the game window."),
+						sidebarSettingRow(videoTab, "vSync", "垂直同期", "Vsync",
+								"画面更新をモニターの周期に合わせ、ティアリングを抑えます。遅延が気になる場合はOFFも試せます。",
+								"Synchronize frames to the monitor to reduce tearing; try OFF when latency matters more."),
+						sidebarSettingRow(videoTab, "maxFps", "最大FPS", "Maximum FPS",
+								"垂直同期がOFFのときの描画上限です。0は上限なしです。",
+								"Cap rendering when Vsync is off; 0 means uncapped.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(videoTab, "bgaOp", "BGA", "BGA",
+								"譜面の背景アニメーションを表示するか決めます。負荷を下げたい場合はOFFにします。",
+								"Choose whether chart background animation is shown; turn it off to reduce load."),
+						sidebarSettingRow(videoTab, "missLayerTime", "ミスレイヤー表示時間", "Miss-layer duration",
+								"ミス時に表示されるBGAレイヤーの長さです。単位は ms です。",
+								"Set how long the miss BGA layer stays visible, in ms."),
+						sidebarSettingRow(videoTab, "bgaExpand", "BGAの拡大方法", "BGA scaling",
+								"縦横比を保つ、領域いっぱいに広げる、拡大しない、から選びます。",
+								"Choose aspect-preserving, full-area, or no expansion.")
+				)
+		);
+	}
+
+	private void initializeSidebarAudio() {
+		installSidebarPage(audioTab,
+				sidebarSettingCard(
+						sidebarSettingRow(audioTab, "audio", "音声出力", "Audio output",
+								"OpenAL、PortAudio、ASIOなど、使用する出力方式を選びます。",
+								"Choose OpenAL, PortAudio, ASIO, or another available output path."),
+						sidebarSettingRow(audioTab, "audioname", "出力デバイス", "Output device",
+								"音を出す機器を選びます。選んだ出力方式で利用できる機器だけが表示されます。",
+								"Choose the output device available through the selected audio backend."),
+						sidebarSettingRow(audioTab, "wasapiMode", "WASAPIモード", "WASAPI mode",
+								"WindowsのWASAPI使用時に共有または排他を選びます。排他は低遅延ですが、他アプリと同時利用できません。",
+								"Choose Shared or Exclusive for Windows WASAPI; Exclusive lowers latency but blocks other apps."),
+						sidebarSettingRow(audioTab, "audiobuffer", "オーディオバッファ", "Audio buffer",
+								"小さいほど遅延は減りますが、音切れしやすくなります。単位は KB です。",
+								"Lower values reduce latency but make dropouts more likely. The unit is KB."),
+						sidebarSettingRow(audioTab, "audiosim", "同時発音数", "Simultaneous sounds",
+								"同時に再生できる音声数です。多い譜面で音が欠ける場合に増やします。",
+								"Set how many sounds can play together; raise it if dense charts lose sounds."),
+						sidebarSettingRow(audioTab, "audiosamplerate", "サンプルレート", "Sample rate",
+								"出力周波数を選びます。通常はデバイス既定または44.1 kHzで十分です。",
+								"Choose the output rate; the device default or 44.1 kHz is normally sufficient.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(audioTab, "systemvolume", "全体音量", "System volume",
+								"ゲーム全体の音量を調整します。",
+								"Adjust the overall game volume."),
+						sidebarSettingRow(audioTab, "keyvolume", "キー音量", "Key volume",
+								"譜面のキー音だけの音量を調整します。",
+								"Adjust the chart key-sound volume."),
+						sidebarSettingRow(audioTab, "bgvolume", "BGM音量", "BGM volume",
+								"BGMや自動再生音の音量を調整します。",
+								"Adjust BGM and automatically played audio."),
+						sidebarSettingRow(audioTab, "normalizeVolume", "譜面音量を正規化", "Normalize chart volume",
+								"曲ごとの音量差を抑えるため、読み込んだ音声の基準音量を揃えます。",
+								"Reduce volume differences by normalizing loaded chart audio.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(audioTab, "audioFreqOption", "周波数変更時の音程", "Pitch during frequency changes",
+								"速度変更時に音程も変えるか、時間伸縮で音程を保つかを選びます。",
+								"Choose whether speed changes alter pitch or preserve it through time stretching."),
+						sidebarSettingRow(audioTab, "audioFastForward", "早送り時の音声", "Fast-forward audio",
+								"譜面プレビューなどの早送り中に使う音声処理を選びます。",
+								"Choose the audio processing used while previews fast-forward."),
+						sidebarSettingRow(audioTab, "loopResultSound", "リザルト音をループ", "Loop result sound",
+								"通常リザルトに滞在している間、リザルト音を繰り返します。",
+								"Repeat result audio while the normal result screen remains open."),
+						sidebarSettingRow(audioTab, "loopCourseResultSound", "コースリザルト音をループ", "Loop course-result sound",
+								"コースリザルトに滞在している間、リザルト音を繰り返します。",
+								"Repeat result audio while the course result screen remains open.")
+				)
+		);
+	}
+
+	private void initializeSidebarInput() {
+		StackPane controllerWorkspace = sidebarMovable(inputTab, "controller_tableView");
+		controllerWorkspace.setMinHeight(190);
+		installSidebarPage(inputTab,
+				sidebarSettingCard(
+						sidebarSettingRow(inputTab, "inputconfig", "設定対象モード", "Input mode",
+								"7KEYS、14KEYSなど、編集する入力モードを選びます。",
+								"Choose the key mode whose input mapping is being edited."),
+						sidebarSettingRow(inputTab, "backgroundControllerInput", "非アクティブ時の専用コントローラー入力", "Background controller input",
+								"ゲーム画面が非アクティブでも、HID・ゲームコントローラー入力を受け付けます。キーボード入力は対象外です。",
+								"Accept HID/game-controller input while the game is unfocused; keyboard input remains focus-bound."),
+						sidebarSettingRow(inputTab, "inputduration", "最小入力間隔", "Minimum input interval",
+								"同じ入力を再び受け付けるまでの最短時間です。単位は ms です。",
+								"Set the shortest interval before the same input is accepted again, in ms."),
+						sidebarSettingRow(inputTab, "jkoc_hack", "JKOC HACK", "JKOC HACK",
+								"一部の旧型コントローラー向け互換入力処理です。必要な機器だけで有効にします。",
+								"Enable legacy compatibility input handling only for controllers that require it.")
+				),
+				sidebarSettingCard(
+						sidebarWorkspaceRow(inputTab, "接続コントローラー", "Connected controllers",
+								"各プレイサイドの機器、アナログスクラッチ、停止閾値とアルゴリズムを編集します。",
+								"Edit devices, analog scratch, stop thresholds, and algorithms for each play side.",
+								controllerWorkspace)
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(inputTab, "mouseScratch", "マウス皿", "Mouse scratch",
+								"マウス移動をスクラッチ入力として使用します。",
+								"Use mouse movement as scratch input."),
+						sidebarSettingRow(inputTab, "mouseScratchMode", "マウス皿のアルゴリズム", "Mouse-scratch algorithm",
+								"マウス移動をスクラッチ回転へ変換する方法を選びます。",
+								"Choose how mouse movement is converted into scratch rotation."),
+						sidebarSettingRow(inputTab, "mouseScratchTimeThreshold", "マウス皿の停止閾値", "Mouse-scratch stop threshold",
+								"最後の移動からスクラッチ停止とみなすまでの時間です。単位は ms です。",
+								"Set the time after the last movement before scratch input stops, in ms."),
+						sidebarSettingRow(inputTab, "mouseScratchDistance", "マウス皿の距離", "Mouse-scratch distance",
+								"スクラッチ1段階として扱うマウス移動量です。小さいほど敏感になります。",
+								"Set the movement distance per scratch step; smaller values are more sensitive.")
+				)
+		);
+	}
+
+	private void initializeSidebarMusicSelect() {
+		installSidebarPage(musicselectTab,
+				sidebarSettingCard(
+						sidebarSettingRow(musicselectTab, "scrolldurationlow", "最初の選曲スクロール間隔", "Initial scroll interval",
+								"方向入力を押し続けたとき、連続スクロールが始まるまでの待ち時間です。単位は ms です。",
+								"Set the delay before held navigation begins continuous scrolling, in ms."),
+						sidebarSettingRow(musicselectTab, "scrolldurationhigh", "それ以降のスクロール間隔", "Repeated scroll interval",
+								"連続スクロール開始後、次の曲へ進む間隔です。小さいほど速くなります。",
+								"Set the interval between later scroll steps; smaller values move faster."),
+						sidebarSettingRow(musicselectTab, "analogScroll", "アナログスクロール", "Analog scroll",
+								"皿などのアナログ回転で選曲リストを移動します。",
+								"Move the song list with analog rotation such as a turntable."),
+						sidebarSettingRow(musicselectTab, "analogTicksPerScroll", "アナログスクロール感度", "Analog-scroll sensitivity",
+								"何回分のアナログ変化で1曲送るかを決めます。小さいほど敏感です。",
+								"Choose how many analog ticks move one song; smaller values are more sensitive.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(musicselectTab, "useSongInfo", "楽曲詳細情報データベースを使用", "Use song-information database",
+								"曲名・アーティスト以外の追加情報を選曲画面で使用します。",
+								"Use additional song metadata beyond title and artist in Music Select."),
+						sidebarSettingRow(musicselectTab, "folderlamp", "フォルダーランプ", "Folder lamp",
+								"フォルダー内のクリア状況をまとめたランプを表示します。",
+								"Show an aggregate lamp for clear status inside each folder."),
+						sidebarSettingRow(musicselectTab, "shownoexistingbar", "存在しない楽曲バーを表示", "Show missing-song bars",
+								"難易度表にはあるがローカルにない曲も一覧へ表示します。",
+								"Show table entries even when the chart is not available locally."),
+						sidebarSettingRow(musicselectTab, "songPreview", "楽曲プレビュー", "Song preview",
+								"選曲中の試聴方法を選びます。LOOPはプレビュー区間を繰り返します。",
+								"Choose how selection audio previews play; LOOP repeats the preview segment."),
+						sidebarSettingRow(musicselectTab, "randomselect", "RANDOM SELECT", "RANDOM SELECT",
+								"選曲一覧にランダム選択項目を表示します。",
+								"Show a random-selection entry in Music Select."),
+						sidebarSettingRow(musicselectTab, "maxsearchbar", "検索バー上限数", "Search-bar limit",
+								"検索結果として保持する検索バーの最大数です。",
+								"Set the maximum number of search-result bars retained."),
+						sidebarSettingRow(musicselectTab, "chartReplicationMode", "譜面複製モード", "Chart replication mode",
+								"ライバル譜面など、複製された譜面データの扱い方を選びます。",
+								"Choose how replicated chart data, such as rival charts, is handled."),
+						sidebarSettingRow(musicselectTab, "skipDecideScreen", "決定画面を省略", "Skip decide screen",
+								"曲決定後のDECIDE画面を省略し、読み込みへ直接進みます。",
+								"Skip the DECIDE screen and proceed directly to loading.")
+				)
+		);
+	}
+
+	private void initializeSidebarResource() {
+		StackPane bmsRoots = sidebarMovableParent(resourceTab, "bmsroot");
+		bmsRoots.setMinHeight(170);
+		VBox bmsButtons = new VBox(8,
+				sidebarControl(resourceTab, "addSongPathButton"),
+				sidebarControl(resourceTab, "downloadDirectoryButton"),
+				sidebarControl(resourceTab, "workDirectoryButton")
+		);
+		bmsButtons.setMinWidth(210);
+		HBox bmsWorkspace = new HBox(12, bmsRoots, bmsButtons);
+		HBox.setHgrow(bmsRoots, Priority.ALWAYS);
+
+		StackPane tableList = sidebarMovableParent(resourceTab, "tableurl");
+		tableList.setMinHeight(260);
+		VBox tableButtons = new VBox(8,
+				sidebarControl(resourceTab, "chooseTablesButton"),
+				sidebarControl(resourceTab, "addTableUrlButton")
+		);
+		tableButtons.setMinWidth(210);
+		HBox tableWorkspace = new HBox(12, tableList, tableButtons);
+		HBox.setHgrow(tableList, Priority.ALWAYS);
+
+		installSidebarPage(resourceTab,
+				sidebarSettingCard(
+						sidebarWorkspaceRow(resourceTab, "BMS Path", "BMS Path",
+								"楽曲を置いているルートフォルダーを登録します。選択したルートは右クリックで個別更新・表示・削除もできます。",
+								"Register song-library root folders. Right-click a selected root to update, open, copy, or remove it.",
+								bmsWorkspace)
+				),
+				sidebarSettingCard(
+						sidebarWorkspaceRow(resourceTab, "難易度表", "Difficulty tables",
+								"選曲画面へ読み込む難易度表を管理します。既存表の追加とカスタムURLの追加を分けて操作できます。",
+								"Manage difficulty tables loaded into Music Select, using separate built-in and custom-URL actions.",
+								tableWorkspace)
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(resourceTab, "updatesong", "起動直後に楽曲更新", "Update songs after startup",
+								"設定画面を閉じて起動した直後、追加・変更された楽曲をバックグラウンドで確認します。",
+								"Check added or changed songs in the background immediately after startup."),
+						sidebarSettingRow(resourceTab, "scanSongArchives", "ZIP/RAR/7z内の曲を展開せずに走査", "Scan songs inside ZIP/RAR/7z",
+								"対応アーカイブ内のBMS/BMSONを展開せず、仮想パスのまま楽曲ライブラリーへ読み込みます。",
+								"Read BMS/BMSON inside supported archives through virtual paths without extracting them."),
+						sidebarSettingRow(resourceTab, "updateDatabaseButton", "楽曲読み込み", "Load songs",
+								"追加・変更された楽曲だけを確認します。通常の更新はこちらを使います。",
+								"Check only added or changed songs; use this for ordinary updates."),
+						sidebarSettingRow(resourceTab, "rebuildDatabaseButton", "楽曲全更新", "Full song update",
+								"登録済みの全楽曲を読み直します。時間がかかるため、データベースを作り直す必要がある場合だけ使います。",
+								"Reread every registered song; use only when the whole database must be rebuilt.")
+				)
+		);
+	}
+
+	private void initializeSidebarSkin() {
+		StackPane skinOptions = sidebarMovable(skinTab, "skinconfig");
+		skinOptions.setMinHeight(360);
+		installSidebarPage(skinTab,
+				sidebarSettingCard(
+						sidebarSettingRow(skinTab, "skintypeSelector", "スキン種類", "Skin category",
+								"選曲、プレイ、リザルトなど、変更する画面の種類を選びます。",
+								"Choose which screen category—select, play, result, and so on—is being edited."),
+						sidebarSettingRow(skinTab, "skinheaderSelector", "スキン", "Skin",
+								"選択した画面種類で使用するスキンを選びます。",
+								"Choose the skin used by the selected screen category."),
+						sidebarSettingRow(skinTab, "skinUpdateButton", "スキン一覧を更新", "Refresh skins",
+								"スキンフォルダーを読み直し、選択可能なスキンを更新します。",
+								"Rescan skin folders and refresh the available skin list.")
+				),
+				sidebarSettingCard(
+						sidebarWorkspaceRow(skinTab, "スキン固有設定とプレビュー", "Skin options and preview",
+								"選択中のスキンが公開しているオプション、ファイル、オフセットを編集し、対応スキンではプレビューを確認します。",
+								"Edit options, files, and offsets exposed by the selected skin and inspect its preview when supported.",
+								skinOptions)
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(skinTab, "BGM Path (LR2)", "BGM Path (LR2)",
+								"LR2形式スキンが使うBGMフォルダーを指定します。右のボタンからフォルダーを選べます。",
+								"Choose the BGM folder used by LR2-format skins; use the button to browse.",
+								sidebarCompound(sidebarControl(skinTab, "bgmpath"), sidebarControl(skinTab, "addBgmPathButton"))),
+						sidebarSettingRow(skinTab, "Sound Path (LR2)", "Sound Path (LR2)",
+								"LR2形式スキンが使う効果音フォルダーを指定します。右のボタンからフォルダーを選べます。",
+								"Choose the sound-effect folder used by LR2-format skins; use the button to browse.",
+								sidebarCompound(sidebarControl(skinTab, "soundpath"), sidebarControl(skinTab, "addSoundPathButton")))
+				)
+		);
+	}
+
+	private void initializeSidebarOther() {
+		installSidebarPage(otherTab,
+				sidebarSettingCard(
+						sidebarSettingRow(otherTab, "configurationLayout", "設定画面", "Configuration screen",
+								"クラシックは従来の上タブ、サイドバーは左側のカテゴリと項目ごとの説明を使用します。設定内容は共通です。",
+								"Classic uses top tabs; Sidebar uses left categories and per-setting explanations. Both edit the same settings.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(otherTab, "usecim", "スキン画像の高速化キャッシュを作成", "Create skin image cache",
+								"スキン画像の読み込みを速くするCIMキャッシュを作成します。初回処理には時間がかかります。",
+								"Create CIM cache files to accelerate skin image loading; the initial pass may take time."),
+						sidebarSettingRow(otherTab, "clipboardScreenshot", "スクリーンショットをクリップボードへコピー", "Copy screenshots to clipboard",
+								"スクリーンショット保存時、画像データをOSのクリップボードにもコピーします。",
+								"Copy image data to the OS clipboard whenever a screenshot is saved."),
+						sidebarSettingRow(otherTab, "importScoreButton", "LR2スコアをインポート", "Import LR2 scores",
+								"既存のLR2スコアデータベースからローカルスコアを取り込みます。",
+								"Import local scores from an existing LR2 score database.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(otherTab, "enableIpfs", "IPFSによるBMS自動ダウンロード", "Automatic BMS download via IPFS",
+								"対応する楽曲をIPFSゲートウェイから自動取得できるようにします。",
+								"Allow supported songs to be downloaded automatically through an IPFS gateway."),
+						sidebarSettingRow(otherTab, "ipfsurl", "IPFS URL", "IPFS URL",
+								"自動ダウンロードで使用するIPFSゲートウェイのURLです。",
+								"Set the IPFS gateway URL used for automatic downloads."),
+						sidebarSettingRow(otherTab, "enableHttp", "HTTPによるBMS自動ダウンロード", "Automatic BMS download via HTTP",
+								"対応する楽曲を選択したHTTP配布元から自動取得できるようにします。",
+								"Allow supported songs to be downloaded automatically from the selected HTTP provider."),
+						sidebarSettingRow(otherTab, "httpDownloadSource", "HTTP配布元", "HTTP provider",
+								"自動ダウンロードで使用する既定の配布サービスを選びます。",
+								"Choose the default provider used for automatic HTTP downloads."),
+						sidebarSettingRow(otherTab, "defaultDownloadURL", "既定HTTPサーバーURL", "Default HTTP server URL",
+								"選択した配布元が使用するURL形式です。通常は変更しません。",
+								"The URL template used by the selected provider; normally leave it unchanged."),
+						sidebarSettingRow(otherTab, "overrideDownloadURL", "上書きHTTPサーバーURL", "Override HTTP server URL",
+								"独自の互換サーバーを使う場合だけ指定します。空欄なら既定URLを使います。",
+								"Set only for a custom compatible server; leave blank to use the default URL.")
+				)
+		);
+	}
+
+	private void initializeSidebarBmsir() {
+		FlowPane keyModes = new FlowPane();
+		keyModes.setHgap(12);
+		keyModes.setVgap(8);
+		keyModes.getStyleClass().add("sidebar-key-mode-list");
+		for (String[] entry : new String[][] {
+				{ "ALL", "bmsirSelectModeAll" },
+				{ "7K", "bmsirSelectMode7k" },
+				{ "14K", "bmsirSelectMode14k" },
+				{ "9K", "bmsirSelectMode9k" },
+				{ "5K", "bmsirSelectMode5k" },
+				{ "10K", "bmsirSelectMode10k" },
+				{ "24K", "bmsirSelectMode24k" },
+				{ "24K DP", "bmsirSelectMode24kDp" }
+		}) {
+			keyModes.getChildren().add(sidebarLabeledToggle(
+					entry[0], (CheckBox) requireNode(bmsirSpecificTab, entry[1])
+			));
+		}
+
+		installSidebarPage(bmsirSpecificTab,
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaLanguage", "本体UI言語", "Built-in UI language",
+								"Arenaオーバーレイ、フェーズ表示、MANIAC OPTIONSなど、本体組み込み画面の言語を選びます。全画面への反映には再起動が必要です。",
+								"Choose the language for built-in Arena and MANIAC UI. Restart the game to apply it everywhere.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirOneBassEnabled", "START＋1鍵の正規1鍵固定", "START + one-key RANDOM anchor",
+								"通常RANDOMで曲決定時にSTARTと任意の1鍵を押すと、その鍵へ正規譜面の1鍵レーンを固定します。",
+								"During standard RANDOM, hold START and one key at song confirmation to anchor source lane 1 there."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirStartHerePreviewEnabled", "譜面読込中・READY中に初手ノーツを表示", "Show first notes during loading and READY",
+								"最初に発音する同時押しを、使用中スキンのノーツ画像でレーン上部またはSUD+直下へ表示します。",
+								"Show the first sounding chord with the active skin's notes at the lane top or below SUD+."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirDanLocalSyncEnabled", "BMS-IR段位をローカル同期", "Synchronize BMS-IR courses locally",
+								"Primary IRから取得した段位コースを現在のプレイヤーへ保存します。通信失敗時は前回の正常データを残します。",
+								"Save courses received from Primary IR for the current player and keep the last valid data on failure.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirStartButtonAction", "選曲画面のSTART短押し", "START short press in Music Select",
+								"START短押しの動作を選びます。350 ms以上の長押しではプレイOPを開きます。",
+								"Choose the START short-press action; holding for 350 ms opens Play Options."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirSelectButtonAction", "選曲画面のSELECT短押し", "SELECT short press in Music Select",
+								"SELECT短押しの動作を選びます。350 ms以上の長押しではアシストOPを開きます。",
+								"Choose the SELECT short-press action; holding for 350 ms opens Assist Options."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirSelectDifficultyDisplay", "難易度の表示方法", "Difficulty display",
+								"譜面を個別行で表示するか、同じ曲をLR2風の1行へまとめるかを選びます。",
+								"Choose separate chart rows or an LR2-style grouped row for the same song."),
+						sidebarSettingRow(bmsirSpecificTab, "対象鍵盤モード", "Visible key modes",
+								"選曲画面へ表示し、鍵盤数変更で巡回するモードを選びます。少なくとも1つは有効にしてください。",
+								"Choose modes shown in Music Select and included in key-mode cycling; keep at least one enabled.",
+								keyModes),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirHideMissingTableSongs", "全難易度表で未所持曲を隠す", "Hide missing songs in every table",
+								"難易度表フォルダーでは、ローカルに所持していない曲を一覧から隠します。通常フォルダーや検索には影響しません。",
+								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaTargetMode", "Arenaターゲット", "Arena target",
+								"Arenaプレイ中のスコアグラフで比較対象にする相手を選びます。",
+								"Choose the comparison target for the score graph during Arena play."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaGraphOrder", "Arenaグラフ順", "Arena graph order",
+								"Arenaの参加者グラフを固定参加順または現在順位で並べます。",
+								"Order Arena participant graphs by fixed entry order or current rank.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirCoverControlMode", "START＋6/7のレーンカバー操作", "START + 6/7 cover control",
+								"START＋6/7でレーンカバーを動かすときの挙動を選びます。",
+								"Choose how START + 6/7 changes the lane cover."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirCoverChangeStep", "レーンカバー変化量", "Lane-cover change step",
+								"START＋6/7を1回入力したときに変えるレーンカバー量です。",
+								"Set the lane-cover amount changed by one START + 6/7 input."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirCoverHispeedAutoAdjustEnabled", "レーンカバー操作時にHI-SPEEDを自動調整", "Auto-adjust HI-SPEED with cover",
+								"専用レーンカバー操作時、現在BPMに合わせてHI-SPEEDを再計算します。",
+								"Recalculate HI-SPEED at the current BPM during the dedicated cover operation.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirJudgeRankSortEnabled", "判定難易度順ソート", "Judge-rank sorting",
+								"同じレベル内を譜面の判定難易度で並べ替えるソートを追加します。",
+								"Add a sorter that orders charts of the same level by judgment difficulty."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirJudgeRankSortSkinNoticeEnabled", "非対応スキンへ案内を表示", "Show unsupported-skin notice",
+								"判定難易度順ソートの表示に未対応な選曲スキンで案内を表示します。",
+								"Show a notice when the Music Select skin cannot display judge-rank sorting.")
+				),
+				sidebarNumpadCard(),
+				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirExportVanillaScoreDb", "通常版スコアDBを書き出す", "Export vanilla score database",
+								"MANIAC分離情報を除いた通常版互換のスコアデータベースを書き出します。元データは変更しません。",
+								"Export a vanilla-compatible score database without MANIAC separation; the source data is unchanged."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirLongNoteFixed", "全ロングノートをLONG NOTEとして扱う", "Treat every long note as LONG NOTE",
+								"BMS-IR互換のため常時ONです。CN/HCNをLONG NOTEへ統一し、ノーツ数と送信スコアの不一致を防ぎます。",
+								"Always ON for BMS-IR compatibility; normalizes CN/HCN to prevent note-count and score mismatches.")
+				)
+		);
+	}
+
+	private VBox sidebarNumpadCard() {
+		List<VBox> rows = new ArrayList<>();
+		for (int number = 0; number <= 9; number++) {
+			rows.add(sidebarSettingRow(bmsirSpecificTab, "bmsirNumpad" + number,
+					"NUMPAD " + number, "NUMPAD " + number,
+					"物理NUMPAD " + number + "を押したときに実行するショートカットを選びます。",
+					"Choose the shortcut executed by physical NUMPAD " + number + "."));
+		}
+		rows.add(sidebarSettingRow(bmsirSpecificTab, "bmsirNumpadJudgeTimingStep",
+				"判定タイミング変更量", "Judge-timing step",
+				"NUMPADショートカットで判定タイミングを1回変更する量です。単位は ms です。",
+				"Set the amount changed by one NUMPAD timing shortcut, in ms."));
+		rows.add(sidebarSettingRow(bmsirSpecificTab, "bmsirJudgeTimingRestoreEnabled",
+				"判定タイミングを自動復元", "Restore judgment timing",
+				"一時変更した判定タイミングを、指定された復元操作で保存値へ戻せるようにします。",
+				"Allow temporary judgment-timing changes to return to the saved value."));
+		rows.add(sidebarSettingRow(bmsirSpecificTab, "bmsirInfoNotificationsEnabled",
+				"INFO通知を表示", "Show INFO notifications",
+				"NUMPAD操作などのINFOメッセージをプレイ画面へ表示します。",
+				"Show INFO messages for NUMPAD actions and similar operations during play."));
+		return sidebarSettingCard(rows.toArray(VBox[]::new));
+	}
+
+	private void initializeSidebarIr() {
+		HBox service = new HBox(10,
+				sidebarControl(irTab, "irname"),
+				sidebarControl(irTab, "primarybutton"),
+				sidebarControl(irTab, "irhome")
+		);
+		service.setAlignment(Pos.CENTER_LEFT);
+		service.getStyleClass().add("sidebar-compound-control");
+		Node serviceSelector = service.getChildren().get(0);
+		if (serviceSelector instanceof Region region) {
+			region.setMaxWidth(Double.MAX_VALUE);
+			HBox.setHgrow(region, Priority.ALWAYS);
+		}
+
+		installSidebarPage(irTab,
+				sidebarSettingCard(
+						sidebarSettingRow(irTab, "IRサービス", "IR service",
+								"使用するIRを選びます。「Primary」にしたIRは起動時の主要な難易度表や段位同期にも使われます。右のリンクでサービスを開けます。",
+								"Choose the IR service. The Primary IR also supplies startup tables and course sync; use the link to open it.",
+								service),
+						sidebarSettingRow(irTab, "iruserid", "User ID", "User ID",
+								"選択したIRへログインするユーザーIDです。",
+								"Enter the user ID used to sign in to the selected IR."),
+						sidebarSettingRow(irTab, "irpassword", "Password", "Password",
+								"IRへログインするためのパスワードです。画面上では伏せて表示されます。",
+								"Enter the IR login password; it remains masked on screen."),
+						sidebarSettingRow(irTab, "irsend", "IR送信", "IR submission",
+								"プレイ結果をIRへ送る条件を選びます。",
+								"Choose when play results are submitted to the IR.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(irTab, "importrival", "IRからライバルスコア取得", "Import rival scores",
+								"選択中のIRからライバル情報と比較スコアを取得します。",
+								"Retrieve rival information and comparison scores from the selected IR."),
+						sidebarSettingRow(irTab, "importscore", "IRからスコアをインポート", "Import scores from IR",
+								"IR側に保存されている自分のスコアをローカルへ取り込みます。",
+								"Import your scores stored by the IR into the local database.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(irTab, "bmsirArenaEnabled", "BMS-IR Arenaを有効にする", "Enable BMS-IR Arena",
+								"起動後にArenaサーバーへ接続し、待機・対戦機能を利用できるようにします。",
+								"Connect to the Arena server after startup and enable queue and match features."),
+						sidebarSettingRow(irTab, "bmsirArenaServer", "Arena Server", "Arena Server",
+								"BMS-IR Arenaへ接続するWebSocket URLです。通常は既定値を使用します。",
+								"Set the WebSocket URL for BMS-IR Arena; normally keep the default.")
+				)
+		);
+	}
+
+	private void initializeSidebarTable() {
+		StackPane tableEditor = sidebarMovable(tableTab, "tableEditorTabs");
+		tableEditor.setMinHeight(430);
+		installSidebarPage(tableTab,
+				sidebarSettingCard(
+						sidebarSettingRow(tableTab, "Table Name", "Table Name",
+								"このローカルテーブルの名前を入力します。保存するとdefault.jsonへ反映されます。",
+								"Enter the local table name; Save writes it to default.json.",
+								sidebarCompound(sidebarControl(tableTab, "tableName"), sidebarControl(tableTab, "tableSaveButton")))
+				),
+				sidebarSettingCard(
+						sidebarWorkspaceRow(tableTab, "コースとフォルダー", "Courses and folders",
+								"Courseでは複数譜面のコースを、Folderではフォルダー条件を追加・削除・並べ替えます。",
+								"Use Course for chart courses and Folder for folder rules; add, remove, and reorder entries here.",
+								tableEditor)
+				)
+		);
+	}
+
+	private void initializeSidebarStream() {
+		installSidebarPage(streamTab,
+				sidebarSettingCard(
+						sidebarSettingRow(streamTab, "enableRequest", "REQコマンドを有効にする", "Enable request command",
+								"配信チャットなどから受け取るリクエストコマンドを有効にします。",
+								"Enable the request command received from streaming chat or integrations."),
+						sidebarSettingRow(streamTab, "notifyRequest", "リクエストを表示", "Show requests",
+								"受け付けたリクエストを選曲画面へ表示します。",
+								"Show accepted requests in Music Select."),
+						sidebarSettingRow(streamTab, "maxRequestCount", "リクエスト最大保持数", "Maximum retained requests",
+								"一覧に保持するリクエスト数の上限です。古い項目から押し出されます。",
+								"Set the maximum retained request count; older entries are discarded first.")
+				)
+		);
+	}
+
+	private void initializeSidebarDiscord() {
+		StackPane webhookTable = sidebarMovable(discordTab, "webhookURL");
+		webhookTable.setMinHeight(250);
+		VBox orderButtons = new VBox(8,
+				sidebarControl(discordTab, "removeWebhookButton"),
+				sidebarControl(discordTab, "moveWebhookUpButton"),
+				sidebarControl(discordTab, "moveWebhookDownButton")
+		);
+		orderButtons.setMinWidth(120);
+		HBox webhookWorkspace = new HBox(12, webhookTable, orderButtons);
+		HBox.setHgrow(webhookTable, Priority.ALWAYS);
+
+		installSidebarPage(discordTab,
+				sidebarSettingCard(
+						sidebarSettingRow(discordTab, "discordRichPresence", "Discord Rich Presence", "Discord Rich Presence",
+								"Discordのプロフィールへ現在のプレイ状態や選曲情報を表示します。",
+								"Show current play and selection status on the Discord profile."),
+						sidebarSettingRow(discordTab, "webhookOption", "Discordへ送信するスコア内容", "Discord score payload",
+								"Webhookへ送るスコア通知を無効、画像のみ、詳細埋め込みから選びます。",
+								"Choose disabled, image-only, or rich-embed score notifications."),
+						sidebarSettingRow(discordTab, "webhookName", "Webhook名", "Webhook name",
+								"Discordへ投稿するときに表示する送信者名です。空欄ならWebhook側の既定値を使います。",
+								"Set the sender name shown in Discord; blank uses the Webhook default."),
+						sidebarSettingRow(discordTab, "webhookAvatar", "Webhookアイコン", "Webhook avatar",
+								"投稿に使うアイコン画像のURLです。空欄ならWebhook側の既定値を使います。",
+								"Set the icon-image URL for posts; blank uses the Webhook default.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(discordTab, "Webhook URLを追加", "Add Webhook URL",
+								"送信先URLを入力して追加します。Webhook URLは画面外へ共有しないでください。",
+								"Enter and add a destination URL. Do not share Webhook URLs outside this screen.",
+								sidebarCompound(sidebarControl(discordTab, "url"), sidebarControl(discordTab, "addWebhookButton"))),
+						sidebarWorkspaceRow(discordTab, "Webhook送信先", "Webhook destinations",
+								"登録済みURLを選択し、削除または優先順の上下移動を行います。",
+								"Select registered URLs to remove them or change their priority order.",
+								webhookWorkspace)
+				)
+		);
+	}
+
+	private void initializeSidebarObs() {
+		StackPane sceneMappings = sidebarMovable(obsTab, "listContainer");
+		sceneMappings.setMinHeight(160);
+		installSidebarPage(obsTab,
+				sidebarSettingCard(
+						sidebarSettingRow(obsTab, "obsWsEnabled", "OBS WebSocket制御", "OBS WebSocket control",
+								"ゲーム状態に合わせたOBS録画・シーン切替を有効にします。OBS側でもWebSocketを有効にしてください。",
+								"Enable OBS recording and scene control; WebSocket must also be enabled in OBS."),
+						sidebarSettingRow(obsTab, "obsWsHost", "ホスト", "Host",
+								"OBS WebSocketが動作しているPC名またはIPアドレスです。同じPCならlocalhostを使います。",
+								"Enter the host or IP running OBS WebSocket; use localhost on the same computer."),
+						sidebarSettingRow(obsTab, "obsWsPort", "ポート", "Port",
+								"OBS WebSocketの待受ポートです。OBS 28以降の既定値は4455です。",
+								"Enter the OBS WebSocket port; OBS 28 and later default to 4455."),
+						sidebarSettingRow(obsTab, "obsWsPass", "パスワード", "Password",
+								"OBS WebSocketで設定した認証パスワードです。画面上では伏せて表示されます。",
+								"Enter the OBS WebSocket password; it remains masked on screen.")
+				),
+				sidebarSettingCard(
+						sidebarSettingRow(obsTab, "obsWsRecMode", "録画連動モード", "Recording mode",
+								"ゲーム状態のどの範囲でOBS録画を開始・停止するかを選びます。",
+								"Choose which game-state interval starts and stops OBS recording."),
+						sidebarSettingRow(obsTab, "obsWsRecStopWait", "録画停止待機時間", "Recording stop delay",
+								"リザルト後などに録画停止を遅らせる時間です。単位は ms です。",
+								"Set the delay before recording stops after results, in ms."),
+						sidebarSettingRow(obsTab, "obsWsConnectButton", "OBSへ接続", "Connect to OBS",
+								"入力した接続先を使ってOBSへ接続し、利用可能なシーン一覧を取得します。",
+								"Connect using the entered details and retrieve the available OBS scenes.")
+				),
+				sidebarSettingCard(
+						sidebarWorkspaceRow(obsTab, "シーン割り当て", "Scene mappings",
+								"接続後、選曲・決定・プレイ・リザルトなど各ゲーム状態へOBSシーンを割り当てます。",
+								"After connecting, assign OBS scenes to selection, decide, play, result, and other states.",
+								sceneMappings)
+				)
+		);
 	}
 
 	private void initializeSidebarPlayOptions() {
@@ -1192,6 +1876,11 @@ public class PlayConfigurationView implements Initializable {
 
 	private VBox sidebarSettingRow(String jaTitle, String enTitle,
 			String jaDescription, String enDescription, Node editorNode) {
+		return sidebarSettingRow(optionTab, jaTitle, enTitle, jaDescription, enDescription, editorNode);
+	}
+
+	private VBox sidebarSettingRow(Tab tab, String jaTitle, String enTitle,
+			String jaDescription, String enDescription, Node editorNode) {
 		String title = uiText(jaTitle, enTitle);
 		String description = uiText(jaDescription, enDescription);
 		Label titleLabel = new Label(title);
@@ -1223,7 +1912,44 @@ public class PlayConfigurationView implements Initializable {
 			titleLabel.setLabelFor(firstControl);
 			firstControl.setAccessibleText(title + ". " + description);
 		}
-		installSidebarRowHelp(row, new ContextHelp(title, description, HelpGraphic.PLAY));
+		HelpGraphic graphic = Optional.ofNullable(tabContextHelp.get(tab))
+				.map(ContextHelp::graphic)
+				.orElse(HelpGraphic.OTHER);
+		installSidebarRowHelp(tab, row, new ContextHelp(title, description, graphic));
+		return row;
+	}
+
+	private VBox sidebarSettingRow(Tab tab, String id, String jaTitle, String enTitle,
+			String jaDescription, String enDescription) {
+		return sidebarSettingRow(tab, jaTitle, enTitle, jaDescription, enDescription, sidebarControl(tab, id));
+	}
+
+	private VBox sidebarWorkspaceRow(Tab tab, String jaTitle, String enTitle,
+			String jaDescription, String enDescription, Node workspace) {
+		String title = uiText(jaTitle, enTitle);
+		String description = uiText(jaDescription, enDescription);
+		Label titleLabel = new Label(title);
+		titleLabel.setWrapText(true);
+		titleLabel.getStyleClass().add("sidebar-setting-title");
+		Label descriptionLabel = new Label(description);
+		descriptionLabel.setWrapText(true);
+		descriptionLabel.getStyleClass().add("sidebar-setting-row-description");
+		if (workspace instanceof Region region) {
+			region.setMaxWidth(Double.MAX_VALUE);
+			VBox.setVgrow(region, Priority.ALWAYS);
+		}
+		VBox row = new VBox(8, titleLabel, descriptionLabel, workspace);
+		row.getStyleClass().addAll("sidebar-setting-row", "sidebar-workspace-row");
+		row.setAccessibleText(title + ". " + description);
+		Control firstControl = firstControl(workspace);
+		if (firstControl != null) {
+			titleLabel.setLabelFor(firstControl);
+			firstControl.setAccessibleText(title + ". " + description);
+		}
+		HelpGraphic graphic = Optional.ofNullable(tabContextHelp.get(tab))
+				.map(ContextHelp::graphic)
+				.orElse(HelpGraphic.OTHER);
+		installSidebarRowHelp(tab, row, new ContextHelp(title, description, graphic));
 		return row;
 	}
 
@@ -1282,6 +2008,12 @@ public class PlayConfigurationView implements Initializable {
 		toggle.getStyleClass().add("sidebar-switch");
 		toggle.selectedProperty().bindBidirectional(source.selectedProperty());
 		toggle.disableProperty().bind(source.disableProperty());
+		toggle.setOnAction(event -> {
+			EventHandler<ActionEvent> sourceAction = source.getOnAction();
+			if (sourceAction != null) {
+				sourceAction.handle(new ActionEvent(source, source));
+			}
+		});
 		Label state = new Label();
 		state.getStyleClass().add("sidebar-switch-state");
 		state.textProperty().bind(Bindings.when(toggle.selectedProperty()).then("ON").otherwise("OFF"));
@@ -1289,6 +2021,139 @@ public class PlayConfigurationView implements Initializable {
 		result.setAlignment(Pos.CENTER_LEFT);
 		result.getStyleClass().add("sidebar-toggle-control");
 		return result;
+	}
+
+	private TextInputControl sidebarTextInput(TextInputControl source) {
+		TextInputControl mirror = source instanceof PasswordField ? new PasswordField() : new TextField();
+		mirror.setPromptText(source.getPromptText());
+		mirror.setEditable(source.isEditable());
+		mirror.textProperty().bindBidirectional(source.textProperty());
+		mirror.disableProperty().bind(source.disableProperty());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	private ButtonBase sidebarButton(ButtonBase source) {
+		ButtonBase mirror = source instanceof Hyperlink ? new Hyperlink() : new Button();
+		mirror.textProperty().bind(source.textProperty());
+		mirror.disableProperty().bind(source.disableProperty());
+		mirror.setMnemonicParsing(source.isMnemonicParsing());
+		mirror.setTooltip(source.getTooltip());
+		mirror.setOnAction(event -> source.fire());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	private Node sidebarControl(Tab tab, String id) {
+		Node source = requireNode(tab, id);
+		if (source instanceof CheckBox checkBox) {
+			return sidebarToggle(checkBox);
+		}
+		if (source instanceof ComboBox<?> comboBox) {
+			return sidebarComboUnchecked(comboBox);
+		}
+		if (source instanceof Spinner<?> spinner) {
+			return sidebarSpinnerUnchecked(spinner);
+		}
+		if (source instanceof Slider slider) {
+			return sidebarSlider(slider);
+		}
+		if (source instanceof TextInputControl textInput) {
+			return sidebarTextInput(textInput);
+		}
+		if (source instanceof ButtonBase button) {
+			return sidebarButton(button);
+		}
+		throw new IllegalArgumentException("Unsupported Sidebar control #" + id + ": " + source.getClass().getName());
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private ComboBox<?> sidebarComboUnchecked(ComboBox<?> source) {
+		return sidebarCombo((ComboBox) source);
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private Spinner<?> sidebarSpinnerUnchecked(Spinner<?> source) {
+		return sidebarSpinner((Spinner) source);
+	}
+
+	private HBox sidebarCompound(Node... nodes) {
+		HBox result = new HBox(10, nodes);
+		result.setAlignment(Pos.CENTER_LEFT);
+		result.getStyleClass().add("sidebar-compound-control");
+		for (Node node : nodes) {
+			if (node instanceof Region region) {
+				if (node instanceof ButtonBase) {
+					region.setMaxWidth(Region.USE_PREF_SIZE);
+				} else {
+					region.setMaxWidth(Double.MAX_VALUE);
+					HBox.setHgrow(region, Priority.ALWAYS);
+				}
+			}
+		}
+		return result;
+	}
+
+	private VBox sidebarLabeledToggle(String labelText, CheckBox source) {
+		Label label = new Label(labelText);
+		label.getStyleClass().add("sidebar-compact-label");
+		VBox result = new VBox(3, label, sidebarToggle(source));
+		result.getStyleClass().add("sidebar-compact-input");
+		return result;
+	}
+
+	private Node requireNode(Tab tab, String id) {
+		Node node = findNodeById(tab.getContent(), id);
+		if (node == null) {
+			throw new IllegalStateException("Missing Sidebar source #" + id + " in tab " + tab.getText());
+		}
+		return node;
+	}
+
+	private static Node findNodeById(Node node, String id) {
+		if (id.equals(node.getId())) {
+			return node;
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				Node match = findNodeById(child, id);
+				if (match != null) {
+					return match;
+				}
+			}
+		}
+		return null;
+	}
+
+	private StackPane sidebarMovable(Tab tab, String id) {
+		Node source = requireNode(tab, id);
+		if (!(source.getParent() instanceof Pane parent)) {
+			throw new IllegalStateException("Sidebar source #" + id + " is not inside a Pane");
+		}
+		StackPane host = new StackPane();
+		host.getStyleClass().add("sidebar-workspace");
+		host.setMaxWidth(Double.MAX_VALUE);
+		host.setMinHeight(120);
+		sidebarNodePlacements.add(new SidebarNodePlacement(
+				source, parent, parent.getChildren().indexOf(source), host
+		));
+		return host;
+	}
+
+	private StackPane sidebarMovableParent(Tab tab, String id) {
+		Node source = requireNode(tab, id);
+		if (!(source.getParent() instanceof Pane sourceParent)
+				|| !(sourceParent.getParent() instanceof Pane parent)) {
+			throw new IllegalStateException("Sidebar source parent for #" + id + " is not movable");
+		}
+		StackPane host = new StackPane();
+		host.getStyleClass().add("sidebar-workspace");
+		host.setMaxWidth(Double.MAX_VALUE);
+		host.setMinHeight(130);
+		sidebarNodePlacements.add(new SidebarNodePlacement(
+				sourceParent, parent, parent.getChildren().indexOf(sourceParent), host
+		));
+		return host;
 	}
 
 	private HBox sidebarToggleWithValue(CheckBox source, Node valueControl) {
@@ -1336,11 +2201,11 @@ public class PlayConfigurationView implements Initializable {
 		return result;
 	}
 
-	private void installSidebarRowHelp(VBox row, ContextHelp help) {
+	private void installSidebarRowHelp(Tab tab, VBox row, ContextHelp help) {
 		row.addEventHandler(MouseEvent.MOUSE_ENTERED, event -> showContextHelp(help));
 		row.addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
 			if (!containsFocusedControl(row)) {
-				showTabContextHelp(optionTab);
+				showTabContextHelp(tab);
 			}
 		});
 		forEachControl(row, control -> control.focusedProperty().addListener(
@@ -1350,7 +2215,7 @@ public class PlayConfigurationView implements Initializable {
 					} else {
 						Platform.runLater(() -> {
 							if (!row.isHover() && !containsFocusedControl(row)) {
-								showTabContextHelp(optionTab);
+								showTabContextHelp(tab);
 							}
 						});
 					}

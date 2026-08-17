@@ -20,10 +20,10 @@
 		<children>
 			<Label text="Table Name" />		
 			<TextField fx:id="tableName" prefWidth="400" />
-    <Button mnemonicParsing="false" onAction="#commit" text="Save" />
+    <Button fx:id="tableSaveButton" mnemonicParsing="false" onAction="#commit" text="Save" />
 		</children>
 	</HBox>
-	<TabPane prefHeight="435.0" prefWidth="740.0"
+	<TabPane fx:id="tableEditorTabs" prefHeight="435.0" prefWidth="740.0"
 		VBox.vgrow="ALWAYS">
 		<Tab closable="false" text="Course">
 			<AnchorPane minHeight="0.0" minWidth="0.0"
@@ -49,4 +49,3 @@
 		</Tab>
 	</TabPane>
 </VBox>
-
