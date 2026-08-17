@@ -10,6 +10,17 @@ folder. Its charts and descendants remain no-save/no-submit content without
 creating a reserved child directory. The selected root is labeled and
 protected from BMS Path removal; the 0.4.14.49 compatibility marker remains.
 
+The current development source adds a `WASAPI Mode` / `WASAPI モード`
+selector to the Audio tab. It is enabled only when PortAudio and a Windows
+WASAPI output device are selected. Shared mode remains the default and keeps
+the existing JPortAudio path. Exclusive mode asks the bundled PortAudio 19.6
+WASAPI backend for exclusive access, which prevents other applications from
+using that output while Arena oraja is running. The device must accept the
+selected 44.1 kHz or 48 kHz sample rate; when no sample rate is selected, the
+device default is used. An unsupported device or format follows the existing
+PortAudio startup-failure path and falls back to OpenAL. OpenAL, other
+PortAudio host APIs, macOS, Linux, and existing configurations are unchanged.
+
 Version `0.4.14.49` adds the Resource-tab `Work folder` / `作業フォルダ`
 button and the reserved `_BMSIR_TESTPLAY` authoring directory. Charts below
 that directory do not save local records and are never submitted to IR or

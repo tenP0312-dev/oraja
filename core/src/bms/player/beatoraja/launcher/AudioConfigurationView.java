@@ -1,20 +1,16 @@
 package bms.player.beatoraja.launcher;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.ResourceBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.portaudio.DeviceInfo;
-
 import bms.player.beatoraja.AudioConfig;
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.AudioConfig.FrequencyType;
-import bms.player.beatoraja.Config;
+import bms.player.beatoraja.AudioConfig.WasapiMode;
 import bms.player.beatoraja.audio.PortAudioDriver;
-import bms.player.beatoraja.launcher.PlayConfigurationView.OptionListCell;
+import bms.player.beatoraja.audio.PortAudioDriver.DeviceOption;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.CheckBox;
@@ -28,7 +24,9 @@ public class AudioConfigurationView implements Initializable {
 	@FXML
 	private ComboBox<DriverType> audio;
 	@FXML
-	private ComboBox<String> audioname;
+	private ComboBox<DeviceOption> audioname;
+	@FXML
+	private ComboBox<String> wasapiMode;
 	@FXML
 	private Spinner<Integer> audiobuffer;
 	@FXML
@@ -57,6 +55,9 @@ public class AudioConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		audio.getItems().setAll(DriverType.OpenAL , DriverType.PortAudio);
 		audiosamplerate.getItems().setAll(null, 44100, 48000);
+		wasapiMode.getItems().setAll(
+				arg1.getString("WASAPI_SHARED"),
+				arg1.getString("WASAPI_EXCLUSIVE"));
 
 		audioFreqOption.getItems().setAll(FrequencyType.UNPROCESSED , FrequencyType.FREQUENCY);
 		audioFastForward.getItems().setAll(FrequencyType.UNPROCESSED , FrequencyType.FREQUENCY);
@@ -71,6 +72,8 @@ public class AudioConfigurationView implements Initializable {
 		audiosamplerate.setValue(config.getSampleRate() > 0 ? config.getSampleRate() : null);
 		audioFreqOption.setValue(config.getFreqOption());
 		audioFastForward.setValue(config.getFastForward());
+		wasapiMode.getSelectionModel().select(
+				config.getWasapiMode() == WasapiMode.EXCLUSIVE ? 1 : 0);
 		systemvolume.setValue((double)config.getSystemvolume());
 		keyvolume.setValue((double)config.getKeyvolume());
 		bgvolume.setValue((double)config.getBgvolume());
@@ -84,7 +87,15 @@ public class AudioConfigurationView implements Initializable {
 	
 	public void commit() {
 		config.setDriver(audio.getValue());
-		config.setDriverName(audioname.getValue());
+		DeviceOption selectedDevice = audioname.getValue();
+		if (selectedDevice != null) {
+			config.setDriverName(selectedDevice.name());
+			config.setDriverHostApi(selectedDevice.hostApiType());
+		}
+		config.setWasapiMode(
+				wasapiMode.getSelectionModel().getSelectedIndex() == 1
+						? WasapiMode.EXCLUSIVE
+						: WasapiMode.SHARED);
 		config.setDeviceBufferSize(audiobuffer.getValue());
 		config.setDeviceSimultaneousSources(audiosim.getValue());
 		config.setSampleRate(audiosamplerate.getValue() != null ? audiosamplerate.getValue() : 0);
@@ -113,26 +124,23 @@ public class AudioConfigurationView implements Initializable {
 			audioname.getItems().clear();
 			audiobuffer.setDisable(false);
 			audiosim.setDisable(false);
+			updateWasapiModeAvailability();
 			break;
 		case PortAudio:
 			try {
-				DeviceInfo[] devices = PortAudioDriver.getDevices();
-				List<String> drivers = new ArrayList<String>(devices.length);
-				for(int i = 0;i < devices.length;i++) {
-					drivers.add(devices[i].name);
-				}
-				if(drivers.size() == 0) {
+				DeviceOption[] devices = PortAudioDriver.getDeviceOptions();
+				if(devices.length == 0) {
 					throw new RuntimeException("ドライバが見つかりません");
 				}
-				audioname.getItems().setAll(drivers);
-				if(drivers.contains(config.getDriverName())) {
-					audioname.setValue(config.getDriverName());
-				} else {
-					audioname.setValue(drivers.get(0));
-				}
+				audioname.getItems().setAll(devices);
+				audioname.setValue(PortAudioDriver.findDeviceOption(
+						devices,
+						config.getDriverName(),
+						config.getDriverHostApi()));
 				audioname.setDisable(false);
 				audiobuffer.setDisable(false);
 				audiosim.setDisable(false);
+				updateWasapiModeAvailability();
 //				PortAudio.terminate();
 			} catch(Throwable e) {
 				logger.error("PortAudioは選択できません : {}", e.getMessage());
@@ -140,5 +148,13 @@ public class AudioConfigurationView implements Initializable {
 			}
 			break;
 		}
+	}
+
+	@FXML
+	public void updateWasapiModeAvailability() {
+		wasapiMode.setDisable(!PortAudioDriver.isWasapiModeSelectable(
+				audio.getValue(),
+				audioname.getValue(),
+				PortAudioDriver.isWindows()));
 	}
 }

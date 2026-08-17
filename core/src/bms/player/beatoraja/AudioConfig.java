@@ -19,6 +19,15 @@ public class AudioConfig implements Validatable {
 	 */
 	private String driverName = null;
 	/**
+	 * PortAudio host API type. -1 keeps compatibility with configurations that
+	 * only stored the device name.
+	 */
+	private int driverHostApi = -1;
+	/**
+	 * Windows WASAPI stream sharing mode.
+	 */
+	private WasapiMode wasapiMode = WasapiMode.SHARED;
+	/**
 	 * オーディオバッファサイズ。大きすぎると音声遅延が発生し、少なすぎるとノイズが発生する
 	 */
 	private int deviceBufferSize = 384;
@@ -82,6 +91,22 @@ public class AudioConfig implements Validatable {
 
 	public void setDriverName(String driverName) {
 		this.driverName = driverName;
+	}
+
+	public int getDriverHostApi() {
+		return driverHostApi;
+	}
+
+	public void setDriverHostApi(int driverHostApi) {
+		this.driverHostApi = driverHostApi;
+	}
+
+	public WasapiMode getWasapiMode() {
+		return wasapiMode;
+	}
+
+	public void setWasapiMode(WasapiMode wasapiMode) {
+		this.wasapiMode = wasapiMode;
 	}
 
 	public int getDeviceBufferSize() {
@@ -176,6 +201,12 @@ public class AudioConfig implements Validatable {
 		if(driver == null) {
 			driver = DriverType.OpenAL;
 		}
+		if(driverHostApi < -1 || driverHostApi >= 15) {
+			driverHostApi = -1;
+		}
+		if(wasapiMode == null) {
+			wasapiMode = WasapiMode.SHARED;
+		}
 		deviceBufferSize = MathUtils.clamp(deviceBufferSize, 4, 4096);
 		deviceSimultaneousSources = MathUtils.clamp(deviceSimultaneousSources, 16, 1024);
 		if(freqOption == null) {
@@ -204,6 +235,11 @@ public class AudioConfig implements Validatable {
 		 * AudioDevice (libGDX AudioDevice, 未実装)
 		 */
 //		AudioDevice,
+	}
+
+	public enum WasapiMode {
+		SHARED,
+		EXCLUSIVE,
 	}
 	
 	public enum FrequencyType {

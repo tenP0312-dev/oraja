@@ -14,6 +14,9 @@ The current client source version is **0.4.14.50**. The Resource tab can mark a
 selected BMS Path itself as the disposable work folder. Charts below that root
 keep their on-screen result but never save local records and are never
 submitted to IR or Arena.
+The current development source also lets Windows PortAudio users select
+WASAPI Shared or Exclusive mode in the Audio tab. Shared remains the default;
+the selector is available only for a device listed under Windows WASAPI.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
