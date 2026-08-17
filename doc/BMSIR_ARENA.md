@@ -428,6 +428,22 @@ or the containing directory cannot be read, the update fails closed and keeps
 the last indexed folder and songs. The client logs the causal rejection reason
 and shows loaded/rejected archive totals when the update finishes.
 
+When the selected chart has neither a readable explicit preview nor a
+per-directory automatically discovered preview, the current development source
+builds an 18-second preview in memory. It chooses an eight-second dense region
+between 25% and 80% of the playable-note distribution, favors the middle of the
+song, and begins 500 ms before the chosen region. The bounded renderer retains
+background audio that began before the window, ignores invisible notes and
+mines, and supports layered or sliced BMSON audio through the same
+`SongResource` path used by ordinary files and ZIP/RAR/7z entries.
+
+Generated previews use a fixed 44.1 kHz stereo output, a 500 ms fade-in, a
+one-second fade-out, and peak limiting. One daemon worker runs at minimum
+priority, only its newest selection may publish a result, the pending queue is
+limited to one request, and the in-memory WAV cache is an eight-entry LRU.
+These previews do not create song-library files and continue to follow the
+existing `OFF`, one-shot, and loop setting.
+
 Archive cache revisions combine filesystem identity/change metadata with
 sampled content so ordinary replacements are noticed even when file size and
 modification time were preserved. This revision also invalidates any
