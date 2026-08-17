@@ -349,10 +349,14 @@ written under `dist/`.
 ## Diagnostic logs
 
 The client creates its Java/JUL log as `logs/beatoraja_log.xml` and its
-bounded Arena diagnostic log as `logs/bmsir-arena.log`. The `logs/` directory
-is created automatically beside the client data directories when either the
-configuration UI or gameplay starts. Existing logs from older releases are
-left in place and are not migrated automatically.
+bounded Arena diagnostic log as `logs/bmsir-arena.log`. Opt-in BGA, render,
+input and audio timing summaries are written separately to the bounded
+`logs/bmsir-timing.log`; see
+[`docs/TIMING_DIAGNOSTICS.md`](docs/TIMING_DIAGNOSTICS.md) for activation and
+metric limitations. The `logs/` directory is created automatically beside the
+client data directories when either the configuration UI or gameplay starts.
+Existing logs from older releases are left in place and are not migrated
+automatically.
 
 The desktop Arena launcher moved to its own repository,
 [`tenP0312-dev/oraja-Rancher`](https://github.com/tenP0312-dev/oraja-Rancher).

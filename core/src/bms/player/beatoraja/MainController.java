@@ -55,6 +55,7 @@ import bms.player.beatoraja.skin.SkinObject.SkinOffset;
 import bms.player.beatoraja.skin.SkinProperty;
 import bms.player.beatoraja.song.*;
 import bms.player.beatoraja.stream.StreamController;
+import bms.player.beatoraja.system.TimingDiagnostics;
 import bms.tool.mdprocessor.MusicDownloadProcessor;
 
 import static bms.player.beatoraja.modmenu.ImGuiRenderer.getShowModMenu;
@@ -375,6 +376,12 @@ public class MainController {
 		tasks.add(StartupTask.required("オーディオ", () -> {
 			if (config.getAudioConfig().getDriver() == DriverType.OpenAL) {
 				audio = new GdxSoundDriver(config);
+				TimingDiagnostics.audioConfigured(
+						DriverType.OpenAL,
+						"libGDX/OpenAL (device latency unavailable)",
+						0,
+						0
+				);
 			}
 			if (audio == null) {
 				throw new IllegalStateException("選択したオーディオドライバーを初期化できません");
@@ -612,6 +619,10 @@ public class MainController {
 			current.setSkin(null);
 		}
 		current = newState;
+		MainStateType stateType = getStateType(newState);
+		TimingDiagnostics.stateChanged(
+				stateType == null ? newState.getClass().getSimpleName() : stateType.name()
+		);
 		timer.setMainState(newState);
 		current.prepare();
 		updateMainStateListener(0);
@@ -940,7 +951,15 @@ public class MainController {
 				final long now = System.nanoTime() / 1000000;
 				if (time != now) {
 					time = now;
-					input.poll();
+					long timingStarted = TimingDiagnostics.inputPollStarted();
+					try {
+						input.poll();
+					} finally {
+						TimingDiagnostics.finish(
+								TimingDiagnostics.Metric.INPUT_POLL_DURATION,
+								timingStarted
+						);
+					}
 				} else {
 					try {
 						Thread.sleep(0, 500000);
@@ -1342,6 +1361,7 @@ public class MainController {
 		}
 
 		logger.info("全リソース破棄完了");
+		TimingDiagnostics.shutdown();
 	}
 
 	public void pause() {

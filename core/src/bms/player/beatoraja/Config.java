@@ -182,6 +182,13 @@ public class Config implements Validatable {
 
 	private int frameskip = 1;
 
+	/**
+	 * Write opt-in BGA/input/render/audio timing summaries to
+	 * logs/bmsir-timing.log. Disabled by default because even lightweight
+	 * instrumentation should not be imposed on normal gameplay.
+	 */
+	private boolean timingDiagnostics = false;
+
 	private boolean updatesong = false;
 
 	/** Whether song database updates scan BMS/BMSON charts in ZIP/RAR files. */
@@ -402,6 +409,14 @@ public class Config implements Validatable {
 
 	public void setBga(int bga) {
 		this.bga = bga;
+	}
+
+	public boolean isTimingDiagnostics() {
+		return timingDiagnostics;
+	}
+
+	public void setTimingDiagnostics(boolean timingDiagnostics) {
+		this.timingDiagnostics = timingDiagnostics;
 	}
 
 	public AudioConfig getAudioConfig() {
