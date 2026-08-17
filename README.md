@@ -10,26 +10,12 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.53**. The native game-window
-title stays stable for OBS, play skins can read the resolved RANDOM placement,
-and grouped song rows can open their retained charts as separate entries. Skin
-Select play previews now expose the normal-play, BGA, score-graph, and gauge
-state expected by skins such as WMII.
+The current client source version is **0.4.14.54**. Difficulty-table levels can
+be disabled per player, charts without a readable preview can generate one in
+memory, and opt-in timing diagnostics can separate render, input, BGA, audio,
+GC, and memory pressure without changing gameplay scheduling.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
-
-The current development source adds a default-ON per-player switch for using
-each difficulty-table entry's first decimal integer as its Music Select display
-level inside that table. Disabling it restores the chart's stored `#PLAYLEVEL`
-for display and LEVEL sorting. The switch applies to ordinary level folders and
-aggregate folders such as `全曲`; ordinary folders remain unchanged.
-
-Music Select also generates an 18-second in-memory preview when a chart has no
-readable explicit or automatically discovered preview file. The preview uses
-BMZ Player's current density-window policy, includes continuing background
-audio and BMSON layers/slices, and works for ordinary and archive-backed songs.
-Generation runs on one low-priority latest-request worker with an eight-entry
-LRU cache; `OFF`, one-shot, loop, and explicit-preview priority are unchanged.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
@@ -56,6 +42,24 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.54
+
+The default-ON difficulty-table level display now has a per-player switch.
+Turning it off restores each chart's stored `#PLAYLEVEL` for display and LEVEL
+sorting without changing ordinary folders or table assignments.
+
+Music Select generates an 18-second in-memory preview when a chart has no
+readable explicit or automatically discovered preview. One low-priority,
+latest-request worker and an eight-entry LRU cache bound the work; explicit
+preview priority and the existing `OFF`, one-shot, and loop modes are retained.
+
+Default-OFF timing diagnostics write bounded JSONL summaries for render, input
+dispatch, BGA decode/upload, audio calls/mixing, GC, and memory pressure. The
+collector uses bounded atomic counters and a daemon writer; it does not change
+input, judgement, keysound, BGA fallback, audio-buffer, or gameplay scheduling
+policy. See [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md) before
+collecting a capture.
 
 ## Arena oraja 0.4.14.53
 
@@ -342,7 +346,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.53
+  --output-dir /release/build-0.4.14.54
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

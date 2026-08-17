@@ -1,8 +1,8 @@
 # Gameplay Timing Diagnostics
 
-The opt-in timing log separates render, input dispatch, BGA, audio output and
-runtime pressure without changing their scheduling or fallback behavior. It is
-disabled by default.
+Arena oraja `0.4.14.54` adds an opt-in timing log that separates render, input
+dispatch, BGA, audio output and runtime pressure without changing their
+scheduling or fallback behavior. It is disabled by default.
 
 ## Enable and collect
 

@@ -1,9 +1,15 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.53`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.54`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.54` adds a per-player switch for difficulty-table display
+levels, bounded in-memory preview generation for charts without a readable
+preview, and default-OFF gameplay timing diagnostics. The diagnostic collector
+observes render, input dispatch, BGA, audio, GC, and memory pressure without
+changing scheduling or fallback policy.
 
 Version `0.4.14.53` keeps the native game-window title stable for OBS, exposes
 the resolved RANDOM lane placement to play skins during READY/PLAY, opens the
@@ -429,8 +435,8 @@ the last indexed folder and songs. The client logs the causal rejection reason
 and shows loaded/rejected archive totals when the update finishes.
 
 When the selected chart has neither a readable explicit preview nor a
-per-directory automatically discovered preview, the current development source
-builds an 18-second preview in memory. It chooses an eight-second dense region
+per-directory automatically discovered preview, version `0.4.14.54` builds an
+18-second preview in memory. It chooses an eight-second dense region
 between 25% and 80% of the playable-note distribution, favors the middle of the
 song, and begins 500 ms before the chosen region. The bounded renderer retains
 background audio that began before the window, ignores invisible notes and
@@ -1138,7 +1144,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.53-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.54-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1159,7 +1165,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.53-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.54-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1175,7 +1181,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.53-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.54-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
