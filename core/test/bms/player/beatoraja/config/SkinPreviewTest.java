@@ -138,6 +138,27 @@ class SkinPreviewTest {
 	}
 
 	@Test
+	void gaugeEventsRestartAtEachJudgementForBothPlayersAndReachMaximum() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_14K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+		long nextNoteMillis = firstNoteMillis + SkinPreviewModel.STEP_MICROS / 1000L;
+
+		for (int player = 0; player < model.getMode().player; player++) {
+			assertEquals(-1L, SkinPreviewPlayer.gaugeEffectTime(
+					model, player, firstNoteMillis - 1L));
+			assertEquals(0L, SkinPreviewPlayer.gaugeEffectTime(
+					model, player, firstNoteMillis));
+			assertEquals(199L, SkinPreviewPlayer.gaugeEffectTime(
+					model, player, nextNoteMillis - 1L));
+			assertEquals(0L, SkinPreviewPlayer.gaugeEffectTime(
+					model, player, nextNoteMillis));
+		}
+		assertEquals(22f, SkinPreviewPlayer.gaugeValue(0, model.getTotalNotes()));
+		assertEquals(100f, SkinPreviewPlayer.gaugeValue(
+				model.getTotalNotes(), model.getTotalNotes()));
+	}
+
+	@Test
 	void tapKeyBeamTurnsOffAfterItsBoundedHold() {
 		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
 		TimeLine first = model.getAllTimeLines()[0];

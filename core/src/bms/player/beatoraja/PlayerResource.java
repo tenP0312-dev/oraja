@@ -309,8 +309,9 @@ public final class PlayerResource {
 		this.model = model;
 		this.orgmode = model.getMode();
 		this.songdata = new SongData(model, false);
-		this.mode = BMSPlayerMode.AUTOPLAY;
+		this.mode = BMSPlayerMode.PLAY;
 		this.replay = new ReplayData();
+		this.bmsresource.setSkinPreviewModel(model, config.getBga() != Config.BGA_OFF);
 	}
 
 	/**

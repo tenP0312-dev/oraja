@@ -36,6 +36,11 @@ the game list is collapsed until opened or matched by a search. The BMS-IR
 section contains all 33 supported table families, including the 13 presets
 that were previously missing from the client list.
 
+Play-skin previews now expose the synthetic session as ordinary play, include
+a silent representative BGA, and drive gauge-increase and gauge-max timers.
+Skins such as WMII can therefore construct their normal-play score graph and
+BGA frame and animate gauge effects without leaving Skin Select.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.

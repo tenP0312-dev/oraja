@@ -133,6 +133,16 @@ public class BMSResource {
 		return true;
 	}
 
+	/**
+	 * Installs deterministic BGA metadata for an in-memory skin preview without
+	 * resolving a chart path or starting a media loader.
+	 */
+	public void setSkinPreviewModel(BMSModel model, boolean enabled) {
+		this.model = model;
+		bga.setSkinPreviewModel(enabled ? model : null);
+		bgaon = enabled;
+	}
+
 	public AudioDriver getAudioDriver() {
 		return audio;
 	}

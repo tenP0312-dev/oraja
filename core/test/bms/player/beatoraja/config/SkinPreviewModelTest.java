@@ -5,6 +5,7 @@ import bms.model.LongNote;
 import bms.model.Mode;
 import bms.model.Note;
 import bms.model.TimeLine;
+import bms.player.beatoraja.BMSPlayerMode;
 import org.junit.jupiter.api.Test;
 
 import java.util.IdentityHashMap;
@@ -30,6 +31,9 @@ class SkinPreviewModelTest {
 		TimeLine first = model.getAllTimeLines()[0];
 		assertEquals(SkinPreviewModel.LEAD_IN_MICROS, first.getMicroTime());
 		assertEquals(0.5, first.getSection(), 0.000001);
+		assertEquals(1, model.getBgaList().length);
+		assertEquals(0, first.getBGA());
+		assertSame(BMSPlayerMode.PLAY, SkinPreviewModel.PRESENTED_PLAY_MODE);
 		assertLongNotesArePairedOnOneNonScratchLane(model);
 		assertLongNoteLanesRemainEmptyBetweenTheirPairs(model);
 	}

@@ -921,9 +921,14 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   enough scored songs to fill a normal bar list without reading the user's song
   DB. DECIDE skins receive the same virtual selected chart through a
   `MusicDecide`-compatible state. Play skins render against a mode-matched,
-  silent autoplay session whose normal notes, chords, and charge notes advance
+  silent synthetic session presented to the skin as ordinary play. Its normal
+  notes, chords, and charge notes advance
   through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
-  score, combo, gauge, judge, and end timers advance with it. The chart's time
+  score, combo, gauge, judge, and end timers advance with it. A deterministic
+  silent BGA keeps BGA-gated frames and song-BGA declarations available when
+  BGA is enabled, and gauge-increase/gauge-max timers follow the sample notes
+  for both play sides. This allows skins such as WMII to build the same score
+  graph and surrounding play parts they use in normal play. The chart's time
   and measure positions stay aligned so its first notes enter from above the
   visible lane. Double-play previews place sample notes on both sides and
   advance the independent 1P/2P judgement, combo, key-beam, end-of-note, and
