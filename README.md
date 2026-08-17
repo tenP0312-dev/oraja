@@ -17,6 +17,13 @@ compressed and must contain the requested chart before they are retained.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
+The current development source keeps the last non-fullscreen WINDOW or
+BORDERLESS mode separately from the active fullscreen setting. F4 therefore
+returns to the same window style even when fullscreen was saved on shutdown
+and restored at the next startup. Existing configurations without the added
+return-mode value infer it from their saved non-fullscreen mode and otherwise
+retain the legacy WINDOW fallback.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is
