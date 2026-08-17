@@ -434,6 +434,37 @@ or the containing directory cannot be read, the update fails closed and keeps
 the last indexed folder and songs. The client logs the causal rejection reason
 and shows loaded/rejected archive totals when the update finishes.
 
+### BMS-IR body URL downloads
+
+The current source adds an independent, default-off
+`Download archives from BMS-IR body URLs` option under Other settings. When a
+missing difficulty-table chart carries an HTTP(S) body URL, selecting or batch
+filling that chart uses the registered URL. If the live response cannot be
+installed, the client asks the Wayback Availability API for one archived
+snapshot of the same URL and tries that snapshot. With the option disabled, or
+when an entry has no eligible body URL, the existing IPFS and configured HTTP
+provider routes keep their previous behavior. BMS-IR's own `/new/song` page is
+treated as a browser page rather than an archive URL.
+
+Body downloads are limited to 2 GiB and ignore the remote filename and
+`Content-Disposition`. A response is first written to a generated staging
+file, recognized only by a ZIP, RAR4/RAR5, or 7z content signature, and passed
+through the existing archive entry/path/count/expanded-size/encryption checks.
+At least one BMS, BME, BML, PMS, or BMSON entry must have the exact MD5 requested
+by the table. Only then is the file moved without replacement to
+`http_download/bmsir-<md5>.<format>` and the song database updated. Rejected,
+oversized, ambiguous, mismatched, and duplicate downloads leave no staging
+file and never overwrite an installed archive.
+
+The accepted archive stays compressed; this path never extracts its contents
+and never executes a file stored inside it. Enabling the body-download option
+also enables archive indexing for that client session so the retained package
+can be played. These format, structure, size, and chart-identity checks are not
+antivirus scanning. Archive parsers and media decoders still process untrusted
+data when the song is indexed or played, so players who do not accept that risk
+should leave the option off and may scan the retained archive with their OS
+security software before playing it.
+
 When the selected chart has neither a readable explicit preview nor a
 per-directory automatically discovered preview, version `0.4.14.54` builds an
 18-second preview in memory. It chooses an eight-second dense region

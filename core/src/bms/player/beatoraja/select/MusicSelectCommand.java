@@ -133,7 +133,7 @@ public enum MusicSelectCommand {
 			}
 			LoggerFactory.getLogger(MusicSelectCommand.class).info("Missing song md5: {}", song.getMd5());
 			if (song.getMd5() != null && !song.getMd5().isEmpty()) {
-				selector.main.getHttpDownloadProcessor().submitMD5Task(song.getMd5(), song.getTitle());
+				selector.main.getHttpDownloadProcessor().submitSongTask(song);
 			}
 		}
 	}),
@@ -144,8 +144,7 @@ public enum MusicSelectCommand {
             for (SongData song : songs) {
 	            LoggerFactory.getLogger(MusicSelectCommand.class).info("Missing song md5: {}", song.getMd5());
                 if (song.getMd5() != null && !song.getMd5().isEmpty()) {
-                    selector.main.getHttpDownloadProcessor().submitMD5Task(song.getMd5(),
-                                                                           song.getTitle());
+                    selector.main.getHttpDownloadProcessor().submitSongTask(song);
                 }
             }
 		}
@@ -209,9 +208,9 @@ public enum MusicSelectCommand {
         else if (current instanceof HashBar && previous instanceof TableBar) {
             // HashBars are also used in other places, but this will open
             // the context menu specific to difficulty table folders
-            // checking for isEnableHttp because batch downloading is
-            // currently the ontry entry in this menu
-            if (!alreadyInContextMenu && selector.main.getConfig().isEnableHttp()) {
+            // Batch downloading is currently the only entry in this menu.
+            if (!alreadyInContextMenu && (selector.main.getConfig().isEnableHttp()
+                    || selector.main.getConfig().isEnableBmsirBodyDownload())) {
                 bar.updateBar(
                     new ContextMenuBar(selector, ((TableBar)previous), ((HashBar)current)));
                 selector.play(FOLDER_OPEN);

@@ -2,6 +2,7 @@ package bms.tool.mdprocessor;
 
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
+import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.graphics.Color;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
@@ -64,11 +65,20 @@ public class HttpDownloadProcessor {
     // A reference to the main controller, only used for updating folder and rendering the message
     private final MainController main;
     private final HttpDownloadSource httpDownloadSource;
+    private final boolean bmsirBodyDownloadEnabled;
+    private final BmsirBodyDownloadService bmsirBodyDownloadService;
 
     public HttpDownloadProcessor(MainController main, HttpDownloadSource httpDownloadSource, String downloadDirectory) {
+        this(main, httpDownloadSource, downloadDirectory, false);
+    }
+
+    public HttpDownloadProcessor(MainController main, HttpDownloadSource httpDownloadSource, String downloadDirectory,
+                                 boolean bmsirBodyDownloadEnabled) {
         this.main = main;
         this.httpDownloadSource = httpDownloadSource;
         this.downloadDirectory = downloadDirectory;
+        this.bmsirBodyDownloadEnabled = bmsirBodyDownloadEnabled;
+        this.bmsirBodyDownloadService = new BmsirBodyDownloadService(Path.of(downloadDirectory));
     }
 
     public static HttpDownloadSourceMeta getDefaultDownloadSource() {
@@ -84,6 +94,29 @@ public class HttpDownloadProcessor {
     // however I'm not sure if that is possible in java
     public Map<Integer, DownloadTask> getAllTasks() { return tasks; }
 
+    public boolean canDownloadSong(SongData song) {
+        return song != null && song.getMd5() != null && !song.getMd5().isBlank()
+                && ((bmsirBodyDownloadEnabled
+                        && BmsirBodyDownloadService.isEligibleBodyUrl(song.getUrl()))
+                        || httpDownloadSource != null);
+    }
+
+    /**
+     * Uses an explicit table body URL when the opt-in is enabled, otherwise
+     * retains the existing MD5-provider route.
+     */
+    public void submitSongTask(SongData song) {
+		if (song == null || song.getMd5() == null || song.getMd5().isBlank()) {
+            ImGuiNotify.error("The selected song has no valid MD5");
+            return;
+        }
+        if (bmsirBodyDownloadEnabled && BmsirBodyDownloadService.isEligibleBodyUrl(song.getUrl())) {
+            submitTask(song.getUrl(), song.getTitle(), song.getMd5(), DownloadTask.DownloadMode.ArchiveInPlace);
+            return;
+        }
+        submitMD5Task(song.getMd5(), song.getTitle());
+    }
+
     /**
      * Submit a download task based on md5
      *
@@ -92,6 +125,11 @@ public class HttpDownloadProcessor {
      */
     public void submitMD5Task(String md5, String taskName) {
         logger.info("[HttpDownloadProcessor] Trying to submit new download task[{}](based on md5: {})", taskName, md5);
+        if (httpDownloadSource == null) {
+            logger.info("[HttpDownloadProcessor] No legacy HTTP download provider is enabled");
+            ImGuiNotify.warning("No HTTP download provider is enabled for this song");
+            return;
+        }
         String sourceName = httpDownloadSource.getName();
         String downloadURL;
         try {
@@ -107,6 +145,11 @@ public class HttpDownloadProcessor {
             return;
         }
 
+        submitTask(downloadURL, taskName, md5, DownloadTask.DownloadMode.LegacyExtract);
+    }
+
+    private void submitTask(String downloadURL, String taskName, String md5, DownloadTask.DownloadMode mode) {
+        String displayName = taskName == null || taskName.isBlank() ? md5 : taskName;
         // NOTE: The reason of using executor instead of using 'synchronized' on tasks directly is forcing
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
         // Alternative way is providing a wait queue and an extra thread polling submit request routinely
@@ -120,9 +163,9 @@ public class HttpDownloadProcessor {
                     return null;
                 }
                 int taskId = idGenerator.addAndGet(1);
-                DownloadTask downloadTask = new DownloadTask(taskId, downloadURL, taskName, md5);
+                DownloadTask downloadTask = new DownloadTask(taskId, downloadURL, displayName, md5, mode);
                 tasks.put(taskId, downloadTask);
-                ImGuiNotify.info(String.format("New download task[%s] submitted", taskName));
+                ImGuiNotify.info(String.format("New download task[%s] submitted", displayName));
                 return downloadTask;
             }
         });
@@ -155,6 +198,10 @@ public class HttpDownloadProcessor {
      * @param downloadTask task
      */
     public void executeDownloadTask(DownloadTask downloadTask) {
+        if (downloadTask.getDownloadMode() == DownloadTask.DownloadMode.ArchiveInPlace) {
+            executeArchiveInPlaceTask(downloadTask);
+            return;
+        }
         executor.submit(() -> {
             String taskName = downloadTask.getName();
             String downloadURL = downloadTask.getUrl();
@@ -202,11 +249,36 @@ public class HttpDownloadProcessor {
         });
     }
 
+    private void executeArchiveInPlaceTask(DownloadTask downloadTask) {
+        executor.submit(() -> {
+            logger.info("[HttpDownloadProcessor] Downloading BMS-IR body URL for [{}]", downloadTask.getName());
+            downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Downloading);
+            downloadTask.setErrorMessage(null);
+            try {
+                BmsirBodyDownloadService.InstallResult result = bmsirBodyDownloadService.install(downloadTask);
+                downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Extracted);
+                String source = result.wayback() ? "Wayback snapshot" : "registered body URL";
+                ImGuiNotify.info(String.format(
+                        "Archive saved without extraction from %s: %s", source, result.archive().getFileName()));
+                main.updateSong(downloadDirectory, true);
+            } catch (IOException error) {
+                String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+                logger.warn("[HttpDownloadProcessor] BMS-IR body archive rejected: {}", message, error);
+                downloadTask.setErrorMessage(message);
+                downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Error);
+                ImGuiNotify.error("BMS-IR body download rejected: " + message);
+            }
+        });
+    }
+
     /**
      * Retry a download task
      */
     public void retryDownloadTask(DownloadTask downloadTask) {
         downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Prepare);
+        downloadTask.setErrorMessage(null);
+        downloadTask.setDownloadSize(0);
+        downloadTask.setContentLength(0);
         executeDownloadTask(downloadTask);
     }
 

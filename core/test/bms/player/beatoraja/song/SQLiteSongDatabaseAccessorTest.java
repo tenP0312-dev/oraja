@@ -148,6 +148,9 @@ class SQLiteSongDatabaseAccessorTest {
 				disabledDatabase.toString(), roots, false);
 		disabled.updateSongDatas(null, roots, false, false, null);
 		assertEquals(0, disabled.getSongDatas("title", "Archive Database Test").length);
+		disabled.setScanSongArchives(true);
+		disabled.updateSongDatas(null, roots, false, false, null);
+		assertEquals(1, disabled.getSongDatas("title", "Archive Database Test").length);
 
 		Path enabledDatabase = temporary.resolve("archive-enabled.db");
 		SQLiteSongDatabaseAccessor enabled = new SQLiteSongDatabaseAccessor(

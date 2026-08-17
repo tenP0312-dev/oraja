@@ -458,7 +458,8 @@ public final class MusicSelector extends MainState {
 				} else if (song.getIpfs() != null && main.getMusicDownloadProcessor() != null
 						&& main.getMusicDownloadProcessor().isAlive()) {
 					execute(MusicSelectCommand.DOWNLOAD_IPFS);
-				} else if (main.getHttpDownloadProcessor() != null) {
+				} else if (main.getHttpDownloadProcessor() != null
+						&& main.getHttpDownloadProcessor().canDownloadSong(song)) {
 					execute(MusicSelectCommand.DOWNLOAD_HTTP);
 				} else {
 	                executeEvent(EventType.open_download_site);
