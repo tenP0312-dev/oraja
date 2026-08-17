@@ -183,7 +183,7 @@ public class MainController {
             }
         }
 		this.player = player;
-		this.lastWindowedDisplayMode = rememberedWindowedMode(config.getDisplaymode());
+		this.lastWindowedDisplayMode = rememberedWindowedMode(config.getLastWindowedDisplayMode());
 		BMSPlayerRule.setConfiguredRuleProfile(player.getBmsirRulesetProfile());
 		ImGuiNotify.setInfoEnabled(player.isBmsirInfoNotificationsEnabled());
 
@@ -779,6 +779,7 @@ public class MainController {
 			lastWindowedDisplayMode = rememberedWindowedMode(isWindowBorderlessMode()
 					? Config.DisplayMode.BORDERLESS
 					: Config.DisplayMode.WINDOW);
+			config.setLastWindowedDisplayMode(lastWindowedDisplayMode);
 			Graphics.DisplayMode windowResOrCurrent = Arrays.stream(Gdx.graphics.getDisplayModes())
 					.filter(mode -> mode.width == config.getWindowWidth()
 							&& mode.height == config.getWindowHeight())

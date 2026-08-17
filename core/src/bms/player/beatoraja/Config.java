@@ -54,10 +54,15 @@ public class Config implements Validatable {
 	 * Startup configuration window layout. Missing legacy values stay classic.
 	 */
 	private ConfigurationLayout configurationLayout = ConfigurationLayout.CLASSIC;
-    /**
+	/**
 	 * ディスプレイモード
 	 */
 	private DisplayMode displaymode = DisplayMode.WINDOW;
+	/**
+	 * Last non-fullscreen mode used as the F4 return target. This is stored
+	 * separately because {@link #displaymode} may be persisted as FULLSCREEN.
+	 */
+	private DisplayMode lastWindowedDisplayMode;
 	/**
 	 * 垂直同期
 	 */
@@ -678,6 +683,19 @@ public class Config implements Validatable {
 
 	public void setDisplaymode(DisplayMode displaymode) {
 		this.displaymode = displaymode;
+		if (displaymode == DisplayMode.WINDOW || displaymode == DisplayMode.BORDERLESS) {
+			lastWindowedDisplayMode = displaymode;
+		}
+	}
+
+	public DisplayMode getLastWindowedDisplayMode() {
+		return normalizeWindowedDisplayMode(
+				lastWindowedDisplayMode != null ? lastWindowedDisplayMode : displaymode
+		);
+	}
+
+	public void setLastWindowedDisplayMode(DisplayMode lastWindowedDisplayMode) {
+		this.lastWindowedDisplayMode = normalizeWindowedDisplayMode(lastWindowedDisplayMode);
 	}
 
 	public int getSkinPixmapGen() {
@@ -929,6 +947,9 @@ public class Config implements Validatable {
 
     public boolean validate() {
 		displaymode = (displaymode != null) ? displaymode : DisplayMode.WINDOW;
+		lastWindowedDisplayMode = normalizeWindowedDisplayMode(
+				lastWindowedDisplayMode != null ? lastWindowedDisplayMode : displaymode
+		);
 		resolution = (resolution != null) ? resolution : Resolution.HD;
 		configurationLayout = configurationLayout != null
 				? configurationLayout
@@ -1074,6 +1095,10 @@ public class Config implements Validatable {
 
 	public enum DisplayMode {
 		FULLSCREEN,BORDERLESS,WINDOW;
+	}
+
+	private static DisplayMode normalizeWindowedDisplayMode(DisplayMode mode) {
+		return mode == DisplayMode.BORDERLESS ? DisplayMode.BORDERLESS : DisplayMode.WINDOW;
 	}
 
 	public enum ConfigurationLayout {

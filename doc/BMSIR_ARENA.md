@@ -11,6 +11,13 @@ snapshot if the live response cannot be installed. Accepted ZIP, RAR4/RAR5,
 and 7z packages remain compressed and must pass bounded archive checks plus
 the requested chart MD5. These checks are not antivirus scanning.
 
+The current development source persists the last non-fullscreen WINDOW or
+BORDERLESS mode independently from fullscreen. A client that enters
+fullscreen, saves or exits there, and later starts in fullscreen therefore
+returns to the original window style when F4 is pressed. Existing configs
+without this value infer BORDERLESS from a saved BORDERLESS mode and otherwise
+keep the legacy WINDOW fallback.
+
 Version `0.4.14.54` adds a per-player switch for difficulty-table display
 levels, bounded in-memory preview generation for charts without a readable
 preview, and default-OFF gameplay timing diagnostics. The diagnostic collector
