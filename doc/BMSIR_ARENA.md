@@ -291,6 +291,11 @@ one table, edit a custom URL, change its order, or remove it. `Choose built-in`
 opens a compact checkbox list and can add several non-duplicate tables in one
 operation. Configured built-in tables stay visible there as checked, read-only
 entries, and the add action is enabled only when a new table is selected.
+The picker groups its 109 presets into beginner-friendly, BMS-IR-supported,
+and other sections. Beginner-friendly contains the cross-game all-song master
+and 36 collapsible game-specific tables from BMS-IR. The BMS-IR section holds
+the 33 supported table families. One search field filters names,
+descriptions, and URLs across every section and opens matching groups.
 `Load from URL` handles custom tables separately. Existing table URLs, active
 ordering, BMS roots, and archive-scanning settings remain compatible with
 saved profiles.

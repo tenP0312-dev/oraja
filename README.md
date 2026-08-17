@@ -30,6 +30,13 @@ visible as checked, read-only choices. The add action becomes available only
 after selecting at least one new table, so the picker reflects the saved
 configuration without duplicating or removing an active table.
 
+The same picker now organizes 109 presets into `Beginner-friendly`, `BMS-IR
+supported`, and `Other` sections with one shared search field. The beginner
+section contains the BMS-IR cross-game master and 36 game-specific tables;
+the game list is collapsed until opened or matched by a search. The BMS-IR
+section contains all 33 supported table families, including the 13 presets
+that were previously missing from the client list.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
