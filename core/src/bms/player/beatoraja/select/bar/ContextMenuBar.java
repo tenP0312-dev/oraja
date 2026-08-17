@@ -9,13 +9,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.MainController;
+import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.BMSPlayerMode;
 import bms.player.beatoraja.select.MusicSelector;
+import bms.player.beatoraja.select.MusicSelectCommand;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
 import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.model.Mode;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 
 import static bms.player.beatoraja.select.bar.FunctionBar.*;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_OPEN;
@@ -32,6 +35,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Clipboard;
 
 public class ContextMenuBar extends DirectoryBar {
     private SongData song = null;
+    private SongBar sourceSongBar = null;
     private TableBar table = null;
     private HashBar folder = null;
     private boolean showMeta = false;
@@ -54,10 +58,15 @@ public class ContextMenuBar extends DirectoryBar {
     }
 
     public ContextMenuBar(MusicSelector selector, SongData song) {
+        this(selector, new SongBar(song));
+    }
+
+    public ContextMenuBar(MusicSelector selector, SongBar songBar) {
         // sets showInvisibleChart = true
         super(selector, true);
         this.setSortable(false);
-        this.song = song;
+        this.sourceSongBar = songBar;
+        this.song = songBar.getSongData();
         this.title = song.getTitle();
     }
 
@@ -98,6 +107,7 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(play);
 
         addLeaderboardEntries(options);
+        addAllChartsEntry(options);
 
         showMeta = true;
         addMetaEntries(options);
@@ -125,6 +135,7 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(practice);
 
         addLeaderboardEntries(options);
+        addAllChartsEntry(options);
 
         var related = new FunctionBar((selector, self) -> {
             var same = new SameFolderBar(selector, song.getFullTitle(), song.getFolder());
@@ -210,6 +221,24 @@ public class ContextMenuBar extends DirectoryBar {
         }
 
         return options.toArray(new Bar[0]);
+    }
+
+    private void addAllChartsEntry(ArrayList<Bar> options) {
+        if (sourceSongBar == null) {
+            return;
+        }
+        boolean groupedDisplay = PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+                selector.main.getPlayerConfig().getBmsirSelectDifficultyDisplay()
+        );
+        if (sourceSongBar.getDifficultyVariantCount() < 2
+                && (groupedDisplay || song == null || song.getPath() == null)) {
+            return;
+        }
+        var allCharts = new FunctionBar((selector, self) -> {
+            selector.getBarManager().close();
+            selector.execute(MusicSelectCommand.SHOW_ALL_CHARTS);
+        }, BMSIRArenaI18n.text("全譜面を表示", "Show All Charts"), STYLE_TABLE);
+        options.add(allCharts);
     }
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {

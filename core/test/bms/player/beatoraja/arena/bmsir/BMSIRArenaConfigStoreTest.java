@@ -388,7 +388,7 @@ class BMSIRArenaConfigStoreTest {
                         "none",
                         "none",
                         "skin_config",
-                        "none",
+                        "same_folder",
                         "judge_plus"
                 ),
                 java.util.Arrays.asList(restored.getBmsirNumpadActions())

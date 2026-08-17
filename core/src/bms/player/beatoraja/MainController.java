@@ -690,7 +690,7 @@ public class MainController {
 		case SORT:
 		case REPLAY:
 		case RIVAL:
-		case SAME_FOLDER:
+		case SHOW_ALL_CHARTS:
 		case OPEN_DOCUMENT:
 		case OPEN_IR:
 		case FAVORITE_SONG:

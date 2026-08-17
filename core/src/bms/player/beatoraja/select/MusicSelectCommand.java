@@ -4,6 +4,7 @@ import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.select.bar.*;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.PlayerConfig;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.Queue;
 import javafx.scene.input.Clipboard;
@@ -150,16 +151,32 @@ public enum MusicSelectCommand {
 		}
 	}),
 	/**
-	 * 同一フォルダにある譜面を全て表示する．コースの場合は構成譜面を全て表示する
+	 * Grouped song bars expose only their retained chart variants. Separate-row
+	 * display keeps the legacy same-folder view. Courses keep their component
+	 * chart expansion.
 	 */
-	SHOW_SONGS_ON_SAME_FOLDER(selector -> {
+	SHOW_ALL_CHARTS(selector -> {
 		final BarManager bar = selector.getBarManager();
-		Bar current = selector.getBarManager().getSelected();
-		if (current instanceof SongBar && ((SongBar) current).existsSong()
-				&& (bar.getDirectory().size == 0 || !(bar.getDirectory().last() instanceof SameFolderBar))) {
-			SongData sd = ((SongBar) current).getSongData();
-			bar.updateBar(new SameFolderBar(selector, sd.getFullTitle(), sd.getFolder()));
-			selector.play(FOLDER_OPEN);
+		Bar current = bar.getSelected();
+		if (current instanceof SongBar songBar
+				&& (bar.getDirectory().size == 0
+						|| (!(bar.getDirectory().last() instanceof AllChartsBar)
+								&& !(bar.getDirectory().last() instanceof SameFolderBar)))) {
+			if (songBar.getDifficultyVariantCount() > 1) {
+				bar.updateBar(new AllChartsBar(songBar));
+				selector.play(FOLDER_OPEN);
+			} else if (songBar.existsSong()
+					&& !PlayerConfig.BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2.equals(
+							selector.main.getPlayerConfig().getBmsirSelectDifficultyDisplay()
+					)) {
+				SongData song = songBar.getSongData();
+				bar.updateBar(new SameFolderBar(
+						selector,
+						song.getFullTitle(),
+						song.getFolder()
+				));
+				selector.play(FOLDER_OPEN);
+			}
 		} else if (current instanceof GradeBar) {
 			List<Bar> songbars = Arrays.asList(((GradeBar) current).getSongDatas()).stream().distinct()
 					.map(SongBar::new).collect(Collectors.toList());
@@ -176,9 +193,8 @@ public enum MusicSelectCommand {
         Bar previous = bar.getDirectory().isEmpty() ? null : bar.getDirectory().last();
         boolean alreadyInContextMenu = previous instanceof ContextMenuBar;
         if (current instanceof SongBar) {
-            SongData song = ((SongBar)current).getSongData();
             if (!alreadyInContextMenu) {
-                bar.updateBar(new ContextMenuBar(selector, song));
+                bar.updateBar(new ContextMenuBar(selector, (SongBar) current));
                 selector.play(FOLDER_OPEN);
             }
             else { selector.selectSong(BMSPlayerMode.PLAY); }
