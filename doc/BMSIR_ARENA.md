@@ -288,9 +288,10 @@ unrelated roots are neither rescanned nor deleted.
 
 Difficulty tables are shown in one active list. A row context menu can update
 one table, edit a custom URL, change its order, or remove it. `Choose built-in`
-opens a compact checkbox list and can add several non-duplicate tables in one
-operation. Configured built-in tables stay visible there as checked, read-only
-entries, and the add action is enabled only when a new table is selected.
+opens a compact checkbox list that manages the built-in selection in both
+directions. Checking a new table adds it, while unchecking a configured
+built-in table removes it from the active Resource list. The apply action is
+enabled only while that selection differs; custom URL tables remain untouched.
 The picker groups its 109 presets into beginner-friendly, BMS-IR-supported,
 and other sections. Beginner-friendly contains the cross-game all-song master
 and 36 collapsible game-specific tables from BMS-IR. The BMS-IR section holds

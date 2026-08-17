@@ -65,6 +65,35 @@ class ResourceConfigurationViewTest {
 	}
 
 	@Test
+	void tableSelectionChangesAddAndRemoveUrlsInPickerOrder() {
+		String kept = Config.AVAILABLE_TABLEURL[0];
+		String removed = Config.AVAILABLE_TABLEURL[1];
+		String added = Config.AVAILABLE_TABLEURL[2];
+
+		ResourceConfigurationView.TableSelectionChanges changes =
+				ResourceConfigurationView.tableSelectionChanges(
+						List.of(kept, removed), List.of(kept, added));
+
+		assertEquals(List.of(added), changes.addedUrls());
+		assertEquals(List.of(removed), changes.removedUrls());
+		assertTrue(changes.hasChanges());
+	}
+
+	@Test
+	void unchangedTableSelectionHasNoChangesRegardlessOfOrder() {
+		String first = Config.AVAILABLE_TABLEURL[0];
+		String second = Config.AVAILABLE_TABLEURL[1];
+
+		ResourceConfigurationView.TableSelectionChanges changes =
+				ResourceConfigurationView.tableSelectionChanges(
+						List.of(first, second), List.of(second, first));
+
+		assertTrue(changes.addedUrls().isEmpty());
+		assertTrue(changes.removedUrls().isEmpty());
+		assertFalse(changes.hasChanges());
+	}
+
+	@Test
 	void activeCustomUrlsDoNotBecomeBuiltInChoices() {
 		String customUrl = "https://example.invalid/custom-table.html";
 
