@@ -74,6 +74,11 @@ public class SongData implements Validatable, IpfsInformation {
 	private int date;
 	private int adddate;
 	private int level;
+	/**
+	 * Difficulty-table display level for this table entry. This is contextual
+	 * metadata and must not replace the chart's #PLAYLEVEL in {@link #level}.
+	 */
+	private Integer tableLevel;
 	private int mode;
 	private int feature;
 	private int difficulty;
@@ -273,6 +278,12 @@ public class SongData implements Validatable, IpfsInformation {
 	}
 	public void setLevel(int level) {
 		this.level = level;
+	}
+	public Integer getTableLevel() {
+		return tableLevel;
+	}
+	public void setTableLevel(Integer tableLevel) {
+		this.tableLevel = tableLevel;
 	}
 	public String getTitle() {
 		return title;

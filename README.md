@@ -20,6 +20,11 @@ OpenAL choices remain available.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
+The current development source also uses each difficulty-table entry's first
+decimal integer as its Music Select display level inside that table. This
+applies to ordinary level folders and aggregate folders such as `全曲`, while
+ordinary folders and the chart's stored `#PLAYLEVEL` remain unchanged.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.

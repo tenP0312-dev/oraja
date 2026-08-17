@@ -384,12 +384,13 @@ public final class BarRenderer {
 				continue;
 			}
 			// level
-			if (ba.sd instanceof SongBar && ((SongBar) ba.sd).existsSong()) {
-				final SongData song = ((SongBar) ba.sd).getSongData();
+			if (ba.sd instanceof SongBar songBar
+					&& (songBar.existsSong() || songBar.hasTableDisplayLevel())) {
+				final SongData song = songBar.getSongData();
 				final SkinNumber leveln = baro.getBarlevel(song.getDifficulty() >= 0 && song.getDifficulty() < 7
 						? song.getDifficulty() : 0);
 				if (leveln != null) {
-					leveln.draw(sprite, time, song.getLevel(), select, ba.x, ba.y);
+					leveln.draw(sprite, time, songBar.getDisplayLevel(), select, ba.x, ba.y);
 				}
 			}
 			else if (ba.sd instanceof FunctionBar

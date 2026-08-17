@@ -78,6 +78,41 @@ public class TableData implements Validatable {
 	public void setTag(String tag) {
 		this.tag = tag;
 	}
+
+	/**
+	 * Extracts the first contiguous ASCII decimal integer from a table level.
+	 * Labels without a representable integer fall back to the chart's
+	 * #PLAYLEVEL at the selection-view boundary.
+	 */
+	public static Integer parseDisplayLevel(String value) {
+		if (value == null) {
+			return null;
+		}
+		int start = -1;
+		for (int index = 0; index < value.length(); index++) {
+			char current = value.charAt(index);
+			if (current >= '0' && current <= '9') {
+				start = index;
+				break;
+			}
+		}
+		if (start < 0) {
+			return null;
+		}
+		int end = start + 1;
+		while (end < value.length()) {
+			char current = value.charAt(end);
+			if (current < '0' || current > '9') {
+				break;
+			}
+			end++;
+		}
+		try {
+			return Integer.parseInt(value.substring(start, end));
+		} catch (NumberFormatException ignored) {
+			return null;
+		}
+	}
 	
 	public void shrink() {
 		for(CourseData c : course) {

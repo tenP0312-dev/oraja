@@ -170,7 +170,8 @@ public class BarManager {
 				return new TableBar(select, td, startupSearchAccessor);
 			} else {
 				return new TableBar(select, td,
-						new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl()));
+						new TableDataAccessor.DifficultyTableAccessor(select.resource.getConfig().getTablepath(), td.getUrl()),
+						true);
 			}			
 		}).forEach(startupTables::add);
 	}
@@ -995,7 +996,7 @@ public class BarManager {
 						public void write(TableData ignored) {
 						}
 					};
-			TableBar replacement = new TableBar(select, data, accessor);
+			TableBar replacement = new TableBar(select, data, accessor, true);
 			next.add(insertionIndex < 0 ? next.size() : insertionIndex, replacement);
 		}
 		tables = next.toArray(TableBar[]::new);
@@ -1115,11 +1116,16 @@ public class BarManager {
 			int difficultyStage
 	) {
 		Map<String, List<SongData>> groups = new LinkedHashMap<>();
+		Map<SongData, Integer> tableLevels = new IdentityHashMap<>();
 		for (Bar bar : bars) {
 			if (bar instanceof SongBar songBar) {
 				for (SongData song : songBar.getDifficultyVariants()) {
 					String key = difficultyGroupKey(song);
 					groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(song);
+					Integer tableLevel = songBar.getTableDisplayLevel(song);
+					if (tableLevel != null) {
+						tableLevels.put(song, tableLevel);
+					}
 				}
 			}
 		}
@@ -1142,7 +1148,8 @@ public class BarManager {
 				grouped.add(new SongBar(
 						variants.toArray(SongData[]::new),
 						preferredSha256,
-						difficultyStage
+						difficultyStage,
+						tableLevels
 				));
 			}
 		}

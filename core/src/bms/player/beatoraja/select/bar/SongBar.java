@@ -7,7 +7,9 @@ import com.badlogic.gdx.graphics.Pixmap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -22,6 +24,8 @@ public class SongBar extends SelectableBar {
      * key mode.
      */
     private final SongData[] songs;
+    /** Table-specific levels keyed by the exact chart objects in {@link #songs}. */
+    private final Map<SongData, Integer> tableLevels;
     private int songIndex;
     /**
      * バナーデータ
@@ -33,7 +37,16 @@ public class SongBar extends SelectableBar {
     private Pixmap stagefile;
 
     public SongBar(SongData song) {
-        this(new SongData[]{song}, song != null ? song.getSha256() : null);
+        this(song, null);
+    }
+
+    public SongBar(SongData song, Integer tableLevel) {
+        this(
+                new SongData[]{song},
+                song != null ? song.getSha256() : null,
+                0,
+                singletonTableLevel(song, tableLevel)
+        );
     }
 
     public SongBar(SongData[] songs, String preferredSha256) {
@@ -45,6 +58,15 @@ public class SongBar extends SelectableBar {
             String preferredSha256,
             int difficultyStage
     ) {
+        this(songs, preferredSha256, difficultyStage, Collections.emptyMap());
+    }
+
+    public SongBar(
+            SongData[] songs,
+            String preferredSha256,
+            int difficultyStage,
+            Map<SongData, Integer> tableLevels
+    ) {
         this.songs = Arrays.stream(songs)
                 .filter(java.util.Objects::nonNull)
                 .sorted(SongBar::compareDifficulty)
@@ -52,8 +74,29 @@ public class SongBar extends SelectableBar {
         if (this.songs.length == 0) {
             throw new IllegalArgumentException("SongBar requires at least one chart");
         }
+        this.tableLevels = new IdentityHashMap<>();
+        if (tableLevels != null) {
+            for (SongData song : this.songs) {
+                Integer tableLevel = tableLevels.get(song);
+                if (tableLevel != null) {
+                    this.tableLevels.put(song, tableLevel);
+                }
+            }
+        }
         selectDifficultyStage(difficultyStage);
         selectSha256(preferredSha256);
+    }
+
+    private static Map<SongData, Integer> singletonTableLevel(
+            SongData song,
+            Integer tableLevel
+    ) {
+        if (song == null || tableLevel == null) {
+            return Collections.emptyMap();
+        }
+        Map<SongData, Integer> result = new IdentityHashMap<>();
+        result.put(song, tableLevel);
+        return result;
     }
 
     public final SongData getSongData() {
@@ -62,6 +105,21 @@ public class SongBar extends SelectableBar {
 
     public final SongData[] getDifficultyVariants() {
         return songs.clone();
+    }
+
+    /** Returns the level shown in Music Select for the active chart. */
+    public final int getDisplayLevel() {
+        Integer tableLevel = getTableDisplayLevel(getSongData());
+        return tableLevel != null ? tableLevel : getSongData().getLevel();
+    }
+
+    /** Returns a table override only when this bar was built from one. */
+    public final Integer getTableDisplayLevel(SongData song) {
+        return tableLevels.get(song);
+    }
+
+    public final boolean hasTableDisplayLevel() {
+        return getTableDisplayLevel(getSongData()) != null;
     }
 
     public final int getDifficultyVariantCount() {
@@ -199,9 +257,18 @@ public class SongBar extends SelectableBar {
     }
 
     protected static SongBar[] toSongBarArray(SongData[] songs, SongData[] elements) {
+        return toSongBarArray(songs, elements, null);
+    }
+
+    protected static SongBar[] toSongBarArray(
+            SongData[] songs,
+            SongData[] elements,
+            Integer folderTableLevel
+    ) {
         // 重複除外
         int count = songs.length;
         int noexistscount = elements.length;
+        Map<SongData, Integer> tableLevels = new IdentityHashMap<>();
         for(SongData element : elements) {
             element.setPath(null);
         }
@@ -222,6 +289,12 @@ public class SongBar extends SelectableBar {
                         || (element.getSha256().length() > 0 && element.getSha256().equals(songs[i].getSha256()))) {
                     element.setPath(songs[i].getPath());
                     songs[i].merge(element);
+                    Integer tableLevel = element.getTableLevel() != null
+                            ? element.getTableLevel()
+                            : folderTableLevel;
+                    if (tableLevel != null) {
+                        tableLevels.put(songs[i], tableLevel);
+                    }
                     noexistscount--;
                     break;
                 }
@@ -231,13 +304,16 @@ public class SongBar extends SelectableBar {
         noexistscount--;
         for(int i = 0;i < elements.length;i++) {
             if(elements[i].getPath() == null) {
-                result[count + (noexistscount--)] = new SongBar(elements[i]);
+                Integer tableLevel = elements[i].getTableLevel() != null
+                        ? elements[i].getTableLevel()
+                        : folderTableLevel;
+                result[count + (noexistscount--)] = new SongBar(elements[i], tableLevel);
             }
         }
         count--;
         for(SongData song : songs) {
             if(song != null) {
-                result[count--] = new SongBar(song);
+                result[count--] = new SongBar(song, tableLevels.get(song));
             }
         }
         return result;

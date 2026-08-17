@@ -102,18 +102,23 @@ public enum BarSorter {
 		if (!(o1 instanceof SongBar) || !(o2 instanceof SongBar)) {
 			return TITLE.sorter.compare(o1, o2);
 		}
-		if (!((SongBar)o1).existsSong() && !((SongBar)o2).existsSong()) {
-			return 0;
-		}
-		if (!((SongBar)o1).existsSong()) {
-			return 1;
-		}
-		if (!((SongBar)o2).existsSong()) {
-			return -1;
+		SongBar first = (SongBar) o1;
+		SongBar second = (SongBar) o2;
+		if (!first.existsSong() || !second.existsSong()) {
+			if (!first.existsSong() && !second.existsSong()) {
+				if (!first.hasTableDisplayLevel() && !second.hasTableDisplayLevel()) {
+					return 0;
+				}
+			} else {
+				return first.existsSong() ? -1 : 1;
+			}
 		}
 
 		// Keep equal levels predictable across folders and refreshes.
-		final int levelSort = ((SongBar) o1).getSongData().getLevel() - ((SongBar) o2).getSongData().getLevel();
+		final int levelSort = Integer.compare(
+				first.getDisplayLevel(),
+				second.getDisplayLevel()
+		);
 		if(levelSort == 0){
 			return TITLE.sorter.compare(o1, o2);
 		}else{

@@ -25,12 +25,25 @@ class BarSorterBMSIRTest {
 		assertTrue(BarSorter.JUDGE.sorter.compare(normalAlpha, normalBeta) < 0);
 	}
 
+	@Test
+	void levelSortUsesTableDisplayLevelWithoutChangingTheChartLevel() {
+		SongBar tableSix = song("Table Six", 12, 100, 6);
+		SongBar tableNine = song("Table Nine", 3, 100, 9);
+
+		assertTrue(BarSorter.LEVEL.sorter.compare(tableSix, tableNine) < 0);
+		assertTrue(tableSix.getSongData().getLevel() > tableNine.getSongData().getLevel());
+	}
+
 	private static SongBar song(String title, int level, int judge) {
+		return song(title, level, judge, null);
+	}
+
+	private static SongBar song(String title, int level, int judge, Integer tableLevel) {
 		SongData song = new SongData();
 		song.setTitle(title);
 		song.setLevel(level);
 		song.setJudge(judge);
 		song.setPath(title + ".bms");
-		return new SongBar(song);
+		return new SongBar(song, tableLevel);
 	}
 }
