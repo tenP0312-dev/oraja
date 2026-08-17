@@ -17,6 +17,7 @@ public class Version {
     public static final String version;
     public static final String unqualifiedVersion;
     public static final String versionLong;
+    public static final String arenaWindowTitle;
     public static final String arenaDisplayName;
 
     public static String getVersion() { return version; }
@@ -28,6 +29,7 @@ public class Version {
      */
     public static String getSkinVersion() { return versionLong; }
     public static String getArenaClientVersion() { return ARENA_CLIENT_VERSION; }
+    public static String getArenaWindowTitle() { return arenaWindowTitle; }
     public static String getArenaDisplayName() { return arenaDisplayName; }
 
     private static final Properties buildMetaInfo = new Properties();
@@ -37,7 +39,8 @@ public class Version {
         unqualifiedVersion = String.valueOf(VERSION_MAJOR) + '.' + VERSION_MINOR + '.' + VERSION_PATCH;
         version = BUILD_TYPE.prefix + unqualifiedVersion;
         versionLong = "LR2oraja Endless Dream " + (BUILD_TYPE.prefix.isBlank() ? "" : "pre-release ") + unqualifiedVersion;
-        arenaDisplayName = "Arena oraja " + ARENA_CLIENT_VERSION;
+        arenaWindowTitle = "Arena oraja";
+        arenaDisplayName = arenaWindowTitle + " " + ARENA_CLIENT_VERSION;
         tryLoadingBuildMetaInfo();
     }
 

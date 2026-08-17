@@ -68,6 +68,7 @@ public class MainController {
 	private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
 	private static final String VERSION = Version.getArenaDisplayName();
+	private static final String WINDOW_TITLE = Version.getArenaWindowTitle();
 
 	public static final boolean debug = false;
 	public static final int debugTextXpos = 10;
@@ -1587,6 +1588,10 @@ public class MainController {
 
 	public static String getVersion() {
 		return VERSION;
+	}
+
+	public static String getWindowTitle() {
+		return WINDOW_TITLE;
 	}
 
 	abstract class UpdateThread extends Thread {

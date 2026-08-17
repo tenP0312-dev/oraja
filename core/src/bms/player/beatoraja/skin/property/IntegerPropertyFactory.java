@@ -1367,51 +1367,69 @@ public class IntegerPropertyFactory {
 		 */
 		private static IntegerProperty getAssignedLane(int key, boolean is2PSide){
 			return (state) -> {
-				if (!(state instanceof MusicResult)){
-					return 0;
-				}
-
-				ReplayData rd = state.resource.getReplayData();
-				Mode mode = state.resource.getBMSModel().getMode();
-				Random type = Random.getRandom(is2PSide? rd.randomoption2: rd.randomoption, mode);
-
-				switch (type){
-					case RANDOM:
-					case ROTATE:
-					case CROSS:
-					case RANDOM_EX:
-						break;
-					default:
-						return 0;
-				}
-
-				if(rd.laneShufflePattern == null){ // patternModifyLogで再現されたリプレイの場合が該当
-					return 0;
-				}
-
-				if(mode.player == 1 && is2PSide){
-					return 0;
-				}
-				int keyNum = mode.key / mode.player;
-
-				int index;
-				if(key >= keyNum || (mode.scratchKey.length != 0 && key == mode.scratchKey[0])) {
-					return 0;
-				} else if(key == -1){ // scratch
-					if (mode.scratchKey.length == 0 || type != Random.RANDOM_EX){ // no scratch
-						return 0;
-					}
-					index = mode.scratchKey[0];
+				final ReplayData rd;
+				if (state instanceof BMSPlayer player) {
+					rd = player.getOptionInformation();
+				} else if (state instanceof MusicResult) {
+					rd = state.resource.getReplayData();
 				} else {
-					index = key;
-				}
-
-				int[] pattern = rd.laneShufflePattern[is2PSide? 1 : 0];
-				if (pattern == null){
 					return 0;
 				}
-				return pattern[index] + 1 - (is2PSide? keyNum: 0);
+
+				BMSModel model = state.resource.getBMSModel();
+				return assignedLane(rd, model != null ? model.getMode() : null, key, is2PSide);
 			};
+		}
+
+		static int assignedLane(ReplayData rd, Mode mode, int key, boolean is2PSide) {
+			if (rd == null || mode == null || mode.player <= 0) {
+				return 0;
+			}
+			if (mode.player == 1 && is2PSide) {
+				return 0;
+			}
+
+			Random type = Random.getRandom(is2PSide ? rd.randomoption2 : rd.randomoption, mode);
+
+			switch (type) {
+				case RANDOM:
+				case ROTATE:
+				case CROSS:
+				case RANDOM_EX:
+					break;
+				default:
+					return 0;
+			}
+
+			int side = is2PSide ? 1 : 0;
+			if (rd.laneShufflePattern == null || side >= rd.laneShufflePattern.length) {
+				// Includes old replays restored from patternModifyLog only.
+				return 0;
+			}
+
+			int keyNum = mode.key / mode.player;
+			if (keyNum <= 0 || key < -1) {
+				return 0;
+			}
+
+			int index;
+			if (key >= keyNum || (mode.scratchKey.length != 0 && key == mode.scratchKey[0])) {
+				return 0;
+			} else if (key == -1) {
+				if (mode.scratchKey.length == 0 || type != Random.RANDOM_EX) {
+					return 0;
+				}
+				index = mode.scratchKey[0];
+			} else {
+				index = key;
+			}
+
+			int[] pattern = rd.laneShufflePattern[side];
+			if (pattern == null || index < 0 || index >= pattern.length) {
+				return 0;
+			}
+			int assigned = pattern[index] + 1 - (is2PSide ? keyNum : 0);
+			return assigned >= 1 && assigned <= keyNum ? assigned : 0;
 		}
 	}
 
