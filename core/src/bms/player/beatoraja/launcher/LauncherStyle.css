@@ -11,3 +11,105 @@
 .optionLabel {
 
 }
+
+.settings-sidebar {
+    -fx-background-color: #eef1f5;
+    -fx-border-color: transparent #d6dce5 transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 12 10 12 10;
+    -fx-spacing: 10;
+}
+
+.sidebar-player-summary {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 10 12 10 12;
+    -fx-font-size: 13px;
+    -fx-text-fill: #253142;
+}
+
+.sidebar-player-summary:hover,
+.sidebar-player-summary:focused,
+.sidebar-player-summary:selected {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cbd5e1;
+}
+
+.settings-sidebar-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.settings-sidebar-list .viewport,
+.settings-sidebar-list .virtual-flow,
+.settings-sidebar-list .corner {
+    -fx-background-color: transparent;
+}
+
+.settings-sidebar-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 7;
+    -fx-padding: 8 11 8 11;
+    -fx-text-fill: #344154;
+    -fx-font-size: 13px;
+}
+
+.settings-sidebar-list .list-cell:hover {
+    -fx-background-color: #e1e7ef;
+}
+
+.settings-sidebar-list .list-cell:selected {
+    -fx-background-color: #1976d2;
+    -fx-text-fill: white;
+}
+
+.context-help-panel {
+    -fx-min-height: 116px;
+    -fx-pref-height: 116px;
+    -fx-padding: 14 20 14 20;
+    -fx-background-color: #f8fafc;
+    -fx-border-color: transparent transparent #dce2ea transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.context-help-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #172033;
+}
+
+.context-help-description,
+.configuration-description {
+    -fx-font-size: 12px;
+    -fx-text-fill: #596579;
+}
+
+.sidebar-content-tabs {
+    -fx-tab-min-height: 0;
+    -fx-tab-max-height: 0;
+    -fx-background-color: #ffffff;
+}
+
+.sidebar-content-tabs > .tab-header-area {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+    -fx-padding: 0;
+}
+
+.sidebar-content-tabs > .tab-header-area > .headers-region,
+.sidebar-content-tabs > .tab-header-area > .tab-header-background,
+.sidebar-content-tabs > .tab-header-area > .control-buttons-tab {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+}
+
+.sidebar-content-tabs > .tab-content-area {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}

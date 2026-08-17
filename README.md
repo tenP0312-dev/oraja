@@ -204,6 +204,15 @@ read correctly.
 See [the Arena client documentation](doc/BMSIR_ARENA.md) for behavior and
 configuration details.
 
+## Startup configuration layout
+
+The `Other` tab can switch the startup configuration screen between
+`Classic` and `Sidebar`. Existing and new installations default to Classic.
+Sidebar keeps the same setting controls and save paths, moves the category
+navigation to the left, and adds an illustrated context area that follows
+pointer hover or keyboard focus. The player ID, display name, and active rule
+profile are collapsed into a sidebar summary and can be expanded when needed.
+
 ## 作業フォルダ / Work folder
 
 BMS Pathから作りかけ譜面用のルートを選択し、`Set DL Directory` の下にある
