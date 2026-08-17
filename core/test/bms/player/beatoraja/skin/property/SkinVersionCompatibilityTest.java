@@ -24,6 +24,8 @@ class SkinVersionCompatibilityTest {
         assertEquals(Version.getSkinVersion(), skinVersion);
         assertFalse(skinVersion.contains("Arena"));
 
+        assertEquals("Arena oraja", Version.getArenaWindowTitle());
+        assertEquals(Version.getArenaWindowTitle(), MainController.getWindowTitle());
         assertTrue(Version.getArenaDisplayName().startsWith("Arena oraja "));
         assertEquals(Version.getArenaDisplayName(), MainController.getVersion());
     }

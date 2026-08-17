@@ -874,11 +874,21 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Ordinary-play and skin additions
 
-- The application and configuration windows keep the `Arena oraja` product
-  name, while legacy skin string property `1010` retains the upstream-compatible
+- The native game window title stays exactly `Arena oraja` across client
+  versions so OBS window-capture rules remain stable. Configuration, What's
+  New, startup, and other version-identification surfaces keep the versioned
+  `Arena oraja <version>` display name.
+- Legacy skin string property `1010` retains the upstream-compatible
   `LR2oraja Endless Dream` version identity. This prevents LITONE and similar
   skins from mistaking the product name for beatoraja's built-in Arena skin API;
   the BMS-IR Arena graph remains in its external overlay.
+- During READY and PLAY, play skins can read the resolved fixed lane placement
+  through numeric references `450`--`466` and `469`, using the same one-based
+  values as the result skin. The values come directly from the already-applied
+  replay placement for RANDOM, ROTATE, CROSS, and RANDOM_EX; reading them
+  never regenerates a seed or reapplies a modifier. NORMAL, MIRROR, S-RANDOM,
+  H-RANDOM, unavailable sides, and old replays without a fixed placement
+  return zero.
 - Skin Select can show a live, scaled preview of the selected skin. The bundled
   Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
   destination with the same ID. JSON and Lua skins use the same explicit

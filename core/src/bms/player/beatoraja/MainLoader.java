@@ -224,7 +224,7 @@ public class MainLoader extends Application {
             gdxConfig.useVsync(config.isVsync());
             gdxConfig.setIdleFPS(config.getMaxFramePerSecond());
             gdxConfig.setForegroundFPS(config.getMaxFramePerSecond());
-            gdxConfig.setTitle(MainController.getVersion());
+            gdxConfig.setTitle(MainController.getWindowTitle());
 
 			gdxConfig.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(), config.getAudioConfig().getDeviceBufferSize(), 1);
 			gdxConfig.setWindowListener(new Lwjgl3WindowAdapter() {
