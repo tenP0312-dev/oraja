@@ -22,7 +22,7 @@ import tempfile
 import zipfile
 
 
-VERSION = "0.4.14.50"
+VERSION = "0.4.14.51"
 BODY_FILENAME = "Arena-oraja.jar"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.72.jar"
 PLATFORM_SPECS = {

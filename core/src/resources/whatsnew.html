@@ -28,6 +28,17 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.51</h1>
+        <h2>Windows WASAPI Shared / Exclusive selection</h2>
+        <ul>
+        <li>The Audio tab can switch a Windows WASAPI output between Shared and Exclusive mode. Existing configurations remain on Shared mode.</li>
+        <li>Exclusive mode requests direct access through the bundled PortAudio WASAPI backend and requires a sample rate supported by the device.</li>
+        </ul>
+        <h2>ASIO-only output-device selection</h2>
+        <ul>
+        <li><code>ASIO</code> is a separate Windows audio driver whose list contains only ASIO Host API output devices.</li>
+        <li>The selected device and Host API persist across restarts. Missing or invalid ASIO output is reported without silently switching the saved driver to OpenAL or WASAPI.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.50</h1>
         <h2>Select the work folder directly from BMS Path</h2>
         <ul>

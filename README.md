@@ -10,17 +10,13 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.50**. The Resource tab can mark a
-selected BMS Path itself as the disposable work folder. Charts below that root
-keep their on-screen result but never save local records and are never
-submitted to IR or Arena.
-The current development source also lets Windows PortAudio users select
-WASAPI Shared or Exclusive mode in the Audio tab. Shared remains the default;
-the selector is available only for a device listed under Windows WASAPI.
-Windows users can also choose `ASIO` as a separate audio driver. That choice
-lists only output devices reported by PortAudio's ASIO Host API, persists the
-exact ASIO device, and never silently changes an unavailable ASIO selection to
-another audio path. The existing PortAudio, WASAPI, and OpenAL choices remain.
+The current client source version is **0.4.14.51**. Windows PortAudio users can
+select WASAPI Shared or Exclusive mode in the Audio tab; Shared remains the
+default and the selector is available only for a Windows WASAPI device.
+Windows users can also choose `ASIO` as a separate driver that lists only ASIO
+output devices, persists the exact selection, and never silently changes an
+unavailable ASIO path to another audio driver. Existing generic PortAudio and
+OpenAL choices remain available.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -32,6 +28,18 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.51
+
+The Audio tab adds WASAPI Shared / Exclusive mode selection for Windows
+WASAPI output devices. Existing configurations stay on Shared mode. Exclusive
+mode requests direct access through the bundled PortAudio WASAPI backend and
+requires a sample rate supported by the selected device.
+
+`ASIO` is now an independent Windows audio driver. Its device list contains
+only ASIO Host API endpoints with output channels, stores the selected Host
+API identity, disables the WASAPI mode selector, and reports unavailable ASIO
+support without silently switching the saved driver to OpenAL or WASAPI.
 
 ## Arena oraja 0.4.14.50
 
@@ -251,7 +259,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.50
+  --output-dir /release/build-0.4.14.51
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
