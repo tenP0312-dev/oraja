@@ -10,6 +10,7 @@ import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.AudioConfig.FrequencyType;
 import bms.player.beatoraja.AudioConfig.WasapiMode;
 import bms.player.beatoraja.audio.PortAudioDriver;
+import bms.player.beatoraja.audio.PortAudioDriver.AsioUnavailableException;
 import bms.player.beatoraja.audio.PortAudioDriver.DeviceOption;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -51,9 +52,14 @@ public class AudioConfigurationView implements Initializable {
 	private CheckBox loopCourseResultSound;
 	
 	private AudioConfig config;
+	private ResourceBundle resources;
 
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		audio.getItems().setAll(DriverType.OpenAL , DriverType.PortAudio);
+		if (PortAudioDriver.isWindows()) {
+			audio.getItems().add(DriverType.ASIO);
+		}
+		resources = arg1;
 		audiosamplerate.getItems().setAll(null, 44100, 48000);
 		wasapiMode.getItems().setAll(
 				arg1.getString("WASAPI_SHARED"),
@@ -127,11 +133,13 @@ public class AudioConfigurationView implements Initializable {
 			updateWasapiModeAvailability();
 			break;
 		case PortAudio:
+		case ASIO:
 			try {
-				DeviceOption[] devices = PortAudioDriver.getDeviceOptions();
+				DeviceOption[] devices = PortAudioDriver.getDeviceOptions(audio.getValue());
 				if(devices.length == 0) {
 					throw new RuntimeException("ドライバが見つかりません");
 				}
+				audioname.setPromptText("");
 				audioname.getItems().setAll(devices);
 				audioname.setValue(PortAudioDriver.findDeviceOption(
 						devices,
@@ -142,6 +150,20 @@ public class AudioConfigurationView implements Initializable {
 				audiosim.setDisable(false);
 				updateWasapiModeAvailability();
 //				PortAudio.terminate();
+			} catch (AsioUnavailableException e) {
+				logger.error("ASIOは選択できません : {}", e.getMessage());
+				audioname.getItems().clear();
+				audioname.setValue(null);
+				audioname.setPromptText(resources.getString(switch (e.reason()) {
+				case UNSUPPORTED_PLATFORM -> "ASIO_UNSUPPORTED_PLATFORM";
+				case HOST_API_UNAVAILABLE -> "ASIO_HOST_API_UNAVAILABLE";
+				case NO_OUTPUT_DEVICE -> "ASIO_DEVICE_UNAVAILABLE";
+				case INVALID_DEVICE -> "ASIO_INVALID_DEVICE";
+				}));
+				audioname.setDisable(true);
+				audiobuffer.setDisable(false);
+				audiosim.setDisable(false);
+				updateWasapiModeAvailability();
 			} catch(Throwable e) {
 				logger.error("PortAudioは選択できません : {}", e.getMessage());
 				audio.setValue(DriverType.OpenAL);

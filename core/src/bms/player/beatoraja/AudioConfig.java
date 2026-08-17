@@ -232,6 +232,10 @@ public class AudioConfig implements Validatable {
 		 */
 		PortAudio,
 		/**
+		 * PortAudio ASIO host API
+		 */
+		ASIO,
+		/**
 		 * AudioDevice (libGDX AudioDevice, 未実装)
 		 */
 //		AudioDevice,

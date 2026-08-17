@@ -8,6 +8,9 @@ repository.
 
 - Client, launcher, input, rendering, local configuration, and Arena client
   protocol code belong here.
+- In BMS-IR conversations, `秘伝のタレ` refers to the bridged requirement
+  thread at `BMS-Mania/IR#478`. Read the exact linked attachment for the
+  requested item instead of treating the whole mixed thread as one Issue.
 - The Arena server, public Web site, SQLite data, BMS-IR plugin, public update
   records, and production operations belong in `BMS-Mania/IR`.
 - Protocol changes require paired Issues and compatible implementations in

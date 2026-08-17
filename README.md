@@ -17,6 +17,10 @@ submitted to IR or Arena.
 The current development source also lets Windows PortAudio users select
 WASAPI Shared or Exclusive mode in the Audio tab. Shared remains the default;
 the selector is available only for a device listed under Windows WASAPI.
+Windows users can also choose `ASIO` as a separate audio driver. That choice
+lists only output devices reported by PortAudio's ASIO Host API, persists the
+exact ASIO device, and never silently changes an unavailable ASIO selection to
+another audio path. The existing PortAudio, WASAPI, and OpenAL choices remain.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 

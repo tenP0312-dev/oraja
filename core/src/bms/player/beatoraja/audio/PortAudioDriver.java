@@ -2,8 +2,12 @@ package bms.player.beatoraja.audio;
 
 import java.nio.ByteBuffer;
 import java.nio.file.*;
+import java.util.Arrays;
 
 import com.portaudio.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import bms.player.beatoraja.AudioConfig;
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.AudioConfig.WasapiMode;
@@ -16,6 +20,7 @@ import bms.player.beatoraja.song.SongResource;
  * @author exch
  */
 public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnable {
+	private static final Logger logger = LoggerFactory.getLogger(PortAudioDriver.class);
 
 	private static DeviceInfo[] devices;
 	private static DeviceOption[] deviceOptions;
@@ -58,10 +63,92 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 						i,
 						device.name,
 						hostApi.type,
-						hostApi.name);
+						hostApi.name,
+						device.maxOutputChannels);
 			}
 		}
 		return deviceOptions;
+	}
+
+	public static DeviceOption[] getDeviceOptions(DriverType driver) {
+		if (driver != DriverType.ASIO) {
+			return getDeviceOptions();
+		}
+		if (!isWindows()) {
+			throw new AsioUnavailableException(AsioUnavailableReason.UNSUPPORTED_PLATFORM);
+		}
+		try {
+			DeviceOption[] options = getDeviceOptions();
+			return selectDeviceOptions(
+					driver,
+					options,
+					true,
+					hasHostApiType(PortAudio.HOST_API_TYPE_ASIO));
+		} catch (AsioUnavailableException error) {
+			if (error.reason() == AsioUnavailableReason.HOST_API_UNAVAILABLE) {
+				logAsioLibraryError(error);
+			}
+			throw error;
+		} catch (Throwable error) {
+			logAsioLibraryError(error);
+			throw new AsioUnavailableException(
+					AsioUnavailableReason.HOST_API_UNAVAILABLE,
+					error);
+		}
+	}
+
+	private static void logAsioLibraryError(Throwable error) {
+		logger.error(
+				"ASIO host API unavailable: jportaudioLibrary={} portaudioLibrary={} java.library.path={}",
+				jPortAudioLibraryName(),
+				portAudioLibraryName(),
+				System.getProperty("java.library.path", ""),
+				error);
+	}
+
+	private static String jPortAudioLibraryName() {
+		return System.getProperty("os.arch", "").contains("64")
+				? "jportaudio_x64.dll"
+				: "jportaudio_x86.dll";
+	}
+
+	private static String portAudioLibraryName() {
+		return System.getProperty("os.arch", "").contains("64")
+				? "portaudio_x64.dll"
+				: "portaudio_x86.dll";
+	}
+
+	static DeviceOption[] selectDeviceOptions(
+			DriverType driver,
+			DeviceOption[] options,
+			boolean windows,
+			boolean asioHostApiAvailable) {
+		if (driver != DriverType.ASIO) {
+			return options;
+		}
+		if (!windows) {
+			throw new AsioUnavailableException(AsioUnavailableReason.UNSUPPORTED_PLATFORM);
+		}
+		if (!asioHostApiAvailable) {
+			throw new AsioUnavailableException(AsioUnavailableReason.HOST_API_UNAVAILABLE);
+		}
+		DeviceOption[] asioOptions = Arrays.stream(options)
+				.filter(DeviceOption::isAsio)
+				.filter(DeviceOption::hasOutputChannels)
+				.toArray(DeviceOption[]::new);
+		if (asioOptions.length == 0) {
+			throw new AsioUnavailableException(AsioUnavailableReason.NO_OUTPUT_DEVICE);
+		}
+		return asioOptions;
+	}
+
+	private static boolean hasHostApiType(int hostApiType) {
+		for (int index = 0; index < PortAudio.getHostApiCount(); index++) {
+			if (PortAudio.getHostApiInfo(index).type == hostApiType) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static DeviceOption findDeviceOption(
@@ -115,9 +202,10 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		super(config.getSongResourceGen());
 		AudioConfig audioConfig = config.getAudioConfig();
 		DeviceOption deviceOption = findDeviceOption(
-				getDeviceOptions(),
+				getDeviceOptions(audioConfig.getDriver()),
 				audioConfig.getDriverName(),
 				audioConfig.getDriverHostApi());
+		validateSelectedDevice(audioConfig.getDriver(), deviceOption);
 		int deviceId = deviceOption.index();
 		DeviceInfo deviceInfo = getDevices()[deviceId];
 		
@@ -134,6 +222,13 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		streamParameters.device = deviceId;
 		int framesPerBuffer = audioConfig.getDeviceBufferSize();
 		streamParameters.suggestedLatency = ((double)framesPerBuffer) / getSampleRate();
+		logger.info(
+				"PortAudio output device selected mode={} device={} hostApi={} sampleRate={} framesPerBuffer={}",
+				audioConfig.getDriver(),
+				deviceOption.name(),
+				deviceOption.hostApiName(),
+				getSampleRate(),
+				framesPerBuffer);
 //		System.out.println( "  suggestedLatency = " + streamParameters.suggestedLatency );
 
 		int flags = 0;
@@ -171,6 +266,13 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 			inputs[i] = new MixerInput();
 		}
 		mixer.start();
+	}
+
+	static void validateSelectedDevice(DriverType driver, DeviceOption option) {
+		if (driver == DriverType.ASIO
+				&& (option == null || !option.isAsio() || !option.hasOutputChannels())) {
+			throw new AsioUnavailableException(AsioUnavailableReason.INVALID_DEVICE);
+		}
 	}
 
 	@Override
@@ -359,14 +461,56 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 			int index,
 			String name,
 			int hostApiType,
-			String hostApiName) {
+			String hostApiName,
+			int maxOutputChannels) {
+		public DeviceOption(int index, String name, int hostApiType, String hostApiName) {
+			this(index, name, hostApiType, hostApiName, 2);
+		}
+
 		public boolean isWasapi() {
 			return hostApiType == PortAudio.HOST_API_TYPE_WASAPI;
+		}
+
+		public boolean isAsio() {
+			return hostApiType == PortAudio.HOST_API_TYPE_ASIO;
+		}
+
+		public boolean hasOutputChannels() {
+			return maxOutputChannels > 0;
 		}
 
 		@Override
 		public String toString() {
 			return hostApiName + ": " + name;
+		}
+	}
+
+	public enum AsioUnavailableReason {
+		UNSUPPORTED_PLATFORM,
+		HOST_API_UNAVAILABLE,
+		NO_OUTPUT_DEVICE,
+		INVALID_DEVICE,
+	}
+
+	public static final class AsioUnavailableException extends IllegalStateException {
+		private final AsioUnavailableReason reason;
+
+		AsioUnavailableException(AsioUnavailableReason reason) {
+			this(reason, null);
+		}
+
+		AsioUnavailableException(AsioUnavailableReason reason, Throwable cause) {
+			super(switch (reason) {
+			case UNSUPPORTED_PLATFORM -> "ASIO output is available only on Windows";
+			case HOST_API_UNAVAILABLE -> "The loaded PortAudio DLL does not provide the ASIO Host API";
+			case NO_OUTPUT_DEVICE -> "No ASIO output device is available; install or connect an ASIO driver";
+			case INVALID_DEVICE -> "The selected output device does not belong to the ASIO Host API";
+			}, cause);
+			this.reason = reason;
+		}
+
+		public AsioUnavailableReason reason() {
+			return reason;
 		}
 	}
 
