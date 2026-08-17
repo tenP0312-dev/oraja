@@ -24,6 +24,13 @@ level inside that table. Disabling it restores the chart's stored `#PLAYLEVEL`
 for display and LEVEL sorting. The switch applies to ordinary level folders and
 aggregate folders such as `全曲`; ordinary folders remain unchanged.
 
+Music Select also generates an 18-second in-memory preview when a chart has no
+readable explicit or automatically discovered preview file. The preview uses
+BMZ Player's current density-window policy, includes continuing background
+audio and BMSON layers/slices, and works for ordinary and archive-backed songs.
+Generation runs on one low-priority latest-request worker with an eight-entry
+LRU cache; `OFF`, one-shot, loop, and explicit-preview priority are unchanged.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is

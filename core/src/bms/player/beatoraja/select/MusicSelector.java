@@ -25,6 +25,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.*;
 
+import bms.model.BMSModel;
 import bms.model.Mode;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
@@ -342,7 +343,10 @@ public final class MusicSelector extends MainState {
 			playedcourse = null;
 		}
 
-		preview = new PreviewMusicProcessor(main.getAudioProcessor(), resource.getConfig());
+		preview = new PreviewMusicProcessor(
+				main.getAudioProcessor(),
+				resource.getConfig(),
+				this::loadPreviewModel);
 		preview.setDefault(getSound(SELECT));
 
 		final BMSPlayerInputProcessor input = main.getInputProcessor();
@@ -406,10 +410,7 @@ public final class MusicSelector extends MainState {
 		if (timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + notesGraphDuration && !showNoteGraph && play == null) {
 			if (current instanceof SongBar && ((SongBar) current).existsSong()) {
 				SongData song = resource.getSongdata();
-				new Thread(() ->  {
-					song.setBMSModel(resource.loadBMSModel(Paths.get(((SongBar) current).getSongData().getPath()),
-							config.getLnmode()));
-				}).start();;
+				new Thread(() -> loadPreviewModel(song), "music-select-chart-info").start();
 			}
 			showNoteGraph = true;
 		}
@@ -493,6 +494,21 @@ public final class MusicSelector extends MainState {
                 ((FunctionBar)current).accept(this);
             }
         }
+	}
+
+	private BMSModel loadPreviewModel(SongData song) {
+		if (song == null || song.getPath() == null || song.getPath().isBlank()) {
+			return null;
+		}
+		synchronized (song) {
+			if (song.getBMSModel() == null) {
+				BMSModel model = resource.loadBMSModel(Paths.get(song.getPath()), config.getLnmode());
+				if (model != null) {
+					song.setBMSModel(model);
+				}
+			}
+			return song.getBMSModel();
+		}
 	}
 
 	public void input() {
