@@ -9,6 +9,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 
+import javafx.geometry.Pos;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +42,7 @@ class PlayConfigurationSidebarLayoutTest {
 	@Test
 	void sidebarScalarRowsUseOneTrailingEditorColumn() {
 		assertEquals(480.0, PlayConfigurationView.SIDEBAR_EDITOR_COLUMN_WIDTH);
+		assertEquals(Pos.CENTER_RIGHT, PlayConfigurationView.SIDEBAR_STANDALONE_TOGGLE_ALIGNMENT);
 	}
 
 	@Test
