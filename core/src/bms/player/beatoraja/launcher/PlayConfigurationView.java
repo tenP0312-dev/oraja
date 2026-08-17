@@ -79,6 +79,7 @@ import twitter4j.conf.ConfigurationBuilder;
  */
 public class PlayConfigurationView implements Initializable {
 	private static final Logger logger = LoggerFactory.getLogger(PlayConfigurationView.class);
+	static final double SIDEBAR_EDITOR_COLUMN_WIDTH = 480.0;
     // TODO スキンプレビュー機能
 	private String dbUpdateCheckDialogMessage;
 
@@ -871,7 +872,9 @@ public class PlayConfigurationView implements Initializable {
 		boolean sidebar = layout == Config.ConfigurationLayout.SIDEBAR;
 		useSidebarPlayerEditor(sidebar);
 		setManagedVisible(sidebarRail, sidebar);
-		setManagedVisible(contextHelpPanel, sidebar);
+		// Persistent descriptions now live with every setting row, so the former
+		// illustrated context card stays out of both layouts.
+		setManagedVisible(contextHelpPanel, false);
 		setManagedVisible(classicPlayOptionContent, !sidebar);
 		setManagedVisible(sidebarPlayOptionScroll, sidebar);
 		moveSidebarNodes(sidebar);
@@ -1892,23 +1895,39 @@ public class PlayConfigurationView implements Initializable {
 		String description = uiText(jaDescription, enDescription);
 		Label titleLabel = new Label(title);
 		titleLabel.setWrapText(true);
+		titleLabel.setAlignment(Pos.CENTER_LEFT);
+		titleLabel.setMaxWidth(Double.MAX_VALUE);
 		titleLabel.getStyleClass().add("sidebar-setting-title");
-		HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
 		HBox editor = new HBox(editorNode);
 		editor.setAlignment(Pos.CENTER_LEFT);
+		editor.setMinWidth(SIDEBAR_EDITOR_COLUMN_WIDTH);
+		editor.setPrefWidth(SIDEBAR_EDITOR_COLUMN_WIDTH);
+		editor.setMaxWidth(SIDEBAR_EDITOR_COLUMN_WIDTH);
 		editor.getStyleClass().add("sidebar-setting-editor");
 		if (editorNode instanceof Region region) {
 			region.setMaxWidth(Double.MAX_VALUE);
 			HBox.setHgrow(region, Priority.ALWAYS);
 		}
 
-		HBox main = new HBox(18, titleLabel, editor);
-		main.setAlignment(Pos.CENTER_LEFT);
+		ColumnConstraints titleColumn = new ColumnConstraints();
+		titleColumn.setHgrow(Priority.ALWAYS);
+		ColumnConstraints editorColumn = new ColumnConstraints(
+				SIDEBAR_EDITOR_COLUMN_WIDTH,
+				SIDEBAR_EDITOR_COLUMN_WIDTH,
+				SIDEBAR_EDITOR_COLUMN_WIDTH
+		);
+		GridPane main = new GridPane();
+		main.setHgap(24);
+		main.getColumnConstraints().setAll(titleColumn, editorColumn);
+		main.add(titleLabel, 0, 0);
+		main.add(editor, 1, 0);
+		main.setMaxWidth(Double.MAX_VALUE);
 		main.getStyleClass().add("sidebar-setting-main");
 
 		Label descriptionLabel = new Label(description);
 		descriptionLabel.setWrapText(true);
+		descriptionLabel.setMaxWidth(Double.MAX_VALUE);
 		descriptionLabel.getStyleClass().add("sidebar-setting-row-description");
 
 		VBox row = new VBox(8, main, descriptionLabel);

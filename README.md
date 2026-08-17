@@ -209,14 +209,14 @@ configuration details.
 The `Other` tab can switch the startup configuration screen between
 `Classic` and `Sidebar`. Existing and new installations default to Classic.
 Sidebar keeps the same setting controls and save paths, moves the category
-navigation to the left, and adds an illustrated context area that follows
-pointer hover or keyboard focus. The player ID, display name, and active rule
+navigation to the left, and keeps the explanation for each setting directly
+below that setting. The player ID, display name, and active rule
 profile are collapsed into a sidebar summary and can be expanded when needed.
 The navigation rail has a stable width, searchable destinations, restrained
-single-color icons, and separate explanation and settings cards so changing
-pages does not shift the content boundary. Every Sidebar destination is
-reflowed into grouped cards with one wide editor or ON/OFF switch and a
-persistent plain-language explanation per scalar setting. Folder lists,
+single-color icons, and grouped settings cards so changing pages does not shift
+the content boundary. Every scalar row uses one stable two-column layout: its
+label stays at the left and its editor or ON/OFF switch uses the same trailing
+column, with a persistent plain-language explanation below. Folder lists,
 tables, skin previews, Webhook lists, and OBS scene mappings keep their useful
 shape inside full-width explained workspace cards. Sidebar editors remain
 connected to the original controls, so Classic layout, controller behavior,
