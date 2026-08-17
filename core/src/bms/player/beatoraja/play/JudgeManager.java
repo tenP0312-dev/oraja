@@ -17,6 +17,7 @@ import bms.model.*;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
+import bms.player.beatoraja.system.TimingDiagnostics;
 import bms.player.beatoraja.play.BMSPlayerRule.NoteJudgementBehavior;
 import bms.player.beatoraja.play.JudgeProperty.MissCondition;
 import bms.player.beatoraja.play.JudgeProperty.NoteType;
@@ -396,6 +397,14 @@ public class JudgeManager {
             final long pmtime = input.getKeyChangedTime(key);
             if (pmtime == Long.MIN_VALUE) {
                 continue;
+            }
+            if (TimingDiagnostics.isEnabled()
+                    && (main.resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
+                    || main.resource.getPlayMode().mode == BMSPlayerMode.Mode.PRACTICE)) {
+                TimingDiagnostics.recordMicros(
+                        TimingDiagnostics.Metric.INPUT_TO_JUDGE_DISPATCH,
+                        mtime - pmtime
+                );
             }
             final LaneState state = states[lane];
             state.lanemodel.reset();

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
+import bms.player.beatoraja.system.TimingDiagnostics;
 
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -101,6 +102,7 @@ public class FFmpegProcessor implements MovieProcessor {
 		processorStatus = ProcessorStatus.DISPOSED;
 		if (movieseek != null) {
 			movieseek.exec(Command.HALT);
+			movieseek.releaseDiagnosticBytes();
 			movieseek = null;
 		}
 
@@ -146,6 +148,8 @@ public class FFmpegProcessor implements MovieProcessor {
 		private Pixmap pixmap;
 		private byte[] frameRow;
 		private byte[] movieBytes;
+		private long diagnosticMovieBytes;
+		private boolean diagnosticBytesReleased;
 		private final Object pixmapLock = new Object();
 		private boolean firstFrameLogged;
 		private boolean firstTextureLogged;
@@ -162,6 +166,7 @@ public class FFmpegProcessor implements MovieProcessor {
 		}
 
 		public void run() {
+			TimingDiagnostics.movieDecoderStarted();
 			decoderState = DecoderState.INITIALIZING;
 			logger.info("movie decoder state INITIALIZING: {}", filepath);
 			boolean failed = false;
@@ -169,6 +174,7 @@ public class FFmpegProcessor implements MovieProcessor {
 				try (InputStream input = resource.openStream()) {
 					movieBytes = input.readAllBytes();
 				}
+				retainDiagnosticBytes(movieBytes.length);
 				logger.info(
 						"movie decoder opening: {} ({} bytes)",
 						filepath,
@@ -211,7 +217,7 @@ public class FFmpegProcessor implements MovieProcessor {
 						continue;
 					} else if (microtime >= grabber.getTimestamp()) {
 						while (microtime >= grabber.getTimestamp() || framecount % fpsd != 0) {
-							frame = grabber.grabImage();
+							frame = grabImageTimed();
 							if (frame == null) {
 								break;
 							}
@@ -223,67 +229,114 @@ public class FFmpegProcessor implements MovieProcessor {
 						} else if (frame.image != null && frame.image[0] != null) {
 							try {
 								logFirstFrame(frame);
+								long pixmapLockStarted = TimingDiagnostics.start();
 								synchronized (pixmapLock) {
-									if (
-											pixmap == null
-													|| pixmap.getWidth() != frame.imageWidth
-													|| pixmap.getHeight() != frame.imageHeight
-									) {
-										if (pixmap != null) {
-											pixmap.dispose();
-										}
-										pixmap = new Pixmap(
-												frame.imageWidth,
-												frame.imageHeight,
-												Pixmap.Format.RGB888
-										);
-									}
-									copyFrameToPixmap(frame, pixmap);
-								}
-								Gdx.app.postRunnable(() -> {
-									synchronized (pixmapLock) {
-										try {
-											final Pixmap p = pixmap;
-											if (
-													p == null
-															|| processorStatus
-																	== ProcessorStatus.DISPOSED
-											) {
-												return;
+									TimingDiagnostics.finish(
+											TimingDiagnostics.Metric.BGA_PIXMAP_LOCK,
+											pixmapLockStarted
+									);
+									long copyStarted = TimingDiagnostics.start();
+									try {
+										if (
+												pixmap == null
+														|| pixmap.getWidth() != frame.imageWidth
+														|| pixmap.getHeight() != frame.imageHeight
+										) {
+											if (pixmap != null) {
+												pixmap.dispose();
 											}
-											preparePixmapForDraw(p);
-											if (
-													showingtex != null
-															&& showingtex.getWidth() == p.getWidth()
-															&& showingtex.getHeight() == p.getHeight()
-											) {
-												showingtex.draw(p, 0, 0);
-											} else {
-												if (showingtex != null) {
-													showingtex.dispose();
-												}
-												showingtex = new Texture(p);
-											}
-											processorStatus = ProcessorStatus.TEXTURE_ACTIVE;
-											if (!firstTextureLogged) {
-												firstTextureLogged = true;
-												logger.info(
-														"movie first texture ready: {} size={}x{}",
-														filepath,
-														p.getWidth(),
-														p.getHeight()
-												);
-											}
-										} catch (Throwable e) {
-											processorStatus = ProcessorStatus.TEXTURE_INACTIVE;
-											logger.error(
-													"movie texture update failed: {}",
-													filepath,
-													e
+											pixmap = new Pixmap(
+													frame.imageWidth,
+													frame.imageHeight,
+													Pixmap.Format.RGB888
 											);
 										}
+										copyFrameToPixmap(frame, pixmap);
+									} finally {
+										TimingDiagnostics.finish(
+												TimingDiagnostics.Metric.BGA_PIXMAP_COPY,
+												copyStarted
+										);
 									}
-								});
+								}
+								long queuedAt = TimingDiagnostics.start();
+								TimingDiagnostics.bgaUploadQueued();
+								try {
+									Gdx.app.postRunnable(() -> {
+										TimingDiagnostics.finish(
+												TimingDiagnostics.Metric.BGA_RENDER_QUEUE,
+												queuedAt
+										);
+										long textureLockStarted = TimingDiagnostics.start();
+										try {
+											synchronized (pixmapLock) {
+												TimingDiagnostics.finish(
+														TimingDiagnostics.Metric.BGA_TEXTURE_LOCK,
+														textureLockStarted
+												);
+												try {
+													final Pixmap p = pixmap;
+													if (
+															p == null
+																	|| processorStatus
+																			== ProcessorStatus.DISPOSED
+													) {
+														TimingDiagnostics.increment(
+																TimingDiagnostics.Counter.BGA_UPLOAD_SKIPPED
+														);
+														return;
+													}
+													long uploadStarted = TimingDiagnostics.start();
+													try {
+														preparePixmapForDraw(p);
+														if (
+																showingtex != null
+																		&& showingtex.getWidth() == p.getWidth()
+																		&& showingtex.getHeight() == p.getHeight()
+														) {
+															showingtex.draw(p, 0, 0);
+														} else {
+															if (showingtex != null) {
+																showingtex.dispose();
+															}
+															showingtex = new Texture(p);
+														}
+														processorStatus = ProcessorStatus.TEXTURE_ACTIVE;
+													} finally {
+														TimingDiagnostics.finish(
+																TimingDiagnostics.Metric.BGA_TEXTURE_UPLOAD,
+																uploadStarted
+														);
+													}
+													if (!firstTextureLogged) {
+														firstTextureLogged = true;
+														logger.info(
+																"movie first texture ready: {} size={}x{}",
+																filepath,
+																p.getWidth(),
+																p.getHeight()
+														);
+													}
+												} catch (Throwable e) {
+													TimingDiagnostics.increment(
+															TimingDiagnostics.Counter.BGA_TEXTURE_ERROR
+													);
+													processorStatus = ProcessorStatus.TEXTURE_INACTIVE;
+													logger.error(
+															"movie texture update failed: {}",
+															filepath,
+															e
+													);
+												}
+											}
+										} finally {
+											TimingDiagnostics.bgaUploadFinished();
+										}
+									});
+								} catch (Throwable error) {
+									TimingDiagnostics.bgaUploadFinished();
+									throw error;
+								}
 								// System.out.println("movie pixmap created : " + time);
 							} catch (Throwable e) {
 								throw new GdxRuntimeException("Couldn't load pixmap from image data", e);
@@ -302,6 +355,9 @@ public class FFmpegProcessor implements MovieProcessor {
 			} catch (Throwable e) {
 				failed = true;
 				decoderState = DecoderState.FAILED;
+				TimingDiagnostics.increment(
+						TimingDiagnostics.Counter.BGA_DECODE_ERROR
+				);
 				logger.error("movie decode failed; decoder state FAILED: {}", filepath, e);
 			} finally {
 				try {
@@ -320,6 +376,7 @@ public class FFmpegProcessor implements MovieProcessor {
 						decoderState = DecoderState.DISPOSED;
 						logger.info("movie decoder state DISPOSED: {}", filepath);
 					}
+					TimingDiagnostics.movieDecoderStopped();
 				}
 			}
 		}
@@ -410,6 +467,35 @@ public class FFmpegProcessor implements MovieProcessor {
 				}
 			}
 		}
+
+		private Frame grabImageTimed() throws Exception {
+			long timingStarted = TimingDiagnostics.start();
+			try {
+				return grabber.grabImage();
+			} finally {
+				TimingDiagnostics.finish(
+						TimingDiagnostics.Metric.BGA_DECODE,
+						timingStarted
+				);
+			}
+		}
+
+		private synchronized void retainDiagnosticBytes(long bytes) {
+			if (diagnosticBytesReleased || bytes <= 0) {
+				return;
+			}
+			diagnosticMovieBytes = bytes;
+			TimingDiagnostics.movieBytesRetained(bytes);
+		}
+
+		private synchronized void releaseDiagnosticBytes() {
+			if (diagnosticBytesReleased) {
+				return;
+			}
+			diagnosticBytesReleased = true;
+			TimingDiagnostics.movieBytesReleased(diagnosticMovieBytes);
+			diagnosticMovieBytes = 0;
+		}
 		
 		private void restart() throws Exception {
 			if (setVideoFrameNumber != null) {
@@ -427,7 +513,7 @@ public class FFmpegProcessor implements MovieProcessor {
 			} else {
 				try {
 					grabber.restart();
-					grabber.grabImage();
+					grabImageTimed();
 					logger.debug("movie decoder restart succeeded: {}", filepath);
 				} catch (Throwable e) {
 					logger.warn(

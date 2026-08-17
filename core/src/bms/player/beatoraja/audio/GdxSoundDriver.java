@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.system.TimingDiagnostics;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
@@ -108,30 +109,46 @@ public class GdxSoundDriver extends AbstractAudioDriver<Sound> {
 	
 	@Override
 	protected void play(Sound pcm, int channel, float volume, float pitch) {
-		if(soundthread) {
-			mixer.put(pcm, channel, volume, getGlobalPitch() * pitch);
-		} else {
-			synchronized (lock) {
-				sounds[soundPos].sound = pcm;
-				sounds[soundPos].id = pcm.play(volume, getGlobalPitch() * pitch, 0);
-				sounds[soundPos].channel = channel;
-				soundPos = (soundPos + 1) % sounds.length;
+		long timingStarted = TimingDiagnostics.start();
+		try {
+			if(soundthread) {
+				mixer.put(pcm, channel, volume, getGlobalPitch() * pitch);
+			} else {
+				synchronized (lock) {
+					sounds[soundPos].sound = pcm;
+					sounds[soundPos].id = pcm.play(volume, getGlobalPitch() * pitch, 0);
+					sounds[soundPos].channel = channel;
+					soundPos = (soundPos + 1) % sounds.length;
+				}
 			}
+		} finally {
+			TimingDiagnostics.finish(
+					TimingDiagnostics.Metric.OPENAL_PLAY_CALL,
+					timingStarted
+			);
 		}
 	}
 
 	@Override
 	protected void play(AudioElement<Sound> id, float volume, boolean loop) {
-		if(soundthread) {
-			mixer.put(id.audio, volume, loop);
-		} else {
-			synchronized (lock) {
-				if(loop) {
-					id.id = id.audio.loop(volume);
-				} else {
-					id.id = id.audio.play(volume);
-				}				
+		long timingStarted = TimingDiagnostics.start();
+		try {
+			if(soundthread) {
+				mixer.put(id.audio, volume, loop);
+			} else {
+				synchronized (lock) {
+					if(loop) {
+						id.id = id.audio.loop(volume);
+					} else {
+						id.id = id.audio.play(volume);
+					}
+				}
 			}
+		} finally {
+			TimingDiagnostics.finish(
+					TimingDiagnostics.Metric.OPENAL_PLAY_CALL,
+					timingStarted
+			);
 		}
 	}
 	

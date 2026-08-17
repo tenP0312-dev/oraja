@@ -13,6 +13,7 @@ import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.AudioConfig.WasapiMode;
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.song.SongResource;
+import bms.player.beatoraja.system.TimingDiagnostics;
 
 /**
  * PortAudioドライバ
@@ -258,6 +259,12 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 			stream = null;
 			throw error;
 		}
+		TimingDiagnostics.audioConfigured(
+				audioConfig.getDriver(),
+				deviceOption.hostApiName(),
+				getSampleRate(),
+				framesPerBuffer
+		);
 
 		mixer = new Thread(this);
 		buffer = new float[framesPerBuffer * channels];
@@ -316,6 +323,7 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 	}
 
 	private long put(PCM pcm, int channel, float volume, float pitch, boolean loop) {
+		long timingStarted = TimingDiagnostics.start();
 		synchronized (inputs) {
 			for (MixerInput input : inputs) {
 				if (input.pos == -1) {
@@ -325,11 +333,23 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 					input.loop = loop;
 					input.id = idcount++;
 					input.channel = channel;
+					input.queuedAtNanos = TimingDiagnostics.start();
 					input.pos = 0;
+					TimingDiagnostics.finish(
+							TimingDiagnostics.Metric.PORTAUDIO_ENQUEUE,
+							timingStarted
+					);
 					return input.id;
 				}
 			}
 		}
+		TimingDiagnostics.increment(
+				TimingDiagnostics.Counter.PORTAUDIO_ENQUEUE_REJECTED
+		);
+		TimingDiagnostics.finish(
+				TimingDiagnostics.Metric.PORTAUDIO_ENQUEUE,
+				timingStarted
+		);
 		return -1;
 	}
 
@@ -381,8 +401,20 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 
 	public void run() {
 		while(!stop) {
+			long mixStarted = TimingDiagnostics.start();
 			final float gpitch = getGlobalPitch();
 			synchronized (inputs) {
+				if (mixStarted != 0) {
+					for (MixerInput input : inputs) {
+						if (input.pos != -1 && input.queuedAtNanos != 0) {
+							TimingDiagnostics.finish(
+									TimingDiagnostics.Metric.PORTAUDIO_ENQUEUE_TO_MIX,
+									input.queuedAtNanos
+							);
+							input.queuedAtNanos = 0;
+						}
+					}
+				}
 				for (int i = 0; i < buffer.length; i+=2) {
 					float wav_l = 0;
 					float wav_r = 0;
@@ -420,11 +452,28 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 					buffer[i+1] = wav_r;
 				}						
 			}
+			TimingDiagnostics.finish(
+					TimingDiagnostics.Metric.PORTAUDIO_MIX,
+					mixStarted
+			);
 			
+			long writeStarted = TimingDiagnostics.start();
 			try {
-				stream.write( buffer, buffer.length / 2);
+				if (stream.write(buffer, buffer.length / 2)) {
+					TimingDiagnostics.increment(
+							TimingDiagnostics.Counter.PORTAUDIO_UNDERFLOW
+					);
+				}
 			} catch(Throwable e) {
+				TimingDiagnostics.increment(
+						TimingDiagnostics.Counter.PORTAUDIO_WRITE_ERROR
+				);
 				e.printStackTrace();
+			} finally {
+				TimingDiagnostics.finish(
+						TimingDiagnostics.Metric.PORTAUDIO_WRITE,
+						writeStarted
+				);
 			}
 			
 		}
@@ -455,6 +504,7 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		public boolean loop;
 		public long id;
 		public int channel = -1;
+		public long queuedAtNanos;
 	}
 
 	public record DeviceOption(

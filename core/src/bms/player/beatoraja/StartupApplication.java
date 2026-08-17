@@ -4,6 +4,8 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 
+import bms.player.beatoraja.system.TimingDiagnostics;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +38,7 @@ final class StartupApplication implements ApplicationListener {
         this.requestedDisplayMode = requestedDisplayMode;
         this.fullscreenMode = fullscreenMode;
         this.tasks = main.createStartupTasks();
+        TimingDiagnostics.configure(config);
     }
 
     @Override
@@ -51,10 +54,16 @@ final class StartupApplication implements ApplicationListener {
     @Override
     public void render() {
         if (ready) {
+            long timingStarted = TimingDiagnostics.renderStarted();
             try (var perf = PerformanceMetrics.get().Watch("render")) {
                 main.beforeRender();
                 main.render();
                 main.afterRender();
+            } finally {
+                TimingDiagnostics.finish(
+                        TimingDiagnostics.Metric.RENDER_DURATION,
+                        timingStarted
+                );
             }
             return;
         }
