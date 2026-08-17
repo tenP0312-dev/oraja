@@ -510,6 +510,15 @@ limited to one request, and the in-memory WAV cache is an eight-entry LRU.
 These previews do not create song-library files and continue to follow the
 existing `OFF`, one-shot, and loop setting.
 
+The current development source sends that in-memory resource through the WAV
+decoder with a `.wav` display suffix and keeps preview-only PCM in GC-managed
+buffers. A generated preview is abandoned before a partial result can be
+cached when its plan needs more than 256 sounds, one source exceeds 16 MiB,
+cumulative source data exceeds 64 MiB, one source exceeds its 32 MiB decode/PCM
+budget, or retained decoded samples exceed 96 MiB. The selector then keeps its
+ordinary default BGM. These limits do not change gameplay key-sound loading or
+the priority of explicit and automatically discovered previews.
+
 Archive cache revisions combine filesystem identity/change metadata with
 sampled content so ordinary replacements are noticed even when file size and
 modification time were preserved. This revision also invalidates any

@@ -7,6 +7,7 @@ import bms.model.TimeLine;
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Path;
@@ -42,10 +43,22 @@ public final class GeneratedPreviewRenderer {
     private static final float SILENCE_PEAK = 0.0001f;
     private static final float OUTPUT_PEAK = 0.98f;
 
+    static final Limits DEFAULT_LIMITS = new Limits(
+            256,
+            16L * 1024L * 1024L,
+            64L * 1024L * 1024L,
+            32L * 1024L * 1024L,
+            96L * 1024L * 1024L);
+
     private final int sampleRate;
     private final int channels;
+    private final Limits limits;
 
     public GeneratedPreviewRenderer(int sampleRate, int channels) {
+        this(sampleRate, channels, DEFAULT_LIMITS);
+    }
+
+    GeneratedPreviewRenderer(int sampleRate, int channels, Limits limits) {
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sample rate must be positive");
         }
@@ -54,6 +67,7 @@ public final class GeneratedPreviewRenderer {
         }
         this.sampleRate = sampleRate;
         this.channels = channels;
+        this.limits = java.util.Objects.requireNonNull(limits, "limits");
     }
 
     public RenderResult render(
@@ -79,7 +93,10 @@ public final class GeneratedPreviewRenderer {
         long endMs = saturatingAdd(boundedStartMs, durationMs);
         long prerollStartMs = Math.max(0L, boundedStartMs - NOTE_PREROLL_MS);
         PreviewPlan plan = buildPlan(model, baseResource, boundedStartMs, prerollStartMs, endMs);
-        if (plan.events().isEmpty() || plan.soundIds().isEmpty() || isCancelled(cancelled)) {
+        if (plan.events().isEmpty()
+                || plan.soundIds().isEmpty()
+                || plan.soundIds().size() > limits.maxSoundCount()
+                || isCancelled(cancelled)) {
             return null;
         }
 
@@ -217,9 +234,9 @@ public final class GeneratedPreviewRenderer {
             SongResource baseResource,
             Set<Integer> soundIds,
             BooleanSupplier cancelled) {
-        Map<Integer, PCM> samples = new HashMap<>();
-        DummyAudioDriver driver = new DummyAudioDriver(sampleRate, channels);
         List<Integer> orderedIds = soundIds.stream().sorted().toList();
+        Map<Integer, SongResource> resources = new HashMap<>();
+        long totalSourceBytes = 0L;
         for (int soundId : orderedIds) {
             if (isCancelled(cancelled)) {
                 return Map.of();
@@ -228,12 +245,68 @@ public final class GeneratedPreviewRenderer {
             if (resource == null) {
                 continue;
             }
-            PCM pcm = PCM.load(resource, driver);
+            long sourceBytes = boundedResourceSize(resource);
+            if (sourceBytes < 0L
+                    || sourceBytes > limits.maxSourceBytesPerSound()
+                    || exceedsLimit(totalSourceBytes, sourceBytes, limits.maxTotalSourceBytes())) {
+                return Map.of();
+            }
+            totalSourceBytes += sourceBytes;
+            resources.put(soundId, resource);
+        }
+        if (resources.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, PCM> samples = new HashMap<>();
+        DummyAudioDriver driver = new DummyAudioDriver(sampleRate, channels);
+        long retainedDecodedBytes = 0L;
+        for (int soundId : orderedIds) {
+            if (isCancelled(cancelled)) {
+                return Map.of();
+            }
+            SongResource resource = resources.get(soundId);
+            if (resource == null) {
+                continue;
+            }
+            PCM pcm;
+            try {
+                pcm = PCM.loadBounded(resource, driver, limits.maxAllocatedBytesPerSound());
+            } catch (PCM.PcmLimitExceededException error) {
+                return Map.of();
+            } catch (IOException error) {
+                continue;
+            }
             if (pcm != null) {
+                long decodedBytes = pcm.memoryBytes();
+                if (decodedBytes <= 0L
+                        || exceedsLimit(
+                        retainedDecodedBytes,
+                        decodedBytes,
+                        limits.maxRetainedDecodedBytes())) {
+                    return Map.of();
+                }
+                retainedDecodedBytes += decodedBytes;
                 samples.put(soundId, pcm);
             }
         }
         return samples;
+    }
+
+    private long boundedResourceSize(SongResource resource) {
+        try {
+            long size = resource.size();
+            return size >= 0L ? size : -1L;
+        } catch (IOException error) {
+            return -1L;
+        }
+    }
+
+    private static boolean exceedsLimit(long current, long additional, long maximum) {
+        return current < 0L
+                || additional < 0L
+                || current > maximum
+                || additional > maximum - current;
     }
 
     private void renderEvent(
@@ -471,6 +544,24 @@ public final class GeneratedPreviewRenderer {
     }
 
     private record PreviewPlan(List<PreviewEvent> events, Set<Integer> soundIds) {
+    }
+
+    record Limits(
+            int maxSoundCount,
+            long maxSourceBytesPerSound,
+            long maxTotalSourceBytes,
+            long maxAllocatedBytesPerSound,
+            long maxRetainedDecodedBytes) {
+
+        Limits {
+            if (maxSoundCount <= 0
+                    || maxSourceBytesPerSound <= 0L
+                    || maxTotalSourceBytes <= 0L
+                    || maxAllocatedBytesPerSound <= 0L
+                    || maxRetainedDecodedBytes <= 0L) {
+                throw new IllegalArgumentException("preview limits must be positive");
+            }
+        }
     }
 
     public record RenderResult(ByteBuffer pcmData, int sampleRate, int channels, long durationMs) {

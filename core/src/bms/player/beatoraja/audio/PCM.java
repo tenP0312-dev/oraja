@@ -13,7 +13,6 @@ import org.jflac.metadata.StreamInfo;
 import com.badlogic.gdx.backends.lwjgl3.audio.OggInputStream;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.badlogic.gdx.utils.StreamUtils;
-import com.badlogic.gdx.utils.StreamUtils.OptimizedByteArrayOutputStream;
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
 
@@ -68,44 +67,165 @@ public abstract class PCM<T> {
 
 	public static PCM load(SongResource resource, AudioDriver driver) {
 		try {
-			PCMLoader loader = new PCMLoader(driver);
-			loader.loadPCM(resource);
-			
-			PCM pcm = null;
-			if(loader.bitsPerSample > 16) {
-//				System.out.println("FLOAT");
-				pcm = FloatPCM.loadPCM(loader);				
-			} else if(loader.bitsPerSample == 16) {
-				if(loader.pcm.isDirect()) {
-					pcm = ShortDirectPCM.loadPCM(loader);
-				} else {
-					pcm = ShortPCM.loadPCM(loader);					
-				}
-			} else {
-				// TODO BytePCMのバグが解消されたら切替
-//				pcm = BytePCM.loadPCM(loader);					
-				pcm = ShortPCM.loadPCM(loader);					
-			}
-			
-			// TODO PCMLoader側での逐次変換が実装されたら削除
-			if(pcm != null && ((AbstractAudioDriver)driver).channels != 0 && pcm.channels != ((AbstractAudioDriver)driver).channels) {
-				pcm = pcm.changeChannels(((AbstractAudioDriver)driver).channels);
-			}
-			if(pcm != null && ((AbstractAudioDriver)driver).getSampleRate() != 0 && pcm.sampleRate != ((AbstractAudioDriver)driver).getSampleRate()) {
-				pcm = pcm.changeSampleRate(((AbstractAudioDriver)driver).getSampleRate());
-			}
-			
-			if(pcm.validate()) {
-				return pcm;
-			} else {
-				logger.warn("音源の読み込みに失敗しました - file : {}", resource.displayPath());
-				return null;
-			}
+			return load(resource, driver, false, Long.MAX_VALUE);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
 		return null;
+	}
+
+	/**
+	 * Loads one PCM resource into GC-managed buffers while enforcing a strict
+	 * per-resource allocation budget. This is used by background preview
+	 * generation; normal gameplay keeps the existing direct-buffer path.
+	 */
+	static PCM loadBounded(SongResource resource, AudioDriver driver, long maxAllocatedBytes)
+			throws IOException {
+		if (maxAllocatedBytes <= 0) {
+			throw new IllegalArgumentException("PCM allocation budget must be positive");
+		}
+		return load(resource, driver, true, maxAllocatedBytes);
+	}
+
+	private static PCM load(
+			SongResource resource,
+			AudioDriver driver,
+			boolean heapBuffers,
+			long maxAllocatedBytes) throws IOException {
+		PCMLoader loader = new PCMLoader(driver, heapBuffers, maxAllocatedBytes);
+		loader.loadPCM(resource);
+		long rawPcmBytes = loader.pcm.capacity();
+		long convertedPcmBytes = estimatedPcmBytes(loader);
+		ensureWithinBudget(
+				checkedAdd(rawPcmBytes, convertedPcmBytes),
+				maxAllocatedBytes,
+				resource.displayPath());
+
+		PCM pcm;
+		if(loader.bitsPerSample > 16) {
+//			System.out.println("FLOAT");
+			pcm = FloatPCM.loadPCM(loader);
+		} else if(loader.bitsPerSample == 16) {
+			if(loader.pcm.isDirect()) {
+				pcm = ShortDirectPCM.loadPCM(loader);
+			} else {
+				pcm = ShortPCM.loadPCM(loader);
+			}
+		} else {
+			// TODO BytePCMのバグが解消されたら切替
+//			pcm = BytePCM.loadPCM(loader);
+			pcm = ShortPCM.loadPCM(loader);
+		}
+
+		long allocatedBytes = checkedAdd(rawPcmBytes, pcm.memoryBytes());
+		ensureWithinBudget(allocatedBytes, maxAllocatedBytes, resource.displayPath());
+
+		// TODO PCMLoader側での逐次変換が実装されたら削除
+		if(((AbstractAudioDriver)driver).channels != 0 && pcm.channels != ((AbstractAudioDriver)driver).channels) {
+			long estimatedBytes = scaledBytes(
+					pcm.memoryBytes(),
+					((AbstractAudioDriver)driver).channels,
+					pcm.channels);
+			ensureWithinBudget(
+					checkedAdd(allocatedBytes, estimatedBytes),
+					maxAllocatedBytes,
+					resource.displayPath());
+			PCM converted = pcm.changeChannels(((AbstractAudioDriver)driver).channels);
+			allocatedBytes = checkedAdd(allocatedBytes, converted.memoryBytes());
+			ensureWithinBudget(allocatedBytes, maxAllocatedBytes, resource.displayPath());
+			pcm = converted;
+		}
+		if(((AbstractAudioDriver)driver).getSampleRate() != 0 && pcm.sampleRate != ((AbstractAudioDriver)driver).getSampleRate()) {
+			long estimatedBytes = scaledBytes(
+					pcm.memoryBytes(),
+					((AbstractAudioDriver)driver).getSampleRate(),
+					pcm.sampleRate);
+			ensureWithinBudget(
+					checkedAdd(allocatedBytes, estimatedBytes),
+					maxAllocatedBytes,
+					resource.displayPath());
+			PCM converted = pcm.changeSampleRate(((AbstractAudioDriver)driver).getSampleRate());
+			allocatedBytes = checkedAdd(allocatedBytes, converted.memoryBytes());
+			ensureWithinBudget(allocatedBytes, maxAllocatedBytes, resource.displayPath());
+			pcm = converted;
+		}
+
+		if(pcm.validate()) {
+			return pcm;
+		}
+		logger.warn("音源の読み込みに失敗しました - file : {}", resource.displayPath());
+		return null;
+	}
+
+	long memoryBytes() {
+		if (sample instanceof byte[] bytes) {
+			return bytes.length;
+		}
+		if (sample instanceof short[] shorts) {
+			return (long) shorts.length * Short.BYTES;
+		}
+		if (sample instanceof float[] floats) {
+			return (long) floats.length * Float.BYTES;
+		}
+		if (sample instanceof ByteBuffer buffer) {
+			return buffer.capacity();
+		}
+		return 0L;
+	}
+
+	private static long estimatedPcmBytes(PCMLoader loader) throws IOException {
+		if (loader.bitsPerSample <= 0) {
+			throw new IOException("Invalid PCM sample size");
+		}
+		long inputBytesPerSample = Math.max(1L, (loader.bitsPerSample + 7L) / 8L);
+		long sampleCount = loader.pcm.limit() / inputBytesPerSample;
+		long outputBytesPerSample = loader.bitsPerSample > 16
+				? Float.BYTES
+				: Short.BYTES;
+		return checkedMultiply(sampleCount, outputBytesPerSample);
+	}
+
+	private static long scaledBytes(long bytes, int numerator, int denominator) throws IOException {
+		if (bytes < 0 || numerator <= 0 || denominator <= 0) {
+			throw new IOException("Invalid PCM conversion size");
+		}
+		if (bytes > Long.MAX_VALUE / numerator) {
+			return Long.MAX_VALUE;
+		}
+		long product = bytes * numerator;
+		long rounding = denominator - 1L;
+		return product > Long.MAX_VALUE - rounding
+				? Long.MAX_VALUE
+				: (product + rounding) / denominator;
+	}
+
+	private static long checkedAdd(long left, long right) {
+		if (left < 0 || right < 0 || left > Long.MAX_VALUE - right) {
+			return Long.MAX_VALUE;
+		}
+		return left + right;
+	}
+
+	private static long checkedMultiply(long left, long right) {
+		if (left < 0 || right < 0 || (left != 0 && right > Long.MAX_VALUE / left)) {
+			return Long.MAX_VALUE;
+		}
+		return left * right;
+	}
+
+	private static void ensureWithinBudget(long bytes, long maximum, String displayName)
+			throws IOException {
+		if (bytes < 0 || bytes > maximum) {
+			throw new PcmLimitExceededException(
+					displayName + " exceeds the PCM allocation budget");
+		}
+	}
+
+	static final class PcmLimitExceededException extends IOException {
+		private PcmLimitExceededException(String message) {
+			super(message);
+		}
 	}
 	
 	public static PCM load(String name, AudioDriver driver) {
@@ -171,10 +291,69 @@ public abstract class PCM<T> {
 		int blockAlign = 0;
 		
 		private final AudioDriver driver;
+		private final boolean heapBuffers;
+		private final long maxDecodedBytes;
 		
 		public PCMLoader(AudioDriver driver) {
+			this(driver, false, Long.MAX_VALUE);
+		}
+
+		PCMLoader(AudioDriver driver, boolean heapBuffers, long maxDecodedBytes) {
 			this.driver = driver;
+			this.heapBuffers = heapBuffers;
+			this.maxDecodedBytes = maxDecodedBytes;
 		};
+
+		private ByteBuffer allocatePcmBuffer(int capacity, String displayName) throws IOException {
+			ensureWithinBudget(capacity, maxDecodedBytes, displayName);
+			ByteBuffer result = heapBuffers
+					? ByteBuffer.allocate(capacity)
+					: getDirectByteBuffer(capacity);
+			return result.order(ByteOrder.LITTLE_ENDIAN);
+		}
+
+		private BoundedPcmOutputStream newPcmOutputStream(long preferredCapacity) {
+			long boundedPreferred = heapBuffers
+					? Math.min(preferredCapacity, 64L * 1024L)
+					: preferredCapacity;
+			return new BoundedPcmOutputStream(boundedPreferred, maxDecodedBytes);
+		}
+
+		private void ensureOutputWithinBudget(
+				BoundedPcmOutputStream output,
+				String displayName) throws IOException {
+			if (output.limitExceeded()) {
+				throw new PcmLimitExceededException(
+						displayName + " exceeds the PCM decode budget");
+			}
+		}
+
+		private ByteBuffer decodedPcmBuffer(
+				BoundedPcmOutputStream output,
+				String displayName) throws IOException {
+			if (heapBuffers) {
+				ByteBuffer result = ByteBuffer.wrap(output.buffer()).order(ByteOrder.LITTLE_ENDIAN);
+				result.limit(output.size());
+				return result;
+			}
+			return allocatePcmBuffer(output.size(), displayName)
+					.put(output.buffer(), 0, output.size());
+		}
+
+		private static void copyToHeapBuffer(InputStream input, ByteBuffer output)
+				throws IOException {
+			byte[] chunk = new byte[Math.min(4096, Math.max(1, output.remaining()))];
+			while (output.hasRemaining()) {
+				int length = input.read(chunk);
+				if (length < 0) {
+					throw new EOFException("Unexpected end of PCM stream");
+				}
+				if (length > output.remaining()) {
+					throw new IOException("PCM stream is larger than its declared size");
+				}
+				output.put(chunk, 0, length);
+			}
+		}
 		
 		public void loadPCM(Path p) throws IOException {
 			loadPCM(SongResources.fromPath(p));
@@ -204,12 +383,17 @@ public abstract class PCM<T> {
 						bitsPerSample = input.bitsPerSample;
 						
 						if(bitsPerSample == 16) {
-							pcm = getDirectByteBuffer(input.dataRemaining);
-							StreamUtils.copyStream(input, pcm);
+							pcm = allocatePcmBuffer(input.dataRemaining, displayName);
+							if (heapBuffers) {
+								copyToHeapBuffer(input, pcm);
+							} else {
+								StreamUtils.copyStream(input, pcm);
+							}
 						} else {
-							OptimizedByteArrayOutputStream output = new OptimizedByteArrayOutputStream(input.dataRemaining);
+							BoundedPcmOutputStream output = newPcmOutputStream(input.dataRemaining);
 							StreamUtils.copyStream(input, output);
-							pcm = ByteBuffer.wrap(output.getBuffer()).order(ByteOrder.LITTLE_ENDIAN);
+							ensureOutputWithinBudget(output, displayName);
+							pcm = ByteBuffer.wrap(output.buffer()).order(ByteOrder.LITTLE_ENDIAN);
 							pcm.limit(output.size());
 						}
 						
@@ -225,9 +409,26 @@ public abstract class PCM<T> {
 //						logger.info("sample rate: " + sampleRate);
 //						logger.info("block align" + blockAlign);
 
-						OptimizedByteArrayOutputStream inputByteStream = new OptimizedByteArrayOutputStream(input.dataRemaining);
+						BoundedPcmOutputStream inputByteStream = newPcmOutputStream(input.dataRemaining);
 						StreamUtils.copyStream(input, inputByteStream);
-						ByteBuffer inputByteBuffer = ByteBuffer.wrap(inputByteStream.getBuffer()).order(ByteOrder.LITTLE_ENDIAN);
+						ensureOutputWithinBudget(inputByteStream, displayName);
+						ByteBuffer inputByteBuffer = ByteBuffer.wrap(inputByteStream.buffer())
+								.order(ByteOrder.LITTLE_ENDIAN);
+						inputByteBuffer.limit(inputByteStream.size());
+						long samplesPerBlock = ((long) input.blockAlign - input.channels * 6L)
+								* 2L / input.channels;
+						long blockCount = input.blockAlign > 0
+								? inputByteBuffer.remaining() / input.blockAlign
+								: Long.MAX_VALUE;
+						long decodedBytes = samplesPerBlock > 0
+								? checkedMultiply(
+										checkedMultiply(blockCount, samplesPerBlock),
+										checkedMultiply(input.channels, 2L))
+								: Long.MAX_VALUE;
+						ensureWithinBudget(
+								checkedAdd(inputByteStream.buffer().length, decodedBytes),
+								maxDecodedBytes,
+								displayName);
 
 						MSADPCMDecoder decoder = new MSADPCMDecoder(channels, sampleRate, blockAlign);
 						pcm = decoder.decode(inputByteBuffer);
@@ -243,7 +444,7 @@ public abstract class PCM<T> {
 						try {
 							Bitstream bitstream = new Bitstream(new ByteArrayInputStream(
 									StreamUtils.copyStreamToByteArray(input, input.dataRemaining)));
-							ByteArrayOutputStream output = new ByteArrayOutputStream(4096);
+							BoundedPcmOutputStream output = newPcmOutputStream(4096);
 							MP3Decoder decoder = new MP3Decoder();
 							OutputBuffer outputBuffer = null;
 							while (true) {
@@ -265,10 +466,13 @@ public abstract class PCM<T> {
 								}
 								bitstream.closeFrame();
 								output.write(outputBuffer.getBuffer(), 0, outputBuffer.reset());
+								if (output.limitExceeded()) {
+									break;
+								}
 							}
 							bitstream.close();
-							byte[] bytes = output.toByteArray();
-							pcm = getDirectByteBuffer(bytes.length).put(bytes);
+							ensureOutputWithinBudget(output, displayName);
+							pcm = decodedPcmBuffer(output, displayName);
 							bitsPerSample = 16;
 						} catch (BitstreamException e) {
 							e.printStackTrace();
@@ -278,37 +482,45 @@ public abstract class PCM<T> {
 					default:
 						throw new IOException(displayName + " unsupported WAV format ID : " + input.type);
 					}
-				} catch (Throwable e) {
-					logger.warn("WAV処理中の例外 - file : {} error : {}{}", displayName, e.getMessage(), e.toString());
-				}
+					} catch (PcmLimitExceededException error) {
+						throw error;
+					} catch (Throwable e) {
+						logger.warn("WAV処理中の例外 - file : {} error : {}{}", displayName, e.getMessage(), e.toString());
+					}
 			} else if (name.endsWith(".ogg")) {
 				// ogg
 				try (OggInputStream input = new OggInputStream(new BufferedInputStream(source))) {
 					// final long time = System.nanoTime();
 					// OptimizedByteArrayOutputStream output = new
 					// OptimizedByteArrayOutputStream(4096);
-					OptimizedByteArrayOutputStream output = new OptimizedByteArrayOutputStream(input.getLength() * 16);
+					BoundedPcmOutputStream output = newPcmOutputStream((long) input.getLength() * 16L);
 					byte[] buff = new byte[4096];
 					while (!input.atEnd()) {
 						int length = input.read(buff);
 						if (length == -1)
 							break;
 						output.write(buff, 0, length);
+						if (output.limitExceeded()) {
+							break;
+						}
 					}
+					ensureOutputWithinBudget(output, displayName);
 					
 					channels = input.getChannels();
 					sampleRate = input.getSampleRate();
 					bitsPerSample = 16;
 					
-					pcm = getDirectByteBuffer(output.size()).put(output.getBuffer(), 0, output.size());
+					pcm = decodedPcmBuffer(output, displayName);
 //					System.out.println(name + " - length : " + input.getLength() + " ( " + input.getLength() * 16 + " ) " + " , bytes : " + bytes);
+				} catch (PcmLimitExceededException error) {
+					throw error;
 				} catch (Throwable ex) {
 				}
 			} else if (name.endsWith(".mp3")) {
 				// mp3
 				try {
 					Bitstream bitstream = new Bitstream(new BufferedInputStream(source));
-					ByteArrayOutputStream output = new ByteArrayOutputStream(4096);
+					BoundedPcmOutputStream output = newPcmOutputStream(4096);
 					MP3Decoder decoder = new MP3Decoder();
 					OutputBuffer outputBuffer = null;
 					while (true) {
@@ -330,11 +542,16 @@ public abstract class PCM<T> {
 						}
 						bitstream.closeFrame();
 						output.write(outputBuffer.getBuffer(), 0, outputBuffer.reset());
+						if (output.limitExceeded()) {
+							break;
+						}
 					}
 					bitstream.close();
-					byte[] bytes = output.toByteArray();
-					pcm = getDirectByteBuffer(bytes.length).put(bytes);
+					ensureOutputWithinBudget(output, displayName);
+					pcm = decodedPcmBuffer(output, displayName);
 					bitsPerSample = 16;
+				} catch (PcmLimitExceededException error) {
+					throw error;
 				} catch (Throwable ex) {
 				}
 			} else if (name.endsWith(".flac")) {
@@ -348,17 +565,25 @@ public abstract class PCM<T> {
 					sampleRate = info.getSampleRate();
 					bitsPerSample = info.getBitsPerSample();
 					
-					OptimizedByteArrayOutputStream output = new OptimizedByteArrayOutputStream((int)info.getTotalSamples() * 16);
+					long expectedBytes = info.getTotalSamples() > 0
+							? checkedMultiply(
+									checkedMultiply(info.getTotalSamples(), Math.max(1L, channels)),
+									Math.max(1L, (bitsPerSample + 7L) / 8L))
+							: 4096L;
+					BoundedPcmOutputStream output = newPcmOutputStream(expectedBytes);
 					input.addPCMProcessor(new FlacProcessor(output));
 					
 					input.decodeFrames();
+					ensureOutputWithinBudget(output, displayName);
 					
 					if(bitsPerSample == 16) {
-						pcm = getDirectByteBuffer(output.size()).put(output.getBuffer(), 0, output.size());						
+						pcm = decodedPcmBuffer(output, displayName);
 					} else {
-						pcm = ByteBuffer.wrap(output.getBuffer()).order(ByteOrder.LITTLE_ENDIAN);
+						pcm = ByteBuffer.wrap(output.buffer()).order(ByteOrder.LITTLE_ENDIAN);
 						pcm.limit(output.size());						
 					}
+				} catch (PcmLimitExceededException error) {
+					throw error;
 				} catch (Throwable ex) {
 					ex.printStackTrace();
 				}
@@ -367,6 +592,7 @@ public abstract class PCM<T> {
 			if(pcm == null) {
 				throw new IOException(displayName + " : can't convert to PCM");
 			}
+			ensureWithinBudget(pcm.limit(), maxDecodedBytes, displayName);
 			
 			int bytes = pcm.limit();
 			bytes -= bytes % (channels > 1 ? bitsPerSample / 4 : bitsPerSample / 8);
@@ -394,10 +620,59 @@ public abstract class PCM<T> {
 			pcm.limit(bytes);
 			
 //			System.out.println(p.getFileName().toString() + " - " + sampleRate + " Hz, " + bitsPerSample + " bits, " + channels + " channels");
+			}
 		}
-		
+
+	private static final class BoundedPcmOutputStream extends ByteArrayOutputStream {
+		private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+
+		private final int maximum;
+		private boolean limitExceeded;
+
+		private BoundedPcmOutputStream(long preferredCapacity, long maximumBytes) {
+			super(initialCapacity(preferredCapacity, maximumBytes));
+			this.maximum = (int) Math.min(MAX_ARRAY_SIZE, Math.max(0L, maximumBytes));
+		}
+
+		@Override
+		public synchronized void write(int value) {
+			if (limitExceeded || count >= maximum) {
+				limitExceeded = true;
+				return;
+			}
+			super.write(value);
+		}
+
+		@Override
+		public synchronized void write(byte[] source, int offset, int length) {
+			if (source == null) {
+				throw new NullPointerException();
+			}
+			if (offset < 0 || length < 0 || offset > source.length - length) {
+				throw new IndexOutOfBoundsException();
+			}
+			if (limitExceeded || length > maximum - count) {
+				limitExceeded = true;
+				return;
+			}
+			super.write(source, offset, length);
+		}
+
+		private byte[] buffer() {
+			return buf;
+		}
+
+		private boolean limitExceeded() {
+			return limitExceeded;
+		}
+
+		private static int initialCapacity(long preferredCapacity, long maximumBytes) {
+			long maximum = Math.min(MAX_ARRAY_SIZE, Math.max(0L, maximumBytes));
+			long preferred = Math.max(32L, preferredCapacity);
+			return (int) Math.min(preferred, maximum);
+		}
 	}
-	
+
 	/** @author Nathan Sweet */
 	private static class WavInputStream extends FilterInputStream {
 		private int dataRemaining;

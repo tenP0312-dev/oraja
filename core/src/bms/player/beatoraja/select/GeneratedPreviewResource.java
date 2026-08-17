@@ -71,7 +71,7 @@ final class GeneratedPreviewResource implements SongResource {
 
     @Override
     public String displayPath() {
-        return "memory:" + cacheKey;
+        return "memory:" + cacheKey + ":generated-preview.wav";
     }
 
     @Override

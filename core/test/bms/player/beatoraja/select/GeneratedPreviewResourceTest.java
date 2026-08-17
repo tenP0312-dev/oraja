@@ -1,6 +1,8 @@
 package bms.player.beatoraja.select;
 
 import bms.player.beatoraja.audio.GeneratedPreviewRenderer;
+import bms.player.beatoraja.audio.PcmTestSupport;
+import bms.player.beatoraja.audio.ShortPCM;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -9,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GeneratedPreviewResourceTest {
 
@@ -29,5 +34,11 @@ class GeneratedPreviewResourceTest {
         assertArrayEquals(new byte[]{123, 0, 56, -2}, java.util.Arrays.copyOfRange(wave, 44, 48));
         assertEquals(250, resource.durationMs());
         assertEquals("cache-key", resource.cacheKey());
+        assertEquals("generated-preview.wav", resource.name());
+        assertTrue(resource.displayPath().endsWith(".wav"));
+        var decoded = PcmTestSupport.load(resource, 8_000);
+        assertNotNull(decoded);
+        ShortPCM shortPcm = assertInstanceOf(ShortPCM.class, decoded);
+        assertArrayEquals(new short[]{123, -456}, shortPcm.sample);
     }
 }
