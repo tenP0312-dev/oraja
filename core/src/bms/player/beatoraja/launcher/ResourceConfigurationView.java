@@ -563,8 +563,12 @@ public class ResourceConfigurationView implements Initializable {
 
 		Label instructions = new Label(resources.getString("CHOOSE_EXISTING_TABLES_DESCRIPTION"));
 		instructions.setWrapText(true);
-		VBox choices = new VBox(1);
 		List<CheckBox> selectors = new ArrayList<>();
+		EnumMap<Config.AvailableTableGroup, List<TableChoiceRow>> rowsByGroup =
+				new EnumMap<>(Config.AvailableTableGroup.class);
+		for (Config.AvailableTableGroup group : Config.AvailableTableGroup.values()) {
+			rowsByGroup.put(group, new ArrayList<>());
+		}
 		List<String> configuredTableUrls = tableurl.getItems().stream()
 				.map(TableInfo::getUrl)
 				.toList();
@@ -576,9 +580,10 @@ public class ResourceConfigurationView implements Initializable {
 			selector.setUserData(tableUrl);
 			selector.setSelected(choiceState.alreadyAdded());
 			selector.setDisable(choiceState.alreadyAdded());
-			selector.setMinWidth(210);
-			selector.setPrefWidth(210);
-			selector.setMaxWidth(210);
+			selector.setMinWidth(280);
+			selector.setPrefWidth(300);
+			selector.setMaxWidth(320);
+			selector.setTextOverrun(OverrunStyle.ELLIPSIS);
 			selectors.add(selector);
 
 			String detailText = info.getComment();
@@ -595,19 +600,81 @@ public class ResourceConfigurationView implements Initializable {
 			choice.setAlignment(Pos.CENTER_LEFT);
 			choice.setPadding(new Insets(3, 6, 3, 6));
 			HBox.setHgrow(detail, Priority.ALWAYS);
-			choices.getChildren().add(choice);
+			String searchText = String.join("\n", name, detailText, tableUrl).toLowerCase(Locale.ROOT);
+			rowsByGroup.get(choiceState.group()).add(
+					new TableChoiceRow(choiceState, choice, searchText));
 		}
 
+		VBox beginnerPrimaryChoices = choiceRows(rowsByGroup.get(Config.AvailableTableGroup.BEGINNER), false);
+		VBox crossGameChoices = choiceRows(rowsByGroup.get(Config.AvailableTableGroup.BEGINNER), true);
+		TitledPane crossGamePane = tableGroupPane(
+				resources.getString("TABLE_GROUP_CROSS_GAME") + " (" + crossGameChoices.getChildren().size() + ")",
+				crossGameChoices, false);
+		VBox beginnerChoices = new VBox(4, beginnerPrimaryChoices, crossGamePane);
+		TitledPane beginnerPane = tableGroupPane(
+				groupTitle("TABLE_GROUP_BEGINNER", rowsByGroup.get(Config.AvailableTableGroup.BEGINNER)),
+				beginnerChoices, true);
+		TitledPane bmsirPane = tableGroupPane(
+				groupTitle("TABLE_GROUP_BMSIR", rowsByGroup.get(Config.AvailableTableGroup.BMSIR)),
+				choiceRows(rowsByGroup.get(Config.AvailableTableGroup.BMSIR), null), true);
+		TitledPane otherPane = tableGroupPane(
+				groupTitle("TABLE_GROUP_OTHER", rowsByGroup.get(Config.AvailableTableGroup.OTHER)),
+				choiceRows(rowsByGroup.get(Config.AvailableTableGroup.OTHER), null), false);
+
+		VBox groups = new VBox(6, beginnerPane, bmsirPane, otherPane);
+		Label noMatches = new Label(resources.getString("TABLE_SEARCH_NO_MATCHES"));
+		noMatches.setVisible(false);
+		noMatches.setManaged(false);
+
+		TextField search = new TextField();
+		search.setPromptText(resources.getString("TABLE_SEARCH_PROMPT"));
+		Label searchLabel = new Label(resources.getString("TABLE_SEARCH_LABEL"));
+		searchLabel.setLabelFor(search);
+		search.textProperty().addListener((observable, oldValue, newValue) -> {
+			String query = newValue == null ? "" : newValue.strip().toLowerCase(Locale.ROOT);
+			boolean beginnerMatches = updateTableChoiceVisibility(
+					rowsByGroup.get(Config.AvailableTableGroup.BEGINNER), query);
+			boolean bmsirMatches = updateTableChoiceVisibility(
+					rowsByGroup.get(Config.AvailableTableGroup.BMSIR), query);
+			boolean otherMatches = updateTableChoiceVisibility(
+					rowsByGroup.get(Config.AvailableTableGroup.OTHER), query);
+			boolean searching = !query.isEmpty();
+			boolean crossGameMatches = rowsByGroup.get(Config.AvailableTableGroup.BEGINNER).stream()
+					.anyMatch(row -> row.choice().crossGameSpecific() && row.node().isVisible());
+			beginnerPane.setVisible(!searching || beginnerMatches);
+			beginnerPane.setManaged(!searching || beginnerMatches);
+			bmsirPane.setVisible(!searching || bmsirMatches);
+			bmsirPane.setManaged(!searching || bmsirMatches);
+			otherPane.setVisible(!searching || otherMatches);
+			otherPane.setManaged(!searching || otherMatches);
+			crossGamePane.setVisible(!searching || crossGameMatches);
+			crossGamePane.setManaged(!searching || crossGameMatches);
+			if (searching) {
+				beginnerPane.setExpanded(beginnerMatches);
+				bmsirPane.setExpanded(bmsirMatches);
+				otherPane.setExpanded(otherMatches);
+				crossGamePane.setExpanded(crossGameMatches);
+			} else {
+				beginnerPane.setExpanded(true);
+				bmsirPane.setExpanded(true);
+				otherPane.setExpanded(false);
+				crossGamePane.setExpanded(false);
+			}
+			boolean hasMatches = beginnerMatches || bmsirMatches || otherMatches;
+			noMatches.setVisible(searching && !hasMatches);
+			noMatches.setManaged(searching && !hasMatches);
+		});
+
 		if (selectors.isEmpty()) {
-			choices.getChildren().add(new Label(resources.getString("NO_AVAILABLE_TABLES")));
+			groups.getChildren().setAll(new Label(resources.getString("NO_AVAILABLE_TABLES")));
 		}
-		ScrollPane scroll = new ScrollPane(choices);
+		ScrollPane scroll = new ScrollPane(groups);
 		scroll.setFitToWidth(true);
-		scroll.setPrefViewportWidth(500);
-		scroll.setPrefViewportHeight(250);
-		VBox content = new VBox(8, instructions, scroll);
+		scroll.setPrefViewportWidth(680);
+		scroll.setPrefViewportHeight(360);
+		VBox content = new VBox(8, instructions, searchLabel, search, noMatches, scroll);
 		dialog.getDialogPane().setContent(content);
-		dialog.getDialogPane().setPrefWidth(540);
+		dialog.getDialogPane().setPrefWidth(720);
 
 		Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
 		Runnable updateAddButton = () -> addButton.setDisable(selectors.stream()
@@ -808,11 +875,61 @@ public class ResourceConfigurationView implements Initializable {
 		knownUrls.addAll(availableUrls);
 		Set<String> configured = new HashSet<>(configuredUrls);
 		return knownUrls.stream()
-				.map(url -> new TableChoice(url, configured.contains(url)))
+				.map(url -> new TableChoice(
+						url,
+						configured.contains(url),
+						Config.availableTableGroup(url),
+						Config.isCrossGameSpecificTable(url)))
 				.toList();
 	}
 
-	record TableChoice(String url, boolean alreadyAdded) {
+	private VBox choiceRows(List<TableChoiceRow> rows, Boolean crossGameSpecific) {
+		VBox choices = new VBox(1);
+		rows.stream()
+				.filter(row -> crossGameSpecific == null
+						|| row.choice().crossGameSpecific() == crossGameSpecific)
+				.forEach(row -> choices.getChildren().add(row.node()));
+		return choices;
+	}
+
+	private TitledPane tableGroupPane(String title, Node content, boolean expanded) {
+		TitledPane pane = new TitledPane(title, content);
+		pane.setAnimated(false);
+		pane.setExpanded(expanded);
+		return pane;
+	}
+
+	private String groupTitle(String resourceKey, List<TableChoiceRow> rows) {
+		return resources.getString(resourceKey) + " (" + rows.size() + ")";
+	}
+
+	static boolean tableChoiceMatches(String searchText, String query) {
+		return query == null || query.isBlank()
+				|| searchText.toLowerCase(Locale.ROOT).contains(query.strip().toLowerCase(Locale.ROOT));
+	}
+
+	private boolean updateTableChoiceVisibility(List<TableChoiceRow> rows, String query) {
+		boolean anyVisible = false;
+		for (TableChoiceRow row : rows) {
+			boolean visible = tableChoiceMatches(row.searchText(), query);
+			row.node().setVisible(visible);
+			row.node().setManaged(visible);
+			anyVisible |= visible;
+		}
+		return anyVisible;
+	}
+
+	record TableChoice(
+			String url,
+			boolean alreadyAdded,
+			Config.AvailableTableGroup group,
+			boolean crossGameSpecific) {
+	}
+
+	private record TableChoiceRow(
+			TableChoice choice,
+			HBox node,
+			String searchText) {
 	}
 
 	private void moveTable(TableInfo info, int direction) {
@@ -964,7 +1081,20 @@ public class ResourceConfigurationView implements Initializable {
 			Map.entry("http://rattoto10.jounin.jp/table.html", new Pair<String, String>("NEW GENERATION \u901a\u5e38 (Normal 2)", "Post 2016 Normal Table \u26061-\u260612")),
 			Map.entry("http://rattoto10.jounin.jp/table_insane.html", new Pair<String, String>("NEW GENERATION \u767a\u72c2 (Insane 2)", "Post 2016 Insane Table \u26051-\u260525")),
 			// overjoy
-			Map.entry("https://rattoto10.jounin.jp/table_overjoy.html", new Pair<String, String>("NEW GENERATION overjoy", "New overjoy. \u2605\u26050-\u2605\u26057")),
+			Map.entry("https://rattoto10.jounin.jp/table_overjoy.html", new Pair<String, String>("\u7b2c3\u671fOverjoy", "Third-generation Overjoy table. \u2605\u26050-\u2605\u26057")),
+			Map.entry("https://lr2.sakura.ne.jp/overjoy.php", new Pair<String, String>("Overjoy", "Current Overjoy table")),
+			Map.entry("https://bmsnormal2.syuriken.jp/table_insane.html", new Pair<String, String>("\u7b2c2\u767a\u72c2\u96e3\u6613\u5ea6", "Second insane table")),
+			Map.entry("https://bmsnormal2.syuriken.jp/table.html", new Pair<String, String>("\u7b2c2\u901a\u5e38\u96e3\u6613\u5ea6\u8868", "Second normal table")),
+			Map.entry("https://stellabms.xyz/sr/table.html", new Pair<String, String>("STELLAVERSE Starlight", "Normal difficulty sr1-sr12")),
+			Map.entry("https://rattoto10.web.fc2.com/kuse_library/table.html", new Pair<String, String>("\u7656\u8b5c\u9762\u30e9\u30a4\u30d6\u30e9\u30ea\u30fc", "Quirky-pattern library")),
+			Map.entry("https://rattoto10.web.fc2.com/kuse_library/sub/table.html", new Pair<String, String>("\u7656\u8b5c\u9762\u30e9\u30a4\u30d6\u30e9\u30ea\u30fc \u30b5\u30d6", "Quirky-pattern library subtable")),
+			Map.entry("https://mplwtch.github.io/Solomon/", new Pair<String, String>("Solomon\u96e3\u6613\u5ea6\u8868", "BMS-IR supported table")),
+			Map.entry("https://monsta-bms.github.io/appamada/", new Pair<String, String>("\u4e0d\u653e\u9038", "BMS-IR supported table")),
+			Map.entry("https://potechang.github.io/like_st/", new Pair<String, String>("BMS\u73fe\u4ee3\u767a\u72c2\u8b5c\u9762\u5bc4\u305b\u96c6\u3081", "Modern insane-chart collection")),
+			Map.entry("https://verticalsub.web.fc2.com/jiriki/table.html", new Pair<String, String>("BMS\u5730\u529b\u8b5c\u9762\u30a2\u30fc\u30ab\u30a4\u30d6", "Fundamental-skill chart archive")),
+			Map.entry("https://akaza2nd.github.io/zetsu/", new Pair<String, String>("\u8155\u30ac\u30c1\u96e3\u6613\u5ea6\u8868", "Chord and physical-skill table")),
+			Map.entry("https://lets-go-time-hell.github.io/mini-jack/", new Pair<String, String>("\u9023\u6253\u7d61\u307f\u96e3\u6613\u5ea6\u8868", "Mini-jack and repeated-note table")),
+			Map.entry("https://kenpel.github.io/objeCraft/table14/", new Pair<String, String>("\u767a\u72c214keyBMS\u95c7\u934b\u96e3\u6613\u5ea6\u8868", "14-key BMS table")),
 			// stream + chordjack
 			Map.entry("https://lets-go-time-hell.github.io/code-stream-table/", new Pair<String, String>("16\u5206\u4e71 (16th streams)", "Chordstream focus. Wide difficulty \u260611-\u260520+")),
 			Map.entry("https://lets-go-time-hell.github.io/Arm-Shougakkou-table/", new Pair<String, String>("\u30a6\u30fc\u30c7\u30aa\u30b7\u5c0f\u5b66\u6821 (Ude table)", "Chordjack/wide chords focus. Satellite difficulty")),
@@ -982,12 +1112,50 @@ public class ResourceConfigurationView implements Initializable {
 			Map.entry("https://stellabms.xyz/upload.html", new Pair<String, String>("Stella Uploader", "Stellaverse uploader. Insane \u26051-\u260525+")),
 			Map.entry("https://exturbow.github.io/github.io/index.html", new Pair<String, String>("BMS\u56f3\u66f8\u9928 (Turbow's Toshokan)", "Rates BMS event submissions. Wide difficulty \u26061-\u260525+")),
 			//Map.entry("http://upl.konjiki.jp/", new Pair<String, String>("差分アップローダー (Black train uploader)", "Manually assigned difficulty. Insane \u26050-\u260525+")),
-			// beginner
+			// Beginner-friendly cross-game tables hosted by BMS-IR
+			Map.entry("https://www.bms-ir.org/new/table/61", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - \u5168\u66f2\u30de\u30b9\u30bf\u30fc", "Beginner-friendly master; levels sync to the game-specific tables")),
+			Map.entry("https://www.bms-ir.org/new/table/62", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - CHUNITHM", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/63", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - maimai", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/64", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - SOUND VOLTEX", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/65", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Phigros", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/66", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Arcaea", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/67", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Muse Dash", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/68", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - \u592a\u9f13\u306e\u9054\u4eba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/69", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - \u30aa\u30f3\u30b2\u30ad", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/70", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - GROOVE COASTER", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/71", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Cytus\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/72", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - DEEMO\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/73", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - VOEZ", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/74", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Lanota", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/75", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - KALPA\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/76", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Rotaeno", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/77", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Paradigm: Reboot", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/78", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Orzmic", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/79", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - ChainBeeT", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/80", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - DanceRail\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/81", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - RAVON", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/82", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Dynamix", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/83", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - MUSYNC / MUSYNX", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/84", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Pump It Up", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/85", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - WACCA", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/86", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - DJMAX\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/87", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - EZ2ON\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/88", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - EZ2AC / EZ2DJ\u30b7\u30ea\u30fc\u30ba", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/89", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - D4DJ Groovy Mix", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/90", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Tone Sphere", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/91", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - MUSIC DIVER", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/92", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Polaris Chord", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/93", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - TAKUMI\u00b3", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/94", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Rizline", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/95", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - MUSECA", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/96", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Nostalgia", "Game-specific beginner table")),
+			Map.entry("https://www.bms-ir.org/new/table/97", new Pair<String, String>("\u4ed6\u6a5f\u7a2e\u53ce\u9332BMS - Synchronica", "Game-specific beginner table")),
+			// Other beginner-oriented tables remain in the general Other section.
 			Map.entry("http://fezikedifficulty.futene.net/list.html", new Pair<String, String>("\u6c60\u7530\u7684 (Ikeda's Beginner)", "Beginner focused table. 19 levels \u26061-\u260611+")),
 			// LN
 			Map.entry("https://ladymade-star.github.io/luminous/table.html", new Pair<String, String>("Luminous", "Active LN table. \u25c61-\u25c627")),
 			Map.entry("https://vinylhouse.web.fc2.com/lntougou/difficulty.html", new Pair<String, String>("Longnote\u7d71\u5408\u8868 (LN Combined)", "\u25c61-\u25c627")),
-			Map.entry("http://flowermaster.web.fc2.com/lrnanido/gla/LN.html", new Pair<String, String>("LN\u96e3\u6613\u5ea6", "Old LN table \u25c61-\u25c626")),
+			Map.entry("http://flowermaster.web.fc2.com/lrnanido/gla/LN.html", new Pair<String, String>("\u7b2c3\u671fLN\u96e3\u6613\u5ea6\u8868", "BMS-IR supported LN table \u25c61-\u25c626")),
 			Map.entry("https://skar-wem.github.io/ln/", new Pair<String, String>("LN Curtain", "Full/inverse LN charts. \u25c61-\u25c626")),
 			Map.entry("http://cerqant.web.fc2.com/zindy/table.html", new Pair<String, String>("zindy LN", "Difficult shield stair patterns. Hard LN \u25c615-\u25c627+")),
 			Map.entry("https://notepara.com/glassist/lnoj", new Pair<String, String>("LNoverjoy", "Hard LN table. \u25c615-\u25c627")),

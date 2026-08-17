@@ -7,13 +7,15 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.system.RobustFile;
-import java.util.Map;
-import java.util.HashMap;
-
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.tool.mdprocessor.HttpDownloadProcessor;
 import com.badlogic.gdx.math.MathUtils;
@@ -232,74 +234,80 @@ public class Config implements Validatable {
 	 *
 	 * A users tableurl list is subtracted from this list to avoid unintentional duplicate table entries
 	 */
-    public static final String[] AVAILABLE_TABLEURL = {
-			//
-			// Default list
-			//
-			// stardust, starlight, satellite, stella
-			"https://mqppppp.neocities.org/StardustTable.html",
-			"https://djkuroakari.github.io/starlighttable.html",
-			"https://stellabms.xyz/sl/table.html",
-			"https://stellabms.xyz/st/table.html",
-			// normal 1/2 insane 1/2
+	public static final String CROSS_GAME_MASTER_TABLE_URL = "https://www.bms-ir.org/new/table/61";
+
+	public enum AvailableTableGroup {
+		BEGINNER,
+		BMSIR,
+		OTHER
+	}
+
+	public static final String[] BEGINNER_AVAILABLE_TABLEURL = Stream.concat(
+			Stream.of(CROSS_GAME_MASTER_TABLE_URL),
+			java.util.stream.IntStream.rangeClosed(62, 97)
+					.mapToObj(id -> "https://www.bms-ir.org/new/table/" + id))
+			.toArray(String[]::new);
+
+	public static final String[] BMSIR_AVAILABLE_TABLEURL = {
 			"https://darksabun.club/table/archive/normal1/",
 			"https://darksabun.club/table/archive/insane1/",
+			"https://lr2.sakura.ne.jp/overjoy.php",
+			"https://bmsnormal2.syuriken.jp/table_insane.html",
+			"https://bmsnormal2.syuriken.jp/table.html",
 			"http://rattoto10.jounin.jp/table.html",
 			"http://rattoto10.jounin.jp/table_insane.html",
-			// overjoy
 			"https://rattoto10.jounin.jp/table_overjoy.html",
-			//
-			// Optional list
-			//
-			// stream + chordjack
-			"https://lets-go-time-hell.github.io/code-stream-table/",
-			"https://lets-go-time-hell.github.io/Arm-Shougakkou-table/",
-			"https://su565fx.web.fc2.com/Gachimijoy/gachimijoy.html",
-			// stellaverse quirked up
+			"https://stellabms.xyz/sr/table.html",
+			"https://stellabms.xyz/sl/table.html",
 			"https://stellabms.xyz/so/table.html",
+			"https://stellabms.xyz/st/table.html",
 			"https://stellabms.xyz/sn/table.html",
-			// osu
+			"https://rattoto10.web.fc2.com/kuse_library/table.html",
+			"https://rattoto10.web.fc2.com/kuse_library/sub/table.html",
+			"http://flowermaster.web.fc2.com/lrnanido/gla/LN.html",
+			"https://mplwtch.github.io/Solomon/",
+			"https://monsta-bms.github.io/appamada/",
+			"https://potechang.github.io/like_st/",
+			"https://verticalsub.web.fc2.com/jiriki/table.html",
+			"https://akaza2nd.github.io/zetsu/",
+			"https://su565fx.web.fc2.com/Gachimijoy/gachimijoy.html",
+			"https://lets-go-time-hell.github.io/code-stream-table/",
+			"https://monibms.github.io/Dystopia/dystopia.html",
+			"https://lets-go-time-hell.github.io/Delay-joy-table/",
+			"https://lets-go-time-hell.github.io/mini-jack/",
+			"https://deltabms.yaruki0.net/table/data/dpdelta_head.json",
+			"https://deltabms.yaruki0.net/table/data/insane_head.json",
+			"http://ereter.net/dpoverjoy/",
+			"https://stellabms.xyz/dp/table.html",
+			"https://stellabms.xyz/dpst/table.html",
+			"https://yaruki0.net/DPlibrary/",
+			"https://kenpel.github.io/objeCraft/table14/",
+	};
+
+	public static final String[] OTHER_AVAILABLE_TABLEURL = {
+			"https://mqppppp.neocities.org/StardustTable.html",
+			"https://djkuroakari.github.io/starlighttable.html",
+			"https://lets-go-time-hell.github.io/Arm-Shougakkou-table/",
 			"https://air-afother.github.io/osu-table/",
-			// AI
 			"https://bms.hexlataia.xyz/tables/ai.html",
-			// Library
 			"https://bms.hexlataia.xyz/tables/db.html",
 			"https://stellabms.xyz/upload.html",
 			"https://exturbow.github.io/github.io/index.html",
 			"https://bms.hexlataia.xyz/tables/olduploader.html",
-			//"http://upl.konjiki.jp/",
-			// beginner
 			"http://fezikedifficulty.futene.net/list.html",
-			// LN
 			"https://ladymade-star.github.io/luminous/table.html",
 			"https://vinylhouse.web.fc2.com/lntougou/difficulty.html",
-			"http://flowermaster.web.fc2.com/lrnanido/gla/LN.html",
 			"https://skar-wem.github.io/ln/",
 			"http://cerqant.web.fc2.com/zindy/table.html",
 			"https://notepara.com/glassist/lnoj",
-			// Scratch
 			"https://egret9.github.io/Scramble/",
 			"http://minddnim.web.fc2.com/sara/3rd_hard/bms_sara_3rd_hard.html",
-			// delay
-			"https://lets-go-time-hell.github.io/Delay-joy-table/",
 			"https://kamikaze12345.github.io/github.io/delaytrainingtable/table.html",
 			"https://wrench616.github.io/Delay/",
-			// high difficulty
 			"https://darksabun.club/table/archive/old-overjoy/",
-			"https://monibms.github.io/Dystopia/dystopia.html",
 			"https://www.firiex.com/tables/joverjoy",
-			// hard judge
 			"https://plyfrm.github.io/table/timing/",
-			// artist search
 			"https://plyfrm.github.io/table/bmssearch/index.html",
-			// DP
-			"https://yaruki0.net/DPlibrary/",
-			"https://stellabms.xyz/dp/table.html",
-			"https://stellabms.xyz/dpst/table.html",
-			"https://deltabms.yaruki0.net/table/data/dpdelta_head.json",
-			"https://deltabms.yaruki0.net/table/data/insane_head.json",
-			"http://ereter.net/dpoverjoy/",
-			// Stella Extensions
 			"https://notmichaelchen.github.io/stella-table-extensions/satellite-easy.html",
 			"https://notmichaelchen.github.io/stella-table-extensions/satellite-normal.html",
 			"https://notmichaelchen.github.io/stella-table-extensions/satellite-hard.html",
@@ -312,12 +320,33 @@ public class Config implements Validatable {
 			"https://notmichaelchen.github.io/stella-table-extensions/dp-satellite-normal.html",
 			"https://notmichaelchen.github.io/stella-table-extensions/dp-satellite-hard.html",
 			"https://notmichaelchen.github.io/stella-table-extensions/dp-satellite-fullcombo.html",
-			// Walkure
 			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=easy",
 			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=normal",
 			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=hard",
 			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=fc",
-    };
+	};
+
+	public static final String[] AVAILABLE_TABLEURL = Stream.of(
+			BEGINNER_AVAILABLE_TABLEURL,
+			BMSIR_AVAILABLE_TABLEURL,
+			OTHER_AVAILABLE_TABLEURL)
+			.flatMap(Arrays::stream)
+			.toArray(String[]::new);
+
+	public static AvailableTableGroup availableTableGroup(String url) {
+		if (Arrays.asList(BEGINNER_AVAILABLE_TABLEURL).contains(url)) {
+			return AvailableTableGroup.BEGINNER;
+		}
+		if (Arrays.asList(BMSIR_AVAILABLE_TABLEURL).contains(url)) {
+			return AvailableTableGroup.BMSIR;
+		}
+		return AvailableTableGroup.OTHER;
+	}
+
+	public static boolean isCrossGameSpecificTable(String url) {
+		return availableTableGroup(url) == AvailableTableGroup.BEGINNER
+				&& !CROSS_GAME_MASTER_TABLE_URL.equals(url);
+	}
 
 	private static final String[] DEFAULT_TABLEURL = {
 			// stardust, starlight, satellite, stella
