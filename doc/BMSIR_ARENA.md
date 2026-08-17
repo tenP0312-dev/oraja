@@ -9,7 +9,9 @@ Version `0.4.14.55` adds a default-OFF path for missing difficulty-table songs
 to download the HTTP(S) archive registered with BMS-IR, then try one Wayback
 snapshot if the live response cannot be installed. Accepted ZIP, RAR4/RAR5,
 and 7z packages remain compressed and must pass bounded archive checks plus
-the requested chart MD5. These checks are not antivirus scanning.
+the requested chart MD5. The current development source also resolves bounded
+archive links from registered HTML distribution pages. These checks are not
+antivirus scanning.
 
 The current development source persists the last non-fullscreen WINDOW or
 BORDERLESS mode independently from fullscreen. A client that enters
@@ -452,22 +454,36 @@ and shows loaded/rejected archive totals when the update finishes.
 Version `0.4.14.55` adds an independent, default-off
 `Download from BMS-IR body URLs` option under Other settings. When a
 missing difficulty-table chart carries an HTTP(S) body URL, selecting or batch
-filling that chart uses the registered URL. If the live response cannot be
-installed, the client asks the Wayback Availability API for one archived
-snapshot of the same URL and tries that snapshot. With the option disabled, or
-when an entry has no eligible body URL, the existing IPFS and configured HTTP
-provider routes keep their previous behavior. BMS-IR's own `/new/song` page is
-treated as a browser page rather than an archive URL.
+filling that chart uses the registered URL. A direct ZIP/RAR/7z response keeps
+the original path. A response recognized as HTML is limited to 2 MiB and may
+contribute at most 12 HTTP(S) ZIP/RAR/7z anchor links in document order. Each
+candidate is downloaded and independently validated; scripts, forms, browser
+automation, nested landing pages, and non-archive links are ignored. If the
+live route cannot be installed, the client asks the Wayback Availability API
+for one archived snapshot of the registered URL. An archived landing page may
+resolve its rewritten archive link through the same bounded path. With the
+option disabled, or when an entry has no eligible body URL, the existing IPFS
+and configured HTTP provider routes keep their previous behavior. BMS-IR's own
+`/new/song` page is treated as a browser page rather than an archive URL.
 
 Body downloads are limited to 2 GiB and ignore the remote filename and
 `Content-Disposition`. A response is first written to a generated staging
 file, recognized only by a ZIP, RAR4/RAR5, or 7z content signature, and passed
 through the existing archive entry/path/count/expanded-size/encryption checks.
+Every request and redirect rejects resolved loopback, link-local, private,
+multicast, and other non-public network destinations. Direct local/private
+targets from registered pages and their archive links are therefore rejected.
 At least one BMS, BME, BML, PMS, or BMSON entry must have the exact MD5 requested
 by the table. Only then is the file moved without replacement to
 `http_download/bmsir-<md5>.<format>` and the song database updated. Rejected,
 oversized, ambiguous, mismatched, and duplicate downloads leave no staging
 file and never overwrite an installed archive.
+
+Download-task identity uses both the registered URL and requested chart MD5,
+so multiple charts carried by one package are not mistaken for the same task.
+Selecting the same failed chart again or pressing Retry resets and reruns its
+existing task. Active and completed identical tasks remain duplicate-protected,
+and a retried task moves back from the expired list to the running list.
 
 The accepted archive stays compressed; this path never extracts its contents
 and never executes a file stored inside it. Enabling the body-download option

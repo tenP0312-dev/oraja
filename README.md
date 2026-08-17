@@ -14,6 +14,9 @@ The current client source version is **0.4.14.55**. Missing difficulty-table
 songs can opt in to downloading the archive registered with BMS-IR, with one
 Wayback snapshot fallback when the live URL fails. Accepted packages stay
 compressed and must contain the requested chart before they are retained.
+The current development source also resolves bounded ZIP/RAR/7z links from
+registered HTML distribution pages, so event pages do not have to be replaced
+with direct archive URLs.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -54,15 +57,21 @@ Arena client-version/build gate are activated and verified where applicable.
 
 The Other settings add `BMS-IR本体URLから取得` / `Download from BMS-IR body
 URLs`. It is off by default. When enabled, a missing difficulty-table song can
-try its BMS-IR-registered HTTP(S) archive URL, then one Wayback snapshot if the
-live download cannot be installed. Existing IPFS, configured HTTP-provider,
-and browser-page behavior remain unchanged.
+try its BMS-IR-registered HTTP(S) URL. A direct archive is handled immediately;
+a bounded HTML distribution page may contribute up to 12 ZIP/RAR/7z links in
+document order. If the live route cannot be installed, one Wayback snapshot of
+the registered URL is tried and an archived page may resolve its rewritten
+archive link. Existing IPFS, configured HTTP-provider, and browser-page
+behavior remain unchanged.
 
 Accepted ZIP, RAR4/RAR5, and 7z packages remain compressed in `http_download`.
 The client enforces the 2 GiB download limit, archive structure/path/expanded-
 size checks, and the requested chart MD5 before a no-overwrite install. These
 checks are not antivirus scanning, so leave the setting off unless you accept
-the risk of processing an untrusted archive and its media.
+the risk of processing an untrusted archive and its media. HTML pages are
+limited to 2 MiB, local/private-network targets are rejected, and a failed task
+can be retried without disabling duplicate protection for active or completed
+tasks.
 
 ## Arena oraja 0.4.14.54
 
@@ -280,10 +289,11 @@ the reader, so a ZIP/RAR/7z file with another supported archive suffix is still
 read correctly.
 
 Missing difficulty-table songs can also opt in to direct archive downloads
-from their BMS-IR-registered HTTP(S) body URL, with a Wayback snapshot fallback
-when the live URL fails. The switch is off by default. Accepted ZIP/RAR/7z
+from their BMS-IR-registered HTTP(S) body URL. A registered HTML distribution
+page can resolve bounded ZIP/RAR/7z links, with a Wayback snapshot fallback
+when the live route fails. The switch is off by default. Accepted ZIP/RAR/7z
 packages remain compressed in `http_download`; the client applies bounded
-archive-structure checks and requires the requested chart MD5 before saving
+page/network/archive checks and requires the requested chart MD5 before saving
 without overwrite. These checks are not antivirus scanning. See
 [`doc/BMSIR_ARENA.md`](doc/BMSIR_ARENA.md#bms-ir-body-url-downloads) for the
 complete behavior and security boundary.
