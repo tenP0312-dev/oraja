@@ -10,10 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.49**. The Resource tab can create
-and open a disposable work folder below the selected BMS Path. Charts below
-the reserved `_BMSIR_TESTPLAY` directory keep their on-screen result but never
-save local records and are never submitted to IR or Arena.
+The current client source version is **0.4.14.50**. The Resource tab can mark a
+selected BMS Path itself as the disposable work folder. Charts below that root
+keep their on-screen result but never save local records and are never
+submitted to IR or Arena.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -25,6 +25,15 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.50
+
+Select a configured BMS Path and click `Set Work Directory` /
+`作業フォルダに設定` to make that exact root and its descendants disposable
+authoring content. The action does not create, move, delete, or open a folder.
+The selected row is labeled as the work folder and cannot be removed from BMS
+Path until another root is selected. The `_BMSIR_TESTPLAY` compatibility marker
+from 0.4.14.49 remains active.
 
 ## Arena oraja 0.4.14.49
 
@@ -235,7 +244,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.49
+  --output-dir /release/build-0.4.14.50
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

@@ -1,3 +1,12 @@
+# Arena oraja 0.4.14.50
+
+- `Set Work Directory` / `作業フォルダに設定` now makes the selected BMS Path
+  itself and its descendants disposable authoring content. It does not create,
+  move, delete, or open a folder.
+- The selected row is labeled as the work folder and cannot be removed from
+  BMS Path until another root is selected. The `_BMSIR_TESTPLAY` compatibility
+  safety marker remains active.
+
 # Arena oraja 0.4.14.49
 
 - Added `Work folder` / `作業フォルダ` below `Set DL Directory` in the

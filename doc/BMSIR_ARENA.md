@@ -1,9 +1,14 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.49`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.50`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.50` makes the selected BMS Path itself the persisted work
+folder. Its charts and descendants remain no-save/no-submit content without
+creating a reserved child directory. The selected root is labeled and
+protected from BMS Path removal; the 0.4.14.49 compatibility marker remains.
 
 Version `0.4.14.49` adds the Resource-tab `Work folder` / `作業フォルダ`
 button and the reserved `_BMSIR_TESTPLAY` authoring directory. Charts below
@@ -992,7 +997,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.49-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.50-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1013,7 +1018,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.49-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.50-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1029,7 +1034,7 @@ only for an internal test package:
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.49-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.50-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
