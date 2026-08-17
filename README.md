@@ -25,6 +25,11 @@ decimal integer as its Music Select display level inside that table. This
 applies to ordinary level folders and aggregate folders such as `全曲`, while
 ordinary folders and the chart's stored `#PLAYLEVEL` remain unchanged.
 
+The Resource built-in-table picker now keeps configured built-in tables
+visible as checked, read-only choices. The add action becomes available only
+after selecting at least one new table, so the picker reflects the saved
+configuration without duplicating or removing an active table.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.

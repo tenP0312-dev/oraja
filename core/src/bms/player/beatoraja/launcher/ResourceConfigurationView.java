@@ -565,20 +565,30 @@ public class ResourceConfigurationView implements Initializable {
 		instructions.setWrapText(true);
 		VBox choices = new VBox(1);
 		List<CheckBox> selectors = new ArrayList<>();
-		for (String tableUrl : availableTableUrls) {
+		List<String> configuredTableUrls = tableurl.getItems().stream()
+				.map(TableInfo::getUrl)
+				.toList();
+		for (TableChoice choiceState : tableChoices(availableTableUrls, configuredTableUrls)) {
+			String tableUrl = choiceState.url();
 			TableInfo info = new TableInfo(tableUrl);
 			String name = info.getNameStatus().isBlank() ? tableUrl : info.getNameStatus();
 			CheckBox selector = new CheckBox(name);
 			selector.setUserData(tableUrl);
+			selector.setSelected(choiceState.alreadyAdded());
+			selector.setDisable(choiceState.alreadyAdded());
 			selector.setMinWidth(210);
 			selector.setPrefWidth(210);
 			selector.setMaxWidth(210);
 			selectors.add(selector);
 
-			Label detail = new Label(info.getComment());
+			String detailText = info.getComment();
+			if (choiceState.alreadyAdded()) {
+				String alreadyAdded = resources.getString("TABLE_ALREADY_ADDED");
+				detailText = detailText.isBlank() ? alreadyAdded : detailText + " · " + alreadyAdded;
+			}
+			Label detail = new Label(detailText);
 			detail.setMaxWidth(Double.MAX_VALUE);
-			String tooltipText = (info.getComment().isBlank() ? name : info.getComment())
-					+ "\n" + tableUrl;
+			String tooltipText = (detailText.isBlank() ? name : detailText) + "\n" + tableUrl;
 			selector.setTooltip(new Tooltip(tooltipText));
 			detail.setTooltip(new Tooltip(tooltipText));
 			HBox choice = new HBox(10, selector, detail);
@@ -600,9 +610,11 @@ public class ResourceConfigurationView implements Initializable {
 		dialog.getDialogPane().setPrefWidth(540);
 
 		Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
-		addButton.setDisable(true);
+		Runnable updateAddButton = () -> addButton.setDisable(selectors.stream()
+				.noneMatch(selector -> selector.isSelected() && !selector.isDisabled()));
+		updateAddButton.run();
 		selectors.forEach(selector -> selector.selectedProperty().addListener((observable, oldValue, newValue) ->
-				addButton.setDisable(selectors.stream().noneMatch(CheckBox::isSelected))));
+				updateAddButton.run()));
 
 		if (dialog.showAndWait().orElse(ButtonType.CANCEL) != addButtonType) {
 			return;
@@ -610,7 +622,7 @@ public class ResourceConfigurationView implements Initializable {
 
 		List<TableInfo> added = new ArrayList<>();
 		for (CheckBox selector : selectors) {
-			if (!selector.isSelected()) {
+			if (!selector.isSelected() || selector.isDisabled()) {
 				continue;
 			}
 			String tableUrl = (String) selector.getUserData();
@@ -789,6 +801,18 @@ public class ResourceConfigurationView implements Initializable {
 
 	private boolean hasTableUrl(String value) {
 		return tableurl.getItems().stream().anyMatch(info -> info.getUrl().equals(value));
+	}
+
+	static List<TableChoice> tableChoices(Collection<String> availableUrls, Collection<String> configuredUrls) {
+		LinkedHashSet<String> knownUrls = new LinkedHashSet<>(Arrays.asList(Config.AVAILABLE_TABLEURL));
+		knownUrls.addAll(availableUrls);
+		Set<String> configured = new HashSet<>(configuredUrls);
+		return knownUrls.stream()
+				.map(url -> new TableChoice(url, configured.contains(url)))
+				.toList();
+	}
+
+	record TableChoice(String url, boolean alreadyAdded) {
 	}
 
 	private void moveTable(TableInfo info, int direction) {
