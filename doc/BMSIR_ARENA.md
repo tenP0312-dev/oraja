@@ -237,6 +237,28 @@ HI-SPEED margin and recent key/scratch FAST/SLOW direction, a bundled
 SP/DP random-placement browser view for OBS, progressive CPU score graphs,
 disconnect/reconnect labels, and bounded Arena chart-start diagnostics.
 
+## Startup configuration layout
+
+The startup configuration `Other` tab stores one system-wide layout choice:
+`Classic` or `Sidebar`. A missing value, including every configuration written
+before this option existed, resolves to Classic. Both layouts reuse the same
+JavaFX setting controls and the same `config_sys.json` / player configuration
+write paths; changing layout does not duplicate or migrate gameplay settings.
+
+Sidebar places the existing Video, Audio, Input, Resource, Music Select, Play
+Options, Skin, Other, BMS-IR Features, IR, Table, Stream, Discord, and OBS
+destinations in a left navigation list. Its player summary shows the current
+player ID plus display name and LR2/oraja rule profile, and expands the existing
+player controls on demand. A context area above the selected page shows the
+page overview by default. Pointing at a setting or moving keyboard focus to it
+changes that area to the setting name, an explanation, and a restrained
+single-color category diagram. Leaving the setting restores the page overview.
+
+The layout choice applies immediately so it can be previewed before leaving
+the `Other` page, then persists with the normal configuration save. Classic
+retains the prior top-tab layout and does not show the sidebar-only context
+area.
+
 ## Resource settings and song-library updates
 
 Version `0.4.14.39` keeps the song-library controls inside the Resource tab and

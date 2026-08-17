@@ -39,12 +39,19 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.*;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -79,6 +86,24 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private HBox playerPanel;
 	@FXML
+	private TabPane configurationTabs;
+	@FXML
+	private VBox sidebarRail;
+	@FXML
+	private ListView<Tab> sidebarNavigation;
+	@FXML
+	private ToggleButton sidebarPlayerSummary;
+	@FXML
+	private HBox contextHelpPanel;
+	@FXML
+	private Canvas contextHelpGraphic;
+	@FXML
+	private Label contextHelpTitle;
+	@FXML
+	private Label contextHelpDescription;
+	@FXML
+	private ComboBox<Config.ConfigurationLayout> configurationLayout;
+	@FXML
 	private Tab videoTab;
 	@FXML
 	private Tab audioTab;
@@ -99,7 +124,7 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private Tab irTab;
 	@FXML
-	private Tab courseTab;
+	private Tab tableTab;
 	@FXML
     private Tab streamTab;
 	@FXML
@@ -192,6 +217,10 @@ public class PlayConfigurationView implements Initializable {
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
 	private List<CheckBox> bmsirSelectModeChecks;
+	private List<Tab> configurationTabOrder = List.of();
+	private final Map<Tab, ContextHelp> tabContextHelp = new IdentityHashMap<>();
+	private final Map<String, ContextHelp> controlContextHelp = new HashMap<>();
+	private boolean englishUi;
 
 	@FXML
 	private ComboBox<PlayMode> playconfig;
@@ -479,6 +508,7 @@ public class PlayConfigurationView implements Initializable {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		final long t = System.currentTimeMillis();
 		final boolean english = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
+		englishUi = english;
 		dbUpdateCheckDialogMessage = arg1.getString("REBUILD_DATABASE_MESSAGE");
 		arenaIdentity.setText(Version.getArenaDisplayName());
 		bmsirArenaLanguage.getItems().setAll("日本語", "English");
@@ -597,9 +627,429 @@ public class PlayConfigurationView implements Initializable {
 		resourceController.init(this);
 		discordController.init(this);
 		obsController.init(this);
+		initializeConfigurationShell(arg1);
 
 		checkNewVersion();
 		logger.info("初期化時間(ms) : " + (System.currentTimeMillis() - t));
+	}
+
+	private void initializeConfigurationShell(ResourceBundle bundle) {
+		configurationLayout.getItems().setAll(Config.ConfigurationLayout.values());
+		configurationLayout.setCellFactory(list -> configurationLayoutCell(bundle));
+		configurationLayout.setButtonCell(configurationLayoutCell(bundle));
+		configurationLayout.valueProperty().addListener((observable, oldValue, newValue) -> {
+			if (newValue != null) {
+				applyConfigurationLayout(newValue);
+			}
+		});
+
+		configurationTabOrder = List.copyOf(configurationTabs.getTabs());
+		sidebarNavigation.getItems().setAll(configurationTabOrder);
+		sidebarNavigation.setCellFactory(list -> new ListCell<>() {
+			@Override
+			protected void updateItem(Tab item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty || item == null ? null : item.getText());
+			}
+		});
+		sidebarNavigation.getSelectionModel().selectedItemProperty().addListener(
+				(observable, oldTab, newTab) -> {
+					if (newTab != null && configurationTabs.getSelectionModel().getSelectedItem() != newTab) {
+						configurationTabs.getSelectionModel().select(newTab);
+					}
+				}
+		);
+		configurationTabs.getSelectionModel().selectedItemProperty().addListener(
+				(observable, oldTab, newTab) -> {
+					if (newTab != null) {
+						sidebarNavigation.getSelectionModel().select(newTab);
+						showTabContextHelp(newTab);
+					}
+				}
+		);
+		sidebarNavigation.getSelectionModel().select(
+				configurationTabs.getSelectionModel().getSelectedItem()
+		);
+
+		sidebarPlayerSummary.selectedProperty().addListener(
+				(observable, oldValue, selected) -> updatePlayerPanelVisibility()
+		);
+		players.valueProperty().addListener((observable, oldValue, newValue) -> updateSidebarPlayerSummary());
+		playername.textProperty().addListener((observable, oldValue, newValue) -> updateSidebarPlayerSummary());
+		bmsirRulesetProfile.valueProperty().addListener((observable, oldValue, newValue) -> updateSidebarPlayerSummary());
+
+		initializeContextHelp();
+		configurationLayout.setValue(Config.ConfigurationLayout.CLASSIC);
+	}
+
+	private ListCell<Config.ConfigurationLayout> configurationLayoutCell(ResourceBundle bundle) {
+		return new ListCell<>() {
+			@Override
+			protected void updateItem(Config.ConfigurationLayout item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty || item == null
+						? null
+						: bundle.getString(item == Config.ConfigurationLayout.SIDEBAR
+								? "CONFIGURATION_LAYOUT_SIDEBAR"
+								: "CONFIGURATION_LAYOUT_CLASSIC"));
+			}
+		};
+	}
+
+	private void applyConfigurationLayout(Config.ConfigurationLayout layout) {
+		boolean sidebar = layout == Config.ConfigurationLayout.SIDEBAR;
+		setManagedVisible(sidebarRail, sidebar);
+		setManagedVisible(contextHelpPanel, sidebar);
+		if (sidebar) {
+			if (!configurationTabs.getStyleClass().contains("sidebar-content-tabs")) {
+				configurationTabs.getStyleClass().add("sidebar-content-tabs");
+			}
+			sidebarNavigation.getSelectionModel().select(
+					configurationTabs.getSelectionModel().getSelectedItem()
+			);
+			showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
+		} else {
+			configurationTabs.getStyleClass().remove("sidebar-content-tabs");
+			sidebarPlayerSummary.setSelected(false);
+		}
+		updatePlayerPanelVisibility();
+	}
+
+	private static void setManagedVisible(Node node, boolean visible) {
+		node.setManaged(visible);
+		node.setVisible(visible);
+	}
+
+	private void updatePlayerPanelVisibility() {
+		boolean sidebar = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR;
+		setManagedVisible(playerPanel, !sidebar || sidebarPlayerSummary.isSelected());
+	}
+
+	private void updateSidebarPlayerSummary() {
+		if (sidebarPlayerSummary == null) {
+			return;
+		}
+		String playerId = players.getValue() == null || players.getValue().isBlank()
+				? "player1"
+				: players.getValue();
+		String displayName = playername.getText() == null || playername.getText().isBlank()
+				? "NO NAME"
+				: playername.getText().trim();
+		String ruleset = bmsirRulesetProfile.getValue() == null
+				? "LR2"
+				: bmsirRulesetProfile.getValue();
+		String summary = playerId + "\n" + displayName + " · " + ruleset;
+		sidebarPlayerSummary.setText(summary);
+		sidebarPlayerSummary.setAccessibleText(
+				(englishUi ? "Player settings: " : "プレイヤー設定: ")
+						+ playerId + ", " + displayName + ", " + ruleset
+		);
+	}
+
+	private void initializeContextHelp() {
+		registerTabHelp(videoTab,
+				"画面",
+				"表示先と描画負荷、BGAの見せ方を決めます。まず「画面モード」「解像度」「垂直同期」だけ確認すれば十分です。",
+				"Video",
+				"Choose the display target, rendering load, and BGA presentation. Start with Display Mode, Resolution, and Vsync.",
+				HelpGraphic.DISPLAY);
+		registerTabHelp(audioTab, "音声", "出力方式、遅延、同時発音数と音量を調整します。", "Audio", "Configure output, latency, simultaneous sounds, and volume.", HelpGraphic.AUDIO);
+		registerTabHelp(inputTab, "入力", "鍵盤モード、コントローラー、スクラッチ入力を設定します。", "Input", "Configure key mode, controllers, and scratch input.", HelpGraphic.INPUT);
+		registerTabHelp(resourceTab, "リソース", "BMSフォルダ、難易度表、楽曲データベースの更新方法を管理します。", "Resources", "Manage BMS folders, difficulty tables, and song database updates.", HelpGraphic.RESOURCE);
+		registerTabHelp(musicselectTab, "選曲", "選曲画面の移動、プレビュー、検索と表示方法を調整します。", "Music Select", "Adjust navigation, previews, search, and presentation in Music Select.", HelpGraphic.MUSIC);
+		registerTabHelp(optionTab, "プレイオプション", "譜面の見え方、譜面オプション、ゲージとアシスト機能を設定します。", "Play Options", "Configure note visibility, chart options, gauges, and assists.", HelpGraphic.PLAY);
+		registerTabHelp(skinTab, "スキン", "使用するスキンとスキン固有の項目、BGM・効果音フォルダを選びます。", "Skin", "Choose skins, skin-specific values, BGM, and sound folders.", HelpGraphic.SKIN);
+		registerTabHelp(otherTab, "その他", "設定画面の表示方式、キャッシュ、ダウンロードなどの補助設定です。", "Other", "Auxiliary settings for the configuration layout, cache, and downloads.", HelpGraphic.OTHER);
+		registerTabHelp(bmsirSpecificTab, "BMS-IR固有設定", "BMS-IR向けの操作、表示、同期、ショートカットを設定します。", "BMS-IR Features", "Configure BMS-IR controls, presentation, synchronization, and shortcuts.", HelpGraphic.BMSIR);
+		registerTabHelp(irTab, "IR", "IRアカウント、送信方法、ライバル取得とArena接続を設定します。", "IR", "Configure the IR account, score sending, rivals, and Arena connection.", HelpGraphic.IR);
+		registerTabHelp(tableTab, "Table", "コースとフォルダをまとめたローカルテーブルを編集します。", "Table", "Edit local tables containing courses and folders.", HelpGraphic.TABLE);
+		registerTabHelp(streamTab, "Stream", "配信リクエストの受付と表示件数を設定します。", "Stream", "Configure stream requests and how many are retained.", HelpGraphic.STREAM);
+		registerTabHelp(discordTab, "Discord", "Rich Presenceとスコア送信用Webhookを設定します。", "Discord", "Configure Rich Presence and score Webhooks.", HelpGraphic.CHAT);
+		registerTabHelp(obsTab, "OBS", "OBS WebSocketへ接続し、録画とシーン切替をゲーム状態に連動させます。", "OBS", "Connect to OBS WebSocket and link recording and scenes to game state.", HelpGraphic.OBS);
+
+		registerControlHelp("displayMode", "画面モード", "ウィンドウ、ボーダーレス、フルスクリーンのどれで起動するかを選びます。", "Display Mode", "Choose Window, Borderless, or Fullscreen startup.", HelpGraphic.DISPLAY);
+		registerControlHelp("resolution", "解像度", "ゲーム画面の幅と高さです。ディスプレイとスキンに合う値を選びます。", "Resolution", "Choose the game width and height to match the display and skin.", HelpGraphic.DISPLAY);
+		registerControlHelp("monitor", "表示モニター", "複数画面を使用している場合の起動先を選びます。", "Monitor", "Choose which display receives the game window.", HelpGraphic.DISPLAY);
+		registerControlHelp("vSync", "垂直同期", "画面更新をモニターの周期に合わせ、ティアリングを抑えます。遅延が気になる場合はOFFも試せます。", "Vsync", "Synchronize frames to the monitor to reduce tearing; try OFF when latency matters more.", HelpGraphic.DISPLAY);
+		registerControlHelp("maxFps", "最大FPS", "垂直同期がOFFのときの描画上限です。0は上限なしです。", "Maximum FPS", "Cap rendering when Vsync is off; 0 means uncapped.", HelpGraphic.DISPLAY);
+		registerControlHelp("bgaOp", "BGA", "譜面の背景アニメーションを表示するか決めます。負荷を下げたい場合はOFFにします。", "BGA", "Choose whether chart background animation is shown; turn it off to reduce load.", HelpGraphic.DISPLAY);
+		registerControlHelp("missLayerTime", "ミスレイヤー表示時間", "ミス時に表示されるBGAレイヤーの長さをミリ秒で設定します。", "Miss-layer duration", "Set how long the miss BGA layer stays visible, in milliseconds.", HelpGraphic.DISPLAY);
+		registerControlHelp("bgaExpand", "BGAの拡大方法", "縦横比を保つ、領域いっぱいに広げる、拡大しない、から選びます。", "BGA scaling", "Choose aspect-preserving, full-area, or no expansion.", HelpGraphic.DISPLAY);
+		registerControlHelp("audio", "音声出力", "OpenAL、PortAudio、ASIOなど使用する出力方式を選びます。", "Audio output", "Choose OpenAL, PortAudio, ASIO, or another available output path.", HelpGraphic.AUDIO);
+		registerControlHelp("audiobuffer", "オーディオバッファ", "小さいほど遅延は減りますが、音切れしやすくなります。", "Audio buffer", "Lower values reduce latency but make dropouts more likely.", HelpGraphic.AUDIO);
+		registerControlHelp("inputduration", "最小入力間隔", "同じ入力を再び受け付けるまでの最短時間を設定します。", "Minimum input interval", "Set the shortest interval before the same input is accepted again.", HelpGraphic.INPUT);
+		registerControlHelp("bmsroot", "BMS Path", "楽曲を置いているルートフォルダを登録します。", "BMS Path", "Register the root folders containing songs.", HelpGraphic.RESOURCE);
+		registerControlHelp("tableurl", "難易度表", "選曲画面へ読み込む難易度表を管理します。", "Difficulty tables", "Manage difficulty tables loaded into Music Select.", HelpGraphic.RESOURCE);
+		registerControlHelp("songPreview", "楽曲プレビュー", "選曲中の試聴をOFF、1回、ループから選びます。", "Song preview", "Choose off, one-shot, or looping audio preview in Music Select.", HelpGraphic.MUSIC);
+		registerControlHelp("hispeed", "HI-SPEED", "ノーツのスクロール速度倍率です。", "HI-SPEED", "Set the note scroll-speed multiplier.", HelpGraphic.PLAY);
+		registerControlHelp("gvalue", "ノーツ表示時間", "ノーツが判定位置へ届くまでの表示時間、いわゆる緑数字です。単位はmsです。", "Note display time", "Set the time until notes reach the judgment line, commonly called green number, in ms.", HelpGraphic.PLAY);
+		registerControlHelp("chartpreview", "チャートプレビュー", "楽曲ロード中にSTARTまたはSELECTを押している間、プレイ画面上で譜面の流れを先行表示します。選曲時の試聴機能ではありません。", "Chart Preview", "While loading, hold START or SELECT to preview chart movement on the play field. This is not the Music Select audio preview.", HelpGraphic.PLAY);
+		registerControlHelp("configurationLayout", "設定画面", "クラシックは従来の上タブ、サイドバーは左側のカテゴリと図付き説明を使用します。設定項目と保存内容は共通です。", "Configuration screen", "Classic uses the existing top tabs; Sidebar uses left categories and illustrated help. Both edit the same settings.", HelpGraphic.OTHER);
+		registerControlHelp("irpassword", "Password", "IRへログインするためのパスワードです。画面上では伏せて表示されます。", "Password", "The IR login password; it remains masked on screen.", HelpGraphic.IR);
+		registerControlHelp("obsWsConnectButton", "OBSへ接続", "入力した接続先を使ってOBSからシーン一覧を取得します。", "Connect to OBS", "Use the entered connection details to retrieve scenes from OBS.", HelpGraphic.OBS);
+
+		for (Tab tab : configurationTabOrder) {
+			installContextHelp(tab, tab.getContent());
+		}
+		showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
+	}
+
+	private void registerTabHelp(Tab tab, String jaTitle, String jaDescription,
+			String enTitle, String enDescription, HelpGraphic graphic) {
+		tabContextHelp.put(tab, new ContextHelp(
+				englishUi ? enTitle : jaTitle,
+				englishUi ? enDescription : jaDescription,
+				graphic
+		));
+	}
+
+	private void registerControlHelp(String id, String jaTitle, String jaDescription,
+			String enTitle, String enDescription, HelpGraphic graphic) {
+		controlContextHelp.put(id, new ContextHelp(
+				englishUi ? enTitle : jaTitle,
+				englishUi ? enDescription : jaDescription,
+				graphic
+		));
+	}
+
+	private void installContextHelp(Tab tab, Node node) {
+		if (isContextHelpControl(node)) {
+			ContextHelp help = contextHelpFor(tab, (Control) node);
+			node.addEventHandler(MouseEvent.MOUSE_ENTERED, event -> showContextHelp(help));
+			node.addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
+				if (!node.isFocused()) {
+					showTabContextHelp(tab);
+				}
+			});
+			node.focusedProperty().addListener((observable, oldValue, focused) -> {
+				if (focused) {
+					showContextHelp(help);
+				} else if (!node.isHover()) {
+					showTabContextHelp(tab);
+				}
+			});
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				installContextHelp(tab, child);
+			}
+		}
+	}
+
+	private static boolean isContextHelpControl(Node node) {
+		return node instanceof ButtonBase
+				|| node instanceof ComboBoxBase<?>
+				|| node instanceof Spinner<?>
+				|| node instanceof Slider
+				|| node instanceof TextInputControl
+				|| node instanceof ListView<?>
+				|| node instanceof TableView<?>;
+	}
+
+	private ContextHelp contextHelpFor(Tab tab, Control control) {
+		if (control.getId() != null && controlContextHelp.containsKey(control.getId())) {
+			return controlContextHelp.get(control.getId());
+		}
+		String title = controlTitle(control);
+		String description;
+		if (englishUi) {
+			description = control instanceof ButtonBase
+					? "Run “" + title + "”. The existing operation is shared by Classic and Sidebar layouts."
+					: "Change “" + title + "”. The selected value is saved through the existing configuration path.";
+		} else {
+			description = control instanceof ButtonBase
+					? "「" + title + "」を実行します。操作内容はクラシックとサイドバーで共通です。"
+					: "「" + title + "」を変更します。選択した値は既存の設定保存経路へ保存されます。";
+		}
+		HelpGraphic graphic = Optional.ofNullable(tabContextHelp.get(tab))
+				.map(ContextHelp::graphic)
+				.orElse(HelpGraphic.OTHER);
+		return new ContextHelp(title, description, graphic);
+	}
+
+	private String controlTitle(Control control) {
+		if (control instanceof Labeled labeled
+				&& labeled.getText() != null
+				&& !labeled.getText().isBlank()) {
+			return labeled.getText().trim();
+		}
+		String nearby = nearbyLabel(control);
+		if (nearby != null) {
+			return nearby;
+		}
+		String id = control.getId();
+		if (id == null || id.isBlank()) {
+			return englishUi ? "This setting" : "この設定";
+		}
+		return id.replaceAll("([a-z0-9])([A-Z])", "$1 $2")
+				.replace('_', ' ')
+				.trim();
+	}
+
+	private String nearbyLabel(Node control) {
+		Node anchor = control;
+		Parent parent = control.getParent();
+		for (int depth = 0; parent != null && depth < 3; depth++) {
+			if (parent instanceof GridPane grid && grid.getChildren().contains(anchor)) {
+				int row = Optional.ofNullable(GridPane.getRowIndex(anchor)).orElse(0);
+				int column = Optional.ofNullable(GridPane.getColumnIndex(anchor)).orElse(0);
+				Label nearest = null;
+				int nearestColumn = Integer.MIN_VALUE;
+				for (Node sibling : grid.getChildren()) {
+					if (sibling instanceof Label label) {
+						int labelRow = Optional.ofNullable(GridPane.getRowIndex(label)).orElse(0);
+						int labelColumn = Optional.ofNullable(GridPane.getColumnIndex(label)).orElse(0);
+						if (labelRow == row && labelColumn <= column && labelColumn > nearestColumn) {
+							nearest = label;
+							nearestColumn = labelColumn;
+						}
+					}
+				}
+				if (nearest != null && nearest.getText() != null && !nearest.getText().isBlank()) {
+					return nearest.getText().trim();
+				}
+			}
+			if (parent instanceof Pane pane && pane.getChildren().contains(anchor)) {
+				int index = pane.getChildren().indexOf(anchor);
+				for (int siblingIndex = index - 1; siblingIndex >= 0; siblingIndex--) {
+					Node sibling = pane.getChildren().get(siblingIndex);
+					if (sibling instanceof Label label
+							&& label.getText() != null
+							&& !label.getText().isBlank()) {
+						return label.getText().trim();
+					}
+				}
+			}
+			anchor = parent;
+			parent = parent.getParent();
+		}
+		return null;
+	}
+
+	private void showTabContextHelp(Tab tab) {
+		ContextHelp help = tabContextHelp.get(tab);
+		if (help != null) {
+			showContextHelp(help);
+		}
+	}
+
+	private void showContextHelp(ContextHelp help) {
+		contextHelpTitle.setText(help.title());
+		contextHelpDescription.setText(help.description());
+		contextHelpGraphic.setAccessibleText(help.title() + ". " + help.description());
+		drawContextHelpGraphic(help.graphic());
+	}
+
+	private void drawContextHelpGraphic(HelpGraphic graphic) {
+		GraphicsContext gc = contextHelpGraphic.getGraphicsContext2D();
+		double width = contextHelpGraphic.getWidth();
+		double height = contextHelpGraphic.getHeight();
+		gc.clearRect(0, 0, width, height);
+		gc.setFill(Color.web("#e8f2ff"));
+		gc.fillRoundRect(2, 2, width - 4, height - 4, 14, 14);
+		gc.setStroke(Color.web("#2b6cb0"));
+		gc.setFill(Color.web("#2b6cb0"));
+		gc.setLineWidth(2.2);
+		switch (graphic) {
+			case DISPLAY -> {
+				gc.strokeRoundRect(25, 17, 82, 47, 6, 6);
+				gc.strokeLine(54, 70, 78, 70);
+				gc.strokeLine(66, 64, 66, 70);
+				gc.strokeLine(36, 28, 96, 28);
+			}
+			case AUDIO -> {
+				gc.strokeLine(30, 33, 42, 33);
+				gc.strokeLine(42, 33, 58, 21);
+				gc.strokeLine(58, 21, 58, 61);
+				gc.strokeLine(58, 61, 42, 49);
+				gc.strokeLine(42, 49, 30, 49);
+				gc.strokeArc(62, 24, 31, 35, -55, 110, javafx.scene.shape.ArcType.OPEN);
+				gc.strokeArc(62, 16, 48, 51, -48, 96, javafx.scene.shape.ArcType.OPEN);
+			}
+			case INPUT -> {
+				gc.strokeRoundRect(20, 21, 92, 43, 6, 6);
+				for (int column = 0; column < 6; column++) {
+					gc.strokeRoundRect(27 + column * 13, 29, 9, 9, 2, 2);
+					gc.strokeRoundRect(27 + column * 13, 43, 9, 9, 2, 2);
+				}
+				gc.strokeRoundRect(43, 56, 47, 4, 2, 2);
+			}
+			case RESOURCE -> {
+				gc.strokeRoundRect(20, 27, 92, 42, 6, 6);
+				gc.strokeLine(20, 34, 61, 34);
+				gc.strokeLine(24, 24, 48, 24);
+				gc.strokeLine(48, 24, 56, 29);
+			}
+			case MUSIC -> {
+				gc.strokeLine(48, 21, 48, 57);
+				gc.strokeLine(48, 21, 86, 15);
+				gc.strokeLine(86, 15, 86, 50);
+				gc.fillOval(34, 52, 16, 12);
+				gc.fillOval(72, 45, 16, 12);
+			}
+			case PLAY -> {
+				for (int row = 0; row < 3; row++) {
+					double y = 25 + row * 18;
+					gc.strokeLine(25, y, 107, y);
+					gc.fillOval(43 + row * 18, y - 5, 10, 10);
+				}
+			}
+			case SKIN -> {
+				gc.strokeOval(31, 15, 69, 55);
+				gc.fillOval(46, 27, 9, 9);
+				gc.fillOval(65, 22, 9, 9);
+				gc.fillOval(81, 35, 9, 9);
+				gc.strokeOval(42, 48, 22, 14);
+			}
+			case OTHER -> {
+				gc.strokeOval(45, 20, 42, 42);
+				gc.strokeOval(58, 33, 16, 16);
+				for (int angle = 0; angle < 8; angle++) {
+					double radians = Math.toRadians(angle * 45);
+					gc.strokeLine(66 + Math.cos(radians) * 24, 41 + Math.sin(radians) * 24,
+							66 + Math.cos(radians) * 31, 41 + Math.sin(radians) * 31);
+				}
+			}
+			case BMSIR, IR -> {
+				gc.strokeOval(25, 25, 31, 31);
+				gc.strokeOval(76, 25, 31, 31);
+				gc.strokeLine(51, 31, 81, 50);
+				gc.strokeLine(51, 50, 81, 31);
+			}
+			case TABLE -> {
+				gc.strokeRoundRect(27, 16, 78, 54, 4, 4);
+				gc.strokeLine(27, 34, 105, 34);
+				gc.strokeLine(27, 52, 105, 52);
+				gc.strokeLine(53, 16, 53, 70);
+				gc.strokeLine(79, 16, 79, 70);
+			}
+			case STREAM -> {
+				gc.fillOval(61, 37, 10, 10);
+				gc.strokeArc(46, 25, 40, 34, -50, 100, javafx.scene.shape.ArcType.OPEN);
+				gc.strokeArc(35, 15, 62, 54, -48, 96, javafx.scene.shape.ArcType.OPEN);
+				gc.strokeLine(66, 47, 66, 68);
+			}
+			case CHAT -> {
+				gc.strokeRoundRect(22, 17, 64, 38, 8, 8);
+				gc.strokeLine(38, 55, 31, 66);
+				gc.strokeRoundRect(54, 35, 57, 31, 7, 7);
+				gc.strokeLine(97, 66, 104, 72);
+			}
+			case OBS -> {
+				gc.strokeOval(42, 17, 48, 48);
+				gc.strokeArc(48, 23, 32, 32, 15, 95, javafx.scene.shape.ArcType.OPEN);
+				gc.strokeArc(48, 23, 32, 32, 135, 95, javafx.scene.shape.ArcType.OPEN);
+				gc.strokeArc(48, 23, 32, 32, 255, 95, javafx.scene.shape.ArcType.OPEN);
+			}
+		}
+	}
+
+	private record ContextHelp(String title, String description, HelpGraphic graphic) {
+	}
+
+	private enum HelpGraphic {
+		DISPLAY, AUDIO, INPUT, RESOURCE, MUSIC, PLAY, SKIN, OTHER,
+		BMSIR, IR, TABLE, STREAM, CHAT, OBS
 	}
 
     @FXML
@@ -692,6 +1142,7 @@ public class PlayConfigurationView implements Initializable {
 	 */
 	public void update(Config config) {
 		this.config = config;
+		configurationLayout.setValue(config.getConfigurationLayout());
 
         // Show the What's New popup upon version change
         String currentVersion = Version.getVersion();
@@ -734,6 +1185,7 @@ public class PlayConfigurationView implements Initializable {
 			players.getSelectionModel().select(0);
 		}
 		updatePlayer();
+		updateSidebarPlayerSummary();
 
 		try {
 			Class.forName("org.sqlite.JDBC");
@@ -930,6 +1382,7 @@ public class PlayConfigurationView implements Initializable {
 		musicselectController.commit();
 
 		config.setPlayername(players.getValue());
+		config.setConfigurationLayout(configurationLayout.getValue());
 
 		config.setBgmpath(bgmpath.getText());
 		config.setSoundpath(soundpath.getText());
@@ -1210,6 +1663,8 @@ public class PlayConfigurationView implements Initializable {
 		streamTab.setDisable(true);
 		discordTab.setDisable(true);
 		obsTab.setDisable(true);
+		sidebarNavigation.setDisable(true);
+		sidebarPlayerSummary.setDisable(true);
 		controlPanel.setDisable(true);
 
 		// Minimise the stage after start

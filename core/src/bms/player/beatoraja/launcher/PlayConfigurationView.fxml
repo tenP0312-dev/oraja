@@ -19,6 +19,8 @@
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
@@ -30,11 +32,15 @@
 
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
+<?import java.net.URL?>
 <?import javafx.scene.control.skin.TabPaneSkin.TabControlButtons?>
 <?import bms.player.beatoraja.launcher.EditableTableView?>
 <!-- Pref height must not be 700 due to incredibly rare bug with TableView https://bugs.openjdk.org/browse/JDK-8320245?attachmentOrder=asc -->
 
 <VBox fx:id="root" prefHeight="725.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="bms.player.beatoraja.launcher.PlayConfigurationView">
+    <stylesheets>
+        <URL value="@LauncherStyle.css" />
+    </stylesheets>
     <HBox fx:id="topBar" alignment="CENTER_LEFT" spacing="10.0">
         <Label fx:id="arenaIdentity" minWidth="520.0" style="-fx-font-size: 15px; -fx-font-weight: bold;" text="BMS-IR Arena" />
         <Hyperlink fx:id="newversion" alignment="CENTER_LEFT" text="" />
@@ -68,7 +74,20 @@
         </Label>
         <ComboBox fx:id="bmsirRulesetProfile" prefWidth="90.0" />
     </HBox>
-    <TabPane prefHeight="435.0" prefWidth="740.0" VBox.vgrow="ALWAYS">
+    <HBox fx:id="configurationArea" VBox.vgrow="ALWAYS">
+        <VBox fx:id="sidebarRail" managed="false" prefWidth="220.0" styleClass="settings-sidebar" visible="false">
+            <ToggleButton fx:id="sidebarPlayerSummary" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="sidebar-player-summary" text="player1&#10;NO NAME · LR2" />
+            <ListView fx:id="sidebarNavigation" focusTraversable="true" styleClass="settings-sidebar-list" VBox.vgrow="ALWAYS" />
+        </VBox>
+        <VBox fx:id="configurationContent" HBox.hgrow="ALWAYS">
+            <HBox fx:id="contextHelpPanel" alignment="CENTER_LEFT" managed="false" spacing="18.0" styleClass="context-help-panel" visible="false">
+                <Canvas fx:id="contextHelpGraphic" height="82.0" width="132.0" />
+                <VBox alignment="CENTER_LEFT" spacing="5.0" HBox.hgrow="ALWAYS">
+                    <Label fx:id="contextHelpTitle" styleClass="context-help-title" text="%CONFIGURATION_HELP_DEFAULT_TITLE" />
+                    <Label fx:id="contextHelpDescription" maxWidth="1.7976931348623157E308" styleClass="context-help-description" text="%CONFIGURATION_HELP_DEFAULT_DESCRIPTION" wrapText="true" />
+                </VBox>
+            </HBox>
+            <TabPane fx:id="configurationTabs" prefHeight="435.0" prefWidth="740.0" VBox.vgrow="ALWAYS">
         <Tab fx:id="videoTab" closable="false" text="%TAB_VIDEO">
             <fx:include fx:id="video" source="VideoConfigurationView.fxml" />
         </Tab>
@@ -411,6 +430,14 @@
                     <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                 </padding>
                 <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <Label text="%CONFIGURATION_LAYOUT" />
+                    <ComboBox fx:id="configurationLayout" prefWidth="220.0" />
+                    <Label maxWidth="680.0" styleClass="configuration-description" text="%CONFIGURATION_LAYOUT_DESCRIPTION" wrapText="true" />
+                    <Separator>
+                        <VBox.margin>
+                            <Insets bottom="8.0" top="8.0" />
+                        </VBox.margin>
+                    </Separator>
                     <CheckBox fx:id="usecim" mnemonicParsing="false" prefHeight="25.0" text="%CACHE_SKIN_IMAGE" />
                     <CheckBox fx:id="clipboardScreenshot" mnemonicParsing="false" prefHeight="25.0" text="%CLIPBOARD_SCREENSHOT" />
 
@@ -605,7 +632,9 @@
                 <fx:include fx:id="trainer" source="TrainerView.fxml" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
             </AnchorPane>
         </Tab> -->
-    </TabPane>
+            </TabPane>
+        </VBox>
+    </HBox>
     <HBox fx:id="controlPanel" alignment="CENTER_LEFT" prefWidth="552.0" spacing="10.0">
         <VBox.margin>
             <Insets bottom="5.0" left="15.0" right="15.0" top="10.0" />

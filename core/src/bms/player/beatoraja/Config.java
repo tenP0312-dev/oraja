@@ -48,6 +48,10 @@ public class Config implements Validatable {
      * Last version boot, used for dynamically displaying changelogs
      */
     private String lastBootedVersion = "";
+	/**
+	 * Startup configuration window layout. Missing legacy values stay classic.
+	 */
+	private ConfigurationLayout configurationLayout = ConfigurationLayout.CLASSIC;
     /**
 	 * ディスプレイモード
 	 */
@@ -344,6 +348,16 @@ public class Config implements Validatable {
     public String getLastBootedVersion() { return lastBootedVersion; }
 
     public void setLastBootedVersion(String lastBootedVersion) { this.lastBootedVersion = lastBootedVersion; }
+
+	public ConfigurationLayout getConfigurationLayout() {
+		return configurationLayout;
+	}
+
+	public void setConfigurationLayout(ConfigurationLayout configurationLayout) {
+		this.configurationLayout = configurationLayout != null
+				? configurationLayout
+				: ConfigurationLayout.CLASSIC;
+	}
 
 	public boolean isVsync() {
 		return vsync;
@@ -862,6 +876,9 @@ public class Config implements Validatable {
     public boolean validate() {
 		displaymode = (displaymode != null) ? displaymode : DisplayMode.WINDOW;
 		resolution = (resolution != null) ? resolution : Resolution.HD;
+		configurationLayout = configurationLayout != null
+				? configurationLayout
+				: ConfigurationLayout.CLASSIC;
 
 		windowWidth = MathUtils.clamp(windowWidth, Resolution.SD.width, Resolution.ULTRAHD.width);
 		windowHeight = MathUtils.clamp(windowHeight, Resolution.SD.height, Resolution.ULTRAHD.height);
@@ -1001,8 +1018,12 @@ public class Config implements Validatable {
 		this.useResolution = useResolution;
 	}
 
-    public enum DisplayMode {
+	public enum DisplayMode {
 		FULLSCREEN,BORDERLESS,WINDOW;
+	}
+
+	public enum ConfigurationLayout {
+		CLASSIC, SIDEBAR;
 	}
 
 	public enum SongPreview {
