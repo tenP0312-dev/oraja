@@ -15,6 +15,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -40,6 +41,8 @@ public class ObsConfigurationView implements Initializable {
 	private Spinner<Integer> obsWsRecStopWait;
 	@FXML
 	private VBox listContainer;
+	@FXML
+	private Button obsWsConnectButton;
 
 	private Config config;
 	private String status;

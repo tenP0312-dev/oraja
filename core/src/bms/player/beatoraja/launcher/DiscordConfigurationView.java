@@ -10,6 +10,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
 
 import java.net.URL;
 import java.util.List;
@@ -28,6 +29,14 @@ public class DiscordConfigurationView implements Initializable {
 	private TextField url;
 	@FXML
 	private EditableTableView<WebhookInfo> webhookURL;
+	@FXML
+	private Button addWebhookButton;
+	@FXML
+	private Button removeWebhookButton;
+	@FXML
+	private Button moveWebhookUpButton;
+	@FXML
+	private Button moveWebhookDownButton;
 
 	private Config config;
 

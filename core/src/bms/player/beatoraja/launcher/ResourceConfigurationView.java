@@ -46,6 +46,20 @@ public class ResourceConfigurationView implements Initializable {
 	private CheckBox updatesong;
 	@FXML
 	private CheckBox scanSongArchives;
+	@FXML
+	private Button addSongPathButton;
+	@FXML
+	private Button downloadDirectoryButton;
+	@FXML
+	private Button workDirectoryButton;
+	@FXML
+	private Button chooseTablesButton;
+	@FXML
+	private Button addTableUrlButton;
+	@FXML
+	private Button updateDatabaseButton;
+	@FXML
+	private Button rebuildDatabaseButton;
 
 	private Config config;
 	private ResourceBundle resources;

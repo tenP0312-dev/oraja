@@ -7,9 +7,11 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlayConfigurationSidebarLayoutTest {
 	private static final String FXML_NAMESPACE = "http://javafx.com/fxml/1";
@@ -66,6 +68,56 @@ class PlayConfigurationSidebarLayoutTest {
 		}
 	}
 
+	@Test
+	void everySidebarSourceIsAnInjectedControllerField() throws Exception {
+		assertInjectedNodes("VideoConfigurationView.fxml", VideoConfigurationView.class,
+				"bgaExpand", "bgaOp", "displayMode", "maxFps", "missLayerTime", "monitor", "resolution", "vSync");
+		assertInjectedNodes("AudioConfigurationView.fxml", AudioConfigurationView.class,
+				"audio", "audioFastForward", "audioFreqOption", "audiobuffer", "audioname", "audiosamplerate",
+				"audiosim", "bgvolume", "keyvolume", "loopCourseResultSound", "loopResultSound", "normalizeVolume",
+				"systemvolume", "wasapiMode");
+		assertInjectedNodes("InputConfigurationView.fxml", InputConfigurationView.class,
+				"backgroundControllerInput", "controller_tableView", "inputconfig", "inputduration", "jkoc_hack",
+				"mouseScratch", "mouseScratchDistance", "mouseScratchMode", "mouseScratchTimeThreshold");
+		assertInjectedNodes("ResourceConfigurationView.fxml", ResourceConfigurationView.class,
+				"addSongPathButton", "addTableUrlButton", "bmsroot", "chooseTablesButton", "downloadDirectoryButton",
+				"rebuildDatabaseButton", "scanSongArchives", "tableurl", "updateDatabaseButton", "updatesong",
+				"workDirectoryButton");
+		assertInjectedNodes("MusicSelectConfigurationView.fxml", MusicSelectConfigurationView.class,
+				"analogScroll", "analogTicksPerScroll", "chartReplicationMode", "folderlamp", "maxsearchbar",
+				"randomselect", "scrolldurationhigh", "scrolldurationlow", "shownoexistingbar", "skipDecideScreen",
+				"songPreview", "useSongInfo");
+		assertInjectedNodes("SkinConfigurationView.fxml", SkinConfigurationView.class,
+				"skinUpdateButton", "skinconfig", "skinheaderSelector", "skintypeSelector");
+		assertInjectedNodes("IRConfigurationView.fxml", IRConfigurationView.class,
+				"bmsirArenaEnabled", "bmsirArenaServer", "importrival", "importscore", "irhome", "irname",
+				"irpassword", "irsend", "iruserid", "primarybutton");
+		assertInjectedNodes("TableEditorView.fxml", TableEditorView.class,
+				"tableEditorTabs", "tableName", "tableSaveButton");
+		assertInjectedNodes("StreamConfigurationView.fxml", StreamEditorView.class,
+				"enableRequest", "maxRequestCount", "notifyRequest");
+		assertInjectedNodes("DiscordConfigurationView.fxml", DiscordConfigurationView.class,
+				"addWebhookButton", "discordRichPresence", "moveWebhookDownButton", "moveWebhookUpButton",
+				"removeWebhookButton", "url", "webhookAvatar", "webhookName", "webhookOption", "webhookURL");
+		assertInjectedNodes("ObsConfigurationView.fxml", ObsConfigurationView.class,
+				"listContainer", "obsWsConnectButton", "obsWsEnabled", "obsWsHost", "obsWsPass", "obsWsPort",
+				"obsWsRecMode", "obsWsRecStopWait");
+		assertInjectedNodes("PlayConfigurationView.fxml", PlayConfigurationView.class,
+				"addBgmPathButton", "addSoundPathButton", "bgmpath", "clipboardScreenshot", "configurationLayout",
+				"defaultDownloadURL", "enableHttp", "enableIpfs", "httpDownloadSource", "importScoreButton",
+				"ipfsurl", "overrideDownloadURL", "soundpath", "usecim",
+				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
+				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
+				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
+				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
+				"bmsirLongNoteFixed", "bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",
+				"bmsirNumpad4", "bmsirNumpad5", "bmsirNumpad6", "bmsirNumpad7", "bmsirNumpad8",
+				"bmsirNumpad9", "bmsirNumpadJudgeTimingStep", "bmsirOneBassEnabled", "bmsirSelectButtonAction",
+				"bmsirSelectDifficultyDisplay", "bmsirSelectMode10k", "bmsirSelectMode14k", "bmsirSelectMode24k",
+				"bmsirSelectMode24kDp", "bmsirSelectMode5k", "bmsirSelectMode7k", "bmsirSelectMode9k",
+				"bmsirSelectModeAll", "bmsirStartButtonAction", "bmsirStartHerePreviewEnabled");
+	}
+
 	private Document loadFxml(String name) throws Exception {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		factory.setNamespaceAware(true);
@@ -85,5 +137,18 @@ class PlayConfigurationSidebarLayoutTest {
 			}
 		}
 		throw new AssertionError("Missing fx:id: " + id);
+	}
+
+	private void assertInjectedNodes(String fxml, Class<?> controller, String... ids) throws Exception {
+		Document document = loadFxml(fxml);
+		for (String id : ids) {
+			assertNotNull(elementWithFxId(document, id),
+					() -> fxml + " must declare fx:id=\"" + id + "\"");
+			Field field = controller.getDeclaredField(id);
+			assertNotNull(field.getAnnotation(javafx.fxml.FXML.class),
+					() -> controller.getSimpleName() + "." + id + " must be injected with @FXML");
+			assertTrue(javafx.scene.Node.class.isAssignableFrom(field.getType()),
+					() -> controller.getSimpleName() + "." + id + " must be a JavaFX Node");
+		}
 	}
 }

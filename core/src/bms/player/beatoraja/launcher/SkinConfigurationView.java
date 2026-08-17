@@ -35,6 +35,8 @@ public class SkinConfigurationView implements Initializable {
 	private ComboBox<SkinHeader> skinheaderSelector;
 	@FXML
 	private ScrollPane skinconfig;
+	@FXML
+	private Button skinUpdateButton;
 
 	private PlayerConfig player;
 	private SkinType mode = null;
