@@ -29,6 +29,7 @@ public final class SkinPreviewModel {
 	static final long LEAD_IN_MICROS = 800_000L;
 	static final long STEP_MICROS = 200_000L;
 	static final int STEP_COUNT = 64;
+	static final BMSPlayerMode PRESENTED_PLAY_MODE = BMSPlayerMode.PLAY;
 	private static final long MEASURE_MICROS = Math.round(60_000_000d / BPM * 4d);
 
 	private SkinPreviewModel() {}
@@ -48,6 +49,7 @@ public final class SkinPreviewModel {
 		model.setTotal(300);
 		model.setMD5("00000000000000000000000000000000");
 		model.setSHA256("0000000000000000000000000000000000000000000000000000000000000000");
+		model.setBgaList(new String[] { "skin-preview-bga.png" });
 
 		List<TimeLine> timelines = new ArrayList<>();
 		int players = Math.max(1, mode.player);
@@ -60,6 +62,9 @@ public final class SkinPreviewModel {
 			timeline.setBPM(BPM);
 			timeline.setScroll(1.0);
 			timeline.setSectionLine(time % MEASURE_MICROS == 0L);
+			if (step == 0) {
+				timeline.setBGA(0);
+			}
 
 			for (int player = 0; player < players; player++) {
 				int sideWidth = mode.key / players;
@@ -103,7 +108,7 @@ public final class SkinPreviewModel {
 		PlayerResource resource = new PlayerResource(
 				new SkinPreviewAudioDriver(), config, player, null);
 		resource.setSkinPreviewModel(model);
-		resource.setPlayMode(BMSPlayerMode.AUTOPLAY);
+		resource.setPlayMode(PRESENTED_PLAY_MODE);
 		resource.setReplayData(new ReplayData());
 		PlayerData playerData = new PlayerData();
 		playerData.setPlaycount(4321);

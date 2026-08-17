@@ -35,6 +35,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private static final int[] FULL_COMBO_TIMERS = {
 			TIMER_FULLCOMBO_1P, TIMER_FULLCOMBO_2P
 	};
+	private static final int[] GAUGE_INCREASE_TIMERS = {
+			TIMER_GAUGE_INCLEASE_1P, TIMER_GAUGE_INCLEASE_2P
+	};
+	private static final int[] GAUGE_MAX_TIMERS = {
+			TIMER_GAUGE_MAX_1P, TIMER_GAUGE_MAX_2P
+	};
 
 	private final BMSModel previewModel;
 	private ScoreData previewScore;
@@ -129,6 +135,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		} else {
 			clearPlayEffects();
 		}
+		updateGaugeEffects(frame.phase(), frame.playTime());
 		return frame.position();
 	}
 
@@ -158,11 +165,33 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		previewScore.setMinbp(0);
 		getScoreDataProperty().update(previewScore, previewPastNotes);
 
-		float progress = previewModel.getTotalNotes() > 0
-				? (float) previewPastNotes / previewModel.getTotalNotes() : 0f;
 		if (previewGauge != null) {
-			previewGauge.setValue(Math.min(100f, 22f + progress * 68f));
+			previewGauge.setValue(gaugeValue(previewPastNotes, previewModel.getTotalNotes()));
 		}
+	}
+
+	private void updateGaugeEffects(SkinPreviewLifecycle.PlayPhase phase, long playTime) {
+		boolean playing = phase == SkinPreviewLifecycle.PlayPhase.PLAY;
+		boolean maximum = previewGauge != null && previewGauge.getGauge().isMax()
+				&& (playing || phase == SkinPreviewLifecycle.PlayPhase.FINISHED);
+		for (int player = 0; player < previewPastNotesByPlayer.length; player++) {
+			long elapsed = gaugeEffectTime(previewModel, player, playTime);
+			SkinPreviewLifecycle.setTimer(timer, GAUGE_INCREASE_TIMERS[player],
+					playing ? elapsed : -1L);
+			SkinPreviewLifecycle.setTimer(timer, GAUGE_MAX_TIMERS[player],
+					maximum ? elapsed : -1L);
+		}
+	}
+
+	static long gaugeEffectTime(BMSModel model, int player, long playTime) {
+		long latest = latestJudgementTimeForPlayer(model, player, playTime);
+		return latest >= 0L ? playTime - latest : -1L;
+	}
+
+	static float gaugeValue(int pastNotes, int totalNotes) {
+		float progress = totalNotes > 0
+				? Math.min(1f, Math.max(0, pastNotes) / (float) totalNotes) : 0f;
+		return Math.min(100f, 22f + progress * 78f);
 	}
 
 	static int countPastNotes(BMSModel model, long playTime) {

@@ -234,6 +234,34 @@ public class BGAProcessor {
 		progress = 1;
 	}
 
+	/**
+	 * Prepares only the timeline shape needed by an in-memory skin preview. The
+	 * declared BGA intentionally resolves to the existing black fallback texture,
+	 * so no file, decoder, or background loader is touched.
+	 */
+	public synchronized void setSkinPreviewModel(BMSModel model) {
+		progress = 0;
+		cache.clear();
+		resetCurrentlyPlayingBGA();
+
+		Array<TimeLine> tls = new Array<TimeLine>();
+		if (model != null) {
+			for (TimeLine tl : model.getAllTimeLines()) {
+				if (tl.getBGA() != -1 || tl.getLayer() != -1 || tl.getEventlayer().length > 0) {
+					tls.add(tl);
+				}
+			}
+			movies = new MovieProcessor[model.getBgaList().length];
+		} else {
+			movies = new MovieProcessor[0];
+		}
+		timelines = tls.toArray(TimeLine.class);
+		pos = 0;
+		time = -1;
+		disposeOld();
+		progress = 1;
+	}
+
 	public void abort() {
 		progress = 1;
 	}
