@@ -1,3 +1,17 @@
+# Arena oraja 0.4.14.55
+
+- Added the default-OFF `BMS-IR本体URLから取得` / `Download from BMS-IR body
+  URLs` setting for missing difficulty-table songs. It tries the registered
+  HTTP(S) archive URL and then one Wayback snapshot when the live response
+  cannot be installed.
+- Retained accepted ZIP, RAR4/RAR5, and 7z packages compressed in
+  `http_download` instead of extracting them. Existing IPFS, configured HTTP
+  providers, and browser-page behavior remain unchanged.
+- Enforced the 2 GiB compressed download limit, archive structure/path/count/
+  expanded-size checks, and the requested chart MD5 before installing without
+  overwrite. These checks are not antivirus scanning; the option remains off
+  until the player accepts the untrusted-archive and media-decoder risk.
+
 # Arena oraja 0.4.14.54
 
 - Added a per-player switch for difficulty-table display levels. Disabling it

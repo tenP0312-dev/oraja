@@ -28,6 +28,17 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.55</h1>
+        <h2>Opt-in downloads from BMS-IR body URLs</h2>
+        <ul>
+        <li>The default-OFF <code>Download from BMS-IR body URLs</code> setting lets a missing difficulty-table song try its registered HTTP(S) archive, then one Wayback snapshot when the live response cannot be installed.</li>
+        <li>Existing IPFS, configured HTTP-provider, and browser-page behavior remain unchanged.</li>
+        </ul>
+        <h2>Retain and validate archives without extraction</h2>
+        <ul>
+        <li>Accepted ZIP, RAR4/RAR5, and 7z packages stay compressed in <code>http_download</code>. The client applies a 2 GiB limit, bounded archive checks, and the requested chart MD5 before installing without overwrite.</li>
+        <li>These checks are not antivirus scanning. Leave the option off unless you accept the risk of processing an untrusted archive and its media.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.54</h1>
         <h2>Optional difficulty-table display levels</h2>
         <ul>

@@ -10,10 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.54**. Difficulty-table levels can
-be disabled per player, charts without a readable preview can generate one in
-memory, and opt-in timing diagnostics can separate render, input, BGA, audio,
-GC, and memory pressure without changing gameplay scheduling.
+The current client source version is **0.4.14.55**. Missing difficulty-table
+songs can opt in to downloading the archive registered with BMS-IR, with one
+Wayback snapshot fallback when the live URL fails. Accepted packages stay
+compressed and must contain the requested chart before they are retained.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -42,6 +42,20 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.55
+
+The Other settings add `BMS-IR本体URLから取得` / `Download from BMS-IR body
+URLs`. It is off by default. When enabled, a missing difficulty-table song can
+try its BMS-IR-registered HTTP(S) archive URL, then one Wayback snapshot if the
+live download cannot be installed. Existing IPFS, configured HTTP-provider,
+and browser-page behavior remain unchanged.
+
+Accepted ZIP, RAR4/RAR5, and 7z packages remain compressed in `http_download`.
+The client enforces the 2 GiB download limit, archive structure/path/expanded-
+size checks, and the requested chart MD5 before a no-overwrite install. These
+checks are not antivirus scanning, so leave the setting off unless you accept
+the risk of processing an untrusted archive and its media.
 
 ## Arena oraja 0.4.14.54
 
@@ -355,7 +369,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.54
+  --output-dir /release/build-0.4.14.55
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
