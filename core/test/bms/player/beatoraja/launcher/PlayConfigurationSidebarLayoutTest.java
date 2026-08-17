@@ -25,13 +25,21 @@ class PlayConfigurationSidebarLayoutTest {
 		assertEquals("220.0", sidebar.getAttribute("prefWidth"));
 		assertEquals("220.0", sidebar.getAttribute("maxWidth"));
 		assertEquals("TextField", elementWithFxId(document, "sidebarSearch").getTagName());
-		assertEquals("VBox", elementWithFxId(document, "contextHelpPanel").getTagName());
+		Element contextHelp = elementWithFxId(document, "contextHelpPanel");
+		assertEquals("VBox", contextHelp.getTagName());
+		assertEquals("false", contextHelp.getAttribute("managed"));
+		assertEquals("false", contextHelp.getAttribute("visible"));
 		assertEquals("VBox", elementWithFxId(document, "classicPlayOptionContent").getTagName());
 		Element sidebarPlayOptions = elementWithFxId(document, "sidebarPlayOptionScroll");
 		assertEquals("ScrollPane", sidebarPlayOptions.getTagName());
 		assertEquals("false", sidebarPlayOptions.getAttribute("managed"));
 		assertEquals("false", sidebarPlayOptions.getAttribute("visible"));
 		assertEquals("VBox", elementWithFxId(document, "sidebarPlayOptionGroups").getTagName());
+	}
+
+	@Test
+	void sidebarScalarRowsUseOneTrailingEditorColumn() {
+		assertEquals(480.0, PlayConfigurationView.SIDEBAR_EDITOR_COLUMN_WIDTH);
 	}
 
 	@Test

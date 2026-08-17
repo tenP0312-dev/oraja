@@ -255,6 +255,7 @@
 
 .sidebar-setting-main {
     -fx-min-height: 38px;
+    -fx-alignment: center-left;
 }
 
 .sidebar-setting-title {
@@ -264,9 +265,10 @@
 }
 
 .sidebar-setting-editor {
-    -fx-min-width: 310px;
-    -fx-pref-width: 360px;
-    -fx-max-width: 430px;
+    -fx-min-width: 480px;
+    -fx-pref-width: 480px;
+    -fx-max-width: 480px;
+    -fx-alignment: center-left;
 }
 
 .sidebar-setting-row-description {

@@ -251,14 +251,14 @@ destinations in a fixed-width, searchable left navigation list. Each row uses
 the same restrained single-color line style and the selected row retains a
 text-and-background active state. Its player summary shows the current player
 ID plus display name and LR2/oraja rule profile, and expands the existing player
-controls into the right pane on demand. A separate card above the selected page
-shows the page overview by default. Pointing at a setting or moving keyboard
-focus to it changes that card to the setting name, an explanation, and a
-category diagram. Leaving the setting restores the page overview. Every
-Sidebar destination uses grouped row cards: scalar settings have a visible
-name, one wide editor or ON/OFF switch, and a persistent plain-language
-explanation. Complex editors keep their useful shape instead of being
-compressed into scalar rows. Controller tables, BMS roots, difficulty tables,
+controls into the right pane on demand. The selected page starts directly with
+its setting cards because each setting carries its own persistent explanation.
+Every Sidebar destination uses grouped row cards. Scalar settings use one
+stable two-column layout: the visible name remains left-aligned and one wide
+editor or ON/OFF switch occupies the shared trailing column, with a persistent
+plain-language explanation below. Complex editors keep their useful shape
+instead of being compressed into scalar rows. Controller tables, BMS roots,
+difficulty tables,
 skin options/previews, local-table editors, Discord Webhook destinations, and
 OBS scene mappings appear as full-width workspace cards with an explanation
 above them. Scalar Sidebar controls stay bound to the original controls.
@@ -269,8 +269,7 @@ configuration state used by Classic and by the existing save path.
 
 The layout choice applies immediately so it can be previewed before leaving
 the `Other` page, then persists with the normal configuration save. Classic
-retains the prior top-tab layout and does not show the sidebar-only context
-area.
+retains the prior top-tab layout.
 
 ## Resource settings and song-library updates
 
