@@ -22,7 +22,6 @@ import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIROrajaHelperBridge;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.OneBassLaneRandomShuffleModifier;
 import bms.player.beatoraja.pattern.OneBassPattern;
-import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import io.github.catizard.jlr2arenaex.enums.ClientToServer;
 import io.github.catizard.jlr2arenaex.network.SelectedBMSMessage;
@@ -694,9 +693,6 @@ public class BMSPlayer extends MainState {
 
 		}
 
-		// Pattern/replay modifiers can create CN/HCN after the initial decode.
-		// Normalize once more immediately before gameplay is initialized.
-		BMSIRLongNotePolicy.normalizeModel(model);
 		BMSIRArenaClient.tracePlayPhase("pattern_ready", this);
 
 		if(HSReplay != null && HSReplay.config != null) {

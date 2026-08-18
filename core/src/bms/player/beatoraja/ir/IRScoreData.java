@@ -2,7 +2,6 @@ package bms.player.beatoraja.ir;
 
 import bms.player.beatoraja.ClearType;
 import bms.player.beatoraja.ScoreData;
-import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import bms.player.beatoraja.input.BMSPlayerInputDevice;
 import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.play.JudgeAlgorithm;
@@ -115,7 +114,7 @@ public class IRScoreData {
 	
 	public IRScoreData(ScoreData score) {
 		this.sha256 = score.getSha256();
-		this.lntype = BMSIRLongNotePolicy.IR_LN_TYPE;
+		this.lntype = score.getMode();
 		this.player = score.getPlayer();
 		this.clear = ClearType.getClearTypeByID(score.getClear());
 		this.date = score.getDate();

@@ -445,11 +445,11 @@ public final class PlayerConfig {
 	}
 
 	public int getLnmode() {
-		return 0;
+		return lnmode;
 	}
 
 	public void setLnmode(int lnmode) {
-		this.lnmode = 0;
+		this.lnmode = lnmode;
 	}
 
 	public int getRandom2() {
@@ -1687,8 +1687,7 @@ public final class PlayerConfig {
 		targetlist = targetlist != null ? targetlist : new String[0];
 		judgetiming = MathUtils.clamp(judgetiming, JUDGETIMING_MIN, JUDGETIMING_MAX);
 		misslayerDuration = MathUtils.clamp(misslayerDuration, 0, 5000);
-		// The dedicated BMS-IR client always plays and submits legacy LN.
-		lnmode = 0;
+		lnmode = MathUtils.clamp(lnmode, 0, 2);
 		keyJudgeWindowRatePerfectGreat = MathUtils.clamp(keyJudgeWindowRatePerfectGreat, 25, 400);
 		keyJudgeWindowRateGreat = MathUtils.clamp(keyJudgeWindowRateGreat, 0, 400);
 		keyJudgeWindowRateGood = MathUtils.clamp(keyJudgeWindowRateGood, 0, 400);

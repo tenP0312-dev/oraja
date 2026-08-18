@@ -1036,7 +1036,21 @@ public class IntegerPropertyFactory {
 		bpmguide(306, (state) -> (state.resource.getPlayerConfig().isBpmguide() ? 1 : 0)),
 
 		customjudge(301, (state) -> (state.resource.getPlayerConfig().isCustomJudge() ? 1 : 0)),
-		lnmode(308, (state) -> dedicatedClientLnMode(state.resource.getSongdata())),
+		lnmode(308, (state) -> {
+			if (state instanceof BMSPlayer || state instanceof MusicResult) {
+				SongData model = state.resource.getSongdata();
+				if (model.hasAnyLongNote() && !model.hasUndefinedLongNote()) {
+					if (model.hasLongNote()) {
+						return 0;
+					} else if (model.hasChargeNote()) {
+						return 1;
+					} else {
+						return 2;
+					}
+				}
+			}
+			return state.resource.getPlayerConfig().getLnmode();
+		}),
 		notesdisplaytimingautoadjust(75, (state) -> (state.resource.getPlayerConfig().isNotesDisplayTimingAutoAdjust() ? 1 : 0)),
 		gaugeautoshift(78, (state) -> (state.resource.getPlayerConfig().getGaugeAutoShift())),
 		bottomshiftablegauge(341, (state) -> (state.resource.getPlayerConfig().getBottomShiftableGauge())),
@@ -1431,13 +1445,6 @@ public class IntegerPropertyFactory {
 			int assigned = pattern[index] + 1 - (is2PSide ? keyNum : 0);
 			return assigned >= 1 && assigned <= keyNum ? assigned : 0;
 		}
-	}
-
-	static int dedicatedClientLnMode(SongData ignoredSongMetadata) {
-		// Existing song databases may retain the chart's original CN/HCN
-		// feature flags. The dedicated BMS-IR clients normalize gameplay and
-		// IR payloads to legacy LN, so the skin property must report LN too.
-		return BMSModel.LNTYPE_LONGNOTE;
 	}
 
 	private static class FolderTotalClearCountProperty implements IntegerProperty {
