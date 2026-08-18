@@ -23,8 +23,10 @@ copying third-party skin assets. Music Select exposes the four MANIAC EXTRA
 MODE states, the persistent judge-timing restore switch, and all nine sort
 states including judge rank. Folder rows show lamp counts, while the new
 `Song Detail` skin option selects the existing table comment or a compact
-IR/rival summary. The 7-key Lua play skin adds three lane widths, a toggleable
-song/play-information overlay, EARLY/LATE totals, and the resolved fixed
+IR/rival summary. The table-comment view replaces the notes-distribution/BPM
+graph under CLEAR/PLAY with a high-contrast wrapped panel. The 7-key Lua
+play skin adds three lane widths, a toggleable song/play-information overlay,
+EARLY/LATE totals, and the resolved fixed
 RANDOM lane values from references `450`--`456` and `459`. The Select controls use one
 replaceable square-cell placeholder sprite; changing the artwork does not
 change any action or property reference.

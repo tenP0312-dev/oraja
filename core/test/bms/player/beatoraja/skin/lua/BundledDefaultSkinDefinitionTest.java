@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,6 +30,18 @@ class BundledDefaultSkinDefinitionTest {
 		assertTrue(hasDestination(skin, "bmsir-restore-on"));
 		assertTrue(hasValue(skin, "ir-rank"));
 		assertTrue(hasValue(skin, "folder-fullcombo"));
+		assertTrue(hasDestination(skin, "comment-panel"));
+		assertFalse(hasDestination(skin, "notes-graph"));
+		assertFalse(hasDestination(skin, "bpmgraph"));
+
+		JsonSkin.Text tableComment = text(skin, "tablecomment");
+		assertTrue(tableComment.wrapping);
+		assertEquals(12, tableComment.size);
+		JsonSkin.Destination tableCommentDestination = destination(skin, "tablecomment");
+		assertEquals(90, tableCommentDestination.dst[0].x);
+		assertEquals(274, tableCommentDestination.dst[0].y);
+		assertEquals(580, tableCommentDestination.dst[0].w);
+		assertEquals(14, tableCommentDestination.dst[0].h);
 		assertEquals(1, skin.radargraph.length);
 
 		var placeholder = ImageIO.read(Path.of("../assets/skin/default/bmsir-controls-placeholder.png").toFile());
@@ -66,6 +79,20 @@ class BundledDefaultSkinDefinitionTest {
 
 	private static boolean hasDestination(JsonSkin.Skin skin, String id) {
 		return Arrays.stream(skin.destination).anyMatch(candidate -> id.equals(candidate.id));
+	}
+
+	private static JsonSkin.Destination destination(JsonSkin.Skin skin, String id) {
+		return Arrays.stream(skin.destination)
+				.filter(candidate -> id.equals(candidate.id))
+				.findFirst()
+				.orElseThrow();
+	}
+
+	private static JsonSkin.Text text(JsonSkin.Skin skin, String id) {
+		return Arrays.stream(skin.text)
+				.filter(candidate -> id.equals(candidate.id))
+				.findFirst()
+				.orElseThrow();
 	}
 
 	private static boolean hasValue(JsonSkin.Skin skin, String id) {
