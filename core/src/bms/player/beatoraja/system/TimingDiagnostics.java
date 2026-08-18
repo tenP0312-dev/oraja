@@ -3,6 +3,7 @@ package bms.player.beatoraja.system;
 import bms.player.beatoraja.AudioConfig;
 import bms.player.beatoraja.Config;
 
+import java.lang.management.BufferPoolMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
@@ -16,14 +17,15 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
  * Opt-in gameplay timing diagnostics with allocation-free hot-path recording.
  *
- * <p>Gameplay threads only read the active session and update atomic counters.
- * Summaries, JSON formatting, GC inspection, rotation and file I/O all run on
- * one daemon writer thread.</p>
+ * <p>Normal gameplay hot paths only update atomic counters. Exceptional stall
+ * and underflow sites enqueue bounded event records without file I/O. Summary
+ * formatting, GC inspection, rotation and file I/O run on daemon threads.</p>
  */
 public final class TimingDiagnostics {
     public static final String ENABLE_PROPERTY = "bmsir.timingDiagnostics";
@@ -33,6 +35,9 @@ public final class TimingDiagnostics {
     private static final long MAX_LOG_BYTES = 2L * 1024L * 1024L;
     private static final int MAX_LOG_BACKUPS = 5;
     private static final int EVENT_QUEUE_CAPACITY = 32;
+    private static final long RENDER_STALL_EVENT_NANOS = 16_670_000L;
+    private static final long RENDER_STACK_SAMPLE_NANOS = TimeUnit.MILLISECONDS.toNanos(50);
+    private static final AtomicLong PLAY_SESSION_IDS = new AtomicLong();
 
     private static volatile Session active;
 
@@ -50,6 +55,9 @@ public final class TimingDiagnostics {
         PORTAUDIO_ENQUEUE_TO_MIX("portaudio_enqueue_to_mix_us"),
         PORTAUDIO_MIX("portaudio_mix_us"),
         PORTAUDIO_WRITE("portaudio_write_us"),
+        LOUDNESS_ANALYSIS_WAIT("loudness_analysis_wait_us"),
+        BGA_PREPARE_STEP("bga_prepare_step_us"),
+        BGA_PREPARE_TOTAL("bga_prepare_total_us"),
         BGA_DECODE("bga_decode_us"),
         BGA_PIXMAP_LOCK("bga_pixmap_lock_us"),
         BGA_PIXMAP_COPY("bga_pixmap_copy_us"),
@@ -132,6 +140,7 @@ public final class TimingDiagnostics {
         if (previous != 0 && now >= previous) {
             session.metrics[Metric.RENDER_INTERVAL.ordinal()].recordNanos(now - previous);
         }
+        session.renderStarted(now);
         return now;
     }
 
@@ -157,7 +166,52 @@ public final class TimingDiagnostics {
             long elapsed = System.nanoTime() - startedNanos;
             if (elapsed >= 0) {
                 session.metrics[metric.ordinal()].recordNanos(elapsed);
+                if (metric == Metric.RENDER_DURATION) {
+                    session.renderFinished(startedNanos, elapsed);
+                }
             }
+        }
+    }
+
+    /** Starts a new chart-local diagnostic context without exposing chart paths. */
+    public static long playSessionStarted(String chartHash) {
+        Session session = active;
+        if (session != null) {
+            return session.playSessionStarted(chartHash);
+        }
+        return 0;
+    }
+
+    /** Records one internal gameplay preparation or playback stage transition. */
+    public static void playStageChanged(String stage) {
+        Session session = active;
+        if (session != null) {
+            session.playStageChanged(stage);
+        }
+    }
+
+    public static void playSessionFinished(long sessionId, String finalStage) {
+        Session session = active;
+        if (session != null) {
+            session.playSessionFinished(sessionId, finalStage);
+        }
+    }
+
+    /** Emits exceptional PortAudio context without doing file I/O on the audio thread. */
+    public static void portAudioUnderflow(
+            int queueDepth,
+            int frames,
+            long writeMicros,
+            long writerDelayMicros) {
+        Session session = active;
+        if (session != null) {
+            session.event(
+                    "portaudio_underflow",
+                    "queue_depth", Math.max(queueDepth, 0),
+                    "frames", Math.max(frames, 0),
+                    "write_us", Math.max(writeMicros, 0),
+                    "writer_delay_us", Math.max(writerDelayMicros, 0)
+            );
         }
     }
 
@@ -284,14 +338,14 @@ public final class TimingDiagnostics {
 
         private final AtomicLongArray buckets = new AtomicLongArray(UPPER_MICROS.length);
         private final AtomicLong totalNanos = new AtomicLong();
-        private final AtomicLong maximumNanos = new AtomicLong();
+        private final AtomicReference<Maximum> maximum = new AtomicReference<>(Maximum.EMPTY);
 
         void recordNanos(long nanos) {
             if (nanos < 0) {
                 return;
             }
             totalNanos.addAndGet(nanos);
-            updateMax(maximumNanos, nanos);
+            updateMaximum(nanos);
             long micros = TimeUnit.NANOSECONDS.toMicros(nanos);
             int low = 0;
             int high = UPPER_MICROS.length - 1;
@@ -321,18 +375,30 @@ public final class TimingDiagnostics {
                 count += counts[index];
             }
             long total = totalNanos.getAndSet(0);
-            long maximum = maximumNanos.getAndSet(0);
+            Maximum maximum = this.maximum.getAndSet(Maximum.EMPTY);
             if (count == 0) {
                 return HistogramSnapshot.EMPTY;
             }
             return new HistogramSnapshot(
                     count,
                     total,
-                    maximum,
-                    percentile(counts, count, 0.50, maximum),
-                    percentile(counts, count, 0.95, maximum),
-                    percentile(counts, count, 0.99, maximum)
+                    maximum.nanos(),
+                    maximum.epochMillis(),
+                    percentile(counts, count, 0.50, maximum.nanos()),
+                    percentile(counts, count, 0.95, maximum.nanos()),
+                    percentile(counts, count, 0.99, maximum.nanos())
             );
+        }
+
+        private void updateMaximum(long nanos) {
+            Maximum previous = maximum.get();
+            while (nanos > previous.nanos()) {
+                Maximum candidate = new Maximum(nanos, System.currentTimeMillis());
+                if (maximum.compareAndSet(previous, candidate)) {
+                    return;
+                }
+                previous = maximum.get();
+            }
         }
 
         private static long percentile(
@@ -355,14 +421,19 @@ public final class TimingDiagnostics {
         }
     }
 
+    record Maximum(long nanos, long epochMillis) {
+        static final Maximum EMPTY = new Maximum(0, 0);
+    }
+
     record HistogramSnapshot(
             long count,
             long totalNanos,
             long maximumNanos,
+            long maximumEpochMillis,
             long p50Micros,
             long p95Micros,
             long p99Micros) {
-        static final HistogramSnapshot EMPTY = new HistogramSnapshot(0, 0, 0, 0, 0, 0);
+        static final HistogramSnapshot EMPTY = new HistogramSnapshot(0, 0, 0, 0, 0, 0, 0);
 
         double averageMicros() {
             return count == 0 ? 0 : (double) totalNanos / count / 1_000.0;
@@ -513,9 +584,15 @@ public final class TimingDiagnostics {
         final AtomicLong retainedMovieBytes = new AtomicLong();
         final AtomicLong pendingBgaUploads = new AtomicLong();
         final AtomicLong maxPendingBgaUploads = new AtomicLong();
+        final AtomicLong renderActiveSinceNanos = new AtomicLong();
+        final AtomicLong sampledRenderStartNanos = new AtomicLong();
         final AsyncLogWriter writer;
 
         volatile String state = "startup";
+        volatile long playSessionId;
+        volatile long transitionId;
+        volatile String chartId = "";
+        volatile Thread renderThread;
         volatile String audioDriver = "unknown";
         volatile String audioHostApi = "";
         volatile int audioSampleRate;
@@ -524,6 +601,8 @@ public final class TimingDiagnostics {
         private long lastSummaryNanos = System.nanoTime();
         private long previousGcCount = gcCount();
         private long previousGcTimeMillis = gcTimeMillis();
+        private volatile boolean stopping;
+        private final Thread stallWatchdog;
 
         Session(
                 Path path,
@@ -547,6 +626,11 @@ public final class TimingDiagnostics {
                     this::summaryJson,
                     startWriter
             );
+            stallWatchdog = new Thread(this::watchRenderStalls, "BMS timing stall watchdog");
+            stallWatchdog.setDaemon(true);
+            if (startWriter) {
+                stallWatchdog.start();
+            }
         }
 
         void event(String event, Object... details) {
@@ -555,12 +639,101 @@ public final class TimingDiagnostics {
             appendString(json, "at", Instant.now().toString());
             json.append(',');
             appendString(json, "event", event);
+            json.append(',');
+            appendString(json, "state", state);
+            json.append(',');
+            appendNumber(json, "session_id", playSessionId);
+            json.append(',');
+            appendNumber(json, "transition_id", transitionId);
+            json.append(',');
+            appendString(json, "chart_id", chartId);
             for (int index = 0; index + 1 < details.length; index += 2) {
                 json.append(',');
                 appendValue(json, String.valueOf(details[index]), details[index + 1]);
             }
             json.append('}');
             writer.offer(json.toString());
+        }
+
+        long playSessionStarted(String chartHash) {
+            if (playSessionId != 0) {
+                event("play_session_replaced");
+            }
+            playSessionId = PLAY_SESSION_IDS.incrementAndGet();
+            transitionId = 0;
+            chartId = shortChartId(chartHash);
+            state = "PLAY_CREATE";
+            event("play_session_started");
+            return playSessionId;
+        }
+
+        void playStageChanged(String stage) {
+            state = stage == null || stage.isBlank() ? "unknown" : stage;
+            transitionId++;
+            event("play_stage");
+        }
+
+        void playSessionFinished(long sessionId, String finalStage) {
+            if (sessionId == 0 || playSessionId != sessionId) {
+                return;
+            }
+            if (finalStage != null && !finalStage.isBlank()) {
+                state = finalStage;
+                transitionId++;
+            }
+            event("play_session_finished");
+            playSessionId = 0;
+            transitionId = 0;
+            chartId = "";
+        }
+
+        void renderStarted(long startedNanos) {
+            renderThread = Thread.currentThread();
+            sampledRenderStartNanos.set(0);
+            renderActiveSinceNanos.set(startedNanos);
+        }
+
+        void renderFinished(long startedNanos, long elapsedNanos) {
+            renderActiveSinceNanos.compareAndSet(startedNanos, 0);
+            if (elapsedNanos >= RENDER_STALL_EVENT_NANOS) {
+                event(
+                        "render_stall",
+                        "duration_us", TimeUnit.NANOSECONDS.toMicros(elapsedNanos),
+                        "thread", Thread.currentThread().getName()
+                );
+            }
+        }
+
+        private void watchRenderStalls() {
+            while (!stopping) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException interrupted) {
+                    if (stopping) {
+                        return;
+                    }
+                    continue;
+                }
+                long started = renderActiveSinceNanos.get();
+                if (started == 0 || System.nanoTime() - started < RENDER_STACK_SAMPLE_NANOS
+                        || !sampledRenderStartNanos.compareAndSet(0, started)) {
+                    continue;
+                }
+                if (renderActiveSinceNanos.get() != started) {
+                    sampledRenderStartNanos.compareAndSet(started, 0);
+                    continue;
+                }
+                Thread thread = renderThread;
+                StackTraceElement[] stack = thread == null
+                        ? new StackTraceElement[0]
+                        : thread.getStackTrace();
+                event(
+                        "render_stall_sample",
+                        "duration_us", TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - started),
+                        "thread", thread == null ? "unknown" : thread.getName(),
+                        "stack", formatStack(stack)
+                );
+            }
         }
 
         String summaryJson() {
@@ -582,6 +755,12 @@ public final class TimingDiagnostics {
             appendString(json, "event", "timing_summary");
             json.append(',');
             appendString(json, "state", state);
+            json.append(',');
+            appendNumber(json, "session_id", playSessionId);
+            json.append(',');
+            appendNumber(json, "transition_id", transitionId);
+            json.append(',');
+            appendString(json, "chart_id", chartId);
             json.append(',');
             appendNumber(json, "period_ms", periodMillis);
             json.append(',');
@@ -623,6 +802,8 @@ public final class TimingDiagnostics {
             json.append(',');
             appendNumber(json, "heap_max_bytes", runtime.maxMemory());
             json.append(',');
+            appendNumber(json, "direct_buffer_bytes", directBufferBytes());
+            json.append(',');
             appendNumber(json, "gc_count", gcCountDelta);
             json.append(',');
             appendNumber(json, "gc_time_ms", gcTimeDelta);
@@ -641,9 +822,39 @@ public final class TimingDiagnostics {
         }
 
         void shutdown() {
+            stopping = true;
+            stallWatchdog.interrupt();
             event("shutdown");
             writer.shutdown();
         }
+    }
+
+    private static String shortChartId(String chartHash) {
+        if (chartHash == null || chartHash.isBlank()) {
+            return "";
+        }
+        return chartHash.substring(0, Math.min(12, chartHash.length()));
+    }
+
+    private static String formatStack(StackTraceElement[] stack) {
+        StringBuilder value = new StringBuilder(Math.min(1_024, stack.length * 80));
+        int limit = Math.min(stack.length, 16);
+        for (int index = 0; index < limit; index++) {
+            if (index > 0) {
+                value.append(" <- ");
+            }
+            value.append(stack[index]);
+        }
+        return value.toString();
+    }
+
+    private static long directBufferBytes() {
+        for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
+            if ("direct".equals(pool.getName())) {
+                return Math.max(pool.getMemoryUsed(), 0);
+            }
+        }
+        return 0;
     }
 
     private static long gcCount() {
@@ -689,6 +900,14 @@ public final class TimingDiagnostics {
         appendNumber(json, "p99_us", snapshot.p99Micros());
         json.append(',');
         appendNumber(json, "max_us", snapshot.maximumMicros());
+        json.append(',');
+        appendString(
+                json,
+                "max_at",
+                snapshot.maximumEpochMillis() == 0
+                        ? ""
+                        : Instant.ofEpochMilli(snapshot.maximumEpochMillis()).toString()
+        );
         json.append('}');
     }
 

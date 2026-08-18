@@ -37,6 +37,17 @@ returns to the original window style when F4 is pressed. Existing configs
 without this value infer BORDERLESS from a saved BORDERLESS mode and otherwise
 keep the legacy WINDOW fallback.
 
+The current development source removes the PRELOAD render thread's forced GC
+and blocking loudness-result wait. Loudness completion is polled while the
+loading screen continues to render, with the existing timeout/fallback kept.
+Static BGA textures retain render-thread/OpenGL ownership but their disposal
+and upload are spread across bounded preparation steps; the client reaches
+READY or sends Arena readiness only after the queue completes. The default-OFF
+timing log adds per-period maximum timestamps, play-session/transition/chart
+context, 16.67 ms render-stall events, one safe render-stack sample after 50
+ms, DirectBuffer usage, and individual PortAudio underflow context. Windows
+ASIO before/after acceptance remains a separate physical-client test.
+
 Version `0.4.14.54` adds a per-player switch for difficulty-table display
 levels, bounded in-memory preview generation for charts without a readable
 preview, and default-OFF gameplay timing diagnostics. The diagnostic collector

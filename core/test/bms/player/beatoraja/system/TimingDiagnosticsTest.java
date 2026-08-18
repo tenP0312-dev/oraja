@@ -31,6 +31,7 @@ class TimingDiagnosticsTest {
         assertEquals(12_000, snapshot.p95Micros());
         assertEquals(12_000, snapshot.p99Micros());
         assertEquals(10_000, snapshot.maximumMicros());
+        assertTrue(snapshot.maximumEpochMillis() > 0);
         assertEquals(0, histogram.snapshotAndReset().count());
     }
 
@@ -86,6 +87,8 @@ class TimingDiagnosticsTest {
         );
         session.metrics[TimingDiagnostics.Metric.RENDER_DURATION.ordinal()]
                 .recordNanos(TimeUnit.MILLISECONDS.toNanos(2));
+        session.playSessionStarted("0123456789abcdef");
+        session.playStageChanged("ACTIVE_PLAY");
 
         JsonNode summary = JSON.readTree(session.summaryJson());
 
@@ -94,8 +97,43 @@ class TimingDiagnosticsTest {
                 .path("render_duration_us")
                 .path("count")
                 .asInt());
+        assertFalse(summary.path("metrics")
+                .path("render_duration_us")
+                .path("max_at")
+                .asText()
+                .isBlank());
+        assertTrue(summary.path("session_id").asLong() > 0);
+        assertEquals(1, summary.path("transition_id").asLong());
+        assertEquals("0123456789ab", summary.path("chart_id").asText());
+        assertEquals("ACTIVE_PLAY", summary.path("state").asText());
         assertTrue(summary.path("runtime").path("heap_used_bytes").isNumber());
+        assertTrue(summary.path("runtime").path("direct_buffer_bytes").isNumber());
         assertTrue(summary.path("counters").isObject());
+    }
+
+    @Test
+    void stalePlayShutdownCannotClearAReplacementSession(@TempDir Path directory) {
+        TimingDiagnostics.Session session = new TimingDiagnostics.Session(
+                directory.resolve("timing.log"),
+                TimeUnit.DAYS.toNanos(1),
+                4,
+                1_024,
+                2,
+                false
+        );
+        long staleSessionId = session.playSessionStarted("old-chart");
+        long replacementSessionId = session.playSessionStarted("new-chart");
+
+        session.playSessionFinished(staleSessionId, "RESULT");
+
+        assertEquals(replacementSessionId, session.playSessionId);
+        assertEquals("new-chart", session.chartId);
+        assertEquals("PLAY_CREATE", session.state);
+
+        session.playSessionFinished(replacementSessionId, "RESULT");
+        assertEquals(0, session.playSessionId);
+        assertEquals("", session.chartId);
+        assertEquals("RESULT", session.state);
     }
 
     @Test
