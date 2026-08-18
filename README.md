@@ -34,8 +34,10 @@ retain the legacy WINDOW fallback.
 The current development source also retains per-chart difficulty-table
 comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
 active table entry is exposed to skins as string property `tablecomment`
-(`1004`). The default Music Select skin uses a wrapped text area; custom skins
-control its width, font size, placement, and practical visible line count.
+(`1004`). The default Music Select skin replaces the notes-distribution/BPM
+graph region below CLEAR/PLAY with a high-contrast wrapped comment panel;
+custom skins control its width, font size, placement, and practical visible
+line count.
 Comments are contextual to the selected table and do not alter local song
 metadata.
 
