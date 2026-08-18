@@ -1,6 +1,7 @@
 package bms.tool.mdprocessor;
 
 import bms.player.beatoraja.MainController;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.graphics.Color;
@@ -19,7 +20,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.regex.Matcher;
@@ -296,7 +296,10 @@ public class HttpDownloadProcessor {
                     ImGuiNotify.info(String.format(
                             "Archive saved without extraction from %s: %s", source, result.archive().getFileName()));
                 }
-                rescanBodyDownloadDirectory(downloadDirectory, main::updateSong);
+                rescanBodyDownloadDirectory(
+                        downloadDirectory,
+                        main::updateSong,
+                        () -> notifyBodyDownloadRegistration(downloadTask));
             } catch (IOException error) {
                 String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
                 logger.warn("[HttpDownloadProcessor] BMS-IR body archive rejected: {}", message, error);
@@ -307,9 +310,35 @@ public class HttpDownloadProcessor {
         });
     }
 
+    private void notifyBodyDownloadRegistration(DownloadTask downloadTask) {
+        boolean registered = false;
+        try {
+            SongData[] songs = main.getSongDatabase().getSongDatas(new String[]{downloadTask.getHash()});
+            registered = songs != null && songs.length > 0;
+        } catch (RuntimeException error) {
+            logger.warn("[HttpDownloadProcessor] Failed to verify the downloaded chart in the song database", error);
+        }
+        if (registered) {
+            ImGuiNotify.info(BMSIRArenaI18n.text(
+                    "ダウンロードした譜面を登録しました。もう一度決定するとプレイできます",
+                    "The downloaded chart is ready. Select it again to play"), 8000);
+        } else {
+            ImGuiNotify.warning(BMSIRArenaI18n.text(
+                    "圧縮ファイルは保存しましたが、譜面を曲DBで確認できませんでした。ダウンロード先の曲更新を再実行してください",
+                    "The archive was saved, but the chart was not found in the song database. Update the download folder again"),
+                    10000);
+        }
+    }
+
     static void rescanBodyDownloadDirectory(String downloadDirectory,
-                                            BiConsumer<String, Boolean> updateSong) {
-        updateSong.accept(downloadDirectory, false);
+                                            SongUpdateRequester updateSong,
+                                            Runnable completion) {
+        updateSong.accept(downloadDirectory, false, completion);
+    }
+
+    @FunctionalInterface
+    interface SongUpdateRequester {
+        void accept(String path, boolean updateParentWhenMissing, Runnable completion);
     }
 
     /**

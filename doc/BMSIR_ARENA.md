@@ -25,6 +25,16 @@ and performs the post-install song update against only the configured download
 root with parent fallback disabled. Multi-package landing pages remain able to
 continue to the correct later archive candidate.
 
+The current development source also rediscovers an exact accepted
+`bmsir-<md5>.zip/.rar/.7z` package after a client restart and revalidates its
+requested chart before any network request. A targeted download-root scan is
+queued when another song update is active; equivalent pending scans coalesce
+without losing their completion checks. Download-task progress is reconciled
+when the BMS-IR body option is the only HTTP download path enabled. Once the
+scan finishes, the client checks the requested MD5 in the song database and
+either tells the player to select the chart again to play or shows a clear
+registration warning.
+
 Version `0.4.14.56` resolves bounded ZIP/RAR/7z candidates from registered HTML
 distribution pages, including through one Wayback snapshot, while retaining
 the requested-chart-MD5 and archive checks. It also loads generated in-memory
@@ -528,6 +538,20 @@ different song packages can still resolve and retain the correct later link.
 After either a new install or a verified reuse, the in-process song update
 scans the configured download root directly and never falls back to scanning
 its parent directory.
+
+An exact accepted `bmsir-<md5>.zip/.rar/.7z` archive in that root is also
+rediscovered after restart and must pass the same bounded archive and requested
+chart MD5 checks before reuse. An invalid exact archive is never overwritten.
+If another song update is active, this targeted update waits in a queue instead
+of being discarded; equivalent pending requests share one scan while retaining
+each chart's completion check.
+
+Selecting an unavailable chart starts the download and keeps Music Select
+active. It does not automatically start gameplay. After the queued or immediate
+scan completes, a successful MD5 lookup displays a ready notice; select the
+chart again to play it. If the archive was saved but the chart still is not in
+the song database, the client shows a warning and asks for another update of
+the configured download root.
 
 Download-task identity uses both the registered URL and requested chart MD5,
 so multiple charts carried by one package are not mistaken for the same task.

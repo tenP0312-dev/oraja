@@ -272,23 +272,48 @@ class BmsirBodyDownloadServiceTest {
 	}
 
 	@Test
-	void neverReplacesAnExistingArchive() throws Exception {
+	void reusesValidatedArchiveFromDiskAcrossServiceRestart() throws Exception {
 		byte[] chart = "#TITLE Existing\n".getBytes(StandardCharsets.UTF_8);
 		byte[] archive = zip("chart.bms", chart);
-		server.createContext("/body", exchange -> respond(exchange, 200, "application/zip", archive));
+		AtomicInteger bodyRequests = new AtomicInteger();
+		server.createContext("/body", exchange -> {
+			bodyRequests.incrementAndGet();
+			respond(exchange, 500, "text/plain", new byte[0]);
+		});
 		server.createContext("/available", exchange -> respond(exchange, 200, "application/json",
 				"{}".getBytes(StandardCharsets.UTF_8)));
 		String md5 = md5(chart);
-		BmsirBodyDownloadService service = service(1024 * 1024);
-		Path installed = service.install(task(base.resolve("/body"), md5)).archive();
-		byte[] original = Files.readAllBytes(installed);
+		Path installed = Files.write(temporary.resolve("bmsir-" + md5 + ".zip"), archive);
+
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task(base.resolve("/body"), md5));
+
+		assertEquals(installed, result.archive());
+		assertTrue(result.reused());
+		assertEquals(0, bodyRequests.get());
+	}
+
+	@Test
+	void rejectsInvalidExactArchiveWithoutNetworkOrOverwrite() throws Exception {
+		byte[] requestedChart = "#TITLE Requested\n".getBytes(StandardCharsets.UTF_8);
+		byte[] existingArchive = zip("wrong.bms", "#TITLE Wrong\n".getBytes(StandardCharsets.UTF_8));
+		byte[] downloadableArchive = zip("requested.bms", requestedChart);
+		AtomicInteger bodyRequests = new AtomicInteger();
+		server.createContext("/body", exchange -> {
+			bodyRequests.incrementAndGet();
+			respond(exchange, 200, "application/zip", downloadableArchive);
+		});
+		String md5 = md5(requestedChart);
+		Path existing = Files.write(temporary.resolve("bmsir-" + md5 + ".zip"), existingArchive);
+		byte[] original = Files.readAllBytes(existing);
 
 		IOException error = assertThrows(IOException.class,
-				() -> service.install(task(base.resolve("/body"), md5)));
+				() -> service(1024 * 1024).install(task(base.resolve("/body"), md5)));
 
-		assertTrue(error.getMessage().contains("already exists"));
+		assertTrue(error.getMessage().contains("failed validation"));
+		assertEquals(0, bodyRequests.get());
 		assertEquals(HexFormat.of().formatHex(original),
-				HexFormat.of().formatHex(Files.readAllBytes(installed)));
+				HexFormat.of().formatHex(Files.readAllBytes(existing)));
 	}
 
 	@Test

@@ -47,6 +47,21 @@ class MainControllerBMSIRTest {
 		assertFalse(MainController.shouldFallbackToOpenAlOnPortAudioFailure(DriverType.ASIO));
 	}
 
+	@Test
+	void bodyOnlyDownloadsStillReconcileTaskProgress() {
+		Config config = new Config();
+		config.setEnableHttp(false);
+		config.setEnableBmsirBodyDownload(false);
+		assertFalse(MainController.shouldUpdateDownloadTaskState(config));
+
+		config.setEnableBmsirBodyDownload(true);
+		assertTrue(MainController.shouldUpdateDownloadTaskState(config));
+
+		config.setEnableBmsirBodyDownload(false);
+		config.setEnableHttp(true);
+		assertTrue(MainController.shouldUpdateDownloadTaskState(config));
+	}
+
     private static IRConfig ir(String name, String userId) {
         IRConfig config = new IRConfig();
         config.setIrname(name);
