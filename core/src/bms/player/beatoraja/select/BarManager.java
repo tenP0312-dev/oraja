@@ -1124,6 +1124,7 @@ public class BarManager {
 	) {
 		Map<String, List<SongData>> groups = new LinkedHashMap<>();
 		Map<SongData, Integer> tableLevels = new IdentityHashMap<>();
+		Map<SongData, String> tableComments = new IdentityHashMap<>();
 		for (Bar bar : bars) {
 			if (bar instanceof SongBar songBar) {
 				for (SongData song : songBar.getDifficultyVariants()) {
@@ -1132,6 +1133,10 @@ public class BarManager {
 					Integer tableLevel = songBar.getTableDisplayLevel(song);
 					if (tableLevel != null) {
 						tableLevels.put(song, tableLevel);
+					}
+					String tableComment = songBar.getTableComment(song);
+					if (!tableComment.isBlank()) {
+						tableComments.put(song, tableComment);
 					}
 				}
 			}
@@ -1156,7 +1161,8 @@ public class BarManager {
 						variants.toArray(SongData[]::new),
 						preferredSha256,
 						difficultyStage,
-						tableLevels
+						tableLevels,
+						tableComments
 				));
 			}
 		}

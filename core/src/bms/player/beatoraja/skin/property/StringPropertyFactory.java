@@ -263,6 +263,10 @@ public class StringPropertyFactory {
 		tablename(1001, (state) -> (state.resource.getTablename())),
 		tablelevel(1002, (state) -> (state.resource.getTablelevel())),
 		tablefull(1003, (state) -> (state.resource.getTableFullname())),
+		tablecomment(1004, (state) -> state instanceof MusicSelector selector
+				&& selector.getSelectedBar() instanceof SongBar songBar
+				? songBar.getTableComment()
+				: ""),
 		version(1010, (state) -> Version.getSkinVersion()),
 		irname(1020, (state) -> {
 			final IRConfig[] irconfig = state.resource.getPlayerConfig().getIrconfig();
