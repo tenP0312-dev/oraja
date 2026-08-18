@@ -483,6 +483,16 @@ by the table. Only then is the file moved without replacement to
 oversized, ambiguous, mismatched, and duplicate downloads leave no staging
 file and never overwrite an installed archive.
 
+During the same client run, body downloads from one registered URL are
+serialized. Before another network request, each package already retained for
+that URL is checked with the same bounded archive reader and requested-chart
+MD5 rule. A package is reused only when it contains that exact chart; matching
+the registered URL by itself is not sufficient, so a landing page with several
+different song packages can still resolve and retain the correct later link.
+After either a new install or a verified reuse, the in-process song update
+scans the configured download root directly and never falls back to scanning
+its parent directory.
+
 Download-task identity uses both the registered URL and requested chart MD5,
 so multiple charts carried by one package are not mistaken for the same task.
 Selecting the same failed chart again or pressing Retry resets and reruns its

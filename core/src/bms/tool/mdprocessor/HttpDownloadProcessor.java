@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.regex.Matcher;
@@ -67,6 +68,8 @@ public class HttpDownloadProcessor {
     private final HttpDownloadSource httpDownloadSource;
     private final boolean bmsirBodyDownloadEnabled;
     private final BmsirBodyDownloadService bmsirBodyDownloadService;
+    private final Map<String, Object> bmsirBodyUrlLocks = new ConcurrentHashMap<>();
+    private final Map<String, CopyOnWriteArrayList<Path>> retainedBmsirArchives = new ConcurrentHashMap<>();
 
     public HttpDownloadProcessor(MainController main, HttpDownloadSource httpDownloadSource, String downloadDirectory) {
         this(main, httpDownloadSource, downloadDirectory, false);
@@ -271,14 +274,29 @@ public class HttpDownloadProcessor {
             downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Downloading);
             downloadTask.setErrorMessage(null);
             try {
-                BmsirBodyDownloadService.InstallResult result = bmsirBodyDownloadService.install(downloadTask);
+                String registeredUrl = downloadTask.getUrl();
+                Object installLock = bmsirBodyUrlLocks.computeIfAbsent(registeredUrl, ignored -> new Object());
+                BmsirBodyDownloadService.InstallResult result;
+                synchronized (installLock) {
+                    List<Path> retained = List.copyOf(retainedBmsirArchives.getOrDefault(
+                            registeredUrl, new CopyOnWriteArrayList<>()));
+                    result = bmsirBodyDownloadService.install(downloadTask, retained);
+                    retainedBmsirArchives.computeIfAbsent(
+                            registeredUrl, ignored -> new CopyOnWriteArrayList<>()).addIfAbsent(result.archive());
+                }
                 downloadTask.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Extracted);
-                String source = result.wayback()
-                        ? (result.landingPage() ? "archive link from a Wayback page" : "Wayback snapshot")
-                        : (result.landingPage() ? "archive link from the registered page" : "registered body URL");
-                ImGuiNotify.info(String.format(
-                        "Archive saved without extraction from %s: %s", source, result.archive().getFileName()));
-                main.updateSong(downloadDirectory, true);
+                if (result.reused()) {
+                    ImGuiNotify.info(String.format(
+                            "Existing archive contains the requested chart; reusing it: %s",
+                            result.archive().getFileName()));
+                } else {
+                    String source = result.wayback()
+                            ? (result.landingPage() ? "archive link from a Wayback page" : "Wayback snapshot")
+                            : (result.landingPage() ? "archive link from the registered page" : "registered body URL");
+                    ImGuiNotify.info(String.format(
+                            "Archive saved without extraction from %s: %s", source, result.archive().getFileName()));
+                }
+                rescanBodyDownloadDirectory(downloadDirectory, main::updateSong);
             } catch (IOException error) {
                 String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
                 logger.warn("[HttpDownloadProcessor] BMS-IR body archive rejected: {}", message, error);
@@ -287,6 +305,11 @@ public class HttpDownloadProcessor {
                 ImGuiNotify.error("BMS-IR body download rejected: " + message);
             }
         });
+    }
+
+    static void rescanBodyDownloadDirectory(String downloadDirectory,
+                                            BiConsumer<String, Boolean> updateSong) {
+        updateSong.accept(downloadDirectory, false);
     }
 
     /**

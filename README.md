@@ -80,6 +80,13 @@ size checks, and the requested chart MD5 before a no-overwrite install. These
 checks are not antivirus scanning, so leave the setting off unless you accept
 the risk of processing an untrusted archive and its media.
 
+Within one running client, later requests from the same registered URL reuse a
+retained package only after that package is verified to contain the newly
+requested chart MD5. URL equality alone never suppresses another package from
+a multi-download landing page. Each accepted or reused package triggers a
+song-database scan of the configured download root only; the scan does not
+expand to its parent directory.
+
 ## Arena oraja 0.4.14.54
 
 The default-ON difficulty-table level display now has a per-player switch.

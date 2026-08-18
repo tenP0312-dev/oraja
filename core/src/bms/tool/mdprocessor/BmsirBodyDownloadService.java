@@ -13,6 +13,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -89,10 +90,22 @@ final class BmsirBodyDownloadService {
 	}
 
 	InstallResult install(DownloadTask task) throws IOException {
+		return install(task, List.of());
+	}
+
+	InstallResult install(DownloadTask task, List<Path> retainedArchives) throws IOException {
 		if (!isValidMd5(task.getHash())) {
 			throw new IOException("The requested chart MD5 is invalid");
 		}
 		URI original = validatedHttpUri(task.getUrl());
+		Path retained = findReusableArchive(retainedArchives, task.getHash());
+		if (retained != null) {
+			long size = Files.size(retained);
+			task.setContentLength(size);
+			task.setDownloadSize(size);
+			task.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Downloaded);
+			return new InstallResult(retained, original, false, false, true);
+		}
 		IOException liveFailure;
 		try {
 			return installFrom(original, task, false);
@@ -142,7 +155,7 @@ final class BmsirBodyDownloadService {
 				Path destination = downloadDirectory.resolve(
 						"bmsir-" + task.getHash().toLowerCase(Locale.ROOT) + extension);
 				moveWithoutReplacing(staging, destination);
-				return new InstallResult(destination, downloaded.source(), wayback, false);
+				return new InstallResult(destination, downloaded.source(), wayback, false, false);
 			}
 		} catch (RuntimeException error) {
 			throw new IOException("Archive validation failed: " + error.getMessage(), error);
@@ -154,7 +167,7 @@ final class BmsirBodyDownloadService {
 		for (URI candidate : candidates) {
 			try {
 				InstallResult result = installFrom(candidate, task, wayback, false);
-				return new InstallResult(result.archive(), result.source(), result.wayback(), true);
+				return new InstallResult(result.archive(), result.source(), result.wayback(), true, false);
 			} catch (IOException error) {
 				if (firstFailure == null) {
 					firstFailure = error;
@@ -165,6 +178,44 @@ final class BmsirBodyDownloadService {
 				"All " + candidates.size() + " archive links from the HTML landing page failed",
 				firstFailure,
 				null);
+	}
+
+	private Path findReusableArchive(List<Path> retainedArchives, String expectedMd5) {
+		if (retainedArchives == null) {
+			return null;
+		}
+		for (Path candidate : retainedArchives) {
+			if (!isRetainedArchive(candidate)) {
+				continue;
+			}
+			try {
+				verifyRequestedChart(candidate, expectedMd5);
+				return candidate.toAbsolutePath().normalize();
+			} catch (IOException | RuntimeException ignored) {
+				// A retained package is reusable only when the requested chart is verified.
+			}
+		}
+		return null;
+	}
+
+	private boolean isRetainedArchive(Path candidate) {
+		if (candidate == null) {
+			return false;
+		}
+		Path normalized = candidate.toAbsolutePath().normalize();
+		Path parent = normalized.getParent();
+		String filename = normalized.getFileName() == null
+				? ""
+				: normalized.getFileName().toString().toLowerCase(Locale.ROOT);
+		try {
+			return downloadDirectory.equals(parent)
+					&& filename.startsWith("bmsir-")
+					&& ARCHIVE_EXTENSIONS.stream().anyMatch(filename::endsWith)
+					&& Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)
+					&& Files.size(normalized) <= maxDownloadSize;
+		} catch (IOException ignored) {
+			return false;
+		}
 	}
 
 	private DownloadedResource download(URI source, Path destination, DownloadTask task) throws IOException {
@@ -546,6 +597,6 @@ final class BmsirBodyDownloadService {
 	record DownloadedResource(URI source, String contentType, boolean htmlLike) {
 	}
 
-	record InstallResult(Path archive, URI source, boolean wayback, boolean landingPage) {
+	record InstallResult(Path archive, URI source, boolean wayback, boolean landingPage, boolean reused) {
 	}
 }
