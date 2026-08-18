@@ -6,9 +6,10 @@ import static bms.player.beatoraja.SystemSoundManager.SoundType.*;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -43,6 +44,7 @@ import bms.player.beatoraja.pattern.LaneShuffleModifier.*;
 import bms.player.beatoraja.play.PracticeConfiguration.PracticeProperty;
 import bms.player.beatoraja.play.bga.BGAProcessor;
 import bms.player.beatoraja.skin.SkinType;
+import bms.player.beatoraja.system.TimingDiagnostics;
 
 /**
  * BMSプレイヤー本体
@@ -94,6 +96,7 @@ public class BMSPlayer extends MainState {
 	private PlayConfig replayConfig;
 
 	static final int TIME_MARGIN = 5000;
+	private static final long LOUDNESS_ANALYSIS_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(15);
 
 	private int state = STATE_PRELOAD;
 
@@ -120,6 +123,13 @@ public class BMSPlayer extends MainState {
 	private float adjustedVolume = -1.f;
 	private boolean analysisChecked = false;
 	private Future<BMSLoudnessAnalyzer.AnalysisResult> analysisTask;
+	private long analysisWaitStartedNanos;
+	private long analysisDiagnosticStartedNanos;
+	private boolean loudnessWaitStageReported;
+	private boolean bgaPreparationStarted;
+	private boolean bgaPreparationComplete;
+	private boolean countdownStageReported;
+	private long diagnosticPlaySessionId;
 
 	public BMSPlayer(MainController main, PlayerResource resource) {
 		super(main);
@@ -139,6 +149,9 @@ public class BMSPlayer extends MainState {
 	private void initialize(PlayerResource resource) {
 		BMSIRArenaClient.enforceArenaOptions();
 		this.model = resource.getBMSModel();
+		diagnosticPlaySessionId = TimingDiagnostics.playSessionStarted(
+				model != null ? model.getSHA256() : null
+		);
 		BMSIRArenaClient.tracePlayPhase("constructor_begin", this);
 		BMSPlayerMode autoplay = resource.getPlayMode();
 		PlayerConfig config = resource.getPlayerConfig();
@@ -856,6 +869,14 @@ public class BMSPlayer extends MainState {
                     model.getTotalNotes()
             );
         }
+		TimingDiagnostics.playStageChanged("LOADING_AUDIO");
+	}
+
+	@Override
+	public void prepare() {
+		TimingDiagnostics.playStageChanged(
+				state == STATE_PRACTICE ? "PRACTICE_LOADING" : "LOADING_AUDIO"
+		);
 	}
 
 	@Override
@@ -883,6 +904,8 @@ public class BMSPlayer extends MainState {
 		switch (state) {
 		// 楽曲ロード
 			case STATE_PRELOAD -> {
+				boolean mediaReady = resource.mediaLoadFinished();
+				boolean bgaReady = mediaReady && advanceBgaPreparation();
 				if(config.isChartPreview()) {
 					if(timer.isTimerOn(141) && micronow > startpressedtime) {
 						timer.setTimerOff(141);
@@ -892,51 +915,23 @@ public class BMSPlayer extends MainState {
 					}
 				}
 
-				if (resource.mediaLoadFinished() && micronow > (skin.getLoadstart() + skin.getLoadend()) * 1000
+				if (mediaReady && bgaReady && micronow > (skin.getLoadstart() + skin.getLoadend()) * 1000
 						&& micronow - startpressedtime > 1000000) {
 					if(config.isChartPreview()) {
 						timer.setTimerOff(141);
 						lanerender.resetTimelinePosition();
 					}
 
-					// Wait for the analysis to complete
-					if (!analysisChecked) {
-						adjustedVolume = -1.f;
-						analysisChecked = true;
-						analysisTask = resource.getAnalysisTask();
-
-						if (analysisTask != null) {
-							try {
-								BMSLoudnessAnalyzer.AnalysisResult result = analysisTask.get(15, TimeUnit.SECONDS);
-								if (result.success) {
-									float configVolume = main.getConfig().getAudioConfig().getKeyvolume();
-									adjustedVolume = result.calculateAdjustedVolume(configVolume);
-									logger.info("Volume set to {} ({} LUFS)",
-										adjustedVolume, result.loudnessLUFS);
-								} else {
-									logger.warn("Analysis failed: {}", result.errorMessage);
-									ImGuiNotify.warning("Loudness analysis failed");
-								}
-							} catch (TimeoutException e) {
-								ImGuiNotify.warning("Chart volume analysis timed out");
-								logger.warn("Loudness analysis timed out after 15 seconds");
-								analysisTask.cancel(true);
-							} catch (Exception e) {
-								ImGuiNotify.warning("Failed to analyze chart volume");
-								logger.warn("Loudness analysis error: {}", e.getMessage());
-							}
-						}
+					if (!pollLoudnessAnalysis()) {
+						break;
 					}
 
 					if (Client.connected.get()) {
 						state = STATE_WAIT;
+						TimingDiagnostics.playStageChanged("READY");
 					} else {
-						bga.prepare(this);
-						final long mem = Runtime.getRuntime().freeMemory();
-						System.gc();
-						final long cmem = Runtime.getRuntime().freeMemory();
-						logger.info("current free memory : {}MB , disposed : {}MB", cmem / (1024 * 1024), (cmem - mem) / (1024 * 1024));
 						state = STATE_READY;
+						TimingDiagnostics.playStageChanged("READY");
 						timer.setTimerOn(TIMER_READY);
 						play(PLAY_READY);
 						BMSIRArenaClient.onArenaPlayReady();
@@ -956,7 +951,6 @@ public class BMSPlayer extends MainState {
 					Client.acceptNextAllReady((allReady) -> this.allReady = allReady);
 				}
 				if (this.allReady) {
-					bga.prepare(this);
 					state = STATE_READY;
 					timer.setTimerOn(TIMER_READY);
 					play(PLAY_READY);
@@ -965,8 +959,13 @@ public class BMSPlayer extends MainState {
 			}
 			// practice mode
 			case STATE_PRACTICE -> {
+				boolean mediaReady = resource.mediaLoadFinished();
+				boolean bgaReady = mediaReady && advanceBgaPreparation();
 				if (timer.isTimerOn(TIMER_PLAY)) {
 					resource.reloadBMSFile();
+					resetBgaPreparation();
+					mediaReady = false;
+					bgaReady = false;
 					model = resource.getBMSModel();
 					resource.getSongdata().setBMSModel(model);
 					if (resource.getOriginalMode() != null) {
@@ -995,7 +994,7 @@ public class BMSPlayer extends MainState {
 				control.setEnableCursor(false);
 				practice.processInput(input);
 
-				if (input.getKeyState(0) && resource.mediaLoadFinished() &&  micronow > (skin.getLoadstart() + skin.getLoadend()) * 1000
+				if (input.getKeyState(0) && mediaReady && bgaReady && micronow > (skin.getLoadstart() + skin.getLoadend()) * 1000
 						&& micronow - startpressedtime > 1000000) {
 					PracticeProperty property = practice.getPracticeProperty();
 					control.setEnableControl(true);
@@ -1031,8 +1030,8 @@ public class BMSPlayer extends MainState {
 					skin.pomyu.init();
 					starttimeoffset = (property.starttime > 1000 ? property.starttime - 1000 : 0) * 100 / property.freq;
 					playtime = (property.endtime + 1000) * 100 / property.freq + TIME_MARGIN;
-					bga.prepare(this);
 					state = STATE_READY;
+					TimingDiagnostics.playStageChanged("READY");
 					timer.setTimerOn(TIMER_READY);
 					play(PLAY_READY);
 					logger.info("STATE_READYに移行");
@@ -1048,11 +1047,16 @@ public class BMSPlayer extends MainState {
 			}
 			// GET READY
 			case STATE_READY -> {
+				if (!countdownStageReported) {
+					countdownStageReported = true;
+					TimingDiagnostics.playStageChanged("COUNTDOWN");
+				}
 				if (timer.getNowTime(TIMER_READY) > skin.getPlaystart()
 						&& BMSIRArenaClient.isArenaStartReleased()) {
 					replayConfig = lanerender.getPlayConfig().clone();
 					saveConfig();
 					state = STATE_PLAY;
+					TimingDiagnostics.playStageChanged("ACTIVE_PLAY");
 					timer.setMicroTimer(TIMER_PLAY, micronow - starttimeoffset * 1000);
 					timer.setMicroTimer(TIMER_RHYTHM, micronow - starttimeoffset * 1000);
 
@@ -1286,6 +1290,86 @@ public class BMSPlayer extends MainState {
 		return adjustedVolume;
 	}
 
+	private boolean pollLoudnessAnalysis() {
+		if (analysisChecked) {
+			return true;
+		}
+		if (analysisTask == null) {
+			adjustedVolume = -1.f;
+			analysisTask = resource.getAnalysisTask();
+			if (analysisTask == null) {
+				analysisChecked = true;
+				return true;
+			}
+			analysisWaitStartedNanos = System.nanoTime();
+			analysisDiagnosticStartedNanos = TimingDiagnostics.start();
+		}
+
+		if (!analysisTask.isDone()) {
+			if (!loudnessWaitStageReported) {
+				loudnessWaitStageReported = true;
+				TimingDiagnostics.playStageChanged("WAITING_LOUDNESS");
+			}
+			if (System.nanoTime() - analysisWaitStartedNanos < LOUDNESS_ANALYSIS_TIMEOUT_NANOS) {
+				return false;
+			}
+			analysisTask.cancel(true);
+			ImGuiNotify.warning("Chart volume analysis timed out");
+			logger.warn("Loudness analysis timed out after 15 seconds");
+			finishLoudnessAnalysisWait();
+			return true;
+		}
+
+		try {
+			BMSLoudnessAnalyzer.AnalysisResult result = analysisTask.get();
+			if (result.success) {
+				float configVolume = main.getConfig().getAudioConfig().getKeyvolume();
+				adjustedVolume = result.calculateAdjustedVolume(configVolume);
+				logger.info("Volume set to {} ({} LUFS)", adjustedVolume, result.loudnessLUFS);
+			} else {
+				logger.warn("Analysis failed: {}", result.errorMessage);
+				ImGuiNotify.warning("Loudness analysis failed");
+			}
+		} catch (CancellationException | ExecutionException e) {
+			ImGuiNotify.warning("Failed to analyze chart volume");
+			logger.warn("Loudness analysis error: {}", e.getMessage());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			ImGuiNotify.warning("Failed to analyze chart volume");
+			logger.warn("Loudness analysis interrupted");
+		}
+		finishLoudnessAnalysisWait();
+		return true;
+	}
+
+	private void finishLoudnessAnalysisWait() {
+		analysisChecked = true;
+		TimingDiagnostics.finish(
+				TimingDiagnostics.Metric.LOUDNESS_ANALYSIS_WAIT,
+				analysisDiagnosticStartedNanos
+		);
+		analysisDiagnosticStartedNanos = 0;
+	}
+
+	private boolean advanceBgaPreparation() {
+		if (bgaPreparationComplete) {
+			return true;
+		}
+		if (!bgaPreparationStarted) {
+			bga.beginPrepare(this);
+			bgaPreparationStarted = true;
+			TimingDiagnostics.playStageChanged("LOADING_BGA");
+		}
+		bgaPreparationComplete = bga.advancePreparation();
+		return bgaPreparationComplete;
+	}
+
+	private void resetBgaPreparation() {
+		bgaPreparationStarted = false;
+		bgaPreparationComplete = false;
+		countdownStageReported = false;
+	}
+
 	public LaneRenderer getLanerender() {
 		return lanerender;
 	}
@@ -1502,6 +1586,14 @@ public class BMSPlayer extends MainState {
 			play(PLAY_STOP);
 			logger.info("STATE_FAILEDに移行");
 		}
+	}
+
+	@Override
+	public void shutdown() {
+		TimingDiagnostics.playSessionFinished(
+				diagnosticPlaySessionId,
+				state == STATE_FINISHED || state == STATE_FAILED ? "RESULT" : null
+		);
 	}
 
 	@Override
