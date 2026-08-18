@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="224" height="32" viewBox="0 0 224 32">
+  <g font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle" fill="#ffffff">
+    <rect x="1" y="1" width="30" height="30" rx="2" fill="#4b5563" stroke="#ffffff"/>
+    <text x="16" y="20">E0</text>
+    <rect x="33" y="1" width="30" height="30" rx="2" fill="#0369a1" stroke="#ffffff"/>
+    <text x="48" y="20">E1</text>
+    <rect x="65" y="1" width="30" height="30" rx="2" fill="#b45309" stroke="#ffffff"/>
+    <text x="80" y="20">E2</text>
+    <rect x="97" y="1" width="30" height="30" rx="2" fill="#be185d" stroke="#ffffff"/>
+    <text x="112" y="20">E3</text>
+    <rect x="129" y="1" width="30" height="30" rx="2" fill="#4b5563" stroke="#ffffff"/>
+    <text x="144" y="20">R0</text>
+    <rect x="161" y="1" width="30" height="30" rx="2" fill="#15803d" stroke="#ffffff"/>
+    <text x="176" y="20">R1</text>
+    <rect x="193" y="1" width="30" height="30" rx="2" fill="#4338ca" stroke="#ffffff"/>
+    <text x="208" y="20">JR</text>
+  </g>
+</svg>

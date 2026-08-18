@@ -6,6 +6,12 @@
 	"fadeout":500,
 	"scene":3000,
 	"input":500,
+	"property":[
+		{"name":"Song Detail", "item":[
+			{"name":"Table Comment", "op":970},
+			{"name":"IR / Rival", "op":971}
+		]}
+	],
 	"filepath":[
 		{"name":"Background", "path":"select/background/*.png"}
 	],
@@ -18,7 +24,8 @@
 		{"id":5, "path":"clear.png"},
 		{"id":6, "path":"number.png"},
 		{"id":7, "path":"panel.png"},
-		{"id":8, "path":"constraint.png"}
+		{"id":8, "path":"constraint.png"},
+		{"id":9, "path":"bmsir-controls-placeholder.png"}
 	],
 	"font": [
 		{"id":0, "path":"VL-Gothic-Regular.ttf"}
@@ -96,7 +103,22 @@
 		{"id":"label-mine", "src":0, "x":0, "y":480, "w":16, "h":30},
 
 		{"id":"sort", "src":0, "x":400, "y":792, "w":96, "h":24},
-		{"id":"sortset", "src":0, "x":400, "y":600, "w":138, "h":192, "divy":8, "len":8, "ref":12, "act":12},
+		{"id":"sort-0", "src":0, "x":400, "y":600, "w":138, "h":24},
+		{"id":"sort-1", "src":0, "x":400, "y":624, "w":138, "h":24},
+		{"id":"sort-2", "src":0, "x":400, "y":648, "w":138, "h":24},
+		{"id":"sort-3", "src":0, "x":400, "y":672, "w":138, "h":24},
+		{"id":"sort-4", "src":0, "x":400, "y":696, "w":138, "h":24},
+		{"id":"sort-5", "src":0, "x":400, "y":720, "w":138, "h":24},
+		{"id":"sort-6", "src":0, "x":400, "y":744, "w":138, "h":24},
+		{"id":"sort-7", "src":0, "x":400, "y":768, "w":138, "h":24},
+		{"id":"sort-judge", "src":9, "x":192, "y":0, "w":32, "h":32},
+
+		{"id":"bmsir-extra-0", "src":9, "x":0, "y":0, "w":32, "h":32},
+		{"id":"bmsir-extra-1", "src":9, "x":32, "y":0, "w":32, "h":32},
+		{"id":"bmsir-extra-2", "src":9, "x":64, "y":0, "w":32, "h":32},
+		{"id":"bmsir-extra-3", "src":9, "x":96, "y":0, "w":32, "h":32},
+		{"id":"bmsir-restore-off", "src":9, "x":128, "y":0, "w":32, "h":32, "act":390},
+		{"id":"bmsir-restore-on", "src":9, "x":160, "y":0, "w":32, "h":32, "act":390},
 
 		{"id":"lnmode", "src":0, "x":550, "y":672, "w":144, "h":24},
 		{"id":"lnmodeset", "src":0, "x":550, "y":600, "w":72, "h":72, "divy":3, "len":3, "ref":308, "act":308},
@@ -165,6 +187,8 @@
 		"option-selector104","option-selector105","option-selector106","option-selector107","option-selector108","option-selector109","option-selector1010"]},
 		{"id":"option-dp", "ref":54, "images":["option-selector31","option-selector32","option-selector33", "option-selector34"]},
 		{"id":"option-bga", "ref":72, "images":["option-selector31","option-selector32","option-selector33"]},
+		{"id":"sortset", "ref":12, "act":12, "images":["sort-0","sort-1","sort-2","sort-3","sort-4","sort-5","sort-6","sort-7","sort-judge"]},
+		{"id":"bmsir-extra", "ref":350, "act":350, "images":["bmsir-extra-0","bmsir-extra-1","bmsir-extra-2","bmsir-extra-3"]},
 	],
 	"value":[
 		{"id":"songs_count", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":300},
@@ -194,6 +218,19 @@
 
 		{"id":"duration", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":4, "ref":312},
 		{"id":"judgetiming", "src":6, "x":0, "y":24, "w":288, "h":48, "divx":12, "divy":2, "digit":3, "ref":12},
+
+		{"id":"ir-rank", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":179},
+		{"id":"ir-players", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":180},
+		{"id":"ir-clear-rate", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":3, "ref":227},
+		{"id":"ir-fullcombo-rate", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":3, "ref":229},
+		{"id":"rival-score", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":271},
+
+		{"id":"folder-failed", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":321},
+		{"id":"folder-easy", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":324},
+		{"id":"folder-normal", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":325},
+		{"id":"folder-hard", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":326},
+		{"id":"folder-exhard", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":327},
+		{"id":"folder-fullcombo", "src":6, "x":0, "y":0, "w":240, "h":24, "divx":10, "digit":5, "ref":328},
 		
 		{"id":"mainbpm-num", "src":0, "x":130, "y":565, "w":99, "h":13, "divx":11, "divy":1, "digit":7, "ref":92},
 	],
@@ -211,6 +248,26 @@
 
 		{"id":"bartext", "font":0, "size":24},
 		{"id":"search", "font":0, "size":24, "ref":30},
+
+		{"id":"bmsir-extra-label", "font":0, "size":14, "constantText":"MANIAC EXTRA", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"bmsir-restore-label", "font":0, "size":14, "constantText":"JUDGE RESTORE", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"bmsir-restore-off-label", "font":0, "size":14, "constantText":"OFF", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"bmsir-restore-on-label", "font":0, "size":14, "constantText":"ON", "outlineColor":"000000ff", "outlineWidth":1},
+
+		{"id":"ir-rank-label", "font":0, "size":14, "constantText":"IR RANK", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"ir-players-label", "font":0, "size":14, "constantText":"PLAYERS", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"ir-clear-label", "font":0, "size":14, "constantText":"CLEAR %", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"ir-fullcombo-label", "font":0, "size":14, "constantText":"FC %", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"rival-label", "font":0, "size":14, "constantText":"RIVAL", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"rival-name", "font":0, "size":14, "ref":1, "overflow":1, "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"rival-score-label", "font":0, "size":14, "constantText":"EX", "outlineColor":"000000ff", "outlineWidth":1},
+
+		{"id":"folder-failed-label", "font":0, "size":14, "constantText":"FAILED", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"folder-easy-label", "font":0, "size":14, "constantText":"EASY", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"folder-normal-label", "font":0, "size":14, "constantText":"NORMAL", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"folder-hard-label", "font":0, "size":14, "constantText":"HARD", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"folder-exhard-label", "font":0, "size":14, "constantText":"EXHARD", "outlineColor":"000000ff", "outlineWidth":1},
+		{"id":"folder-fullcombo-label", "font":0, "size":14, "constantText":"FC", "outlineColor":"000000ff", "outlineWidth":1},
 	],
 	"graph":[
 		{"id":"graph-lamp", "src":3, "x":0, "y":330, "w":11, "h":30, "divx":11, "divy":2, "cycle":100, "type":-1},
@@ -738,11 +795,38 @@
 			{"x":430, "y":102, "w":18, "h":18}
 		]},
 
+		{"id":"ir-rank-label", "op":[2,602,971], "dst":[{"x":80, "y":170, "w":64, "h":16}]},
+		{"id":"ir-rank", "op":[2,602,971], "dst":[{"x":148, "y":170, "w":12, "h":16}]},
+		{"id":"ir-players-label", "op":[2,602,971], "dst":[{"x":235, "y":170, "w":72, "h":16}]},
+		{"id":"ir-players", "op":[2,602,971], "dst":[{"x":312, "y":170, "w":12, "h":16}]},
+		{"id":"ir-clear-label", "op":[2,602,971], "dst":[{"x":400, "y":170, "w":72, "h":16}]},
+		{"id":"ir-clear-rate", "op":[2,602,971], "dst":[{"x":475, "y":170, "w":12, "h":16}]},
+		{"id":"ir-fullcombo-label", "op":[2,602,971], "dst":[{"x":560, "y":170, "w":42, "h":16}]},
+		{"id":"ir-fullcombo-rate", "op":[2,602,971], "dst":[{"x":605, "y":170, "w":12, "h":16}]},
+
+		{"id":"rival-label", "op":[2,625,971], "dst":[{"x":80, "y":142, "w":48, "h":16}]},
+		{"id":"rival-name", "op":[2,625,971], "dst":[{"x":132, "y":142, "w":220, "h":16}]},
+		{"id":"rival-score-label", "op":[2,625,971], "dst":[{"x":375, "y":142, "w":20, "h":16}]},
+		{"id":"rival-score", "op":[2,625,971], "dst":[{"x":400, "y":142, "w":12, "h":16}]},
+
+		{"id":"folder-failed-label", "op":[1], "dst":[{"x":80, "y":170, "w":58, "h":16}]},
+		{"id":"folder-failed", "op":[1], "dst":[{"x":142, "y":170, "w":12, "h":16}]},
+		{"id":"folder-easy-label", "op":[1], "dst":[{"x":245, "y":170, "w":42, "h":16}]},
+		{"id":"folder-easy", "op":[1], "dst":[{"x":292, "y":170, "w":12, "h":16}]},
+		{"id":"folder-normal-label", "op":[1], "dst":[{"x":395, "y":170, "w":58, "h":16}]},
+		{"id":"folder-normal", "op":[1], "dst":[{"x":458, "y":170, "w":12, "h":16}]},
+		{"id":"folder-hard-label", "op":[1], "dst":[{"x":80, "y":142, "w":42, "h":16}]},
+		{"id":"folder-hard", "op":[1], "dst":[{"x":127, "y":142, "w":12, "h":16}]},
+		{"id":"folder-exhard-label", "op":[1], "dst":[{"x":245, "y":142, "w":58, "h":16}]},
+		{"id":"folder-exhard", "op":[1], "dst":[{"x":308, "y":142, "w":12, "h":16}]},
+		{"id":"folder-fullcombo-label", "op":[1], "dst":[{"x":395, "y":142, "w":24, "h":16}]},
+		{"id":"folder-fullcombo", "op":[1], "dst":[{"x":424, "y":142, "w":12, "h":16}]},
+
 		{"id":"dir", "dst":[{"x":40, "y":646, "w":18, "h":24, "g":128}]},
 		{"id":"genre", "filter":1, "dst":[{"x":100, "y":610, "w":18, "h":20}]},
 		{"id":"title", "filter":1, "dst":[{"x":100, "y":576, "w":18, "h":24}]},
 		{"id":"artist", "filter":1, "dst":[{"x":100, "y":550, "w":18, "h":20}]},
-		{"id":"tablecomment", "filter":1, "dst":[{"x":80, "y":180, "w":600, "h":18, "r":220, "g":240, "b":220}]},
+		{"id":"tablecomment", "filter":1, "op":[970], "dst":[{"x":80, "y":180, "w":600, "h":18, "r":220, "g":240, "b":220}]},
 
 		{"id":"course1", "dst":[{"x":80, "y":572, "w":18, "h":24, "b":0}]},
 		{"id":"course2", "dst":[{"x":80, "y":544, "w":18, "h":24, "b":0}]},
@@ -795,6 +879,14 @@
 
 		{"id":"lnmode", "dst":[{"x":540, "y":10, "w":108, "h":18}]},
 		{"id":"lnmodeset", "dst":[{"x":700, "y":10, "w":54, "h":18}]},
+
+		{"id":"bmsir-extra-label", "dst":[{"x":10, "y":38, "w":104, "h":16}]},
+		{"id":"bmsir-extra", "dst":[{"x":120, "y":34, "w":24, "h":24}]},
+		{"id":"bmsir-restore-label", "dst":[{"x":180, "y":38, "w":112, "h":16}]},
+		{"id":"bmsir-restore-off", "op":[-2900], "dst":[{"x":298, "y":34, "w":24, "h":24}]},
+		{"id":"bmsir-restore-on", "op":[2900], "dst":[{"x":298, "y":34, "w":24, "h":24}]},
+		{"id":"bmsir-restore-off-label", "op":[-2900], "dst":[{"x":328, "y":38, "w":28, "h":16}]},
+		{"id":"bmsir-restore-on-label", "op":[2900], "dst":[{"x":328, "y":38, "w":22, "h":16}]},
 
 		{"id":"blank", "loop":300, "op":[21], "timer":21, "dst":[
 			{"time":0, "x":0, "y":0, "w":1280, "h":720, "a":0},

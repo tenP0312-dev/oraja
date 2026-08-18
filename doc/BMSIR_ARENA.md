@@ -13,6 +13,17 @@ different outputs, and records the exact toolchain, features, file hashes,
 licenses, corresponding source, and SPDX SBOM. The JPortAudio Java source is
 compiled with the body; JNA 5.13.0 uses its Apache-2.0 option.
 
+The current development source expands the bundled default skins without
+copying third-party skin assets. Music Select exposes the four MANIAC EXTRA
+MODE states, the persistent judge-timing restore switch, and all nine sort
+states including judge rank. Folder rows show lamp counts, while the new
+`Song Detail` skin option selects the existing table comment or a compact
+IR/rival summary. The 7-key Lua play skin adds three lane widths, a toggleable
+song/play-information overlay, EARLY/LATE totals, and the resolved fixed
+RANDOM lane values from references `450`--`456` and `459`. The Select controls use one
+replaceable square-cell placeholder sprite; changing the artwork does not
+change any action or property reference.
+
 Version `0.4.14.57` serializes body-download requests from the same registered
 URL, reuses a retained package only after confirming the requested chart MD5,
 and performs the post-install song update against only the configured download
