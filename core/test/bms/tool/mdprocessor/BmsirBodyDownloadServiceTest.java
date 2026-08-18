@@ -102,6 +102,8 @@ class BmsirBodyDownloadServiceTest {
 		byte[] chart = "#TITLE Requested\n".getBytes(StandardCharsets.UTF_8);
 		byte[] wrongArchive = zip("wrong.bms", "#TITLE Wrong\n".getBytes(StandardCharsets.UTF_8));
 		byte[] correctArchive = zip("requested.bms", chart);
+		Path retainedWrongArchive = Files.write(
+				temporary.resolve("bmsir-" + "1".repeat(32) + ".zip"), wrongArchive);
 		server.createContext("/entry", exchange -> respond(exchange, 200, "text/html",
 				("<a href=\"/wrong.zip\">Old package</a>"
 						+ "<a href=\"/correct.7z\">Current package</a>").getBytes(StandardCharsets.UTF_8)));
@@ -111,11 +113,39 @@ class BmsirBodyDownloadServiceTest {
 				"{}".getBytes(StandardCharsets.UTF_8)));
 
 		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
-				.install(task(base.resolve("/entry"), md5(chart)));
+				.install(task(base.resolve("/entry"), md5(chart)), java.util.List.of(retainedWrongArchive));
 
 		assertEquals(base.resolve("/correct.7z"), result.source());
 		assertTrue(result.landingPage());
+		assertFalse(result.reused());
 		assertEquals(correctArchive.length, Files.size(result.archive()));
+	}
+
+	@Test
+	void reusesRetainedPackageOnlyWhenItContainsTheRequestedChart() throws Exception {
+		byte[] firstChart = "#TITLE First\n".getBytes(StandardCharsets.UTF_8);
+		byte[] requestedChart = "#TITLE Another difficulty\n".getBytes(StandardCharsets.UTF_8);
+		byte[] archive = zip("Pack/first.bms", firstChart, "Pack/another.bms", requestedChart);
+		Path retained = Files.write(
+				temporary.resolve("bmsir-" + md5(firstChart) + ".zip"), archive);
+		AtomicInteger bodyRequests = new AtomicInteger();
+		server.createContext("/body", exchange -> {
+			bodyRequests.incrementAndGet();
+			respond(exchange, 500, "text/plain", new byte[0]);
+		});
+
+		DownloadTask task = task(base.resolve("/body"), md5(requestedChart));
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task, java.util.List.of(retained));
+
+		assertEquals(retained, result.archive());
+		assertTrue(result.reused());
+		assertEquals(0, bodyRequests.get());
+		assertEquals(archive.length, task.getDownloadSize());
+		assertEquals(DownloadTask.DownloadTaskStatus.Downloaded, task.getDownloadTaskStatus());
+		try (var files = Files.list(temporary)) {
+			assertEquals(1, files.count());
+		}
 	}
 
 	@Test
