@@ -45,7 +45,7 @@ function Get-VerifiedArchive {
     Invoke-WebRequest -Uri $Component.url -OutFile $Destination
     $Actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $Destination).Hash.ToLowerInvariant()
     if ($Actual -ne $Component.sha256) {
-        throw "Source archive SHA-256 mismatch for $Filename: $Actual"
+        throw "Source archive SHA-256 mismatch for ${Filename}: $Actual"
     }
     return $Destination
 }
