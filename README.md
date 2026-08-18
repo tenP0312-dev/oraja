@@ -34,6 +34,15 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
+The development source also recovers BMS-IR body downloads across a
+client restart by revalidating an exact previously accepted archive before any
+network request. Targeted download-root scans wait behind an active song update
+instead of being discarded, equivalent pending scans coalesce, and body-only
+configurations keep their download-task progress current. After the scan, the
+client confirms whether the requested chart entered the song database. A ready
+notice tells the player to select the chart again to start play; the download
+action itself does not automatically begin gameplay.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is
