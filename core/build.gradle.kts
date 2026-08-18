@@ -2,6 +2,7 @@ import java.nio.file.FileSystems
 import java.util.Properties
 import java.util.zip.ZipFile
 import org.gradle.api.GradleException
+import org.gradle.api.tasks.compile.JavaCompile
 
 plugins {
     id("java-library")
@@ -41,6 +42,10 @@ sourceSets {
 
 application {
     mainClass.set("bms.player.beatoraja.MainLoader")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
 }
 
 tasks {
@@ -210,6 +215,8 @@ tasks {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("user.language", "ja")
+    systemProperty("user.country", "JP")
 }
 
 val gitHashProvider = providers.exec {
