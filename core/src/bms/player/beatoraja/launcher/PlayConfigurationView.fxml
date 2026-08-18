@@ -628,9 +628,6 @@
 	                    <Separator />
 	                    <Button fx:id="bmsirExportVanillaScoreDb" mnemonicParsing="false" onAction="#exportBmsirVanillaScoreDatabase" text="%BMSIR_EXPORT_VANILLA_SCORE_DB" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_EXPORT_VANILLA_SCORE_DB_DESCRIPTION" wrapText="true" />
-	                    <Separator />
-	                    <CheckBox fx:id="bmsirLongNoteFixed" disable="true" mnemonicParsing="false" selected="true" text="%BMSIR_LONG_NOTE_FIXED" />
-                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LONG_NOTE_FIXED_DESCRIPTION" wrapText="true" />
                 </VBox>
             </ScrollPane>
         </Tab>

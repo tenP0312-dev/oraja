@@ -18,6 +18,12 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
+The current development source restores the ordinary LN/CN/HCN launcher
+selection and carries it through decoding, catalog keys, IR ranking, and score
+submission. Casual/private Arena rooms lock the host's selected mode for every
+participant; rated Arena explicitly remains LN. This protocol-v8 source change
+does not by itself publish a new body or plugin package.
+
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
 returns to the same window style even when fullscreen was saved on shutdown

@@ -72,7 +72,7 @@ public final class BMSIRArenaClient {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String CLIENT_VERSION = Version.getArenaClientVersion();
     private static final String CLIENT_FLAVOR = "arena-oraja";
-    private static final int PROTOCOL_VERSION = 7;
+    private static final int PROTOCOL_VERSION = 8;
     private static final int MAX_NORMAL_ARENA_LEVEL = 13;
     private static final int MAX_OFFICIAL_ARENA_LEVEL = 25;
     private static final int MAX_ARENA_RATING_BAND =
@@ -114,6 +114,7 @@ public final class BMSIRArenaClient {
     private static volatile int currentPlayOption;
     private static volatile int currentPlayMode;
     private static volatile int lastKnownPlayMode;
+    private static volatile String currentLnMode = "LN";
     private static volatile int currentChartTotalNotes;
     private static volatile long currentRandomSeed = -1L;
     private static volatile boolean optionSelectionOpen;
@@ -386,6 +387,7 @@ public final class BMSIRArenaClient {
         currentPlayOption = 0;
         currentPlayMode = 0;
         lastKnownPlayMode = 0;
+        currentLnMode = "LN";
         loadDeadlineMillis = 0L;
         serverStartMillis = 0L;
         interRoundResultExitAtMillis = 0L;
@@ -528,7 +530,34 @@ public final class BMSIRArenaClient {
     private static void sendPlayReady(String chartHash) {
         ObjectNode message = baseMatchMessage("play_ready");
         message.put("chart_hash", chartHash);
+        message.put("ln_mode", currentLnMode);
+        int loadedTotalNotes = main != null
+                && main.getPlayerResource() != null
+                && main.getPlayerResource().getBMSModel() != null
+                ? main.getPlayerResource().getBMSModel().getTotalNotes()
+                : 0;
+        message.put("totalnotes", Math.max(0, loadedTotalNotes));
         send(message);
+    }
+
+    static String longnoteModeName(int mode) {
+        return switch (mode) {
+            case 1 -> "CN";
+            case 2 -> "HCN";
+            default -> "LN";
+        };
+    }
+
+    static int longnoteModeValue(String mode) {
+        return switch (mode == null ? "" : mode.trim().toUpperCase(Locale.ROOT)) {
+            case "CN" -> 1;
+            case "HCN" -> 2;
+            default -> 0;
+        };
+    }
+
+    private static String configuredLongnoteMode(PlayerConfig config) {
+        return longnoteModeName(config == null ? 0 : config.getLnmode());
     }
 
     static boolean shouldShowOverlay() {
@@ -730,6 +759,12 @@ public final class BMSIRArenaClient {
 
     static String currentForcedGauge() {
         return activeRulesOrQueue().path("forced_gauge").asText("free");
+    }
+
+    static String currentLongnoteMode() {
+        return longnoteModeName(longnoteModeValue(
+                activeRulesOrQueue().path("ln_mode").asText(currentLnMode)
+        ));
     }
 
     static String currentRulesetProfile() {
@@ -1777,6 +1812,8 @@ public final class BMSIRArenaClient {
         ObjectNode message = JSON.createObjectNode();
         message.put("type", "queue_entry");
         message.put("ruleset_profile", BMSPlayerRule.PROFILE_LR2);
+        // Rated Arena stays on the legacy LN scale.
+        message.put("ln_mode", "LN");
         message.put(
                 "unrestricted_rating",
                 config != null && config.isBmsirArenaUnrestrictedRating()
@@ -1829,6 +1866,7 @@ public final class BMSIRArenaClient {
         message.put("room_name", roomName == null ? "" : roomName);
         message.put("room_password", roomPassword == null ? "" : roomPassword);
         PlayerConfig config = playerConfig();
+        message.put("ln_mode", configuredLongnoteMode(config));
         message.put(
                 "ruleset_profile",
                 config == null
@@ -2667,7 +2705,7 @@ public final class BMSIRArenaClient {
         message.put("combo_break", arenaComboBreak(score));
         message.put("max_combo", Math.min(processed, Math.max(0, score.getCombo())));
         message.put("play_option", currentPlayOption);
-        message.put("ln_mode", "LN");
+        message.put("ln_mode", currentLnMode);
         if (currentPlayMode > 0) {
             message.put("play_mode", currentPlayMode);
         }
@@ -2694,7 +2732,7 @@ public final class BMSIRArenaClient {
         message.put("state", hardFail ? "hard_fail" : "complete");
         message.put("clear_type", score.getClear());
         message.put("play_option", currentPlayOption);
-        message.put("ln_mode", "LN");
+        message.put("ln_mode", currentLnMode);
         if (currentPlayMode > 0) {
             message.put("play_mode", currentPlayMode);
         }
@@ -2883,7 +2921,7 @@ public final class BMSIRArenaClient {
                 case "room_status" -> {
                     roomView = message;
                     if (!arenaPlayActive && message.path("rules").isObject()) {
-                        rulesView = message.path("rules");
+                        receiveRules(message);
                     }
                     for (JsonNode player : message.path("players")) {
                         if (player.path("player_id").asInt() == currentPlayerId) {
@@ -3483,6 +3521,11 @@ public final class BMSIRArenaClient {
         JsonNode incoming = message.path("rules");
         if (incoming.isObject() && incoming.size() > 0) {
             rulesView = incoming;
+            currentLnMode = longnoteModeName(
+                    longnoteModeValue(incoming.path("ln_mode").asText(
+                            message.path("ln_mode").asText("LN")
+                    ))
+            );
         }
     }
 
@@ -3653,7 +3696,7 @@ public final class BMSIRArenaClient {
         ObjectNode message = baseMatchMessage("option_ready");
         message.put("play_option", currentPlayOption);
         message.put("play_mode", currentPlayMode);
-        message.put("ln_mode", "LN");
+        message.put("ln_mode", currentLnMode);
         send(message);
         arenaUiMessage = t(
                 "OP確定済み。他の参加者を待っています",
@@ -3737,6 +3780,10 @@ public final class BMSIRArenaClient {
         }
         receiveRules(message);
         liveView = message;
+        int authoritativeTotalNotes = message.path("chart").path("totalnotes").asInt(0);
+        if (authoritativeTotalNotes > 0) {
+            currentChartTotalNotes = authoritativeTotalNotes;
+        }
         int incomingPlayMode = message.path("play_mode").asInt(0);
         if (supportedPlayMode(incomingPlayMode)) {
             currentPlayMode = incomingPlayMode;
@@ -3822,13 +3869,6 @@ public final class BMSIRArenaClient {
                     main.getSongDatabase().getSongDatas(new String[]{md5})
             );
             SongData song = songs.length > 0 ? songs[0] : null;
-            /*
-             * Existing songdata.db files may contain a CN/HCN-scale note
-             * count from before this dedicated client normalized its catalog.
-             * The MD5 identifies the exact source chart; its model is
-             * normalized again when gameplay loads it, so a stale cached count
-             * must not incorrectly report that the chart is missing.
-             */
             boolean available = song != null;
             if (available) {
                 boolean sameActiveChart = arenaPlayActive && md5.equalsIgnoreCase(
@@ -3943,7 +3983,7 @@ public final class BMSIRArenaClient {
         if (config.getDoubleoption() < 0 || config.getDoubleoption() > 1) {
             config.setDoubleoption(0);
         }
-        config.setLnmode(0);
+        config.setLnmode(longnoteModeValue(currentLnMode));
         config.setMineMode(0);
         config.setScrollMode(0);
         config.setLongnoteMode(0);

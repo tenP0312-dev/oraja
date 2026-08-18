@@ -205,8 +205,6 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirHideMissingTableSongs;
 	@FXML
-	private CheckBox bmsirLongNoteFixed;
-	@FXML
 	private ComboBox<String> bmsirArenaLanguage;
 	@FXML
 	private ComboBox<String> bmsirArenaTargetMode;
@@ -678,8 +676,6 @@ public class PlayConfigurationView implements Initializable {
 		initComboBox(fixhispeed, new String[] { "OFF", "START BPM", "MAX BPM", "MAIN BPM", "MIN BPM" });
 		playconfig.getItems().setAll(PlayMode.values());
 		initComboBox(lntype, new String[] { "LONG NOTE", "CHARGE NOTE", "HELL CHARGE NOTE" });
-		lntype.getSelectionModel().select(0);
-		lntype.setDisable(true);
 		initComboBox(gaugeautoshift, new String[] { "NONE", "CONTINUE", "SURVIVAL TO GROOVE","BEST CLEAR","SELECT TO UNDER" });
 		initComboBox(bottomshiftablegauge, new String[] { "ASSIST EASY", "EASY", "NORMAL" });
 		initComboBox(minemode, new String[] { "OFF", "REMOVE", "ADD RANDOM", "ADD NEAR", "ADD ALL" });
@@ -1484,10 +1480,7 @@ public class PlayConfigurationView implements Initializable {
 				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirExportVanillaScoreDb", "通常版スコアDBを書き出す", "Export vanilla score database",
 								"MANIAC分離情報を除いた通常版互換のスコアデータベースを書き出します。元データは変更しません。",
-								"Export a vanilla-compatible score database without MANIAC separation; the source data is unchanged."),
-						sidebarSettingRow(bmsirSpecificTab, "bmsirLongNoteFixed", "全ロングノートをLONG NOTEとして扱う", "Treat every long note as LONG NOTE",
-								"BMS-IR互換のため常時ONです。CN/HCNをLONG NOTEへ統一し、ノーツ数と送信スコアの不一致を防ぎます。",
-								"Always ON for BMS-IR compatibility; normalizes CN/HCN to prevent note-count and score mismatches.")
+								"Export a vanilla-compatible score database without MANIAC separation; the source data is unchanged.")
 				)
 		);
 	}
@@ -2822,8 +2815,6 @@ public class PlayConfigurationView implements Initializable {
 		bmsirHideMissingTableSongs.setSelected(
 				player.isBmsirHideMissingTableSongs()
 		);
-		bmsirLongNoteFixed.setSelected(true);
-		bmsirLongNoteFixed.setDisable(true);
 		bmsirArenaLanguage.getSelectionModel().select(
 				"en".equals(player.getBmsirArenaLanguage()) ? 1 : 0
 		);
@@ -2880,7 +2871,7 @@ public class PlayConfigurationView implements Initializable {
 		guidese.setSelected(player.isGuideSE());
 		windowhold.setSelected(player.isWindowHold());
 		gaugeop.getSelectionModel().select(player.getGauge());
-		lntype.getSelectionModel().select(0);
+		lntype.getSelectionModel().select(player.getLnmode());
 
 		notesdisplaytiming.getValueFactory().setValue(player.getJudgetiming());
 		notesdisplaytimingautoadjust.setSelected(player.isNotesDisplayTimingAutoAdjust());
@@ -3090,7 +3081,7 @@ public class PlayConfigurationView implements Initializable {
 		player.setGuideSE(guidese.isSelected());
 		player.setWindowHold(windowhold.isSelected());
 		player.setGauge(gaugeop.getValue());
-		player.setLnmode(0);
+		player.setLnmode(lntype.getValue());
 		player.setJudgetiming(getValue(notesdisplaytiming));
 		player.setNotesDisplayTimingAutoAdjust(notesdisplaytimingautoadjust.isSelected());
 

@@ -5,7 +5,6 @@ import bms.player.beatoraja.CourseData.CourseDataConstraint;
 import bms.player.beatoraja.TableData.TableFolder;
 import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
-import bms.player.beatoraja.bmsir.BMSIRLongNotePolicy;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.play.BMSPlayerRule;
@@ -211,11 +210,11 @@ public final class PlayerResource {
 
 	public BMSModel loadBMSModel(int[] selectedRandom) {
 		if(model != null) {
-			if (chartResource != null) {
-				return loadBMSModel(chartResource, BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom);
-			}
 			ChartInformation info = model.getChartInformation();
-			return loadBMSModel(new ChartInformation(info.path, BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom));
+			if (chartResource != null) {
+				return loadBMSModel(chartResource, info.lntype, selectedRandom);
+			}
+			return loadBMSModel(new ChartInformation(info.path, info.lntype, selectedRandom));
 		}
 		return null;
 	}
@@ -227,7 +226,7 @@ public final class PlayerResource {
 		try {
 			if (lowerName.endsWith(".bms") || lowerName.endsWith(".bme")
 					|| lowerName.endsWith(".bml") || lowerName.endsWith(".pms")) {
-				decoder = new BMSDecoder(BMSIRLongNotePolicy.IR_LN_TYPE);
+				decoder = new BMSDecoder(lnmode);
 				try (java.io.InputStream input = resource.openStream()) {
 					loaded = ((BMSDecoder) decoder).decode(input.readAllBytes(),
 							lowerName.endsWith(".pms"), selectedRandom);
@@ -243,7 +242,7 @@ public final class PlayerResource {
 				decoder = ChartDecoder.getDecoder(decoderPath);
 				loaded = decoder != null
 						? decoder.decode(new ChartInformation(decoderPath,
-								BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom))
+								lnmode, selectedRandom))
 						: null;
 			}
 		} catch (java.io.IOException | java.io.UncheckedIOException e) {
@@ -252,13 +251,12 @@ public final class PlayerResource {
 		}
 		if (loaded != null) {
 			loaded.setChartInformation(new ChartInformation(
-					Path.of(resource.displayPath()), BMSIRLongNotePolicy.IR_LN_TYPE, selectedRandom));
+					Path.of(resource.displayPath()), lnmode, selectedRandom));
 		}
 		return prepareModel(loaded, decoder);
 	}
 
 	public BMSModel loadBMSModel(ChartInformation info) {
-		info = BMSIRLongNotePolicy.forceLongNote(info);
 		ChartDecoder decoder = ChartDecoder.getDecoder(info.path);
 		if(decoder == null) {
 			return null;
@@ -271,7 +269,6 @@ public final class PlayerResource {
 		if (model == null) {
 			return null;
 		}
-		BMSIRLongNotePolicy.normalizeModel(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);
 		}
