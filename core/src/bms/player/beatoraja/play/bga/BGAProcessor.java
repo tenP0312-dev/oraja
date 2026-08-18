@@ -16,6 +16,7 @@ import bms.player.beatoraja.play.SkinBGA;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
+import bms.player.beatoraja.system.TimingDiagnostics;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
@@ -30,6 +31,8 @@ import com.badlogic.gdx.utils.Array;
  */
 public class BGAProcessor {
 	private static final Logger logger = LoggerFactory.getLogger(BGAProcessor.class);
+	private static final int PREPARE_DISPOSALS_PER_FRAME = 4;
+	private static final int PREPARE_UPLOADS_PER_FRAME = 1;
 	
 	// TODO イベントレイヤー対応(現状はミスレイヤーのみ)
 
@@ -76,6 +79,8 @@ public class BGAProcessor {
 	
 	private boolean rbga;
 	private boolean rlayer;
+	private boolean preparationStarted;
+	private long preparationStartedNanos;
 
 	public BGAProcessor(Config config, PlayerConfig player) {
 		this.player = player;
@@ -273,10 +278,10 @@ public class BGAProcessor {
 	/**
 	 * BGAの初期データをあらかじめキャッシュする
 	 */
-	public void prepare(BMSPlayer player) {
+	public void beginPrepare(BMSPlayer player) {
 		pos = 0;
 		if(cache != null) {
-			cache.prepare(timelines);			
+			cache.beginPrepare(timelines);
 		}
 		for (MovieProcessor mp : movies) {
 			if(mp != null) {
@@ -284,7 +289,34 @@ public class BGAProcessor {
 			}
 		}
 		resetCurrentlyPlayingBGA();
-		time = 0;		
+		time = 0;
+		preparationStarted = true;
+		preparationStartedNanos = TimingDiagnostics.start();
+	}
+
+	public boolean advancePreparation() {
+		if (!preparationStarted) {
+			return false;
+		}
+		long stepStarted = TimingDiagnostics.start();
+		boolean complete;
+		try {
+			complete = cache == null || cache.advancePreparation(
+					PREPARE_DISPOSALS_PER_FRAME,
+					PREPARE_UPLOADS_PER_FRAME
+			);
+		} finally {
+			TimingDiagnostics.finish(TimingDiagnostics.Metric.BGA_PREPARE_STEP, stepStarted);
+		}
+		if (complete) {
+			TimingDiagnostics.finish(
+					TimingDiagnostics.Metric.BGA_PREPARE_TOTAL,
+					preparationStartedNanos
+			);
+			preparationStartedNanos = 0;
+			preparationStarted = false;
+		}
+		return complete;
 	}
 
 	private void resetCurrentlyPlayingBGA() {

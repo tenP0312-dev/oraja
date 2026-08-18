@@ -3,6 +3,7 @@ package bms.player.beatoraja.audio;
 import java.nio.ByteBuffer;
 import java.nio.file.*;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import com.portaudio.*;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 	private final float[] buffer;
 	
 	private final Thread mixer;
+	private long lastWriteCompletedNanos;
 
 	public static DeviceInfo[] getDevices() {
 		if(devices == null) {
@@ -403,15 +405,19 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 		while(!stop) {
 			long mixStarted = TimingDiagnostics.start();
 			final float gpitch = getGlobalPitch();
+			int activeInputCount = 0;
 			synchronized (inputs) {
 				if (mixStarted != 0) {
 					for (MixerInput input : inputs) {
-						if (input.pos != -1 && input.queuedAtNanos != 0) {
-							TimingDiagnostics.finish(
-									TimingDiagnostics.Metric.PORTAUDIO_ENQUEUE_TO_MIX,
-									input.queuedAtNanos
-							);
-							input.queuedAtNanos = 0;
+						if (input.pos != -1) {
+							activeInputCount++;
+							if (input.queuedAtNanos != 0) {
+								TimingDiagnostics.finish(
+										TimingDiagnostics.Metric.PORTAUDIO_ENQUEUE_TO_MIX,
+										input.queuedAtNanos
+								);
+								input.queuedAtNanos = 0;
+							}
 						}
 					}
 				}
@@ -458,8 +464,10 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 			);
 			
 			long writeStarted = TimingDiagnostics.start();
+			boolean underflow = false;
 			try {
-				if (stream.write(buffer, buffer.length / 2)) {
+				underflow = stream.write(buffer, buffer.length / 2);
+				if (underflow) {
 					TimingDiagnostics.increment(
 							TimingDiagnostics.Counter.PORTAUDIO_UNDERFLOW
 					);
@@ -470,6 +478,22 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 				);
 				e.printStackTrace();
 			} finally {
+				if (writeStarted != 0) {
+					long completedNanos = System.nanoTime();
+					if (underflow) {
+						TimingDiagnostics.portAudioUnderflow(
+								activeInputCount,
+								buffer.length / 2,
+								TimeUnit.NANOSECONDS.toMicros(completedNanos - writeStarted),
+								lastWriteCompletedNanos == 0
+										? 0
+										: TimeUnit.NANOSECONDS.toMicros(
+												writeStarted - lastWriteCompletedNanos
+										)
+						);
+					}
+					lastWriteCompletedNanos = completedNanos;
+				}
 				TimingDiagnostics.finish(
 						TimingDiagnostics.Metric.PORTAUDIO_WRITE,
 						writeStarted

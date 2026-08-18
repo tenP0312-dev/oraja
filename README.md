@@ -25,6 +25,15 @@ and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
 
+The current development source also removes two render-thread blockers from
+gameplay startup: the PRELOAD transition no longer invokes `System.gc()` or
+waits on an unfinished loudness-analysis task. Static BGA texture disposal and
+upload stay on the render thread but advance with a small per-frame budget
+before READY. Default-OFF timing diagnostics now correlate stalls and PortAudio
+underflows with play-session/state IDs, maximum timestamps, direct-buffer
+usage, and a safe stack sample for render stalls over 50 ms. See
+[the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is
