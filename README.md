@@ -355,12 +355,14 @@ Sidebar keeps the same setting controls and save paths, moves the category
 navigation to the left, and keeps the explanation for each setting directly
 below that setting. The player ID, display name, and active rule
 profile are collapsed into a sidebar summary and can be expanded when needed.
-The navigation rail has a stable width, searchable destinations, restrained
-single-color icons, and grouped settings cards so changing pages does not shift
-the content boundary. Every scalar row uses one stable two-column layout: its
-label stays at the left and its editor or ON/OFF switch uses the same trailing
-column. Standalone switches sit at the row's far-right edge, with a persistent
-plain-language explanation below. Folder lists,
+The navigation rail has a stable width and searches localized category names,
+setting names, and their descriptions. A matching setting opens its category;
+a true no-match query replaces stale page content with clear guidance.
+Restrained single-color icons and grouped settings cards keep the content
+boundary stable while changing pages. Every scalar row uses one stable
+two-column layout: its label stays at the left and its editor or ON/OFF switch
+uses the same trailing column. Standalone switches sit at the row's far-right
+edge, with a persistent plain-language explanation below. Folder lists,
 tables, skin previews, Webhook lists, and OBS scene mappings keep their useful
 shape inside full-width explained workspace cards. Sidebar editors remain
 connected to the original controls, so Classic layout, controller behavior,
