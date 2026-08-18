@@ -12,7 +12,7 @@ jobs:
     name: Package and compliance tools
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -33,14 +33,15 @@ jobs:
             gradle_args: -Dplatform=macos -Darch=aarch64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: '17'
+          java-package: jdk+fx
           cache: gradle
 
       - name: Test and build the platform body
@@ -59,9 +60,9 @@ jobs:
     name: Reproducible Windows native audio
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
