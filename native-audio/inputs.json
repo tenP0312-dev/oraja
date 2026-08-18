@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "target": "windows-x86_64",
+  "distribution_version": "0.4.14.58",
+  "source_date_epoch": 1617236250,
+  "portaudio": {
+    "version": "19.7.0",
+    "commit": "147dd722548358763a8b649b3e4b41dfffbcfbb6",
+    "url": "https://codeload.github.com/PortAudio/portaudio/tar.gz/147dd722548358763a8b649b3e4b41dfffbcfbb6",
+    "sha256": "95457b809ce60d4d4790f84bb692e271f644e59d8adf96feb988c89ab52a506a",
+    "license": "MIT"
+  },
+  "asio_sdk": {
+    "version": "2.3.4",
+    "release_date": "2025-10-15",
+    "url": "https://download.steinberg.net/sdk_downloads/ASIO-SDK_2.3.4_2025-10-15.zip",
+    "sha256": "d5ebf0c20dd2c5f43771fd0c1418f4b361bf52434ee670097cfa6b3a335e2eca",
+    "license_selected": "GPL-3.0-only"
+  },
+  "jna": {
+    "version": "5.13.0",
+    "commit": "4962fd7758493b7395e86578705d8a32f6238872",
+    "license_selected": "Apache-2.0",
+    "license_url": "https://raw.githubusercontent.com/java-native-access/jna/5.13.0/AL2.0",
+    "license_sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+  }
+}

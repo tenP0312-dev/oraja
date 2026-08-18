@@ -10,10 +10,11 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.57**. BMS-IR body downloads now
-serialize requests from the same registered URL, reuse a retained package only
-after confirming the requested chart MD5, and rescan only the configured
-download directory after a new or reused package is accepted.
+The current client source version is **0.4.14.58**. Its Windows native-audio
+runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
+SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
+licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
+non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -49,6 +50,22 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.58
+
+The Windows x86-64 package replaces the repository's untraceable legacy
+PortAudio/JPortAudio binaries with a clean, double-built native bundle. Fixed
+source archive hashes, the MSVC/CMake toolchain, enabled host APIs, output
+hashes, license selection, and full file inventory are recorded and verified
+before packaging. ASIO and WASAPI remain available; failure to verify the ASIO
+source or build fails the Windows package instead of silently distributing an
+unknown binary.
+
+The MIT-licensed JPortAudio Java sources are compiled directly with the body
+instead of loading the old prebuilt JAR. JNA 5.13.0 uses its Apache-2.0 option.
+The Windows launch scripts and portable launcher both pass the package's
+`natives/` directory as the JVM native-library path. macOS does not receive the
+Windows DLLs.
 
 ## Arena oraja 0.4.14.57
 
@@ -404,7 +421,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.57
+  --output-dir /release/build-0.4.14.58
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

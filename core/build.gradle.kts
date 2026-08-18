@@ -2,6 +2,7 @@ import java.nio.file.FileSystems
 import java.util.Properties
 import java.util.zip.ZipFile
 import org.gradle.api.GradleException
+import org.gradle.api.tasks.compile.JavaCompile
 
 plugins {
     id("java-library")
@@ -43,6 +44,10 @@ application {
     mainClass.set("bms.player.beatoraja.MainLoader")
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
 tasks {
     jar {
         dependsOn("generateBuildMetaInfo")
@@ -63,7 +68,7 @@ tasks {
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))
         archiveBaseName.set("BMS-IR-Arena-oraja")
-        archiveVersion.set("0.4.14.57")
+        archiveVersion.set("0.4.14.58")
         archiveClassifier.set(platformClassifier)
         mergeServiceFiles()
 
@@ -210,6 +215,8 @@ tasks {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("user.language", "ja")
+    systemProperty("user.country", "JP")
 }
 
 val gitHashProvider = providers.exec {
@@ -291,8 +298,9 @@ dependencies {
 
     implementation(libs.jlr2arenaex)
 
-    // non-gradle managed file dependencies. jportaudio not on maven. "custom" scares me.
-    implementation(":jportaudio")
+    // JPortAudio's MIT-licensed Java sources are tracked under
+    // core/src/com/portaudio. The native JNI and PortAudio DLLs are built
+    // separately from pinned upstream sources for the Windows package.
     implementation(":luaj-jse:3.0.2-custom")
 
     testImplementation(platform(libs.junit.bom))
