@@ -27,7 +27,7 @@ jobs:
         include:
           - os: windows-2022
             platform: windows-x86-64
-            gradle_args: -Dplatform=windows -x core:test
+            gradle_args: -Dplatform=windows -Darch=x86-64 -x core:test
             run_tests: false
           - os: macos-14
             platform: macos-aarch64
