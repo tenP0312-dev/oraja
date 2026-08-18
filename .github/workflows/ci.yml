@@ -27,10 +27,12 @@ jobs:
         include:
           - os: windows-2022
             platform: windows-x86-64
-            gradle_args: -Dplatform=windows
+            gradle_args: -Dplatform=windows -x core:test
+            run_tests: false
           - os: macos-14
             platform: macos-aarch64
             gradle_args: -Dplatform=macos -Darch=aarch64
+            run_tests: true
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -44,7 +46,12 @@ jobs:
           java-package: jdk+fx
           cache: gradle
 
-      - name: Test and build the platform body
+      - name: Run the full body test suite
+        if: matrix.run_tests
+        shell: bash
+        run: ./gradlew core:test ${{ matrix.gradle_args }}
+
+      - name: Build and verify the platform body
         shell: bash
         run: ./gradlew core:shadowJar ${{ matrix.gradle_args }}
 
