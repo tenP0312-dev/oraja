@@ -28,6 +28,16 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.57</h1>
+        <h2>Reuse only the package that contains the requested chart</h2>
+        <ul>
+        <li>BMS-IR body downloads from the same registered URL are serialized. A retained package is reused only after the bounded archive reader confirms the exact requested chart MD5.</li>
+        <li>Matching the URL alone does not suppress another package, so a distribution page with several song archives can still continue to the correct later candidate.</li>
+        </ul>
+        <h2>Rescan only the configured download directory</h2>
+        <ul>
+        <li>After a new or verified reused archive is accepted, the running client updates the configured download root with parent-directory fallback disabled.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.56</h1>
         <h2>Resolve archive links from distribution pages</h2>
         <ul>

@@ -10,11 +10,10 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.56**. Registered HTML
-distribution pages can supply bounded ZIP/RAR/7z candidates for a missing
-difficulty-table song, including through one Wayback snapshot. Generated
-Music Select previews now load their in-memory WAV correctly and stop at
-explicit source, decode, and retained-memory limits.
+The current client source version is **0.4.14.57**. BMS-IR body downloads now
+serialize requests from the same registered URL, reuse a retained package only
+after confirming the requested chart MD5, and rescan only the configured
+download directory after a new or reused package is accepted.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
@@ -51,6 +50,18 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Arena oraja 0.4.14.57
+
+Within one running client, later requests from the same registered URL wait
+for an active request and then reuse a retained package only after that package
+is verified to contain the newly requested chart MD5. URL equality alone never
+suppresses another package from a multi-download landing page.
+
+Each accepted or verified reused package triggers a song-database scan of the
+configured download root only. Parent-directory fallback is disabled for this
+targeted update, so the downloaded compressed archive becomes visible without
+rescanning an unrelated tree.
+
 ## Arena oraja 0.4.14.56
 
 When the default-OFF BMS-IR body URL option encounters an HTML distribution
@@ -79,13 +90,6 @@ The client enforces the 2 GiB download limit, archive structure/path/expanded-
 size checks, and the requested chart MD5 before a no-overwrite install. These
 checks are not antivirus scanning, so leave the setting off unless you accept
 the risk of processing an untrusted archive and its media.
-
-Within one running client, later requests from the same registered URL reuse a
-retained package only after that package is verified to contain the newly
-requested chart MD5. URL equality alone never suppresses another package from
-a multi-download landing page. Each accepted or reused package triggers a
-song-database scan of the configured download root only; the scan does not
-expand to its parent directory.
 
 ## Arena oraja 0.4.14.54
 
@@ -400,7 +404,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.56
+  --output-dir /release/build-0.4.14.57
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
