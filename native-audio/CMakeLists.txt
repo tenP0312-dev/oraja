@@ -11,7 +11,8 @@ endif()
 set(PORTAUDIO_SOURCE_DIR "" CACHE PATH "Pinned PortAudio source directory")
 set(ASIOSDK_ROOT_DIR "" CACHE PATH "Pinned Steinberg ASIO SDK root")
 set(PORTAUDIO_COMMIT "" CACHE STRING "Pinned PortAudio commit")
-foreach(required PORTAUDIO_SOURCE_DIR ASIOSDK_ROOT_DIR PORTAUDIO_COMMIT)
+set(JAVA_HOME "" CACHE PATH "Windows x64 JDK root")
+foreach(required PORTAUDIO_SOURCE_DIR ASIOSDK_ROOT_DIR PORTAUDIO_COMMIT JAVA_HOME)
   if(NOT ${required})
     message(FATAL_ERROR "${required} is required")
   endif()
@@ -21,6 +22,9 @@ if(NOT EXISTS "${PORTAUDIO_SOURCE_DIR}/include/portaudio.h")
 endif()
 if(NOT EXISTS "${ASIOSDK_ROOT_DIR}/common/asio.h")
   message(FATAL_ERROR "ASIOSDK_ROOT_DIR does not contain the ASIO SDK")
+endif()
+if(NOT EXISTS "${JAVA_HOME}/include/jni.h" OR NOT EXISTS "${JAVA_HOME}/include/win32/jni_md.h")
+  message(FATAL_ERROR "JAVA_HOME does not contain Windows JNI headers")
 endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -41,7 +45,6 @@ if(NOT TARGET portaudio OR NOT PA_USE_ASIO OR NOT PA_USE_WASAPI)
 endif()
 target_compile_definitions(portaudio PRIVATE "PA_GIT_REVISION=${PORTAUDIO_COMMIT}")
 
-find_package(JNI REQUIRED)
 set(JPORTAUDIO_SOURCE_DIR "${PORTAUDIO_SOURCE_DIR}/bindings/java/c/src")
 add_library(jportaudio SHARED
   "${JPORTAUDIO_SOURCE_DIR}/com_portaudio_BlockingStream.c"
@@ -51,7 +54,8 @@ add_library(jportaudio SHARED
 target_include_directories(jportaudio PRIVATE
   "${PORTAUDIO_SOURCE_DIR}/include"
   "${JPORTAUDIO_SOURCE_DIR}"
-  ${JNI_INCLUDE_DIRS}
+  "${JAVA_HOME}/include"
+  "${JAVA_HOME}/include/win32"
 )
 target_link_libraries(jportaudio PRIVATE portaudio)
 set_target_properties(jportaudio PROPERTIES

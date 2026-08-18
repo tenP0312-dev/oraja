@@ -137,6 +137,7 @@ $JavaHome = if ($env:JAVA_HOME_17_X64) { $env:JAVA_HOME_17_X64 } else { $env:JAV
 if (-not $JavaHome -or -not (Test-Path -LiteralPath (Join-Path $JavaHome "bin/javac.exe") -PathType Leaf)) {
     throw "A Windows x64 JDK is required in JAVA_HOME_17_X64 or JAVA_HOME"
 }
+$JavaHome = [System.IO.Path]::GetFullPath($JavaHome).Replace("\", "/")
 $env:JAVA_HOME = $JavaHome
 $env:SOURCE_DATE_EPOCH = [string]$Inputs.source_date_epoch
 
