@@ -203,6 +203,7 @@
 		{"id":"genre", "font":0, "size":24, "ref":13},
 		{"id":"title", "font":0, "size":24, "ref":12},
 		{"id":"artist", "font":0, "size":24, "ref":16},
+		{"id":"tablecomment", "font":0, "size":18, "ref":1004, "wrapping":true},
 		{"id":"course1", "font":0, "size":24, "ref":150},
 		{"id":"course2", "font":0, "size":24, "ref":151},
 		{"id":"course3", "font":0, "size":24, "ref":152},
@@ -741,6 +742,7 @@
 		{"id":"genre", "filter":1, "dst":[{"x":100, "y":610, "w":18, "h":20}]},
 		{"id":"title", "filter":1, "dst":[{"x":100, "y":576, "w":18, "h":24}]},
 		{"id":"artist", "filter":1, "dst":[{"x":100, "y":550, "w":18, "h":20}]},
+		{"id":"tablecomment", "filter":1, "dst":[{"x":80, "y":180, "w":600, "h":18, "r":220, "g":240, "b":220}]},
 
 		{"id":"course1", "dst":[{"x":80, "y":572, "w":18, "h":24, "b":0}]},
 		{"id":"course2", "dst":[{"x":80, "y":544, "w":18, "h":24, "b":0}]},

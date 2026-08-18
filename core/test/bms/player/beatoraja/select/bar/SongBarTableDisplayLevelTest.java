@@ -29,6 +29,30 @@ class SongBarTableDisplayLevelTest {
     }
 
     @Test
+    void keepsCommentsInTheActiveTableBarWithoutChangingLocalSongData() {
+        SongData local = localSong("a", 12);
+        SongData firstEntry = tableEntry("a", 6);
+        firstEntry.setTableComment("first[[BR]]line");
+        SongData secondEntry = tableEntry("a", 9);
+        secondEntry.setTableComment("other table");
+
+        SongBar first = SongBar.toSongBarArray(
+                new SongData[]{local},
+                new SongData[]{firstEntry},
+                null
+        )[0];
+        SongBar second = SongBar.toSongBarArray(
+                new SongData[]{local},
+                new SongData[]{secondEntry},
+                null
+        )[0];
+
+        assertEquals("first\nline", first.getTableComment());
+        assertEquals("other table", second.getTableComment());
+        assertEquals("", local.getTableComment());
+    }
+
+    @Test
     void preservesEachEntryLevelInsideAnAggregateFolder() {
         SongData first = localSong("a", 11);
         SongData second = localSong("b", 12);

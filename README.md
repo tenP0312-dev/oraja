@@ -25,6 +25,14 @@ and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
 
+The current development source also retains per-chart difficulty-table
+comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
+active table entry is exposed to skins as string property `tablecomment`
+(`1004`). The default Music Select skin uses a wrapped text area; custom skins
+control its width, font size, placement, and practical visible line count.
+Comments are contextual to the selected table and do not alter local song
+metadata.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is

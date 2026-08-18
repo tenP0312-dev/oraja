@@ -247,6 +247,7 @@ public class TableDataAccessor {
 		if(te instanceof DifficultyTableElement) {
 			DifficultyTableElement dte = (DifficultyTableElement) te;
 			song.setTableLevel(TableData.parseDisplayLevel(dte.getLevel()));
+			song.setTableComment(dte.getComment());
 			song.setAppendurl(dte.getAppendURL());
 			song.setAppendIpfs(dte.getAppendIPFS());
 		}

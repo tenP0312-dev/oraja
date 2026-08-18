@@ -81,7 +81,14 @@ class BMSIRMyTableDraftTest {
 
         assertEquals(
                 BMSIRMyTableDraft.StageResult.NO_CHANGE,
-                draft.stageUpsert(12L, REVISION, entry(snapshot, 0), existing, "1", "")
+                draft.stageUpsert(
+                        12L,
+                        REVISION,
+                        entry(snapshot, 0),
+                        existing,
+                        "1",
+                        "first[[BR]]second"
+                )
         );
         draft.stageUpsert(12L, REVISION, null, added, "2", "");
         assertTrue(draft.hasChanges());
@@ -147,6 +154,7 @@ class BMSIRMyTableDraftTest {
         entries.addObject()
                 .put("entry_hash", MD5_A)
                 .put("md5", MD5_A)
+                .put("comment", "first\nsecond")
                 .put("level", "1");
         entries.addObject()
                 .put("entry_hash", "e".repeat(32))
