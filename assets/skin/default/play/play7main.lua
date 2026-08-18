@@ -1,4 +1,6 @@
 
+local main_state = require("main_state")
+
 local function append_all(list, list1)
 	for i, v in ipairs(list1) do
 		table.insert(list, v)
@@ -26,6 +28,19 @@ local property = {
 		{name = "Off", op = 910},
 		{name = "EARLY/LATE", op = 911},
 		{name = "+-ms", op = 912}
+	}},
+	{name = "Lane Width", item = {
+		{name = "Standard", op = 930},
+		{name = "Compact", op = 931},
+		{name = "Wide", op = 932}
+	}},
+	{name = "Play Info", item = {
+		{name = "On", op = 941},
+		{name = "Off", op = 940}
+	}},
+	{name = "Resolved RANDOM", item = {
+		{name = "On", op = 946},
+		{name = "Off", op = 945}
 	}}
 }
 local function is_left_side()
@@ -51,6 +66,20 @@ local function is_judge_detail_early_late()
 end
 local function is_judge_detail_ms()
 	return skin_config.option["Judge Detail"] == 912
+end
+local function lane_width_scale()
+	if skin_config.option["Lane Width"] == 931 then
+		return 0.9
+	elseif skin_config.option["Lane Width"] == 932 then
+		return 1.1
+	end
+	return 1
+end
+local function is_resolved_random_enabled()
+	return skin_config.option["Resolved RANDOM"] == 946
+end
+local function has_resolved_random()
+	return is_resolved_random_enabled() and main_state.number(450) > 0
 end
 
 local function timer_key_bomb(index)
@@ -145,36 +174,37 @@ local function main()
 	end
 
 	local geometry = {}
+	local lane_scale = lane_width_scale()
+	geometry.lanes_w = 390 * lane_scale
+	geometry.lane_w_width = 50 * lane_scale
+	geometry.lane_b_width = 40 * lane_scale
+	geometry.lane_s_width = 70 * lane_scale
+	geometry.note_w_width = 50 * lane_scale
+	geometry.note_b_width = 40 * lane_scale
+	geometry.note_s_width = 70 * lane_scale
 
 	if is_left_side() then
 		geometry.lanes_x = 20
-		geometry.lanes_w = 390
-		geometry.lane_w_width = 50
-		geometry.lane_b_width = 40
-		geometry.lane_s_width = 70
-		geometry.note_w_width = 50
-		geometry.note_b_width = 40
-		geometry.note_s_width = 70
 		geometry.title_align = 0
-		geometry.judge_x = 115
-		geometry.judgedetail_x = 200
+		geometry.judge_x = geometry.lanes_x + (geometry.lanes_w - 180) / 2 - 10
+		geometry.judgedetail_x = geometry.lanes_x + geometry.lanes_w / 2 - 15
 		geometry.judgedetail_y = 290
-		geometry.judgecount_x = 476
+		geometry.judgecount_x = geometry.lanes_x + geometry.lanes_w + 66
 		geometry.judgecount_y = 50
-		geometry.ready_x = 40
-		geometry.title_x = 450
-		geometry.gauge_x = 20
-		geometry.gauge_w = 390
-		geometry.gaugevalue_x = 314
-		geometry.bga_x = 440
+		geometry.ready_x = geometry.lanes_x + 20
+		geometry.gauge_x = geometry.lanes_x
+		geometry.gauge_w = geometry.lanes_w
+		geometry.gaugevalue_x = geometry.lanes_x + geometry.lanes_w - 96
+		geometry.bga_x = geometry.lanes_x + geometry.lanes_w + 30
 		geometry.bga_y = 50
-		geometry.bga_w = 800
+		geometry.bga_w = 1280 - geometry.bga_x - 40
 		geometry.bga_h = 650
-		geometry.judgegraph_x = 740
+		geometry.title_x = geometry.bga_x + 10
+		geometry.judgegraph_x = geometry.bga_x + geometry.bga_w - 500
 		geometry.judgegraph_y = 100
 		geometry.judgegraph_w = 450
 		geometry.judgegraph_h = 100
-		geometry.timing_x = 740
+		geometry.timing_x = geometry.judgegraph_x
 		geometry.timing_y = 50
 		geometry.timing_w = 450
 		geometry.timing_h = 50
@@ -184,30 +214,23 @@ local function main()
 		geometry.progress_h = 540
 	end
 	if is_right_side() then
-		geometry.lanes_x = 870
-		geometry.lanes_w = 390
-		geometry.lane_w_width = 50
-		geometry.lane_b_width = 40
-		geometry.lane_s_width = 70
-		geometry.note_w_width = 50
-		geometry.note_b_width = 40
-		geometry.note_s_width = 70
+		geometry.lanes_x = 1280 - 20 - geometry.lanes_w
 		geometry.title_align = 2
-		geometry.judge_x = 965
-		geometry.judgedetail_x = 1050
+		geometry.judge_x = geometry.lanes_x + (geometry.lanes_w - 180) / 2 - 10
+		geometry.judgedetail_x = geometry.lanes_x + geometry.lanes_w / 2 - 15
 		geometry.judgedetail_y = 290
-		geometry.judgecount_x = 720
+		geometry.judgecount_x = geometry.lanes_x - 150
 		geometry.judgecount_y = 50
-		geometry.ready_x = 890
-		geometry.title_x = 840
-		geometry.gauge_x = 1260
-		geometry.gauge_w = -390
-		geometry.gaugevalue_x = 870
+		geometry.ready_x = geometry.lanes_x + 20
+		geometry.gauge_x = geometry.lanes_x + geometry.lanes_w
+		geometry.gauge_w = -geometry.lanes_w
+		geometry.gaugevalue_x = geometry.lanes_x
 		geometry.bga_x = 40
 		geometry.bga_y = 50
-		geometry.bga_w = 800
+		geometry.bga_w = geometry.lanes_x - geometry.bga_x - 30
 		geometry.bga_h = 650
-		geometry.judgegraph_x = 90
+		geometry.title_x = geometry.bga_x + geometry.bga_w
+		geometry.judgegraph_x = geometry.bga_x + 50
 		geometry.judgegraph_y = 100
 		geometry.judgegraph_w = 450
 		geometry.judgegraph_h = 100
@@ -242,6 +265,14 @@ local function main()
 		geometry.graph_w = 0
 		geometry.graph_h = 0
 	end
+	geometry.info_x = geometry.bga_x + 10
+	geometry.info_y = geometry.bga_y + geometry.bga_h - 92
+	geometry.info_w = math.min(540, geometry.bga_w - 20)
+	geometry.info_h = 82
+	geometry.stats_x = geometry.bga_x + 10
+	geometry.stats_y = geometry.bga_y + 10
+	geometry.stats_w = math.min(520, geometry.bga_w - 20)
+	geometry.stats_h = 34
 	do
 		geometry.notes_x = {}
 		geometry.notes_w = {}
@@ -457,6 +488,10 @@ local function main()
 		{id = 422, src = 5, x = 0, y = 0, w = 240, h = 24, divx = 10, digit = 5, ref = 71},
 		{id = 423, src = 5, x = 0, y = 24, w = 240, h = 24, divx = 10, digit = 5, ref = 150},
 		{id = 424, src = 5, x = 0, y = 48, w = 240, h = 24, divx = 10, digit = 5, ref = 121},
+		{id = "play-info-level", src = 5, x = 0, y = 0, w = 240, h = 24, divx = 10, digit = 3, ref = 96},
+		{id = "play-info-next-rank", src = 5, x = 0, y = 0, w = 240, h = 24, divx = 10, digit = 5, ref = 154},
+		{id = "play-info-early", src = 5, x = 0, y = 0, w = 240, h = 24, divx = 10, digit = 5, ref = 423},
+		{id = "play-info-late", src = 5, x = 0, y = 0, w = 240, h = 24, divx = 10, digit = 5, ref = 424},
 
 		{id = "lanecover-value", src = 0, x = 0, y = 550, w = 100, h = 15, divx = 10, digit = 3, ref = 14},
 		{id = "lanecover-duration", src = 0, x = 0, y = 565, w = 100, h = 15, divx = 10, digit = 4, ref = 312},
@@ -471,9 +506,42 @@ local function main()
 		{id = "judgems-1pp", src = 13, x = 0, y = 20, w = 120, h = 40, divx = 12, divy = 2, digit = 4, ref = 525},
 		{id = "judgems-1pg", src = 13, x = 0, y = 60, w = 120, h = 40, divx = 12, divy = 2, digit = 4, ref = 525}
 	}
+	for i = 1, 7 do
+		table.insert(skin.value, {
+			id = "resolved-random-"..i,
+			src = 5,
+			x = 0,
+			y = 0,
+			w = 240,
+			h = 24,
+			divx = 10,
+			digit = 1,
+			ref = 449 + i
+		})
+	end
+	table.insert(skin.value, {
+		id = "resolved-random-scratch",
+		src = 5,
+		x = 0,
+		y = 0,
+		w = 240,
+		h = 24,
+		divx = 10,
+		digit = 1,
+		ref = 459
+	})
 	append_all(skin.value, play_parts.judge_count_sources("judge-count-", 5))
 	skin.text = {
-		{id = "song-title", font = 0, size = 24, align = geometry.title_align, ref = 12}
+		{id = "song-title", font = 0, size = 24, align = geometry.title_align, ref = 12},
+		{id = "play-info-title", font = 0, size = 20, overflow = 1, ref = 12},
+		{id = "play-info-artist", font = 0, size = 16, overflow = 1, ref = 16},
+		{id = "play-info-genre", font = 0, size = 14, overflow = 1, ref = 13},
+		{id = "play-info-level-label", font = 0, size = 14, constantText = "LEVEL"},
+		{id = "play-info-next-rank-label", font = 0, size = 14, constantText = "NEXT"},
+		{id = "play-info-early-label", font = 0, size = 14, constantText = "EARLY"},
+		{id = "play-info-late-label", font = 0, size = 14, constantText = "LATE"},
+		{id = "resolved-random-label", font = 0, size = 14, constantText = "RANDOM"},
+		{id = "resolved-random-scratch-label", font = 0, size = 14, constantText = "S"}
 	}
 	skin.slider = {
 		{id = "musicprogress", src = 0, x = 0, y = 289, w = 14, h = 20, angle = 2, range = geometry.progress_h - 20,type = 6},
@@ -748,6 +816,76 @@ local function main()
 		{id = "bga", offset = 43, dst = {
 			{time = 0, x = geometry.bga_x, y = geometry.bga_y, w = geometry.bga_w, h = geometry.bga_h}
 		}},
+		{id = 7, op = {941}, dst = {
+			{x = geometry.info_x, y = geometry.info_y, w = geometry.info_w, h = geometry.info_h, r = 0, g = 0, b = 0, a = 176}
+		}},
+		{id = "play-info-title", op = {941}, dst = {
+			{x = geometry.info_x + 10, y = geometry.info_y + 56, w = geometry.info_w - 20, h = 20}
+		}},
+		{id = "play-info-artist", op = {941}, dst = {
+			{x = geometry.info_x + 10, y = geometry.info_y + 34, w = geometry.info_w - 170, h = 16}
+		}},
+		{id = "play-info-genre", op = {941}, dst = {
+			{x = geometry.info_x + 10, y = geometry.info_y + 12, w = geometry.info_w - 170, h = 14}
+		}},
+		{id = "play-info-level-label", op = {941}, dst = {
+			{x = geometry.info_x + geometry.info_w - 150, y = geometry.info_y + 34, w = 50, h = 16}
+		}},
+		{id = "play-info-level", op = {941}, dst = {
+			{x = geometry.info_x + geometry.info_w - 88, y = geometry.info_y + 34, w = 12, h = 16}
+		}},
+		{id = "play-info-next-rank-label", op = {941}, dst = {
+			{x = geometry.info_x + geometry.info_w - 150, y = geometry.info_y + 12, w = 44, h = 16}
+		}},
+		{id = "play-info-next-rank", op = {941}, dst = {
+			{x = geometry.info_x + geometry.info_w - 88, y = geometry.info_y + 12, w = 12, h = 16}
+		}},
+
+		{id = 7, op = {941}, dst = {
+			{x = geometry.stats_x, y = geometry.stats_y, w = geometry.stats_w, h = geometry.stats_h, r = 0, g = 0, b = 0, a = 176}
+		}},
+		{id = "play-info-early-label", op = {941}, dst = {
+			{x = geometry.stats_x + 10, y = geometry.stats_y + 9, w = 48, h = 16}
+		}},
+		{id = "play-info-early", op = {941}, dst = {
+			{x = geometry.stats_x + 62, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "play-info-late-label", op = {941}, dst = {
+			{x = geometry.stats_x + 130, y = geometry.stats_y + 9, w = 38, h = 16}
+		}},
+		{id = "play-info-late", op = {941}, dst = {
+			{x = geometry.stats_x + 172, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-label", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 245, y = geometry.stats_y + 9, w = 62, h = 16}
+		}},
+		{id = "resolved-random-1", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 315, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-2", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 339, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-3", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 363, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-4", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 387, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-5", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 411, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-6", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 435, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-7", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 459, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
+		{id = "resolved-random-scratch-label", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 483, y = geometry.stats_y + 9, w = 10, h = 16}
+		}},
+		{id = "resolved-random-scratch", op = {941, 946}, draw = has_resolved_random, dst = {
+			{x = geometry.stats_x + 499, y = geometry.stats_y + 9, w = 12, h = 16}
+		}},
 		{id = "judgegraph", dst = {
 			{time = 0, x = geometry.judgegraph_x, y = geometry.judgegraph_y, w = geometry.judgegraph_w, h = geometry.judgegraph_h}
 		}},
@@ -757,7 +895,7 @@ local function main()
 		{id = "timing", dst = {
 			{time = 0, x = geometry.timing_x, y = geometry.timing_y, w = geometry.timing_w, h = geometry.timing_h}
 		}},
-		{id = "song-title", dst = {
+		{id = "song-title", op = {-941}, dst = {
 			{time = 0, x = geometry.title_x, y = 674, w = 24, h = 24},
 			{time = 1000, a = 0},
 			{time = 2000, a = 255}

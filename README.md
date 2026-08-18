@@ -33,6 +33,17 @@ control its width, font size, placement, and practical visible line count.
 Comments are contextual to the selected table and do not alter local song
 metadata.
 
+The bundled default Music Select skin now exposes MANIAC EXTRA MODE,
+judge-timing restore, the ninth judge-rank sort state, folder lamp counts, and
+an optional compact IR/rival detail row. Its `Song Detail` customization keeps
+the table comment as the default and can switch that space to IR data. The
+bundled default 7-key Lua skin adds compact/standard/wide lane widths, a
+toggleable song and play-information overlay, EARLY/LATE totals, and the
+resolved fixed RANDOM placement. The new control artwork is an intentionally
+simple seven-cell square placeholder at
+`assets/skin/default/bmsir-controls-placeholder.png` so it can be replaced
+without changing the skin definitions.
+
 The current development source also removes two render-thread blockers from
 gameplay startup: the PRELOAD transition no longer invokes `System.gc()` or
 waits on an unfinished loudness-analysis task. Static BGA texture disposal and
