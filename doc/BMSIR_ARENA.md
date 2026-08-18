@@ -178,6 +178,17 @@ display-only folder containing the same complete chart set. It does not add
 duplicate snapshot entries or draft/edit identities. The cross-game all-song
 master uses this field for `全曲`; ordinary personal and system tables omit it.
 
+Difficulty-table entry comments are retained for ordinary bmstable imports and
+the in-memory My Difficulty Table. `[[BR]]`, CRLF, and CR normalize to LF.
+Music Select skins read the active entry through string property
+`tablecomment` / `1004`; an entry from another table or an ordinary local
+folder cannot leak into it. JSON-skin text objects can set `wrapping: true` and
+choose destination width and font height, so the skin determines the effective
+characters per line and visible line layout. The bundled default select skin
+provides one wrapped presentation, but no engine-owned comment overlay is
+forced over custom skins. The My Difficulty Table editor accepts up to 4,096
+Unicode characters and shows LF as `[[BR]]` in its single-line IME editor.
+
 In the same version, clicking an Arena room-name, chat, or My Difficulty Table
 text field places an
 IME-capable OS text control directly over the same field. Japanese conversion

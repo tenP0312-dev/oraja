@@ -149,6 +149,26 @@ class BarManagerDifficultyGroupingTest {
         assertEquals(6, bar.getDisplayLevel());
     }
 
+    @Test
+    void groupedDifficultyKeepsTheActiveVariantsTableComment() {
+        SongData normal = song("normal", "folder", Mode.BEAT_7K.id, 2, 5);
+        SongData hyper = song("hyper", "folder", Mode.BEAT_7K.id, 3, 9);
+
+        Bar[] grouped = BarManager.groupDifficultyBars(
+                new Bar[]{
+                        new SongBar(normal, 4, "normal comment"),
+                        new SongBar(hyper, 6, "hyper[[BR]]comment")
+                },
+                null,
+                2
+        );
+        SongBar bar = (SongBar) grouped[0];
+
+        assertEquals("normal comment", bar.getTableComment());
+        bar.cycleDifficulty();
+        assertEquals("hyper\ncomment", bar.getTableComment());
+    }
+
     private static SongData song(
             String hash,
             String folder,

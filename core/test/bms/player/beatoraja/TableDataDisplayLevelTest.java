@@ -33,6 +33,7 @@ class TableDataDisplayLevelTest {
         song.setTitle("Chart");
         song.setSha256("a".repeat(64));
         song.setTableLevel(6);
+        song.setTableComment("first[[BR]]second");
         TableData.TableFolder folder = new TableData.TableFolder();
         folder.setName("発狂6");
         folder.setSong(new SongData[]{song});
@@ -46,5 +47,6 @@ class TableDataDisplayLevelTest {
         TableData restored = TableData.read(cache);
 
         assertEquals(6, restored.getFolder()[0].getSong()[0].getTableLevel());
+        assertEquals("first\nsecond", restored.getFolder()[0].getSong()[0].getTableComment());
     }
 }

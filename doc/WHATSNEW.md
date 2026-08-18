@@ -1,5 +1,10 @@
 # Arena oraja 0.4.14.58
 
+- Retained per-chart difficulty-table comments in Music Select and exposed the
+  active table entry as skin string property `tablecomment` / `1004`.
+  `[[BR]]`, CRLF, and CR normalize to LF; the default select skin wraps the
+  text, while custom skins choose placement, width, font size, and line layout.
+  My Difficulty Table comments now accept up to 4,096 characters.
 - Replaced the untraceable legacy Windows PortAudio/JPortAudio binaries with a
   clean x86-64 build from pinned PortAudio 19.7.0 and the official Steinberg
   ASIO SDK 2.3.4 under its GPL-3.0-only route.

@@ -1,5 +1,6 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.player.beatoraja.DifficultyTableComment;
 import bms.player.beatoraja.modmenu.FontAwesomeIcons;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
@@ -82,7 +83,9 @@ public final class BMSIRArenaOverlay {
     private static final ImString MY_TABLE_SYMBOL = new ImString(utf8BufferCapacity(16));
     private static final ImString MY_TABLE_DESCRIPTION = new ImString(utf8BufferCapacity(1000));
     private static final ImString MY_TABLE_LEVEL = new ImString(utf8BufferCapacity(32));
-    private static final ImString MY_TABLE_COMMENT = new ImString(utf8BufferCapacity(200));
+    private static final ImString MY_TABLE_COMMENT = new ImString(
+            utf8BufferCapacity(DifficultyTableComment.MAX_EDITOR_LENGTH)
+    );
     private static final ImInt MY_TABLE_VISIBILITY = new ImInt(0);
     private static final ImInt MY_TABLE_SELECTION = new ImInt(0);
     private static String loadedMyTableRevision = "";
@@ -419,10 +422,12 @@ public final class BMSIRArenaOverlay {
         if (!editorChartState.equals(loadedMyTableChart)) {
             if (pendingEntry != null && !pendingEntry.removal()) {
                 MY_TABLE_LEVEL.set(pendingEntry.level());
-                MY_TABLE_COMMENT.set(pendingEntry.comment());
+                MY_TABLE_COMMENT.set(DifficultyTableComment.toEditorText(pendingEntry.comment()));
             } else if (selectedEntry != null) {
                 MY_TABLE_LEVEL.set(selectedEntry.path("level").asText(""));
-                MY_TABLE_COMMENT.set(selectedEntry.path("comment").asText(""));
+                MY_TABLE_COMMENT.set(DifficultyTableComment.toEditorText(
+                        selectedEntry.path("comment").asText("")
+                ));
             } else {
                 MY_TABLE_LEVEL.set(
                         selectedSong != null && selectedSong.getLevel() > 0
@@ -451,7 +456,16 @@ public final class BMSIRArenaOverlay {
                         "Levels in this table are synchronized from its master table."
                 ));
             }
-            inputTextWithIme(t("コメント", "Comment"), "my-table-comment", MY_TABLE_COMMENT, 200);
+            inputTextWithIme(
+                    t("コメント", "Comment"),
+                    "my-table-comment",
+                    MY_TABLE_COMMENT,
+                    DifficultyTableComment.MAX_EDITOR_LENGTH
+            );
+            ImGui.textDisabled(t(
+                    "最大4096文字。[[BR]] で表示上の改行を指定できます。",
+                    "Up to 4096 characters. Use [[BR]] for a displayed line break."
+            ));
             ImGui.beginDisabled(
                     !editEntries || busy || (levelEditable && MY_TABLE_LEVEL.get().isBlank())
             );
