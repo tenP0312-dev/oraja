@@ -160,7 +160,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
 				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
 				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
-				"bmsirLongNoteFixed", "bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",
+				"bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",
 				"bmsirNumpad4", "bmsirNumpad5", "bmsirNumpad6", "bmsirNumpad7", "bmsirNumpad8",
 				"bmsirNumpad9", "bmsirNumpadJudgeTimingStep", "bmsirOneBassEnabled", "bmsirSelectButtonAction",
 				"bmsirSelectDifficultyDisplay", "bmsirSelectMode10k", "bmsirSelectMode14k", "bmsirSelectMode24k",

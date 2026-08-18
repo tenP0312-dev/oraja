@@ -1035,6 +1035,10 @@ public final class BMSIRArenaOverlay {
             ImGui.textColored(ImColor.rgb(121, 223, 139), playMode);
             ImGui.setWindowFontScale(1.0f);
         }
+        ImGui.textColored(
+                ImColor.rgb(121, 223, 139),
+                "LN MODE: " + BMSIRArenaClient.currentLongnoteMode()
+        );
         renderSeriesBanner(compact);
     }
 
@@ -2798,7 +2802,9 @@ public final class BMSIRArenaOverlay {
                             + room.path("member_count").asInt()
             );
             tableText(
-                    scoreRuleLabel(room.path("score_rule").asText("exscore"))
+                    room.path("ln_mode").asText("LN")
+                            + " / "
+                            + scoreRuleLabel(room.path("score_rule").asText("exscore"))
                             + " / "
                             + gaugeLabel(room.path("forced_gauge").asText("free"))
             );
