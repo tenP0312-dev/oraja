@@ -318,7 +318,11 @@ write paths; changing layout does not duplicate or migrate gameplay settings.
 
 Sidebar places the existing Video, Audio, Input, Resource, Music Select, Play
 Options, Skin, Other, BMS-IR Features, IR, Table, Stream, Discord, and OBS
-destinations in a fixed-width, searchable left navigation list. Each row uses
+destinations in a fixed-width left navigation list. Search covers the localized
+category title and description plus every setting title and description. When
+the selected category does not match, the first matching category opens; when
+nothing matches, the right pane shows a no-result explanation instead of stale
+settings. Each row uses
 the same restrained single-color line style and the selected row retains a
 text-and-background active state. Its player summary shows the current player
 ID plus display name and LR2/oraja rule profile, and expands the existing player

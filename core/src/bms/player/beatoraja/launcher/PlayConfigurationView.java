@@ -102,6 +102,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private VBox configurationContent;
 	@FXML
+	private VBox sidebarSearchNoResults;
+	@FXML
 	private TabPane configurationTabs;
 	@FXML
 	private VBox sidebarRail;
@@ -255,6 +257,7 @@ public class PlayConfigurationView implements Initializable {
 	private List<Node> classicPlayerPanelNodes = List.of();
 	private final Map<Tab, ContextHelp> tabContextHelp = new IdentityHashMap<>();
 	private final Map<String, ContextHelp> controlContextHelp = new HashMap<>();
+	private final SidebarSearchIndex<Tab> sidebarSearchIndex = new SidebarSearchIndex<>();
 	private final Map<Tab, Node> classicTabContents = new IdentityHashMap<>();
 	private final Map<Tab, ScrollPane> sidebarTabContents = new IdentityHashMap<>();
 	private final List<SidebarNodePlacement> sidebarNodePlacements = new ArrayList<>();
@@ -715,9 +718,7 @@ public class PlayConfigurationView implements Initializable {
 
 		configurationTabOrder = List.copyOf(configurationTabs.getTabs());
 		sidebarNavigation.getItems().setAll(configurationTabOrder);
-		sidebarNavigation.setPlaceholder(new Label(
-				englishUi ? "No matching settings" : "一致する設定はありません"
-		));
+		sidebarNavigation.setPlaceholder(new Label(bundle.getString("CONFIGURATION_SEARCH_NO_MATCHES")));
 		sidebarNavigation.setCellFactory(list -> configurationTabCell());
 		sidebarSearch.textProperty().addListener(
 				(observable, oldValue, newValue) -> updateSidebarNavigationItems(newValue)
@@ -801,16 +802,19 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private void updateSidebarNavigationItems(String query) {
-		String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-		List<Tab> filtered = configurationTabOrder.stream()
-				.filter(tab -> normalized.isEmpty()
-						|| tab.getText().toLowerCase(Locale.ROOT).contains(normalized))
-				.toList();
+		List<Tab> filtered = sidebarSearchIndex.filter(configurationTabOrder, query);
 		sidebarNavigation.getItems().setAll(filtered);
 		Tab current = configurationTabs.getSelectionModel().getSelectedItem();
-		if (filtered.contains(current)) {
-			sidebarNavigation.getSelectionModel().select(current);
+		Tab selection = SidebarSearchIndex.preferredSelection(filtered, current);
+		if (selection == null) {
+			sidebarNavigation.getSelectionModel().clearSelection();
+		} else {
+			sidebarNavigation.getSelectionModel().select(selection);
+			if (selection != current) {
+				configurationTabs.getSelectionModel().select(selection);
+			}
 		}
+		updateSidebarSearchPresentation(!filtered.isEmpty());
 	}
 
 	private void initializeSidebarPlayerEditor() {
@@ -897,11 +901,10 @@ public class PlayConfigurationView implements Initializable {
 			if (!configurationTabs.getStyleClass().contains("sidebar-content-tabs")) {
 				configurationTabs.getStyleClass().add("sidebar-content-tabs");
 			}
-			sidebarNavigation.getSelectionModel().select(
-					configurationTabs.getSelectionModel().getSelectedItem()
-			);
+			updateSidebarNavigationItems(sidebarSearch.getText());
 			showTabContextHelp(configurationTabs.getSelectionModel().getSelectedItem());
 		} else {
+			updateSidebarSearchPresentation(true);
 			configurationContent.getStyleClass().remove("sidebar-mode");
 			configurationTabs.getStyleClass().remove("sidebar-content-tabs");
 			configurationTabs.getStyleClass().remove("sidebar-form-tab");
@@ -909,6 +912,13 @@ public class PlayConfigurationView implements Initializable {
 		}
 		updateSidebarTabPresentation(configurationTabs.getSelectionModel().getSelectedItem());
 		updatePlayerPanelVisibility();
+	}
+
+	private void updateSidebarSearchPresentation(boolean hasResults) {
+		boolean showNoResults = configurationLayout.getValue() == Config.ConfigurationLayout.SIDEBAR
+				&& !hasResults;
+		setManagedVisible(configurationContent, !showNoResults);
+		setManagedVisible(sidebarSearchNoResults, showNoResults);
 	}
 
 	private void updateSidebarTabPresentation(Tab tab) {
@@ -2261,6 +2271,7 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private void installSidebarRowHelp(Tab tab, VBox row, ContextHelp help) {
+		sidebarSearchIndex.add(tab, help.title(), help.description());
 		row.addEventHandler(MouseEvent.MOUSE_ENTERED, event -> showContextHelp(help));
 		row.addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
 			if (!containsFocusedControl(row)) {
@@ -2324,11 +2335,13 @@ public class PlayConfigurationView implements Initializable {
 
 	private void registerTabHelp(Tab tab, String jaTitle, String jaDescription,
 			String enTitle, String enDescription, HelpGraphic graphic) {
-		tabContextHelp.put(tab, new ContextHelp(
+		ContextHelp help = new ContextHelp(
 				englishUi ? enTitle : jaTitle,
 				englishUi ? enDescription : jaDescription,
 				graphic
-		));
+		);
+		tabContextHelp.put(tab, help);
+		sidebarSearchIndex.add(tab, tab.getText(), help.title(), help.description());
 	}
 
 	private void registerControlHelp(String id, String jaTitle, String jaDescription,
