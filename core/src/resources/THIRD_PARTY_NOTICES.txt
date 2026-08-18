@@ -1,6 +1,30 @@
 Third-party notices for BMS-IR Arena oraja
 ==========================================
 
+Windows native audio
+--------------------
+
+The Windows x86-64 package contains PortAudio 19.7.0 and its JPortAudio Java
+binding from PortAudio commit 147dd722548358763a8b649b3e4b41dfffbcfbb6.
+Both are used under the MIT license. The corresponding license is provided as
+licenses/PORTAUDIO-19.7.0-MIT.txt.
+
+The same package builds PortAudio's ASIO host API from the official Steinberg
+ASIO SDK 2.3.4. This GPL-3.0-only Arena oraja distribution explicitly selects
+the SDK's GPL-3.0-only license route. The compiled SDK host helpers separately
+carry BSD 3-Clause terms. Both the SDK license notice and the helper-source BSD
+notice are provided under licenses/, and the full GPLv3 text is the project
+LICENSE. The original verified source archives and exact build scripts are
+included under source/native-audio/. ASIO is a Steinberg trademark; this project
+does not use the ASIO logo or use ASIO as part of the product name.
+
+JNA
+---
+
+JNA and JNA Platform 5.13.0 are used under the Apache License 2.0 option
+offered by that project. The selected license text is provided as
+licenses/JNA-5.13.0-APACHE-2.0.txt.
+
 Junrar 8.1.0 includes code derived from the UnRAR sources and is used only to
 read RAR archives. It is not used to create RAR-compatible archives.
 

@@ -1,3 +1,19 @@
+# Arena oraja 0.4.14.58
+
+- Replaced the untraceable legacy Windows PortAudio/JPortAudio binaries with a
+  clean x86-64 build from pinned PortAudio 19.7.0 and the official Steinberg
+  ASIO SDK 2.3.4 under its GPL-3.0-only route.
+- Added a double-build reproducibility check, exact source/toolchain/output
+  manifest, SPDX SBOM, license bundle, and corresponding source archives.
+- Compiled the MIT-licensed JPortAudio Java source with the body instead of
+  loading the old prebuilt JAR. JNA 5.13.0 uses its Apache-2.0 option.
+- Required the Windows packager to verify PE architecture, ASIO/WASAPI/JNI
+  exports, hashes, source identities, licenses, and file inventory. macOS
+  packages reject the Windows native bundle.
+- Added the package's `natives/` directory to the fallback Windows launcher's
+  JVM native-library path. Portable launcher 0.2.28 provides the same path for
+  normal and configuration launches.
+
 # Arena oraja 0.4.14.57
 
 - Serialized BMS-IR body-download requests that use the same registered URL.

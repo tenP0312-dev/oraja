@@ -1,6 +1,9 @@
 from pathlib import Path
+import hashlib
+import json
 import plistlib
 import stat
+import struct
 import tempfile
 import unittest
 import zipfile
@@ -12,12 +15,81 @@ from package_arena_release import (
     VERSION,
     build_release,
 )
+from verify_native_audio_bundle import (
+    ASIO_ARCHIVE_SHA256,
+    EXPECTED_DLL_MARKERS,
+    PORTAUDIO_ARCHIVE_SHA256,
+    PORTAUDIO_COMMIT,
+    REQUIRED_FILES,
+)
 
 
 class ArenaReleasePackageTest(unittest.TestCase):
     def write_jar(self, path: Path) -> None:
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
+
+    def write_native_audio_bundle(self, root: Path) -> Path:
+        bundle = root / "native-audio-bundle"
+        for relative in REQUIRED_FILES:
+            path = bundle / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if relative in EXPECTED_DLL_MARKERS:
+                data = bytearray(256)
+                data[:2] = b"MZ"
+                struct.pack_into("<I", data, 0x3C, 128)
+                data[128:132] = b"PE\0\0"
+                struct.pack_into("<H", data, 132, 0x8664)
+                data.extend(b"\0".join(EXPECTED_DLL_MARKERS[relative]))
+                path.write_bytes(data)
+            else:
+                path.write_text(relative, encoding="utf-8")
+        spdx = {
+            "packages": [
+                {"name": "PortAudio", "licenseDeclared": "MIT"},
+                {"name": "JPortAudio", "licenseDeclared": "MIT"},
+                {
+                    "name": "Steinberg ASIO SDK",
+                    "licenseDeclared": "GPL-3.0-only AND BSD-3-Clause",
+                },
+                {"name": "JNA and JNA Platform", "licenseDeclared": "Apache-2.0"},
+            ]
+        }
+        (bundle / "native-audio.spdx.json").write_text(json.dumps(spdx), encoding="utf-8")
+        files = [
+            {
+                "path": path.relative_to(bundle).as_posix(),
+                "size": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in sorted(bundle.rglob("*"))
+            if path.is_file()
+        ]
+        manifest = {
+            "schema_version": 1,
+            "target": "windows-x86_64",
+            "license_route": "GPL-3.0-only",
+            "features": ["ASIO", "WASAPI"],
+            "toolchain": {"double_build_verified": True},
+            "sources": {
+                "portaudio": {
+                    "commit": PORTAUDIO_COMMIT,
+                    "sha256": PORTAUDIO_ARCHIVE_SHA256,
+                    "license": "MIT",
+                },
+                "asio_sdk": {
+                    "version": "2.3.4",
+                    "sha256": ASIO_ARCHIVE_SHA256,
+                    "license_selected": "GPL-3.0-only",
+                },
+                "jna": {"version": "5.13.0", "license_selected": "Apache-2.0"},
+            },
+            "files": files,
+        }
+        (bundle / "native-audio-manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        return bundle
 
     def fixture(self, root: Path) -> dict[str, Path]:
         body = root / f"BMS-IR-Arena-oraja-{VERSION}-macos-aarch64.jar"
@@ -149,6 +221,7 @@ class ArenaReleasePackageTest(unittest.TestCase):
             )
             launcher = root / "launcher.exe"
             launcher.write_bytes(b"MZportable" + CONFIGURED_LAUNCHER_MARKER)
+            native_audio_bundle = self.write_native_audio_bundle(root)
             output = build_release(
                 platform="windows-x86-64",
                 body_jar=fixture["body"],
@@ -159,19 +232,56 @@ class ArenaReleasePackageTest(unittest.TestCase):
                 output_dir=root / "dist",
                 confirmed=True,
                 launcher_exe=launcher,
+                native_audio_bundle=native_audio_bundle,
                 test_build=True,
             )
             self.assertIn("-test-java21.zip", output.name)
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
-                manifest = archive.read("release-manifest.json").decode("utf-8")
+                manifest = json.loads(archive.read("release-manifest.json"))
                 launcher = archive.read("BMS-IR-Arena-config.bat").decode("utf-8")
             self.assertIn("BMS-IR Arena Test.exe", names)
             self.assertIn("BMS-IR-Arena-config.bat", names)
             self.assertIn(BODY_FILENAME, names)
             self.assertNotIn("beatoraja.jar", names)
+            self.assertIn("natives/portaudio_x64.dll", names)
+            self.assertIn("natives/jportaudio_x64.dll", names)
+            self.assertIn("native-audio.spdx.json", names)
+            self.assertIn("licenses/JNA-5.13.0-APACHE-2.0.txt", names)
+            self.assertIn("THIRD_PARTY_NOTICES.txt", names)
             self.assertIn(f"-jar {BODY_FILENAME}", launcher)
-            self.assertIn('"channel": "test"', manifest)
+            self.assertIn("-Djava.library.path=%CD%\\natives", launcher)
+            self.assertEqual("test", manifest["channel"])
+            self.assertTrue(manifest["native_audio_manifest_sha256"])
+            self.assertTrue(any(item["path"] == "natives/portaudio_x64.dll" for item in manifest["files"]))
+
+    def test_windows_archive_requires_native_audio_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = self.fixture(root)
+            body = root / f"BMS-IR-Arena-oraja-{VERSION}-windows-x86-64.jar"
+            fixture["body"].rename(body)
+            (fixture["runtime"] / "bin" / "java").unlink()
+            (fixture["runtime"] / "bin" / "java.exe").write_text("java", encoding="utf-8")
+            (fixture["runtime"] / "release").write_text(
+                'JAVA_VERSION="21.0.1"\nOS_NAME="Windows"\nOS_ARCH="amd64"\n',
+                encoding="utf-8",
+            )
+            launcher = root / "launcher.exe"
+            launcher.write_bytes(b"MZportable" + CONFIGURED_LAUNCHER_MARKER)
+            with self.assertRaisesRegex(ValueError, "native audio bundle"):
+                build_release(
+                    platform="windows-x86-64",
+                    body_jar=body,
+                    plugin_jar=fixture["plugin"],
+                    base_assets=fixture["assets"],
+                    java_home=fixture["runtime"],
+                    project_license=fixture["license"],
+                    output_dir=root / "dist",
+                    confirmed=True,
+                    launcher_exe=launcher,
+                    test_build=True,
+                )
 
     def test_rejects_launcher_without_online_update_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:

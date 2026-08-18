@@ -28,6 +28,18 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.58</h1>
+        <h2>Traceable Windows WASAPI and ASIO distribution</h2>
+        <ul>
+        <li>The Windows x86-64 native-audio runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO SDK 2.3.4 under its GPL-3.0-only route.</li>
+        <li>The package includes verified corresponding source archives, build scripts, component licenses, SOURCE_INFO, an exact build/file manifest, and an SPDX SBOM.</li>
+        <li>CI builds the DLLs twice and rejects mismatched output. Packaging also verifies x64 PE identity, ASIO/WASAPI/JNI exports, source hashes, licenses, and the full file inventory.</li>
+        </ul>
+        <h2>Load only the reviewed portable native runtime</h2>
+        <ul>
+        <li>The MIT-licensed JPortAudio Java source is compiled with Arena oraja instead of using the old prebuilt JAR. JNA 5.13.0 uses its Apache-2.0 option.</li>
+        <li>The Windows launch scripts and portable launcher add the package's <code>natives/</code> directory to the JVM native-library path. macOS packages reject the Windows DLL bundle.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.57</h1>
         <h2>Reuse only the package that contains the requested chart</h2>
         <ul>

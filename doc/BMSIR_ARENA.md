@@ -1,9 +1,17 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.57`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.58`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.58` replaces the untraceable legacy Windows PortAudio and
+JPortAudio binaries with a clean x86-64 build from pinned PortAudio 19.7.0 and
+the official Steinberg ASIO SDK 2.3.4. The ASIO SDK's GPL-3.0-only route is
+selected. CI verifies both source archives, builds the DLLs twice, rejects
+different outputs, and records the exact toolchain, features, file hashes,
+licenses, corresponding source, and SPDX SBOM. The JPortAudio Java source is
+compiled with the body; JNA 5.13.0 uses its Apache-2.0 option.
 
 Version `0.4.14.57` serializes body-download requests from the same registered
 URL, reuses a retained package only after confirming the requested chart MD5,
@@ -88,10 +96,11 @@ to devices with at least one output channel. The exact device name and Host
 API are stored, the WASAPI mode control is disabled, and startup rejects a
 non-ASIO or unavailable selection instead of silently rewriting it to OpenAL.
 The selected mode, device, Host API, sample rate, and buffer size are logged.
-The bundled Windows PortAudio DLL already contains the ASIO backend and the
-basic implementation uses its existing blocking-stream path; no new ASIO SDK
-binary or library is added by this change. Driver-specific buffer-size lists
-and the ASIO control-panel button remain optional follow-up work.
+The original 0.4.14.51 build used the previously bundled PortAudio DLL and its
+blocking-stream path. Version 0.4.14.58 replaces that binary through the pinned
+GPLv3 source/build process above without changing the saved audio behavior.
+Driver-specific buffer-size lists and the ASIO control-panel button remain
+optional follow-up work.
 
 Version `0.4.14.49` adds the Resource-tab `Work folder` / `作業フォルダ`
 button and the reserved `_BMSIR_TESTPLAY` authoring directory. Charts below
@@ -1233,7 +1242,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.57-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.58-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1254,7 +1263,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.57-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.58-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1264,17 +1273,21 @@ python tools/package_arena_release.py \
 ```
 
 Use `windows-x86-64` with a matching Windows x64 Java 21 runtime for the
-Windows archive and pass the reviewed portable launcher. Add `--test-build`
-only for an internal test package:
+Windows archive and pass the reviewed portable launcher plus the bundle created
+by `native-audio/build-native-audio.ps1 -VerifyReproducible`. The packager
+rechecks the source identities, GPLv3 license route, file inventory, PE x64
+identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
+`--test-build` only for an internal test package:
 
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.57-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.58-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
   --launcher-exe /reviewed/BMS-IR-Arena-launcher.exe \
+  --native-audio-bundle /reviewed/native-audio-bundle \
   --output-dir dist \
   --test-build \
   --confirm-base-assets-redistributable
@@ -1282,9 +1295,12 @@ python tools/package_arena_release.py \
 
 Test packages name the launcher `BMS-IR Arena Test.exe` or
 `BMS-IR Arena Test.app` and select the test update channel. The ZIP contains
-`release-manifest.json` with body, plugin, and launcher SHA-256 values plus the
-initial local version marker. Generated JARs and ZIPs remain release artifacts
-and must not be committed to the source repository.
+`release-manifest.json` with body, plugin, launcher, native-audio manifest, and
+complete package-file SHA-256 values plus the initial local version marker.
+The Windows ZIP also carries the original pinned PortAudio and ASIO SDK source
+archives, build scripts, component license files, SOURCE_INFO, and SPDX SBOM.
+Generated JARs, DLLs, and ZIPs remain release artifacts and must not be
+committed to the source repository.
 
 The release build uses JavaCPP and JavaCV 1.5.11 with the matching FFmpeg
 7.1-1.5.11 preset. `shadowJar` fails when the target JavaCPP runtime, the

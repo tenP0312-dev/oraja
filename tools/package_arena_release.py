@@ -21,10 +21,15 @@ import stat
 import tempfile
 import zipfile
 
+from verify_native_audio_bundle import validate_native_audio_bundle
 
-VERSION = "0.4.14.57"
+
+VERSION = "0.4.14.58"
 BODY_FILENAME = "Arena-oraja.jar"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.72.jar"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+THIRD_PARTY_NOTICES = PROJECT_ROOT / "core/src/resources/THIRD_PARTY_NOTICES.txt"
+JNA_LICENSE = PROJECT_ROOT / "core/src/resources/licenses/JNA-5.13.0-APACHE-2.0.txt"
 PLATFORM_SPECS = {
     "windows-x86-64": {
         "runtime_os": ("windows",),
@@ -138,6 +143,7 @@ def validate_inputs(
     project_license: Path,
     launcher_exe: Path | None,
     launcher_app: Path | None,
+    native_audio_bundle: Path | None,
     confirmed: bool,
     distribution_version: str,
 ) -> dict[str, str]:
@@ -158,6 +164,8 @@ def validate_inputs(
         raise ValueError("Base assets must contain a distributable skin directory")
     if not project_license.is_file():
         raise ValueError(f"Project license is missing: {project_license}")
+    if not THIRD_PARTY_NOTICES.is_file() or not JNA_LICENSE.is_file():
+        raise ValueError("Distribution notices or the selected JNA license are missing")
     release = parse_runtime_release(java_home)
     version = release.get("JAVA_VERSION", "")
     if java_major(version) < 21:
@@ -184,6 +192,9 @@ def validate_inputs(
             raise ValueError(
                 "Portable launcher was built without the update endpoint or release verification key"
             )
+        if native_audio_bundle is None or not native_audio_bundle.is_dir():
+            raise ValueError("Windows packages require a reviewed native audio bundle")
+        validate_native_audio_bundle(native_audio_bundle)
     else:
         if launcher_exe is not None:
             raise ValueError("Portable launcher EXE is only valid for Windows packages")
@@ -198,6 +209,8 @@ def validate_inputs(
                 "Portable launcher was built without the update endpoint or release verification key"
             )
         sha256_tree(launcher_app)
+        if native_audio_bundle is not None:
+            raise ValueError("Windows native audio must not enter a macOS package")
     return release
 
 
@@ -226,6 +239,7 @@ def write_launchers(root: Path, platform: str) -> None:
             "@echo off\r\n"
             "pushd %~dp0\r\n"
             '"runtime\\bin\\java.exe" "-DcustomIRDirectory=%CD%\\ir" '
+            '"-Djava.library.path=%CD%\\natives" '
             f'-Xms1g -Xmx4g -jar {BODY_FILENAME}\r\n'
             "popd\r\n",
             encoding="utf-8",
@@ -306,6 +320,7 @@ def build_release(
     confirmed: bool,
     launcher_exe: Path | None = None,
     launcher_app: Path | None = None,
+    native_audio_bundle: Path | None = None,
     test_build: bool = False,
     distribution_version: str | None = None,
 ) -> Path:
@@ -321,6 +336,7 @@ def build_release(
         project_license=project_license,
         launcher_exe=launcher_exe,
         launcher_app=launcher_app,
+        native_audio_bundle=native_audio_bundle,
         confirmed=confirmed,
         distribution_version=distribution_version,
     )
@@ -341,6 +357,12 @@ def build_release(
         plugin_dir.mkdir()
         shutil.copy2(plugin_jar, plugin_dir / PLUGIN_FILENAME)
         shutil.copy2(project_license, root / "LICENSE")
+        shutil.copy2(THIRD_PARTY_NOTICES, root / "THIRD_PARTY_NOTICES.txt")
+        licenses = root / "licenses"
+        licenses.mkdir()
+        shutil.copy2(JNA_LICENSE, licenses / JNA_LICENSE.name)
+        if native_audio_bundle is not None:
+            safe_copy_tree(native_audio_bundle, root)
         safe_copy_tree(java_home, root / "runtime")
         launcher_filename = None
         if launcher_exe is not None:
@@ -371,7 +393,21 @@ def build_release(
                 if launcher_exe is not None
                 else sha256_tree(launcher_app) if launcher_app is not None else None
             ),
+            "native_audio_manifest_sha256": (
+                sha256_file(native_audio_bundle / "native-audio-manifest.json")
+                if native_audio_bundle is not None else None
+            ),
         }
+        manifest["files"] = [
+            {
+                "path": path.relative_to(root).as_posix(),
+                "size": path.stat().st_size,
+                "sha256": sha256_file(path),
+                "executable": bool(path.stat().st_mode & stat.S_IXUSR),
+            }
+            for path in sorted(root.rglob("*"))
+            if path.is_file() and path.name != "release-manifest.json"
+        ]
         (root / "release-manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
@@ -391,6 +427,7 @@ def main() -> int:
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--launcher-exe", type=Path)
     parser.add_argument("--launcher-app", type=Path)
+    parser.add_argument("--native-audio-bundle", type=Path)
     parser.add_argument("--test-build", action="store_true")
     parser.add_argument("--distribution-version")
     parser.add_argument("--project-license", type=Path, default=Path(__file__).resolve().parents[1] / "LICENSE")
@@ -408,6 +445,9 @@ def main() -> int:
         confirmed=args.confirm_base_assets_redistributable,
         launcher_exe=args.launcher_exe.resolve() if args.launcher_exe else None,
         launcher_app=args.launcher_app.resolve() if args.launcher_app else None,
+        native_audio_bundle=(
+            args.native_audio_bundle.resolve() if args.native_audio_bundle else None
+        ),
         test_build=args.test_build,
         distribution_version=args.distribution_version,
     )
