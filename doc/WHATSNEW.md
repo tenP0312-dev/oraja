@@ -1,3 +1,14 @@
+# Arena oraja 0.4.14.57
+
+- Serialized BMS-IR body-download requests that use the same registered URL.
+- Reused a retained package only after the bounded archive reader confirms the
+  exact requested chart MD5. URL equality alone no longer suppresses another
+  package from a multi-download landing page.
+- Kept multi-package distribution pages able to continue to a later archive
+  candidate when the retained package does not contain the requested chart.
+- Updated the in-process song database after a new or verified reused archive
+  by scanning only the configured download root with parent fallback disabled.
+
 # Arena oraja 0.4.14.56
 
 - Resolved up to 12 ZIP/RAR/7z links in document order when the default-OFF
