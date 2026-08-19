@@ -1,3 +1,14 @@
+# Arena oraja 0.4.14.61
+
+- Restored the ordinary `LONG NOTE` / `CHARGE NOTE` / `HELL CHARGE NOTE`
+  selection and preserved the selected mode through decoding, local records,
+  ranking requests, and score submission.
+- Advanced Arena communication to protocol v8. Casual/private rooms lock the
+  selected LN/CN/HCN mode and verify every participant's decoded note count at
+  the ready barrier; rated Arena remains LN-only.
+- Retains the settings search, gameplay-start mitigation, download recovery,
+  difficulty-table comments, and safe all-table update shipped in 0.4.14.60.
+
 # Arena oraja 0.4.14.60
 
 - Restored startup-settings search by localized title, setting label, and

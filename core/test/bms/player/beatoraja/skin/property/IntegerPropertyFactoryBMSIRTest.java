@@ -1,10 +1,8 @@
 package bms.player.beatoraja.skin.property;
 
-import bms.model.BMSModel;
 import bms.model.Mode;
 import bms.player.beatoraja.ReplayData;
 import bms.player.beatoraja.pattern.Random;
-import bms.player.beatoraja.song.SongData;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -12,23 +10,6 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class IntegerPropertyFactoryBMSIRTest {
-
-    @Test
-    void dedicatedLnModeIgnoresReusedCnAndHcnSongMetadata() {
-        SongData cn = new SongData();
-        cn.setFeature(SongData.FEATURE_CHARGENOTE);
-        SongData hcn = new SongData();
-        hcn.setFeature(SongData.FEATURE_HELLCHARGENOTE);
-
-        assertEquals(
-                BMSModel.LNTYPE_LONGNOTE,
-                IntegerPropertyFactory.dedicatedClientLnMode(cn)
-        );
-        assertEquals(
-                BMSModel.LNTYPE_LONGNOTE,
-                IntegerPropertyFactory.dedicatedClientLnMode(hcn)
-        );
-    }
 
     @Test
     void fixedShufflePatternsUseLocalOneBasedLaneNumbers() {

@@ -1,15 +1,19 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.60`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.61`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.61` advances Arena negotiation to protocol v8 for LN/CN/HCN.
+Casual/private rooms use the selected mode; rated Arena remains LN-only. All
+0.4.14.60 recovery features and the safe all-table update remain present.
+Binary publication and launcher-channel promotion remain separate operations.
 
 Version `0.4.14.60` restores startup-settings search, gameplay-start render-
 stall mitigation and diagnostics, BMS-IR body-download recovery, and
 difficulty-table comments after they were unintentionally omitted from
-`0.4.14.59`. It retains the safe all-table update and remains on Arena wire
-protocol v7.
+`0.4.14.59`. It retains the safe all-table update.
 
 Version `0.4.14.59` restores one visible Resource-settings action for updating
 every configured difficulty table. It fetches and validates the complete set
@@ -943,15 +947,19 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Dedicated-client long-note policy
 
-- Every long note is interpreted as legacy LN throughout this BMS-IR build,
-  including ordinary play outside Arena.
-- The decoder input, explicit chart `#LNMODE`, explicit CN/HCN note types,
-  replay/pattern output, local catalog metadata, score storage keys, ranking
-  requests, and IR score payloads are normalized to LN.
-- The launcher LN-type control is fixed to `LONG NOTE`.
-- Existing `songdata.db` files do not need to be rebuilt for Arena chart
-  ownership checks. The exact source chart is identified by MD5 and the model
-  is normalized when loaded for play.
+- The ordinary launcher selects `LONG NOTE`, `CHARGE NOTE`, or `HELL CHARGE
+  NOTE` (`lntype=0/1/2`). Decoder input, explicit chart long-note types, local
+  catalog metadata, score storage keys, ranking requests, and IR score payloads
+  preserve that selection.
+- A casual/private Arena entry snapshots the selected mode as a room rule and
+  every participant loads that mode. Rated queue entry explicitly uses LN, so
+  an ordinary CN/HCN setting cannot change rated behavior.
+- Protocol v8 sends the locked mode and actual decoded total-note count at the
+  ready barrier. The server starts only after all humans agree. Older protocol
+  clients keep implied LN behavior and cannot join a CN/HCN room.
+- The exact source chart remains identified by MD5. CN/HCN possession is not
+  rejected merely because an LN catalog count differs; the agreed decoded
+  count becomes the live/final validation scale before start.
 
 ## Match behavior
 
@@ -1139,10 +1147,9 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   to the displayed destination size and a 2048-pixel maximum dimension.
 
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
-first-timing preview default to ON and may be changed there. `全ロングノートを
-LONG NOTEとして扱う` is shown as an always-ON compatibility rule rather than
-an editable switch: BMS-IR rejects CN/HCN results, so disabling the rule would
-make chart note counts and submitted scores disagree.
+first-timing preview default to ON and may be changed there. Long-note behavior
+uses the ordinary enabled LN-type selector; BMS-IR accepts new CN/HCN results
+in mode-separated rankings, while rated Arena continues to lock LN.
 
 - The Input tab option `非アクティブ時も専用コントローラー入力を受け付ける` is OFF by
   default. When enabled, GLFW game controllers continue to drive Music Select,
@@ -1304,7 +1311,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.61-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1325,7 +1332,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.61-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1344,7 +1351,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.61-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

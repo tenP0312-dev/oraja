@@ -28,12 +28,13 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.14.60", Version.getArenaClientVersion());
+        assertEquals("0.4.14.61", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertEquals("Arena oraja 0.4.14.60", Version.getArenaDisplayName());
+        assertEquals(8, BMSIRArenaClient.protocolVersion());
+        assertEquals("Arena oraja 0.4.14.61", Version.getArenaDisplayName());
     }
 
     @Test
@@ -200,6 +201,7 @@ class BMSIRArenaClientTest {
     @Test
     void rankedQueueMessageCarriesTheSavedCpuPreference() {
         PlayerConfig config = new PlayerConfig();
+        config.setLnmode(2);
         config.setBmsirArenaUnrestrictedRating(true);
         config.setBmsirArenaAllowCpu(false);
         config.setBmsirArenaAllowHigherSelection(true);
@@ -208,6 +210,7 @@ class BMSIRArenaClientTest {
 
         assertEquals("queue_entry", message.path("type").asText());
         assertEquals("lr2", message.path("ruleset_profile").asText());
+        assertEquals("LN", message.path("ln_mode").asText());
         assertTrue(message.path("unrestricted_rating").asBoolean());
         assertFalse(message.path("allow_cpu").asBoolean());
         assertTrue(message.path("allow_higher_selection").asBoolean());
@@ -221,6 +224,22 @@ class BMSIRArenaClientTest {
                         .path("allow_higher_selection")
                         .asBoolean()
         );
+    }
+
+    @Test
+    void arenaLongnoteModesRoundTripWithoutMixingScoreScales() {
+        PlayerConfig config = new PlayerConfig();
+        config.setLnmode(2);
+        config.validate();
+        assertEquals(2, config.getLnmode());
+
+        assertEquals("LN", BMSIRArenaClient.longnoteModeName(0));
+        assertEquals("CN", BMSIRArenaClient.longnoteModeName(1));
+        assertEquals("HCN", BMSIRArenaClient.longnoteModeName(2));
+        assertEquals(0, BMSIRArenaClient.longnoteModeValue("LN"));
+        assertEquals(1, BMSIRArenaClient.longnoteModeValue("cn"));
+        assertEquals(2, BMSIRArenaClient.longnoteModeValue("HCN"));
+        assertEquals(0, BMSIRArenaClient.longnoteModeValue("unknown"));
     }
 
     @Test

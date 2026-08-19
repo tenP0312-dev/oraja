@@ -10,13 +10,19 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.60**. Its Windows native-audio
+The current client source version is **0.4.14.61**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+The current development source restores the ordinary LN/CN/HCN launcher
+selection and carries it through decoding, catalog keys, IR ranking, and score
+submission. Casual/private Arena rooms lock the host's selected mode for every
+participant; rated Arena explicitly remains LN. This protocol-v8 source change
+does not by itself publish a new body or plugin package.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -76,6 +82,13 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.61
+
+Restores ordinary LN/CN/HCN selection and mode-separated IR behavior. Arena
+wire protocol v8 locks the selected mode for casual/private rooms and verifies
+the decoded note count at the ready barrier; rated Arena remains LN-only.
+All 0.4.14.60 recovery features and the safe all-table update remain present.
 
 ## Arena oraja 0.4.14.60
 
@@ -465,7 +478,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.60
+  --output-dir /release/build-0.4.14.61
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
