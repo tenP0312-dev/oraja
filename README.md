@@ -18,11 +18,12 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-The current development source restores the ordinary LN/CN/HCN launcher
+Version 0.4.14.61 restores the ordinary LN/CN/HCN launcher
 selection and carries it through decoding, catalog keys, IR ranking, and score
 submission. Casual/private Arena rooms lock the host's selected mode for every
-participant; rated Arena explicitly remains LN. This protocol-v8 source change
-does not by itself publish a new body or plugin package.
+participant; rated Arena explicitly remains LN. New BMS-IR body archives use
+portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
+archives and retained multi-chart packages remain reusable after restart.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -48,14 +49,19 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
-The development source also recovers BMS-IR body downloads across a
-client restart by revalidating an exact previously accepted archive before any
-network request. Targeted download-root scans wait behind an active song update
-instead of being discarded, equivalent pending scans coalesce, and body-only
-configurations keep their download-task progress current. After the scan, the
-client confirms whether the requested chart entered the song database. A ready
-notice tells the player to select the chart again to start play; the download
-action itself does not automatically begin gameplay.
+Version 0.4.14.61 also recovers BMS-IR body downloads across a
+client restart by revalidating previously accepted archives before any network
+request. New packages use portable readable names such as
+`[Artist]Song-0123abcd.zip`, with the requested chart's eight-character MD5
+prefix and the detected ZIP/RAR/7z extension. Existing `bmsir-<full-md5>`
+packages remain compatible, and a retained multi-chart package can satisfy a
+different chart request after restart. Targeted download-root scans wait behind
+an active song update instead of being discarded, equivalent pending scans
+coalesce, and body-only configurations keep their download-task progress
+current. After the scan, the client confirms whether the requested chart
+entered the song database. A ready notice tells the player to select the chart
+again to start play; the download action itself does not automatically begin
+gameplay.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in

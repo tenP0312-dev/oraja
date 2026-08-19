@@ -7,8 +7,11 @@ judgement/gauge behavior.
 
 Version `0.4.14.61` advances Arena negotiation to protocol v8 for LN/CN/HCN.
 Casual/private rooms use the selected mode; rated Arena remains LN-only. All
-0.4.14.60 recovery features and the safe all-table update remain present.
-Binary publication and launcher-channel promotion remain separate operations.
+0.4.14.60 recovery features and the safe all-table update remain present. New
+BMS-IR body archives use portable readable names such as
+`[Artist]Song-0123abcd.zip`; legacy full-MD5 archives and retained multi-chart
+packages remain reusable after restart. Binary publication and launcher-channel
+promotion remain separate operations.
 
 Version `0.4.14.60` restores startup-settings search, gameplay-start render-
 stall mitigation and diagnostics, BMS-IR body-download recovery, and
@@ -35,15 +38,18 @@ and performs the post-install song update against only the configured download
 root with parent fallback disabled. Multi-package landing pages remain able to
 continue to the correct later archive candidate.
 
-The current development source also rediscovers an exact accepted
-`bmsir-<md5>.zip/.rar/.7z` package after a client restart and revalidates its
-requested chart before any network request. A targeted download-root scan is
-queued when another song update is active; equivalent pending scans coalesce
-without losing their completion checks. Download-task progress is reconciled
-when the BMS-IR body option is the only HTTP download path enabled. Once the
-scan finishes, the client checks the requested MD5 in the song database and
-either tells the player to select the chart again to play or shows a clear
-registration warning.
+Version `0.4.14.61` saves new packages as portable readable
+`[artist]title-<8-character-md5>.zip/.rar/.7z` files. It rediscovers those
+packages and legacy `bmsir-<full-md5>` packages after a client restart, then
+revalidates the requested chart before any network request. A retained
+multi-chart package can therefore satisfy another chart request even when its
+filename was derived from the first requested chart. A targeted download-root
+scan is queued when another song update is active; equivalent pending scans
+coalesce without losing their completion checks. Download-task progress is
+reconciled when the BMS-IR body option is the only HTTP download path enabled.
+Once the scan finishes, the client checks the requested MD5 in the song
+database and either tells the player to select the chart again to play or shows
+a clear registration warning.
 
 Version `0.4.14.56` resolves bounded ZIP/RAR/7z candidates from registered HTML
 distribution pages, including through one Wayback snapshot, while retaining
@@ -545,10 +551,14 @@ Every request and redirect rejects resolved loopback, link-local, private,
 multicast, and other non-public network destinations. Direct local/private
 targets from registered pages and their archive links are therefore rejected.
 At least one BMS, BME, BML, PMS, or BMSON entry must have the exact MD5 requested
-by the table. Only then is the file moved without replacement to
-`http_download/bmsir-<md5>.<format>` and the song database updated. Rejected,
-oversized, ambiguous, mismatched, and duplicate downloads leave no staging
-file and never overwrite an installed archive.
+by the table. Only then is the file moved without replacement to a portable
+`http_download/[artist]title-<first-8-md5>.<format>` name and the song database
+updated. The label comes from the difficulty-table artist and full title;
+unsupported filesystem characters and controls become underscores, an absent
+artist omits the bracketed prefix, and an overlong label is truncated without
+removing the MD5 suffix or detected format. Rejected, oversized, ambiguous,
+mismatched, and duplicate downloads leave no staging file and never overwrite
+an installed archive.
 
 Starting with version `0.4.14.57`, body downloads from one registered URL are
 serialized. Before another network request, each package already retained for
@@ -560,12 +570,14 @@ After either a new install or a verified reuse, the in-process song update
 scans the configured download root directly and never falls back to scanning
 its parent directory.
 
-An exact accepted `bmsir-<md5>.zip/.rar/.7z` archive in that root is also
-rediscovered after restart and must pass the same bounded archive and requested
-chart MD5 checks before reuse. An invalid exact archive is never overwritten.
-If another song update is active, this targeted update waits in a queue instead
-of being discarded; equivalent pending requests share one scan while retaining
-each chart's completion check.
+After restart, the client checks readable managed archives and legacy exact
+`bmsir-<full-md5>.zip/.rar/.7z` archives in that root with the same bounded
+archive and requested-chart-MD5 rules before reuse. This also recovers a
+multi-chart package named for another chart in that package. An invalid archive
+at the requested destination is never overwritten. If another song update is
+active, this targeted update waits in a queue instead of being discarded;
+equivalent pending requests share one scan while retaining each chart's
+completion check.
 
 Selecting an unavailable chart starts the download and keeps Music Select
 active. It does not automatically start gameplay. After the queued or immediate
