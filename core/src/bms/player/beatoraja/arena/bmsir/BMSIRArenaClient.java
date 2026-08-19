@@ -168,6 +168,10 @@ public final class BMSIRArenaClient {
         return CLIENT_VERSION;
     }
 
+    static int protocolVersion() {
+        return PROTOCOL_VERSION;
+    }
+
     static final class ArenaNominationLevelBar extends DirectoryBar {
         private final String title;
         private final SongData[] songs;
