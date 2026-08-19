@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.60
+
+- Restored startup-settings search by localized title, setting label, and
+  description, including category navigation and a clear no-results state.
+- Restored the gameplay-start render-stall mitigation and extended timing
+  diagnostics without changing ordinary gameplay scheduling policy.
+- Restored BMS-IR body-download recovery across restarts, queued targeted song
+  updates, and post-scan requested-chart verification.
+- Restored difficulty-table comment import, cache retention, and Music Select
+  skin string property `tablecomment` / `1004`.
+- Retains the safe all-table cache replacement from 0.4.14.59 and remains on
+  Arena wire protocol v7.
+
 # Arena oraja 0.4.14.59
 
 - Restored one visible Resource-settings action for updating every configured

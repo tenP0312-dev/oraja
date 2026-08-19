@@ -1,9 +1,15 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.59`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.60`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.60` restores startup-settings search, gameplay-start render-
+stall mitigation and diagnostics, BMS-IR body-download recovery, and
+difficulty-table comments after they were unintentionally omitted from
+`0.4.14.59`. It retains the safe all-table update and remains on Arena wire
+protocol v7.
 
 Version `0.4.14.59` restores one visible Resource-settings action for updating
 every configured difficulty table. It fetches and validates the complete set
@@ -1298,7 +1304,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.59-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1319,7 +1325,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.59-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1338,7 +1344,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.59-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
