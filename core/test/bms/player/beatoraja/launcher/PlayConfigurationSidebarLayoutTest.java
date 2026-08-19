@@ -75,6 +75,14 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
+	void safeTableUpdateGuidanceIsAvailableInEnglishAndJapanese() {
+		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
+		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
+		assertTrue(english.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("current caches are kept"));
+		assertTrue(japanese.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("現在のキャッシュを残します"));
+	}
+
+	@Test
 	void complexSidebarPagesExposeStableActionAndWorkspaceNodes() throws Exception {
 		Document play = loadFxml("PlayConfigurationView.fxml");
 		for (String id : new String[] {
@@ -86,11 +94,13 @@ class PlayConfigurationSidebarLayoutTest {
 		Document resource = loadFxml("ResourceConfigurationView.fxml");
 		for (String id : new String[] {
 				"bmsroot", "addSongPathButton", "downloadDirectoryButton", "workDirectoryButton",
-				"tableurl", "chooseTablesButton", "addTableUrlButton",
+				"tableurl", "updateAllTablesButton", "chooseTablesButton", "addTableUrlButton",
 				"updateDatabaseButton", "rebuildDatabaseButton"
 		}) {
 			assertNotNull(elementWithFxId(resource, id));
 		}
+		assertEquals("#loadAllTables",
+				elementWithFxId(resource, "updateAllTablesButton").getAttribute("onAction"));
 
 		Document skin = loadFxml("SkinConfigurationView.fxml");
 		assertNotNull(elementWithFxId(skin, "skinUpdateButton"));
@@ -122,7 +132,7 @@ class PlayConfigurationSidebarLayoutTest {
 		assertInjectedNodes("ResourceConfigurationView.fxml", ResourceConfigurationView.class,
 				"addSongPathButton", "addTableUrlButton", "bmsroot", "chooseTablesButton", "downloadDirectoryButton",
 				"rebuildDatabaseButton", "scanSongArchives", "tableurl", "updateDatabaseButton", "updatesong",
-				"workDirectoryButton");
+				"updateAllTablesButton", "workDirectoryButton");
 		assertInjectedNodes("MusicSelectConfigurationView.fxml", MusicSelectConfigurationView.class,
 				"analogScroll", "analogTicksPerScroll", "chartReplicationMode", "folderlamp", "maxsearchbar",
 				"randomselect", "scrolldurationhigh", "scrolldurationlow", "shownoexistingbar", "skipDecideScreen",
