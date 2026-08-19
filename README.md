@@ -67,13 +67,18 @@ usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
 The development source also recovers BMS-IR body downloads across a
-client restart by revalidating an exact previously accepted archive before any
-network request. Targeted download-root scans wait behind an active song update
-instead of being discarded, equivalent pending scans coalesce, and body-only
-configurations keep their download-task progress current. After the scan, the
-client confirms whether the requested chart entered the song database. A ready
-notice tells the player to select the chart again to start play; the download
-action itself does not automatically begin gameplay.
+client restart by revalidating previously accepted archives before any network
+request. New packages use portable readable names such as
+`[Artist]Song-0123abcd.zip`, with the requested chart's eight-character MD5
+prefix and the detected ZIP/RAR/7z extension. Existing `bmsir-<full-md5>`
+packages remain compatible, and a retained multi-chart package can satisfy a
+different chart request after restart. Targeted download-root scans wait behind
+an active song update instead of being discarded, equivalent pending scans
+coalesce, and body-only configurations keep their download-task progress
+current. After the scan, the client confirms whether the requested chart
+entered the song database. A ready notice tells the player to select the chart
+again to start play; the download action itself does not automatically begin
+gameplay.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
