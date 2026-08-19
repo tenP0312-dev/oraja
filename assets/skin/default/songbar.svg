@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="432" viewBox="0 0 750 432">
+  <defs>
+    <linearGradient id="song" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#352052"/><stop offset="1" stop-color="#40245e"/></linearGradient>
+    <linearGradient id="folder" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#49344d"/><stop offset="1" stop-color="#654b3b"/></linearGradient>
+    <linearGradient id="table" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#233f53"/><stop offset="1" stop-color="#31566a"/></linearGradient>
+    <linearGradient id="grade" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#4c284d"/><stop offset="1" stop-color="#6a3249"/></linearGradient>
+  </defs>
+  <g stroke-width="2">
+    <path d="M0 1h716l32 26-32 26H0Z" fill="url(#song)" stroke="#75428e"/><rect x="0" y="1" width="12" height="52" fill="#52e3d2"/>
+    <path d="M0 55h716l32 26-32 26H0Z" fill="url(#folder)" stroke="#a47b4b"/><rect x="0" y="55" width="12" height="52" fill="#ffe35a"/>
+    <path d="M0 109h716l32 26-32 26H0Z" fill="url(#table)" stroke="#4f9eaa"/><rect x="0" y="109" width="12" height="52" fill="#52e3d2"/>
+    <path d="M0 163h716l32 26-32 26H0Z" fill="url(#grade)" stroke="#a95070"/><rect x="0" y="163" width="12" height="52" fill="#ff5d8a"/>
+    <path d="M0 217h716l32 26-32 26H0Z" fill="#30203f" stroke="#665071"/><rect x="0" y="217" width="12" height="52" fill="#766a86"/>
+    <path d="M0 271h716l32 26-32 26H0Z" fill="#442054" stroke="#aa4e78"/><rect x="0" y="271" width="12" height="52" fill="#ff5d8a"/>
+    <path d="M0 325h716l32 26-32 26H0Z" fill="#2e3159" stroke="#676fb0"/><rect x="0" y="325" width="12" height="52" fill="#aab2ff"/>
+    <path d="M0 379h716l32 26-32 26H0Z" fill="#251a35" stroke="#5a4868"/><rect x="0" y="379" width="12" height="52" fill="#766a86"/>
+  </g>
+  <g opacity="0.14" fill="#fff8e9">
+    <path d="m680 12 20 15-20 15Z"/><path d="m680 66 20 15-20 15Z"/><path d="m680 120 20 15-20 15Z"/><path d="m680 174 20 15-20 15Z"/>
+    <path d="m680 228 20 15-20 15Z"/><path d="m680 282 20 15-20 15Z"/><path d="m680 336 20 15-20 15Z"/><path d="m680 390 20 15-20 15Z"/>
+  </g>
+</svg>

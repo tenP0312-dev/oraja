@@ -19,12 +19,16 @@ licenses, corresponding source, and SPDX SBOM. The JPortAudio Java source is
 compiled with the body; JNA 5.13.0 uses its Apache-2.0 option.
 
 The current development source expands the bundled default skins without
-copying third-party skin assets. Music Select exposes the four MANIAC EXTRA
-MODE states, the persistent judge-timing restore switch, and all nine sort
-states including judge rank. Folder rows show lamp counts, while the new
-`Song Detail` skin option selects the existing table comment or a compact
-IR/rival summary. The table-comment view replaces the notes-distribution/BPM
-graph under CLEAR/PLAY with a high-contrast wrapped panel. The 7-key Lua
+copying third-party skin assets. Music Select uses a 1920×1080 `POP//BELT`
+layout with a right-side song list and stacked song, score, radar, comment, and
+IR/rival information on the left. Its principal runtime PNGs are rendered from
+committed SVG masters, and a square neutral placeholder remains visible when a
+selected song has no banner. Music Select exposes the four MANIAC EXTRA MODE
+states, the persistent judge-timing restore switch, and all nine sort states
+including judge rank. Folder rows show lamp counts, while the `Song Detail`
+skin option selects the existing table comment or a compact IR/rival summary.
+The table-comment view replaces the notes-distribution/BPM graph under
+CLEAR/PLAY with a high-contrast wrapped panel. The 7-key Lua
 play skin adds three lane widths, a toggleable song/play-information overlay,
 EARLY/LATE totals, and the resolved fixed
 RANDOM lane values from references `450`--`456` and `459`. The Select controls use one

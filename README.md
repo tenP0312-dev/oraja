@@ -41,10 +41,15 @@ line count.
 Comments are contextual to the selected table and do not alter local song
 metadata.
 
-The bundled default Music Select skin now exposes MANIAC EXTRA MODE,
-judge-timing restore, the ninth judge-rank sort state, folder lamp counts, and
-an optional compact IR/rival detail row. Its `Song Detail` customization keeps
-the table comment as the default and can switch that space to IR data. The
+The bundled default Music Select skin is now a 1920×1080 `POP//BELT` layout:
+the song list remains on the right while selected-song metadata, score state,
+note radar, table comment, and IR/rival information are stacked on the left.
+Its main panel, overlay, and song-row PNGs are rendered from committed SVG
+masters; the square artwork region is a neutral replacement placeholder when
+the selected song has no banner. The skin continues to expose MANIAC EXTRA
+MODE, judge-timing restore, the ninth judge-rank sort state, folder lamp counts,
+and an optional compact IR/rival detail row. Its `Song Detail` customization
+keeps the table comment as the default and can switch that space to IR data. The
 bundled default 7-key Lua skin adds compact/standard/wide lane widths, a
 toggleable song and play-information overlay, EARLY/LATE totals, and the
 resolved fixed RANDOM placement. The new control artwork is an intentionally
