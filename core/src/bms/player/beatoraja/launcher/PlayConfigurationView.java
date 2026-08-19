@@ -1270,6 +1270,7 @@ public class PlayConfigurationView implements Initializable {
 		StackPane tableList = sidebarMovableParent(resourceTab, "tableurl");
 		tableList.setMinHeight(260);
 		VBox tableButtons = new VBox(8,
+				sidebarControl(resourceTab, "updateAllTablesButton"),
 				sidebarControl(resourceTab, "chooseTablesButton"),
 				sidebarControl(resourceTab, "addTableUrlButton")
 		);

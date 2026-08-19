@@ -24,7 +24,7 @@ import zipfile
 from verify_native_audio_bundle import validate_native_audio_bundle
 
 
-VERSION = "0.4.14.58"
+VERSION = "0.4.14.59"
 BODY_FILENAME = "Arena-oraja.jar"
 PLUGIN_FILENAME = "bms_ir_arena_oraja_0.0.72.jar"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

@@ -8,6 +8,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -56,6 +57,8 @@ public class ResourceConfigurationView implements Initializable {
 	private Button chooseTablesButton;
 	@FXML
 	private Button addTableUrlButton;
+	@FXML
+	private Button updateAllTablesButton;
 	@FXML
 	private Button updateDatabaseButton;
 	@FXML
@@ -269,75 +272,25 @@ public class ResourceConfigurationView implements Initializable {
     @FXML
 	public void loadAllTables() {
 		commit();
-		ResourceBundle bundle = ResourceBundle.getBundle("resources.UIResources");
-		try {
-			Files.createDirectories(Paths.get(config.getTablepath()));
-		} catch (IOException e) {
-		}
+		Stage loadingBarStage = createTableProgressStage();
+		updateAllTablesButton.setDisable(true);
+		loadingBarStage.show();
 
-		final Stage[] loadingBarStage = new Stage[1];
-		Runnable progressRunnable = () -> {
-			// JavaFX UI code must be run inside a Platform run context
-			Platform.runLater(new Runnable() {
-				@Override
-				public void run() {
-					loadingBarStage[0] = new Stage();
-					loadingBarStage[0].setResizable(false);
-					// This modality freezes the launcher/primary stage
-					loadingBarStage[0].initModality(Modality.APPLICATION_MODAL);
-					loadingBarStage[0].setTitle(bundle.getString("PROGRESS_TABLE_TITLE"));
-					// This prevents users from seeing typical windowing system buttons
-					loadingBarStage[0].initStyle(StageStyle.UTILITY);
-
-					ProgressBar progressBar = new ProgressBar();
-					progressBar.setPrefWidth(300);
-
-					Label messageLabel = new Label(bundle.getString("PROGRESS_TABLE_LABEL"));
-
-					VBox root = new VBox(10);
-					root.setStyle("-fx-padding: 20; -fx-alignment: center;");
-					root.getChildren().addAll(messageLabel, progressBar);
-
-					Scene scene = new Scene(root);
-					loadingBarStage[0].setScene(scene);
-
-					// Prevents closing. This has the side effect of preventing windowing system close requests but
-					// the application can still be force killed by the user if necessary
-					loadingBarStage[0].setOnCloseRequest(Event::consume);
-					loadingBarStage[0].show();
-				}
+		String[] configuredUrls = config.getTableURL().clone();
+		List<TableInfo> visibleTables = new ArrayList<>(tableurl.getItems());
+		Thread worker = new Thread(() -> {
+			TableDataAccessor accessor = new TableDataAccessor(config.getTablepath());
+			TableDataAccessor.TableUpdateResult result = accessor.replaceAllTableData(configuredUrls);
+			String[] visibleUrls = visibleTables.stream().map(TableInfo::getUrl).toArray(String[]::new);
+			HashMap<String, String> names = accessor.readLocalTableNames(visibleUrls);
+			Platform.runLater(() -> {
+				updateVisibleTableNames(visibleTables, names);
+				loadingBarStage.hide();
+				updateAllTablesButton.setDisable(false);
+				showAllTableUpdateResult(result);
 			});
-		};
-
-		Runnable loadTableRunnable = () -> {
-			try (DirectoryStream<Path> paths = Files.newDirectoryStream(Paths.get(config.getTablepath()))) {
-				paths.forEach((p) -> {
-					if(p.toString().toLowerCase().endsWith(".bmt")) {
-						try {
-							Files.deleteIfExists(p);
-						} catch (IOException ignored) {
-						}
-					}
-				});
-			} catch (IOException ignored) {
-			}
-
-			TableDataAccessor tda = new TableDataAccessor(config.getTablepath());
-			tda.updateTableData(config.getTableURL());
-			refreshLocalTableInfo();
-
-			// Once again, JavaFX UI code must be run inside a Platform context. Hide progress bar and resume
-			// normal launcher behaviour
-			Platform.runLater(new Runnable() {
-				@Override
-				public void run() {
-					loadingBarStage[0].hide();
-				}
-			});
-		};
-
-		new Thread(progressRunnable).start();
-		new Thread(loadTableRunnable).start();
+		}, "Difficulty Table Update All");
+		worker.start();
 	}
 
     @FXML
@@ -999,16 +952,7 @@ public class ResourceConfigurationView implements Initializable {
 		commit();
 	}
 
-	private void loadTableUrls(String[] urls) {
-		if (urls == null || urls.length == 0) {
-			return;
-		}
-		commit();
-		try {
-			Files.createDirectories(Paths.get(config.getTablepath()));
-		} catch (IOException ignored) {
-		}
-
+	private Stage createTableProgressStage() {
 		Stage loadingBarStage = new Stage();
 		loadingBarStage.setResizable(false);
 		loadingBarStage.initModality(Modality.APPLICATION_MODAL);
@@ -1021,6 +965,53 @@ public class ResourceConfigurationView implements Initializable {
 		root.setStyle("-fx-padding: 20; -fx-alignment: center;");
 		loadingBarStage.setScene(new Scene(root));
 		loadingBarStage.setOnCloseRequest(Event::consume);
+		return loadingBarStage;
+	}
+
+	private void updateVisibleTableNames(List<TableInfo> visibleTables, HashMap<String, String> names) {
+		for (TableInfo info : visibleTables) {
+			String loadedName = names == null ? null : names.get(info.getUrl());
+			info.setNameStatus(loadedName == null
+					? resources.getString("TABLE_NOT_LOADED")
+					: loadedName);
+		}
+		tableurl.refresh();
+	}
+
+	private void showAllTableUpdateResult(TableDataAccessor.TableUpdateResult result) {
+		Alert alert;
+		if (result.success()) {
+			alert = new Alert(Alert.AlertType.INFORMATION);
+			alert.setHeaderText(resources.getString("TABLES_LOAD_ALL_SUCCESS"));
+			alert.setContentText(MessageFormat.format(
+					resources.getString("TABLES_LOAD_ALL_SUCCESS_DESCRIPTION"),
+					result.updatedCount()));
+		} else if (!result.failedUrls().isEmpty()) {
+			alert = new Alert(Alert.AlertType.WARNING);
+			alert.setHeaderText(resources.getString("TABLES_LOAD_ALL_FAILED"));
+			alert.setContentText(MessageFormat.format(
+					resources.getString("TABLES_LOAD_ALL_FETCH_FAILED_DESCRIPTION"),
+					String.join("\n", result.failedUrls())));
+		} else {
+			alert = new Alert(Alert.AlertType.ERROR);
+			alert.setHeaderText(resources.getString("TABLES_LOAD_ALL_FAILED"));
+			alert.setContentText(resources.getString("TABLES_LOAD_ALL_CACHE_FAILED_DESCRIPTION"));
+		}
+		alert.setTitle(resources.getString("TABLES_LOAD_ALL"));
+		alert.showAndWait();
+	}
+
+	private void loadTableUrls(String[] urls) {
+		if (urls == null || urls.length == 0) {
+			return;
+		}
+		commit();
+		try {
+			Files.createDirectories(Paths.get(config.getTablepath()));
+		} catch (IOException ignored) {
+		}
+
+		Stage loadingBarStage = createTableProgressStage();
 		loadingBarStage.show();
 
 		List<TableInfo> visibleTables = new ArrayList<>(tableurl.getItems());
@@ -1030,13 +1021,7 @@ public class ResourceConfigurationView implements Initializable {
 			String[] visibleUrls = visibleTables.stream().map(TableInfo::getUrl).toArray(String[]::new);
 			HashMap<String, String> names = accessor.readLocalTableNames(visibleUrls);
 			Platform.runLater(() -> {
-				for (TableInfo info : visibleTables) {
-					String loadedName = names == null ? null : names.get(info.getUrl());
-					info.setNameStatus(loadedName == null
-							? resources.getString("TABLE_NOT_LOADED")
-							: loadedName);
-				}
-				tableurl.refresh();
+				updateVisibleTableNames(visibleTables, names);
 				loadingBarStage.hide();
 			});
 		}, "Difficulty Table Update");

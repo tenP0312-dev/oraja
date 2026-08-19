@@ -28,6 +28,14 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.59</h1>
+        <h2>Safely update every configured difficulty table</h2>
+        <ul>
+        <li>Resource settings provide one visible update-all action in both classic and sidebar layouts.</li>
+        <li>The client fetches and validates the complete configured set before replacing live table caches.</li>
+        <li>Only a successful update removes orphan <code>.bmt</code> files left by URL edits or removals. Unrelated files are preserved.</li>
+        <li>Any fetch, validation, or cache error keeps or restores the previous complete cache set.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.58</h1>
         <h2>Traceable Windows WASAPI and ASIO distribution</h2>
         <ul>

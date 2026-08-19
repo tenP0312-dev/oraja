@@ -1,3 +1,14 @@
+# Arena oraja 0.4.14.59
+
+- Restored one visible Resource-settings action for updating every configured
+  difficulty table in both classic and sidebar layouts.
+- Fetches and validates the complete configured table set before replacing
+  live caches.
+- Removes orphan `.bmt` files left by URL edits or removals only after every
+  table succeeds, while preserving unrelated files.
+- Keeps or restores the previous complete cache set when any fetch,
+  validation, or cache operation fails.
+
 # Arena oraja 0.4.14.58
 
 - Replaced the untraceable legacy Windows PortAudio/JPortAudio binaries with a

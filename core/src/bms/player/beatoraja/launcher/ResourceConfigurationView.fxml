@@ -64,6 +64,10 @@
         </VBox>
         <VBox prefWidth="175.0" spacing="7.0">
             <Region VBox.vgrow="ALWAYS" />
+            <Button fx:id="updateAllTablesButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                    onAction="#loadAllTables" prefHeight="31.0" text="%TABLES_LOAD_ALL">
+                <tooltip><Tooltip text="%TABLES_LOAD_ALL_DESCRIPTION" /></tooltip>
+            </Button>
             <Button fx:id="chooseTablesButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
                     onAction="#showAvailableTables" prefHeight="31.0"
                     text="%CHOOSE_EXISTING_TABLES" />
