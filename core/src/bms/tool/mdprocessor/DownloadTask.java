@@ -8,6 +8,7 @@ public class DownloadTask {
     final private String name;
     final private String hash;
     final private DownloadMode downloadMode;
+    final private String archiveLabel;
 
     private DownloadTaskStatus downloadTaskStatus;
     private long downloadSize;
@@ -16,15 +17,21 @@ public class DownloadTask {
     private volatile long timeFinished;
 
     public DownloadTask(int id, String url, String name, String hash) {
-        this(id, url, name, hash, DownloadMode.LegacyExtract);
+        this(id, url, name, hash, DownloadMode.LegacyExtract, null);
     }
 
     public DownloadTask(int id, String url, String name, String hash, DownloadMode downloadMode) {
+        this(id, url, name, hash, downloadMode, null);
+    }
+
+    public DownloadTask(int id, String url, String name, String hash, DownloadMode downloadMode,
+                        String archiveLabel) {
         this.id = id;
         this.url = url;
         this.name = name;
         this.hash = hash;
         this.downloadMode = downloadMode;
+        this.archiveLabel = archiveLabel;
         this.downloadTaskStatus = DownloadTaskStatus.Prepare;
     }
 
@@ -42,6 +49,10 @@ public class DownloadTask {
 
     public DownloadMode getDownloadMode() {
         return downloadMode;
+    }
+
+    public String getArchiveLabel() {
+        return archiveLabel;
     }
 
     public DownloadTaskStatus getDownloadTaskStatus() {

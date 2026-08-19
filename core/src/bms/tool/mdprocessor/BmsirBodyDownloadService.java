@@ -17,6 +17,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.Normalizer;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,9 +49,15 @@ final class BmsirBodyDownloadService {
 	private static final int MAX_LANDING_PAGE_SIZE = 2 * 1024 * 1024;
 	private static final int MAX_ARCHIVE_CANDIDATES = 12;
 	private static final int RESPONSE_SNIFF_SIZE = 8192;
+	private static final int MAX_FILENAME_UTF8_BYTES = 180;
+	private static final String INVALID_FILENAME_CHARACTERS = "<>:\"/\\|?*";
 	private static final Set<String> CHART_EXTENSIONS = Set.of(".bms", ".bme", ".bml", ".pms", ".bmson");
 	private static final Set<String> ARCHIVE_EXTENSIONS = Set.of(".zip", ".rar", ".7z");
 	private static final List<String> ARCHIVE_EXTENSION_ORDER = List.of(".zip", ".rar", ".7z");
+	private static final Pattern LEGACY_ARCHIVE_FILENAME = Pattern.compile(
+			"(?i)bmsir-[0-9a-f]{32}\\.(?:zip|rar|7z)");
+	private static final Pattern READABLE_ARCHIVE_FILENAME = Pattern.compile(
+			"(?i).+-[0-9a-f]{8}\\.(?:zip|rar|7z)");
 	private static final Pattern CONTENT_TYPE_CHARSET = Pattern.compile(
 			"(?i)(?:^|;)\\s*charset\\s*=\\s*[\\\"']?([^\\s;\\\"']+)");
 	private static final Pattern META_CHARSET = Pattern.compile(
@@ -99,7 +107,7 @@ final class BmsirBodyDownloadService {
 			throw new IOException("The requested chart MD5 is invalid");
 		}
 		URI original = validatedHttpUri(task.getUrl());
-		Path retained = findInstalledArchive(task.getHash());
+		Path retained = findInstalledArchive(task);
 		if (retained == null) {
 			retained = findReusableArchive(retainedArchives, task.getHash());
 		}
@@ -156,8 +164,8 @@ final class BmsirBodyDownloadService {
 				}
 			} else {
 				verifyRequestedChart(staging, task.getHash());
-				Path destination = downloadDirectory.resolve(
-						"bmsir-" + task.getHash().toLowerCase(Locale.ROOT) + extension);
+				Path destination = downloadDirectory.resolve(archiveFileName(
+						task.getArchiveLabel(), task.getName(), task.getHash(), extension));
 				moveWithoutReplacing(staging, destination);
 				return new InstallResult(destination, downloaded.source(), wayback, false, false);
 			}
@@ -184,16 +192,32 @@ final class BmsirBodyDownloadService {
 				null);
 	}
 
-	private Path findInstalledArchive(String expectedMd5) throws IOException {
-		IOException firstFailure = null;
-		String basename = "bmsir-" + expectedMd5.toLowerCase(Locale.ROOT);
+	private Path findInstalledArchive(DownloadTask task) throws IOException {
+		String expectedMd5 = task.getHash();
+		LinkedHashSet<Path> exactCandidates = new LinkedHashSet<>();
 		for (String extension : ARCHIVE_EXTENSION_ORDER) {
-			Path candidate = downloadDirectory.resolve(basename + extension);
+			exactCandidates.add(downloadDirectory.resolve(archiveFileName(
+					task.getArchiveLabel(), task.getName(), expectedMd5, extension)));
+			exactCandidates.add(downloadDirectory.resolve(
+					"bmsir-" + expectedMd5.toLowerCase(Locale.ROOT) + extension));
+		}
+		LinkedHashSet<Path> candidates = new LinkedHashSet<>(exactCandidates);
+		if (Files.isDirectory(downloadDirectory, LinkOption.NOFOLLOW_LINKS)) {
+			try (var files = Files.list(downloadDirectory)) {
+				files.filter(path -> path.getFileName() != null)
+						.filter(path -> isManagedArchiveFilename(path.getFileName().toString()))
+						.sorted(Comparator.comparing(path -> path.getFileName().toString()))
+						.forEach(candidates::add);
+			}
+		}
+
+		IOException firstFailure = null;
+		for (Path candidate : candidates) {
 			if (!Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
 				continue;
 			}
 			if (!isRetainedArchive(candidate)) {
-				if (firstFailure == null) {
+				if (exactCandidates.contains(candidate) && firstFailure == null) {
 					firstFailure = new IOException(
 							"Existing BMS-IR archive is not a reusable regular file: " + candidate.getFileName());
 				}
@@ -203,7 +227,7 @@ final class BmsirBodyDownloadService {
 				verifyRequestedChart(candidate, expectedMd5);
 				return candidate.toAbsolutePath().normalize();
 			} catch (IOException | RuntimeException error) {
-				if (firstFailure == null) {
+				if (exactCandidates.contains(candidate) && firstFailure == null) {
 					firstFailure = new IOException(
 							"Existing BMS-IR archive failed validation and was not replaced: "
 									+ candidate.getFileName(), error);
@@ -245,13 +269,61 @@ final class BmsirBodyDownloadService {
 				: normalized.getFileName().toString().toLowerCase(Locale.ROOT);
 		try {
 			return downloadDirectory.equals(parent)
-					&& filename.startsWith("bmsir-")
-					&& ARCHIVE_EXTENSIONS.stream().anyMatch(filename::endsWith)
+					&& isManagedArchiveFilename(filename)
 					&& Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)
 					&& Files.size(normalized) <= maxDownloadSize;
 		} catch (IOException ignored) {
 			return false;
 		}
+	}
+
+	static String archiveFileName(String archiveLabel, String fallbackLabel, String expectedMd5,
+			String extension) {
+		String normalizedExtension = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
+		if (!isValidMd5(expectedMd5) || !ARCHIVE_EXTENSIONS.contains(normalizedExtension)) {
+			throw new IllegalArgumentException("A valid chart MD5 and archive extension are required");
+		}
+		String label = archiveLabel == null || archiveLabel.isBlank() ? fallbackLabel : archiveLabel;
+		String sanitized = sanitizeArchiveLabel(label);
+		String suffix = "-" + expectedMd5.substring(0, 8).toLowerCase(Locale.ROOT) + normalizedExtension;
+		int labelBytes = MAX_FILENAME_UTF8_BYTES - suffix.getBytes(StandardCharsets.UTF_8).length;
+		return truncateUtf8(sanitized, labelBytes) + suffix;
+	}
+
+	private static String sanitizeArchiveLabel(String value) {
+		String normalized = Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFC).strip();
+		StringBuilder sanitized = new StringBuilder(normalized.length());
+		normalized.codePoints().forEach(codePoint -> {
+			if (Character.isISOControl(codePoint) || INVALID_FILENAME_CHARACTERS.indexOf(codePoint) >= 0) {
+				sanitized.append('_');
+			} else {
+				sanitized.appendCodePoint(codePoint);
+			}
+		});
+		String result = sanitized.toString().strip();
+		return result.isEmpty() ? "song" : result;
+	}
+
+	private static String truncateUtf8(String value, int maxBytes) {
+		StringBuilder result = new StringBuilder(value.length());
+		int bytes = 0;
+		for (int offset = 0; offset < value.length();) {
+			int codePoint = value.codePointAt(offset);
+			String character = new String(Character.toChars(codePoint));
+			int characterBytes = character.getBytes(StandardCharsets.UTF_8).length;
+			if (bytes + characterBytes > maxBytes) {
+				break;
+			}
+			result.append(character);
+			bytes += characterBytes;
+			offset += Character.charCount(codePoint);
+		}
+		return result.isEmpty() ? "song" : result.toString();
+	}
+
+	private static boolean isManagedArchiveFilename(String filename) {
+		return LEGACY_ARCHIVE_FILENAME.matcher(filename).matches()
+				|| READABLE_ARCHIVE_FILENAME.matcher(filename).matches();
 	}
 
 	private DownloadedResource download(URI source, Path destination, DownloadTask task) throws IOException {

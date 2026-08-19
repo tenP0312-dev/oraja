@@ -1,3 +1,12 @@
+# Unreleased
+
+- Saved newly accepted BMS-IR body archives as portable readable
+  `[artist]title-<8-character-md5>.zip/.rar/.7z` files while preserving the
+  detected archive format and no-overwrite validation.
+- Kept legacy `bmsir-<full-md5>` packages reusable and rediscovered managed
+  multi-chart packages after restart even when the filename came from another
+  requested chart in the same package.
+
 # Arena oraja 0.4.14.58
 
 - Retained per-chart difficulty-table comments in Music Select and exposed the
