@@ -62,7 +62,7 @@ class BmsirBodyDownloadServiceTest {
 		BmsirBodyDownloadService service = service(1024 * 1024);
 		BmsirBodyDownloadService.InstallResult result = service.install(task);
 
-		assertEquals(temporary.resolve("bmsir-" + md5 + ".zip"), result.archive());
+		assertEquals(temporary.resolve("[Artist]Test song-" + md5.substring(0, 8) + ".zip"), result.archive());
 		assertFalse(result.wayback());
 		assertFalse(result.landingPage());
 		assertEquals(0, waybackRequests.get());
@@ -294,6 +294,28 @@ class BmsirBodyDownloadServiceTest {
 	}
 
 	@Test
+	void reusesReadableMultiChartArchiveAcrossRestart() throws Exception {
+		byte[] firstChart = "#TITLE First\n".getBytes(StandardCharsets.UTF_8);
+		byte[] requestedChart = "#TITLE Requested after restart\n".getBytes(StandardCharsets.UTF_8);
+		byte[] archive = zip("Pack/first.bms", firstChart, "Pack/requested.bms", requestedChart);
+		String firstMd5 = md5(firstChart);
+		Path installed = Files.write(
+				temporary.resolve("[Artist]Package-" + firstMd5.substring(0, 8) + ".zip"), archive);
+		AtomicInteger bodyRequests = new AtomicInteger();
+		server.createContext("/body", exchange -> {
+			bodyRequests.incrementAndGet();
+			respond(exchange, 500, "text/plain", new byte[0]);
+		});
+
+		BmsirBodyDownloadService.InstallResult result = service(1024 * 1024)
+				.install(task(base.resolve("/body"), md5(requestedChart)));
+
+		assertEquals(installed, result.archive());
+		assertTrue(result.reused());
+		assertEquals(0, bodyRequests.get());
+	}
+
+	@Test
 	void rejectsInvalidExactArchiveWithoutNetworkOrOverwrite() throws Exception {
 		byte[] requestedChart = "#TITLE Requested\n".getBytes(StandardCharsets.UTF_8);
 		byte[] existingArchive = zip("wrong.bms", "#TITLE Wrong\n".getBytes(StandardCharsets.UTF_8));
@@ -305,6 +327,29 @@ class BmsirBodyDownloadServiceTest {
 		});
 		String md5 = md5(requestedChart);
 		Path existing = Files.write(temporary.resolve("bmsir-" + md5 + ".zip"), existingArchive);
+		byte[] original = Files.readAllBytes(existing);
+
+		IOException error = assertThrows(IOException.class,
+				() -> service(1024 * 1024).install(task(base.resolve("/body"), md5)));
+
+		assertTrue(error.getMessage().contains("failed validation"));
+		assertEquals(0, bodyRequests.get());
+		assertEquals(HexFormat.of().formatHex(original),
+				HexFormat.of().formatHex(Files.readAllBytes(existing)));
+	}
+
+	@Test
+	void rejectsInvalidReadableExactArchiveWithoutNetworkOrOverwrite() throws Exception {
+		byte[] requestedChart = "#TITLE Requested\n".getBytes(StandardCharsets.UTF_8);
+		byte[] existingArchive = zip("wrong.bms", "#TITLE Wrong\n".getBytes(StandardCharsets.UTF_8));
+		AtomicInteger bodyRequests = new AtomicInteger();
+		server.createContext("/body", exchange -> {
+			bodyRequests.incrementAndGet();
+			respond(exchange, 200, "application/zip", zip("requested.bms", requestedChart));
+		});
+		String md5 = md5(requestedChart);
+		Path existing = Files.write(
+				temporary.resolve("[Artist]Test song-" + md5.substring(0, 8) + ".zip"), existingArchive);
 		byte[] original = Files.readAllBytes(existing);
 
 		IOException error = assertThrows(IOException.class,
@@ -330,6 +375,28 @@ class BmsirBodyDownloadServiceTest {
 	}
 
 	@Test
+	void createsPortableReadableArchiveFilename() {
+		String md5 = "ABCDEF0123456789ABCDEF0123456789";
+
+		String filename = BmsirBodyDownloadService.archiveFileName(
+				"[Artist]Song/Title:*?\"\n", "unused", md5, ".RAR");
+
+		assertEquals("[Artist]Song_Title____-abcdef01.rar", filename);
+		assertTrue(filename.getBytes(StandardCharsets.UTF_8).length <= 180);
+	}
+
+	@Test
+	void boundsLongMultibyteArchiveFilenameWithoutSplittingTheSuffix() {
+		String md5 = "0123456789abcdef0123456789abcdef";
+
+		String filename = BmsirBodyDownloadService.archiveFileName(
+				"[作曲者]" + "長い曲名".repeat(100), "unused", md5, ".7z");
+
+		assertTrue(filename.endsWith("-01234567.7z"));
+		assertTrue(filename.getBytes(StandardCharsets.UTF_8).length <= 180);
+	}
+
+	@Test
 	void blocksPrivateNetworkTargetsOutsideTheTestPolicy() throws Exception {
 		server.createContext("/body", exchange -> respond(exchange, 200, "application/zip", new byte[0]));
 		BmsirBodyDownloadService service = new BmsirBodyDownloadService(
@@ -347,7 +414,7 @@ class BmsirBodyDownloadServiceTest {
 
 	private static DownloadTask task(URI uri, String md5) {
 		return new DownloadTask(1, uri.toString(), "Test song", md5,
-				DownloadTask.DownloadMode.ArchiveInPlace);
+				DownloadTask.DownloadMode.ArchiveInPlace, "[Artist]Test song");
 	}
 
 	private static byte[] zip(Object... namesAndContents) throws IOException {

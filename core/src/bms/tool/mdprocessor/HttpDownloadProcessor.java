@@ -114,7 +114,8 @@ public class HttpDownloadProcessor {
             return;
         }
         if (bmsirBodyDownloadEnabled && BmsirBodyDownloadService.isEligibleBodyUrl(song.getUrl())) {
-            submitTask(song.getUrl(), song.getTitle(), song.getMd5(), DownloadTask.DownloadMode.ArchiveInPlace);
+            submitTask(song.getUrl(), song.getTitle(), song.getMd5(), DownloadTask.DownloadMode.ArchiveInPlace,
+                    bodyArchiveLabel(song));
             return;
         }
         submitMD5Task(song.getMd5(), song.getTitle());
@@ -148,10 +149,11 @@ public class HttpDownloadProcessor {
             return;
         }
 
-        submitTask(downloadURL, taskName, md5, DownloadTask.DownloadMode.LegacyExtract);
+        submitTask(downloadURL, taskName, md5, DownloadTask.DownloadMode.LegacyExtract, null);
     }
 
-    private void submitTask(String downloadURL, String taskName, String md5, DownloadTask.DownloadMode mode) {
+    private void submitTask(String downloadURL, String taskName, String md5, DownloadTask.DownloadMode mode,
+                            String archiveLabel) {
         String displayName = taskName == null || taskName.isBlank() ? md5 : taskName;
         // NOTE: The reason of using executor instead of using 'synchronized' on tasks directly is forcing
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
@@ -174,7 +176,8 @@ public class HttpDownloadProcessor {
                     return null;
                 }
                 int taskId = idGenerator.addAndGet(1);
-                DownloadTask downloadTask = new DownloadTask(taskId, downloadURL, displayName, md5, mode);
+                DownloadTask downloadTask = new DownloadTask(
+                        taskId, downloadURL, displayName, md5, mode, archiveLabel);
                 tasks.put(taskId, downloadTask);
                 ImGuiNotify.info(String.format("New download task[%s] submitted", displayName));
                 return new TaskSubmission(downloadTask, false);
@@ -366,6 +369,15 @@ public class HttpDownloadProcessor {
         // Reserve the retry while tasks is locked so rapid repeated submissions cannot start it twice.
         task.setDownloadTaskStatus(DownloadTask.DownloadTaskStatus.Prepare);
         return true;
+    }
+
+    static String bodyArchiveLabel(SongData song) {
+        String artist = song.getArtist() == null ? "" : song.getArtist().trim();
+        String title = song.getFullTitle() == null ? "" : song.getFullTitle().trim();
+        if (title.isEmpty()) {
+            title = song.getMd5();
+        }
+        return artist.isEmpty() ? title : "[" + artist + "]" + title;
     }
 
     /**

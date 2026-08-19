@@ -6,6 +6,12 @@
 - Advanced Arena communication to protocol v8. Casual/private rooms lock the
   selected LN/CN/HCN mode and verify every participant's decoded note count at
   the ready barrier; rated Arena remains LN-only.
+- Saved newly accepted BMS-IR body archives as portable readable
+  `[artist]title-<8-character-md5>.zip/.rar/.7z` files while preserving the
+  detected archive format and no-overwrite validation.
+- Kept legacy `bmsir-<full-md5>` packages reusable and rediscovered managed
+  multi-chart packages after restart even when the filename came from another
+  requested chart in the same package.
 - Retains the settings search, gameplay-start mitigation, download recovery,
   difficulty-table comments, and safe all-table update shipped in 0.4.14.60.
 

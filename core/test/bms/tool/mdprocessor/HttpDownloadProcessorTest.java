@@ -9,6 +9,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import bms.player.beatoraja.song.SongData;
+
 class HttpDownloadProcessorTest {
 
 	@Test
@@ -53,5 +55,15 @@ class HttpDownloadProcessorTest {
 		assertEquals("/songs/downloads", updatedPath.get());
 		assertFalse(updateParentWhenMissing.get());
 		assertTrue(completionRan.get());
+	}
+
+	@Test
+	void bodyArchiveLabelUsesArtistAndFullTitle() {
+		SongData song = new SongData();
+		song.setArtist("Artist");
+		song.setTitle("Song");
+		song.setSubtitle("[Another]");
+
+		assertEquals("[Artist]Song [Another]", HttpDownloadProcessor.bodyArchiveLabel(song));
 	}
 }
