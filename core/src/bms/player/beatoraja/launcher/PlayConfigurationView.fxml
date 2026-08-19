@@ -51,7 +51,7 @@
     </HBox>
     <HBox fx:id="configurationArea" VBox.vgrow="ALWAYS">
         <VBox fx:id="sidebarRail" managed="false" maxWidth="220.0" minWidth="220.0" prefWidth="220.0" styleClass="settings-sidebar" visible="false">
-            <TextField fx:id="sidebarSearch" maxWidth="1.7976931348623157E308" promptText="%CONFIGURATION_SEARCH" styleClass="sidebar-search" />
+            <TextField fx:id="sidebarSearch" accessibleText="%CONFIGURATION_SEARCH" maxWidth="1.7976931348623157E308" promptText="%CONFIGURATION_SEARCH" styleClass="sidebar-search" />
             <ToggleButton fx:id="sidebarPlayerSummary" contentDisplay="GRAPHIC_ONLY" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="sidebar-player-summary">
                 <graphic>
                     <HBox alignment="CENTER_LEFT" minWidth="188.0" prefWidth="188.0" spacing="10.0">
@@ -70,7 +70,8 @@
             <Separator styleClass="sidebar-separator" />
             <ListView fx:id="sidebarNavigation" focusTraversable="true" styleClass="settings-sidebar-list" VBox.vgrow="ALWAYS" />
         </VBox>
-        <VBox fx:id="configurationContent" styleClass="settings-content" HBox.hgrow="ALWAYS">
+        <StackPane HBox.hgrow="ALWAYS">
+            <VBox fx:id="configurationContent" styleClass="settings-content">
             <StackPane fx:id="playerPanelHost" styleClass="player-panel-host">
                 <VBox.margin>
                     <Insets bottom="5.0" top="5.0" />
@@ -667,7 +668,12 @@
             </AnchorPane>
         </Tab> -->
             </TabPane>
-        </VBox>
+            </VBox>
+            <VBox fx:id="sidebarSearchNoResults" alignment="CENTER" managed="false" spacing="8.0" styleClass="sidebar-search-no-results" visible="false">
+                <Label styleClass="sidebar-search-no-results-title" text="%CONFIGURATION_SEARCH_NO_MATCHES" />
+                <Label maxWidth="520.0" styleClass="sidebar-search-no-results-description" text="%CONFIGURATION_SEARCH_NO_MATCHES_DESCRIPTION" textAlignment="CENTER" wrapText="true" />
+            </VBox>
+        </StackPane>
     </HBox>
     <HBox fx:id="controlPanel" alignment="CENTER_LEFT" prefWidth="552.0" spacing="10.0">
         <VBox.margin>

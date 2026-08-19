@@ -22,7 +22,11 @@ public final class AllChartsBar extends ContainerBar {
     }
 
     private static SongBar chartBar(SongBar source, SongData song) {
-        return new SongBar(song, source.getTableDisplayLevel(song));
+        return new SongBar(
+                song,
+                source.getTableDisplayLevel(song),
+                source.getTableComment(song)
+        );
     }
 
     @Override

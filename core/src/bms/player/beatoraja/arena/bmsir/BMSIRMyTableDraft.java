@@ -1,5 +1,6 @@
 package bms.player.beatoraja.arena.bmsir;
 
+import bms.player.beatoraja.DifficultyTableComment;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -157,11 +158,13 @@ final class BMSIRMyTableDraft {
             return StageResult.WRONG_TABLE;
         }
         String normalizedLevel = value(level);
-        String normalizedComment = value(comment);
+        String normalizedComment = DifficultyTableComment.normalize(comment);
         boolean unchanged = authoritativeEntry != null
                 && authoritativeEntry.isObject()
                 && normalizedLevel.equals(authoritativeEntry.path("level").asText(""))
-                && normalizedComment.equals(authoritativeEntry.path("comment").asText(""));
+                && normalizedComment.equals(DifficultyTableComment.normalize(
+                        authoritativeEntry.path("comment").asText("")
+                ));
         if (unchanged) {
             if (entryChanges.remove(key) == null) {
                 return StageResult.NO_CHANGE;

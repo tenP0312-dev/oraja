@@ -39,15 +39,19 @@ class HttpDownloadProcessorTest {
 	void bodyDownloadRescanNeverFallsBackToTheParentDirectory() {
 		AtomicReference<String> updatedPath = new AtomicReference<>();
 		AtomicBoolean updateParentWhenMissing = new AtomicBoolean(true);
+		AtomicBoolean completionRan = new AtomicBoolean();
 
 		HttpDownloadProcessor.rescanBodyDownloadDirectory(
 				"/songs/downloads",
-				(path, updateParent) -> {
+				(path, updateParent, completion) -> {
 					updatedPath.set(path);
 					updateParentWhenMissing.set(updateParent);
-				});
+					completion.run();
+				},
+				() -> completionRan.set(true));
 
 		assertEquals("/songs/downloads", updatedPath.get());
 		assertFalse(updateParentWhenMissing.get());
+		assertTrue(completionRan.get());
 	}
 }

@@ -49,6 +49,7 @@ final class BmsirBodyDownloadService {
 	private static final int RESPONSE_SNIFF_SIZE = 8192;
 	private static final Set<String> CHART_EXTENSIONS = Set.of(".bms", ".bme", ".bml", ".pms", ".bmson");
 	private static final Set<String> ARCHIVE_EXTENSIONS = Set.of(".zip", ".rar", ".7z");
+	private static final List<String> ARCHIVE_EXTENSION_ORDER = List.of(".zip", ".rar", ".7z");
 	private static final Pattern CONTENT_TYPE_CHARSET = Pattern.compile(
 			"(?i)(?:^|;)\\s*charset\\s*=\\s*[\\\"']?([^\\s;\\\"']+)");
 	private static final Pattern META_CHARSET = Pattern.compile(
@@ -98,7 +99,10 @@ final class BmsirBodyDownloadService {
 			throw new IOException("The requested chart MD5 is invalid");
 		}
 		URI original = validatedHttpUri(task.getUrl());
-		Path retained = findReusableArchive(retainedArchives, task.getHash());
+		Path retained = findInstalledArchive(task.getHash());
+		if (retained == null) {
+			retained = findReusableArchive(retainedArchives, task.getHash());
+		}
 		if (retained != null) {
 			long size = Files.size(retained);
 			task.setContentLength(size);
@@ -178,6 +182,38 @@ final class BmsirBodyDownloadService {
 				"All " + candidates.size() + " archive links from the HTML landing page failed",
 				firstFailure,
 				null);
+	}
+
+	private Path findInstalledArchive(String expectedMd5) throws IOException {
+		IOException firstFailure = null;
+		String basename = "bmsir-" + expectedMd5.toLowerCase(Locale.ROOT);
+		for (String extension : ARCHIVE_EXTENSION_ORDER) {
+			Path candidate = downloadDirectory.resolve(basename + extension);
+			if (!Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+				continue;
+			}
+			if (!isRetainedArchive(candidate)) {
+				if (firstFailure == null) {
+					firstFailure = new IOException(
+							"Existing BMS-IR archive is not a reusable regular file: " + candidate.getFileName());
+				}
+				continue;
+			}
+			try {
+				verifyRequestedChart(candidate, expectedMd5);
+				return candidate.toAbsolutePath().normalize();
+			} catch (IOException | RuntimeException error) {
+				if (firstFailure == null) {
+					firstFailure = new IOException(
+							"Existing BMS-IR archive failed validation and was not replaced: "
+									+ candidate.getFileName(), error);
+				}
+			}
+		}
+		if (firstFailure != null) {
+			throw firstFailure;
+		}
+		return null;
 	}
 
 	private Path findReusableArchive(List<Path> retainedArchives, String expectedMd5) {

@@ -133,6 +133,22 @@
     -fx-background-color: #f5f6f8;
 }
 
+.sidebar-search-no-results {
+    -fx-background-color: #f5f6f8;
+    -fx-padding: 32px;
+}
+
+.sidebar-search-no-results-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #283342;
+}
+
+.sidebar-search-no-results-description {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: #626c7c;
+}
+
 .settings-content.sidebar-mode .player-panel-host {
     -fx-background-color: #ffffff;
     -fx-border-color: transparent transparent #dce1e8 transparent;

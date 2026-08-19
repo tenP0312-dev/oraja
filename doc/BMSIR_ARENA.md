@@ -1,9 +1,15 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.59`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.60`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.60` restores startup-settings search, gameplay-start render-
+stall mitigation and diagnostics, BMS-IR body-download recovery, and
+difficulty-table comments after they were unintentionally omitted from
+`0.4.14.59`. It retains the safe all-table update and remains on Arena wire
+protocol v7.
 
 Version `0.4.14.59` restores one visible Resource-settings action for updating
 every configured difficulty table. It fetches and validates the complete set
@@ -25,6 +31,16 @@ and performs the post-install song update against only the configured download
 root with parent fallback disabled. Multi-package landing pages remain able to
 continue to the correct later archive candidate.
 
+The current development source also rediscovers an exact accepted
+`bmsir-<md5>.zip/.rar/.7z` package after a client restart and revalidates its
+requested chart before any network request. A targeted download-root scan is
+queued when another song update is active; equivalent pending scans coalesce
+without losing their completion checks. Download-task progress is reconciled
+when the BMS-IR body option is the only HTTP download path enabled. Once the
+scan finishes, the client checks the requested MD5 in the song database and
+either tells the player to select the chart again to play or shows a clear
+registration warning.
+
 Version `0.4.14.56` resolves bounded ZIP/RAR/7z candidates from registered HTML
 distribution pages, including through one Wayback snapshot, while retaining
 the requested-chart-MD5 and archive checks. It also loads generated in-memory
@@ -42,6 +58,17 @@ fullscreen, saves or exits there, and later starts in fullscreen therefore
 returns to the original window style when F4 is pressed. Existing configs
 without this value infer BORDERLESS from a saved BORDERLESS mode and otherwise
 keep the legacy WINDOW fallback.
+
+The current development source removes the PRELOAD render thread's forced GC
+and blocking loudness-result wait. Loudness completion is polled while the
+loading screen continues to render, with the existing timeout/fallback kept.
+Static BGA textures retain render-thread/OpenGL ownership but their disposal
+and upload are spread across bounded preparation steps; the client reaches
+READY or sends Arena readiness only after the queue completes. The default-OFF
+timing log adds per-period maximum timestamps, play-session/transition/chart
+context, 16.67 ms render-stall events, one safe render-stack sample after 50
+ms, DirectBuffer usage, and individual PortAudio underflow context. Windows
+ASIO before/after acceptance remains a separate physical-client test.
 
 Version `0.4.14.54` adds a per-player switch for difficulty-table display
 levels, bounded in-memory preview generation for charts without a readable
@@ -162,6 +189,17 @@ When present, the client keeps every authoritative level folder and appends one
 display-only folder containing the same complete chart set. It does not add
 duplicate snapshot entries or draft/edit identities. The cross-game all-song
 master uses this field for `全曲`; ordinary personal and system tables omit it.
+
+Difficulty-table entry comments are retained for ordinary bmstable imports and
+the in-memory My Difficulty Table. `[[BR]]`, CRLF, and CR normalize to LF.
+Music Select skins read the active entry through string property
+`tablecomment` / `1004`; an entry from another table or an ordinary local
+folder cannot leak into it. JSON-skin text objects can set `wrapping: true` and
+choose destination width and font height, so the skin determines the effective
+characters per line and visible line layout. The bundled default select skin
+provides one wrapped presentation, but no engine-owned comment overlay is
+forced over custom skins. The My Difficulty Table editor accepts up to 4,096
+Unicode characters and shows LF as `[[BR]]` in its single-line IME editor.
 
 In the same version, clicking an Arena room-name, chat, or My Difficulty Table
 text field places an
@@ -318,7 +356,11 @@ write paths; changing layout does not duplicate or migrate gameplay settings.
 
 Sidebar places the existing Video, Audio, Input, Resource, Music Select, Play
 Options, Skin, Other, BMS-IR Features, IR, Table, Stream, Discord, and OBS
-destinations in a fixed-width, searchable left navigation list. Each row uses
+destinations in a fixed-width left navigation list. Search covers the localized
+category title and description plus every setting title and description. When
+the selected category does not match, the first matching category opens; when
+nothing matches, the right pane shows a no-result explanation instead of stale
+settings. Each row uses
 the same restrained single-color line style and the selected row retains a
 text-and-background active state. Its player summary shows the current player
 ID plus display name and LR2/oraja rule profile, and expands the existing player
@@ -513,6 +555,20 @@ different song packages can still resolve and retain the correct later link.
 After either a new install or a verified reuse, the in-process song update
 scans the configured download root directly and never falls back to scanning
 its parent directory.
+
+An exact accepted `bmsir-<md5>.zip/.rar/.7z` archive in that root is also
+rediscovered after restart and must pass the same bounded archive and requested
+chart MD5 checks before reuse. An invalid exact archive is never overwritten.
+If another song update is active, this targeted update waits in a queue instead
+of being discarded; equivalent pending requests share one scan while retaining
+each chart's completion check.
+
+Selecting an unavailable chart starts the download and keeps Music Select
+active. It does not automatically start gameplay. After the queued or immediate
+scan completes, a successful MD5 lookup displays a ready notice; select the
+chart again to play it. If the archive was saved but the chart still is not in
+the song database, the client shows a warning and asks for another update of
+the configured download root.
 
 Download-task identity uses both the registered URL and requested chart MD5,
 so multiple charts carried by one package are not mistaken for the same task.
@@ -1248,7 +1304,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.59-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1269,7 +1325,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.59-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1288,7 +1344,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.59-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.60-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

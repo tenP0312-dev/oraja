@@ -1,5 +1,7 @@
 package bms.player.beatoraja.song;
 
+import bms.player.beatoraja.DifficultyTableComment;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -79,6 +81,8 @@ public class SongData implements Validatable, IpfsInformation {
 	 * metadata and must not replace the chart's #PLAYLEVEL in {@link #level}.
 	 */
 	private Integer tableLevel;
+	/** Optional per-chart comment supplied by the active difficulty table. */
+	private String tableComment = "";
 	private int mode;
 	private int feature;
 	private int difficulty;
@@ -284,6 +288,12 @@ public class SongData implements Validatable, IpfsInformation {
 	}
 	public void setTableLevel(Integer tableLevel) {
 		this.tableLevel = tableLevel;
+	}
+	public String getTableComment() {
+		return tableComment;
+	}
+	public void setTableComment(String tableComment) {
+		this.tableComment = DifficultyTableComment.normalize(tableComment);
 	}
 	public String getTitle() {
 		return title;

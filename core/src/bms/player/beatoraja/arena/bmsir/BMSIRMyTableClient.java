@@ -2,6 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
 import bms.player.beatoraja.CourseData;
+import bms.player.beatoraja.DifficultyTableComment;
 import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.TableData;
@@ -180,7 +181,7 @@ final class BMSIRMyTableClient {
         payload.put("md5", normalizedHash(song.getMd5(), 32));
         payload.put("sha256", normalizedHash(song.getSha256(), 64));
         payload.put("level", level == null ? "" : level);
-        payload.put("comment", comment == null ? "" : comment);
+        payload.put("comment", DifficultyTableComment.normalize(comment));
         submit(payload, SESSION.get(), text("譜面を保存して本体へ反映しました", "Chart saved and applied"));
     }
 
@@ -466,6 +467,7 @@ final class BMSIRMyTableClient {
                 }
                 String level = limited(entry.path("level").asText("-"), 32).trim();
                 song.setTableLevel(TableData.parseDisplayLevel(level));
+                song.setTableComment(entry.path("comment").asText(""));
                 levels.computeIfAbsent(level.isEmpty() ? "-" : level, ignored -> new ArrayList<>())
                         .add(song);
                 allSongs.add(song);

@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.59**. Its Windows native-audio
+The current client source version is **0.4.14.60**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -24,6 +24,32 @@ returns to the same window style even when fullscreen was saved on shutdown
 and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
+
+The current development source also retains per-chart difficulty-table
+comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
+active table entry is exposed to skins as string property `tablecomment`
+(`1004`). The default Music Select skin uses a wrapped text area; custom skins
+control its width, font size, placement, and practical visible line count.
+Comments are contextual to the selected table and do not alter local song
+metadata.
+
+The current development source also removes two render-thread blockers from
+gameplay startup: the PRELOAD transition no longer invokes `System.gc()` or
+waits on an unfinished loudness-analysis task. Static BGA texture disposal and
+upload stay on the render thread but advance with a small per-frame budget
+before READY. Default-OFF timing diagnostics now correlate stalls and PortAudio
+underflows with play-session/state IDs, maximum timestamps, direct-buffer
+usage, and a safe stack sample for render stalls over 50 ms. See
+[the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
+
+The development source also recovers BMS-IR body downloads across a
+client restart by revalidating an exact previously accepted archive before any
+network request. Targeted download-root scans wait behind an active song update
+instead of being discarded, equivalent pending scans coalesce, and body-only
+configurations keep their download-task progress current. After the scan, the
+client confirms whether the requested chart entered the song database. A ready
+notice tells the player to select the chart again to start play; the download
+action itself does not automatically begin gameplay.
 
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
@@ -50,6 +76,14 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.60
+
+Restored the four feature groups that the 0.4.14.59 hotfix unintentionally
+omitted: startup-settings search, gameplay-start render-stall mitigation,
+BMS-IR body-download recovery, and difficulty-table comments exposed to Music
+Select skins. The safe all-table update from 0.4.14.59 remains present, and the
+Arena wire protocol remains v7.
 
 ## Arena oraja 0.4.14.59
 
@@ -363,12 +397,14 @@ Sidebar keeps the same setting controls and save paths, moves the category
 navigation to the left, and keeps the explanation for each setting directly
 below that setting. The player ID, display name, and active rule
 profile are collapsed into a sidebar summary and can be expanded when needed.
-The navigation rail has a stable width, searchable destinations, restrained
-single-color icons, and grouped settings cards so changing pages does not shift
-the content boundary. Every scalar row uses one stable two-column layout: its
-label stays at the left and its editor or ON/OFF switch uses the same trailing
-column. Standalone switches sit at the row's far-right edge, with a persistent
-plain-language explanation below. Folder lists,
+The navigation rail has a stable width and searches localized category names,
+setting names, and their descriptions. A matching setting opens its category;
+a true no-match query replaces stale page content with clear guidance.
+Restrained single-color icons and grouped settings cards keep the content
+boundary stable while changing pages. Every scalar row uses one stable
+two-column layout: its label stays at the left and its editor or ON/OFF switch
+uses the same trailing column. Standalone switches sit at the row's far-right
+edge, with a persistent plain-language explanation below. Folder lists,
 tables, skin previews, Webhook lists, and OBS scene mappings keep their useful
 shape inside full-width explained workspace cards. Sidebar editors remain
 connected to the original controls, so Classic layout, controller behavior,
@@ -429,7 +465,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.59
+  --output-dir /release/build-0.4.14.60
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

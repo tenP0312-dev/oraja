@@ -2,6 +2,8 @@ package bms.player.beatoraja.play.bga;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,7 @@ public class BGImageProcessor {
 	private int[] bgacacheid;
 
 	private final PixmapResourcePool cache;
+	private IncrementalPreparation<Texture> preparation;
 
 	public BGImageProcessor(int size, int maxgen) {
 		bgacache = new Texture[size];
@@ -84,31 +87,67 @@ public class BGImageProcessor {
 	/**
 	 * BGAの初期データをあらかじめキャッシュする
 	 */
-	public void prepare(TimeLine[] timelines) {
-		long l = System.currentTimeMillis();
+	public void beginPrepare(TimeLine[] timelines) {
+		ArrayDeque<Texture> disposals = new ArrayDeque<>();
+		if (preparation != null) {
+			preparation.drainDisposalsTo(disposals);
+		}
 		Arrays.fill(bgacacheid, -1);
 		for (Texture bga : bgacache) {
 			if (bga != null) {
-				bga.dispose();
+				disposals.addLast(bga);
 			}
 		}
 		Arrays.fill(bgacache, null);
 
-		int count = 0;
+		boolean[] scheduledSlots = new boolean[bgacache.length];
+		ArrayList<Integer> uploads = new ArrayList<>();
 		for (TimeLine tl : timelines) {
 			int bga = tl.getBGA();
-			if (bga >= 0 && bgacache[bga % bgacache.length] == null && bga < bgamap.length && bgamap[bga] != null) {
-				getTexture(bga);
-				count++;
+			if (shouldPrepare(bga, scheduledSlots)) {
+				uploads.add(bga);
 			}
 
 			bga = tl.getLayer();
-			if (bga >= 0 && bgacache[bga % bgacache.length] == null && bga < bgamap.length && bgamap[bga] != null) {
-				getTexture(bga);
-				count++;
+			if (shouldPrepare(bga, scheduledSlots)) {
+				uploads.add(bga);
 			}
 		}
-		logger.info("BGAデータの事前Texture化 - BGAデータ数:{} time(ms):{}", count, System.currentTimeMillis() - l);
+		preparation = new IncrementalPreparation<>(
+				disposals,
+				uploads.stream().mapToInt(Integer::intValue).toArray()
+		);
+		logger.info("BGA incremental texture preparation queued - textures:{} disposals:{}",
+				uploads.size(), disposals.size());
+	}
+
+	public boolean advancePreparation(int disposalBudget, int uploadBudget) {
+		if (preparation == null) {
+			return true;
+		}
+		preparation.advance(
+				disposalBudget,
+				uploadBudget,
+				Texture::dispose,
+				this::getTexture
+		);
+		if (preparation.isComplete()) {
+			preparation = null;
+			return true;
+		}
+		return false;
+	}
+
+	private boolean shouldPrepare(int id, boolean[] scheduledSlots) {
+		if (id < 0 || id >= bgamap.length || bgamap[id] == null) {
+			return false;
+		}
+		int slot = id % bgacache.length;
+		if (scheduledSlots[slot]) {
+			return false;
+		}
+		scheduledSlots[slot] = true;
+		return true;
 	}
 
 	public Texture getTexture(int id) {
@@ -137,6 +176,10 @@ public class BGImageProcessor {
 	 * リソースを開放する
 	 */
 	public void dispose() {
+		if (preparation != null) {
+			preparation.disposeRemaining(Texture::dispose);
+			preparation = null;
+		}
 		for (Texture bga : bgacache) {
 			if (bga != null) {
 				bga.dispose();
@@ -145,5 +188,44 @@ public class BGImageProcessor {
 		bgacache = new Texture[0];
 
 		cache.dispose();
+	}
+
+	static final class IncrementalPreparation<T> {
+		private final ArrayDeque<T> disposals;
+		private final int[] uploads;
+		private int uploadIndex;
+
+		IncrementalPreparation(ArrayDeque<T> disposals, int[] uploads) {
+			this.disposals = disposals;
+			this.uploads = uploads;
+		}
+
+		void advance(
+				int disposalBudget,
+				int uploadBudget,
+				Consumer<T> disposer,
+				IntConsumer uploader) {
+			for (int count = 0; count < Math.max(disposalBudget, 0) && !disposals.isEmpty(); count++) {
+				disposer.accept(disposals.removeFirst());
+			}
+			for (int count = 0; count < Math.max(uploadBudget, 0) && uploadIndex < uploads.length; count++) {
+				uploader.accept(uploads[uploadIndex++]);
+			}
+		}
+
+		boolean isComplete() {
+			return disposals.isEmpty() && uploadIndex >= uploads.length;
+		}
+
+		void drainDisposalsTo(ArrayDeque<T> target) {
+			target.addAll(disposals);
+			disposals.clear();
+		}
+
+		void disposeRemaining(Consumer<T> disposer) {
+			while (!disposals.isEmpty()) {
+				disposer.accept(disposals.removeFirst());
+			}
+		}
 	}	
 }

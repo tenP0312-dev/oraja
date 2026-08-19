@@ -32,6 +32,7 @@ class BMSIRMyTableClientTest {
         assertEquals(2, data.getFolder().length);
         assertEquals("★1", data.getFolder()[0].getName());
         assertEquals(MD5, data.getFolder()[0].getSong()[0].getMd5());
+        assertEquals("first\nsecond", data.getFolder()[0].getSong()[0].getTableComment());
         assertEquals("★2", data.getFolder()[1].getName());
         assertEquals(SHA256, data.getFolder()[1].getSong()[0].getSha256());
         assertEquals(0, data.getCourse().length);
@@ -166,6 +167,7 @@ class BMSIRMyTableClientTest {
                 .put("md5", MD5)
                 .put("title", "BMS Chart")
                 .put("artist", "Artist")
+                .put("comment", "first[[BR]]second")
                 .put("level", "1");
         entries.addObject()
                 .put("entry_hash", BMSON_KEY)

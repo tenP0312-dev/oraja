@@ -28,7 +28,15 @@ class PlayConfigurationSidebarLayoutTest {
 		assertEquals("220.0", sidebar.getAttribute("minWidth"));
 		assertEquals("220.0", sidebar.getAttribute("prefWidth"));
 		assertEquals("220.0", sidebar.getAttribute("maxWidth"));
-		assertEquals("TextField", elementWithFxId(document, "sidebarSearch").getTagName());
+		Element search = elementWithFxId(document, "sidebarSearch");
+		assertEquals("TextField", search.getTagName());
+		assertEquals("%CONFIGURATION_SEARCH", search.getAttribute("accessibleText"));
+		Element noResults = elementWithFxId(document, "sidebarSearchNoResults");
+		assertEquals("VBox", noResults.getTagName());
+		assertEquals("false", noResults.getAttribute("managed"));
+		assertEquals("false", noResults.getAttribute("visible"));
+		assertTrue(elementWithFxId(document, "configurationContent").getParentNode()
+				.isSameNode(noResults.getParentNode()));
 		Element contextHelp = elementWithFxId(document, "contextHelpPanel");
 		assertEquals("VBox", contextHelp.getTagName());
 		assertEquals("false", contextHelp.getAttribute("managed"));
@@ -62,6 +70,16 @@ class PlayConfigurationSidebarLayoutTest {
 		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
 		assertTrue(english.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("current caches are kept"));
 		assertTrue(japanese.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("現在のキャッシュを残します"));
+	}
+
+	@Test
+	void sidebarNoResultGuidanceIsAvailableInEnglishAndJapanese() {
+		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
+		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
+		assertEquals("No matching settings", english.getString("CONFIGURATION_SEARCH_NO_MATCHES"));
+		assertTrue(english.getString("CONFIGURATION_SEARCH_NO_MATCHES_DESCRIPTION").contains("clear"));
+		assertTrue(japanese.getString("CONFIGURATION_SEARCH_NO_MATCHES").contains("一致"));
+		assertTrue(japanese.getString("CONFIGURATION_SEARCH_NO_MATCHES_DESCRIPTION").contains("検索を消去"));
 	}
 
 	@Test

@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.60
+
+- Restored startup-settings search by localized title, setting label, and
+  description, including category navigation and a clear no-results state.
+- Restored the gameplay-start render-stall mitigation and extended timing
+  diagnostics without changing ordinary gameplay scheduling policy.
+- Restored BMS-IR body-download recovery across restarts, queued targeted song
+  updates, and post-scan requested-chart verification.
+- Restored difficulty-table comment import, cache retention, and Music Select
+  skin string property `tablecomment` / `1004`.
+- Retains the safe all-table cache replacement from 0.4.14.59 and remains on
+  Arena wire protocol v7.
+
 # Arena oraja 0.4.14.59
 
 - Restored one visible Resource-settings action for updating every configured
@@ -11,6 +24,11 @@
 
 # Arena oraja 0.4.14.58
 
+- Retained per-chart difficulty-table comments in Music Select and exposed the
+  active table entry as skin string property `tablecomment` / `1004`.
+  `[[BR]]`, CRLF, and CR normalize to LF; the default select skin wraps the
+  text, while custom skins choose placement, width, font size, and line layout.
+  My Difficulty Table comments now accept up to 4,096 characters.
 - Replaced the untraceable legacy Windows PortAudio/JPortAudio binaries with a
   clean x86-64 build from pinned PortAudio 19.7.0 and the official Steinberg
   ASIO SDK 2.3.4 under its GPL-3.0-only route.

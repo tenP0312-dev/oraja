@@ -446,6 +446,10 @@ public class MainController {
 		return driver == DriverType.PortAudio;
 	}
 
+	static boolean shouldUpdateDownloadTaskState(Config config) {
+		return config != null && (config.isEnableHttp() || config.isEnableBmsirBodyDownload());
+	}
+
 	private static String startupErrorMessage(Throwable error) {
 		String message = error.getLocalizedMessage();
 		return message == null || message.isBlank()
@@ -1204,7 +1208,7 @@ public class MainController {
 
         periodicConfigSave();
 
-        if (config.isEnableHttp()) { DownloadTaskState.update(); }
+		if (shouldUpdateDownloadTaskState(config)) { DownloadTaskState.update(); }
         PerformanceMetrics.get().commit();
 
 		imGui.start();
@@ -1313,10 +1317,7 @@ public class MainController {
             	this.updateSong(download.getDownloadpath());
             	download.setDownloadpath(null);
             }
-			if (updateSong != null && !updateSong.isAlive()) {
-				selector.getBarManager().updateBar();
-				updateSong = null;
-			}
+			finishSongUpdateIfReady();
         }
 	}
 
@@ -1543,7 +1544,10 @@ public class MainController {
 		timer.switchTimer(id, on);
 	}
 
-	private UpdateThread updateSong;
+	private final Object songUpdateLock = new Object();
+	private final SongUpdateRequestQueue pendingSongUpdates = new SongUpdateRequestQueue();
+	private volatile UpdateThread updateSong;
+	private SongUpdateRequestQueue.Request activeSongUpdateRequest;
 
 	/** Handles loose chart files dropped onto the game window. */
 	public void handleFilesDropped(String[] files) {
@@ -1568,15 +1572,23 @@ public class MainController {
 					"Select a song in a normal folder before dropping a difference chart"), 5000);
 			return;
 		}
-		if (updateSong != null && updateSong.isAlive()) {
+		if (updateSong != null) {
 			ImGuiNotify.warning(BMSIRArenaI18n.text(
 					"楽曲データベースを更新中です。完了後にもう一度D&Dしてください",
 					"The song database is being updated. Drop the files again after it finishes"), 5000);
 			return;
 		}
 
-		updateSong = new DifferenceChartImportThread(songBar.getSongData().getPath(), files.clone());
-		updateSong.start();
+		synchronized (songUpdateLock) {
+			if (updateSong != null) {
+				ImGuiNotify.warning(BMSIRArenaI18n.text(
+						"楽曲データベースを更新中です。完了後にもう一度D&Dしてください",
+						"The song database is being updated. Drop the files again after it finishes"), 5000);
+				return;
+			}
+			updateSong = new DifferenceChartImportThread(songBar.getSongData().getPath(), files.clone());
+			updateSong.start();
+		}
 	}
 
 	public void updateSong(String path) {
@@ -1584,20 +1596,62 @@ public class MainController {
 	}
 
 	public void updateSong(String path, boolean updateParentWhenMissing) {
-		if (updateSong == null || !updateSong.isAlive()) {
-			updateSong = new SongUpdateThread(path, updateParentWhenMissing);
-			updateSong.start();
-		} else {
-			logger.warn("楽曲更新中のため、更新要求は取り消されました");
+		updateSong(path, updateParentWhenMissing, null);
+	}
+
+	public void updateSong(String path, boolean updateParentWhenMissing, Runnable completion) {
+		synchronized (songUpdateLock) {
+			if (updateSong == null) {
+				startSongUpdateLocked(SongUpdateRequestQueue.request(path, updateParentWhenMissing, completion));
+				return;
+			}
+			pendingSongUpdates.enqueue(path, updateParentWhenMissing, completion);
+			logger.info("楽曲更新中のため、更新要求を予約しました: {}", path == null ? "ALL" : path);
 		}
 	}
 
 	public void updateTable(TableBar reader) {
-		if (updateSong == null || !updateSong.isAlive()) {
-			updateSong = new TableUpdateThread(reader);
-			updateSong.start();
-		} else {
-			logger.warn("楽曲更新中のため、更新要求は取り消されました");
+		synchronized (songUpdateLock) {
+			if (updateSong == null) {
+				updateSong = new TableUpdateThread(reader);
+				updateSong.start();
+			} else {
+				logger.warn("楽曲更新中のため、難易度表の更新要求は取り消されました");
+			}
+		}
+	}
+
+	private void startSongUpdateLocked(SongUpdateRequestQueue.Request request) {
+		activeSongUpdateRequest = request;
+		updateSong = new SongUpdateThread(request.path(), request.updateParentWhenMissing());
+		updateSong.start();
+	}
+
+	private void finishSongUpdateIfReady() {
+		SongUpdateRequestQueue.Request completed;
+		synchronized (songUpdateLock) {
+			if (updateSong == null || updateSong.isAlive()) {
+				return;
+			}
+			completed = activeSongUpdateRequest;
+			activeSongUpdateRequest = null;
+			updateSong = null;
+			SongUpdateRequestQueue.Request next = pendingSongUpdates.poll();
+			if (next != null) {
+				startSongUpdateLocked(next);
+			}
+		}
+
+		selector.getBarManager().updateBar();
+		if (completed == null) {
+			return;
+		}
+		for (Runnable completion : completed.completions()) {
+			try {
+				completion.run();
+			} catch (RuntimeException error) {
+				logger.warn("楽曲更新完了後の処理に失敗しました", error);
+			}
 		}
 	}
 
