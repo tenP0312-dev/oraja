@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="selected" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff5d8a" stop-opacity="0.62"/>
+      <stop offset="0.72" stop-color="#ff795e" stop-opacity="0.48"/>
+      <stop offset="1" stop-color="#ffe35a" stop-opacity="0.70"/>
+    </linearGradient>
+    <style>
+      .display { font-family: Arial, sans-serif; font-weight: 700; letter-spacing: 2px; }
+    </style>
+  </defs>
+  <path d="M1198 0h722v224h-722Z" fill="#1a102f" fill-opacity="0.99"/>
+  <path d="M1202 126h678l38 38v62h-716Z" fill="#2d194a" stroke="#ffe35a" stroke-width="4"/>
+  <text x="1240" y="184" class="display" font-size="38" fill="#fff8e9">TRACK LIST</text>
+  <path d="M1236 205h642" stroke="#744d91" stroke-width="3"/>
+
+  <path d="M860 178h260l24 24v238H860Z" fill="#211437" fill-opacity="0.97" stroke="#52e3d2" stroke-width="3"/>
+  <path d="m1000 202 92 53v106l-92 53-92-53V255Z" fill="#281842" fill-opacity="0.72" stroke="#744d91" stroke-width="2"/>
+  <path d="m1000 228 69 40v80l-69 40-69-40v-80Zm0 26 46 27v54l-46 27-46-27v-54Z" fill="none" stroke="#744d91" stroke-width="2" opacity="0.72"/>
+  <path d="M1000 202v212M908 255l184 106M1092 255 908 361" stroke="#744d91" stroke-width="1.5" opacity="0.58"/>
+  <text x="1000" y="432" text-anchor="middle" class="display" font-size="15" fill="#52e3d2">NOTE RADAR</text>
+
+  <path d="M1170 486h708l38 27-38 27h-708Z" fill="url(#selected)" stroke="#fff8e9" stroke-width="4"/>
+  <path d="m1882 499 18 14-18 14Z" fill="#281744"/>
+
+  <path d="M1202 126h678l38 38v836l-38 38h-678" fill="none" stroke="#ffe35a" stroke-width="4"/>
+</svg>

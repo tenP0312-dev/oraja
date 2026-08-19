@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3c205d" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#291744" stop-opacity="0.97"/>
+    </linearGradient>
+    <linearGradient id="art" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#52e3d2"/>
+      <stop offset="0.48" stop-color="#ffe35a"/>
+      <stop offset="1" stop-color="#ff5d8a"/>
+    </linearGradient>
+    <clipPath id="art-clip"><rect x="78" y="188" width="220" height="220" rx="18"/></clipPath>
+    <style>
+      .display { font-family: Arial, sans-serif; font-weight: 700; letter-spacing: 2px; }
+      .small { font-family: Arial, sans-serif; font-weight: 700; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <path d="M0 0h1920v116H0Z" fill="#1a102f" fill-opacity="0.98"/>
+  <path d="M0 112h1920" stroke="#ffe35a" stroke-width="5"/>
+  <path d="M36 24h484l50 50v30H36Z" fill="#ffe35a"/>
+  <text x="68" y="79" class="display" font-size="48" fill="#281744">POP//BELT</text>
+  <text x="610" y="54" class="small" font-size="22" fill="#52e3d2">MUSIC SELECT / DIRECTORY</text>
+  <text x="1118" y="54" text-anchor="end" class="small" font-size="16" fill="#cbbdda">F1 HELP</text>
+
+  <path d="M48 142h1092l34 34v250l-34 34H48Z" fill="url(#panel)" stroke="#ffe35a" stroke-width="4"/>
+  <path d="M48 142h316l42 42H48Z" fill="#ff5d8a"/>
+  <text x="78" y="180" class="display" font-size="25" fill="#281744">NOW SELECTING</text>
+
+  <rect x="78" y="188" width="220" height="220" rx="18" fill="url(#art)"/>
+  <g clip-path="url(#art-clip)">
+    <circle cx="264" cy="230" r="92" fill="#281744" fill-opacity="0.28"/>
+    <path d="M35 414 194 190l144 224Z" fill="#ff5d8a"/>
+    <path d="M118 414 266 212l126 202Z" fill="#ffe35a" fill-opacity="0.92"/>
+    <path d="m162 222 17 45 48 4-37 30 11 46-39-26-40 26 13-46-38-30 48-4Z" fill="#fff8e9"/>
+    <circle cx="210" cy="310" r="44" fill="#281744"/>
+    <text x="210" y="326" text-anchor="middle" class="display" font-size="35" fill="#ffe35a">ART</text>
+  </g>
+  <text x="188" y="436" text-anchor="middle" class="small" font-size="15" fill="#cbbdda">JACKET / BANNER</text>
+
+  <path d="M334 322h500l24 24v106H334Z" fill="#472765" fill-opacity="0.88"/>
+  <path d="M570 322v74M720 322v74M334 396h524" stroke="#744d91" stroke-width="2"/>
+
+  <path d="M48 480h1092l34 34v112l-34 34H48Z" fill="#281842" stroke="#52e3d2" stroke-width="4"/>
+  <text x="78" y="520" class="display" font-size="21" fill="#52e3d2">SCORE STATUS</text>
+  <path d="M78 540h1016" stroke="#744d91" stroke-width="2"/>
+
+  <path d="M48 674h1092l34 34v154l-34 34H48Z" fill="url(#panel)" stroke="#ff5d8a" stroke-width="4"/>
+  <text x="78" y="714" class="display" font-size="21" fill="#ff9db6">SONG DETAIL</text>
+  <path d="M78 734h1016" stroke="#744d91" stroke-width="2"/>
+
+  <path d="M48 908h1092l34 30v24H48Z" fill="#211437" stroke="#744d91" stroke-width="3"/>
+  <path d="M48 978h1092l34 30v44H48Z" fill="#1a102f" stroke="#52e3d2" stroke-width="4"/>
+
+  <path d="M1202 126h678l38 38v836l-38 38h-678Z" fill="#211437" fill-opacity="0.96" stroke="#ffe35a" stroke-width="4"/>
+</svg>
