@@ -5,6 +5,7 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
@@ -39,6 +40,170 @@ public class TableDataAccessor {
                 write(td);
             }
 		});		
+	}
+
+	/**
+	 * Fetches every configured table before replacing the local table cache set.
+	 * If any fetch, validation, or cache operation fails, the previous cache set
+	 * is kept or restored.
+	 *
+	 * @param urls configured difficulty table URLs
+	 * @return the update result
+	 */
+	public TableUpdateResult replaceAllTableData(String[] urls) {
+		return replaceAllTableData(urls,
+				url -> new DifficultyTableAccessor(tabledir, url).read());
+	}
+
+	TableUpdateResult replaceAllTableData(String[] urls, Function<String, TableData> loader) {
+		List<String> configuredUrls = urls == null
+				? List.of()
+				: Arrays.stream(urls)
+						.filter(Objects::nonNull)
+						.map(String::trim)
+						.filter(url -> !url.isEmpty())
+						.distinct()
+						.toList();
+		List<LoadedTable> loadedTables = configuredUrls.parallelStream()
+				.map(url -> loadTable(url, loader))
+				.toList();
+		List<String> failedUrls = loadedTables.stream()
+				.filter(loaded -> loaded.table() == null
+						|| !loaded.url().equals(loaded.table().getUrl()))
+				.map(LoadedTable::url)
+				.toList();
+		if (!failedUrls.isEmpty()) {
+			return TableUpdateResult.fetchFailure(failedUrls);
+		}
+
+		Path tableDirectory = Paths.get(tabledir);
+		Path stagingDirectory = null;
+		Path backupDirectory = null;
+		boolean keepBackup = false;
+		try {
+			Files.createDirectories(tableDirectory);
+			stagingDirectory = Files.createTempDirectory(tableDirectory, ".table-update-stage-");
+			for (LoadedTable loaded : loadedTables) {
+				Path stagedCache = stagingDirectory.resolve(getFileName(loaded.url()) + ".bmt");
+				TableData.write(stagedCache, loaded.table());
+				TableData stagedTable = TableData.read(stagedCache);
+				if (stagedTable == null || !loaded.url().equals(stagedTable.getUrl())) {
+					throw new IOException("Failed to write a valid table cache for " + loaded.url());
+				}
+			}
+
+			backupDirectory = Files.createTempDirectory(tableDirectory, ".table-update-backup-");
+			for (Path cache : listCacheFiles(tableDirectory)) {
+				Files.copy(cache, backupDirectory.resolve(cache.getFileName()));
+			}
+
+			try {
+				commitStagedCaches(tableDirectory, stagingDirectory);
+			} catch (IOException commitFailure) {
+				try {
+					restoreCachedTables(tableDirectory, backupDirectory);
+				} catch (IOException rollbackFailure) {
+					keepBackup = true;
+					commitFailure.addSuppressed(rollbackFailure);
+					logger.error("Difficulty table cache rollback failed; backup kept at {}",
+							backupDirectory, rollbackFailure);
+				}
+				throw commitFailure;
+			}
+			return TableUpdateResult.success(loadedTables.size());
+		} catch (IOException | RuntimeException e) {
+			logger.warn("Failed to replace difficulty table caches", e);
+			return TableUpdateResult.cacheFailure();
+		} finally {
+			deleteTemporaryDirectory(stagingDirectory);
+			if (!keepBackup) {
+				deleteTemporaryDirectory(backupDirectory);
+			}
+		}
+	}
+
+	private LoadedTable loadTable(String url, Function<String, TableData> loader) {
+		try {
+			return new LoadedTable(url, loader.apply(url));
+		} catch (Throwable e) {
+			logger.warn("Difficulty table - {} could not be loaded", url, e);
+			return new LoadedTable(url, null);
+		}
+	}
+
+	private void commitStagedCaches(Path tableDirectory, Path stagingDirectory) throws IOException {
+		Set<String> newCacheNames = new HashSet<>();
+		for (Path stagedCache : listCacheFiles(stagingDirectory)) {
+			newCacheNames.add(stagedCache.getFileName().toString());
+			moveReplacing(stagedCache, tableDirectory.resolve(stagedCache.getFileName()));
+		}
+		for (Path existingCache : listCacheFiles(tableDirectory)) {
+			if (!newCacheNames.contains(existingCache.getFileName().toString())) {
+				Files.delete(existingCache);
+			}
+		}
+	}
+
+	private void restoreCachedTables(Path tableDirectory, Path backupDirectory) throws IOException {
+		for (Path cache : listCacheFiles(tableDirectory)) {
+			Files.delete(cache);
+		}
+		for (Path backup : listCacheFiles(backupDirectory)) {
+			Files.copy(backup, tableDirectory.resolve(backup.getFileName()),
+					StandardCopyOption.REPLACE_EXISTING);
+		}
+	}
+
+	private static void moveReplacing(Path source, Path target) throws IOException {
+		try {
+			Files.move(source, target,
+					StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+		}
+	}
+
+	private static List<Path> listCacheFiles(Path directory) throws IOException {
+		try (Stream<Path> paths = Files.list(directory)) {
+			return paths.filter(Files::isRegularFile)
+					.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".bmt"))
+					.sorted()
+					.toList();
+		}
+	}
+
+	private static void deleteTemporaryDirectory(Path directory) {
+		if (directory == null) {
+			return;
+		}
+		try (Stream<Path> paths = Files.walk(directory)) {
+			for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+				Files.deleteIfExists(path);
+			}
+		} catch (IOException | RuntimeException e) {
+			logger.warn("Could not remove temporary difficulty table directory {}", directory, e);
+		}
+	}
+
+	private record LoadedTable(String url, TableData table) {
+	}
+
+	public record TableUpdateResult(boolean success, int updatedCount, List<String> failedUrls) {
+		public TableUpdateResult {
+			failedUrls = List.copyOf(failedUrls);
+		}
+
+		private static TableUpdateResult success(int updatedCount) {
+			return new TableUpdateResult(true, updatedCount, List.of());
+		}
+
+		private static TableUpdateResult fetchFailure(List<String> failedUrls) {
+			return new TableUpdateResult(false, 0, failedUrls);
+		}
+
+		private static TableUpdateResult cacheFailure() {
+			return new TableUpdateResult(false, 0, List.of());
+		}
 	}
 
 	public void loadNewTableData(String[] urls) {

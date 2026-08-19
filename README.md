@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.58**. Its Windows native-audio
+The current client source version is **0.4.14.59**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -50,6 +50,14 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.59
+
+Resource settings again provide one visible action to update every configured
+difficulty table. The client fetches and validates the complete configured set
+before replacing live caches. A successful update removes orphan `.bmt` files
+left by URL edits or removals while preserving unrelated files; any fetch,
+validation, or cache error keeps or restores the previous complete cache set.
 
 ## Arena oraja 0.4.14.58
 
@@ -421,7 +429,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.58
+  --output-dir /release/build-0.4.14.59
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
