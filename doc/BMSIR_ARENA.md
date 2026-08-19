@@ -7,8 +7,11 @@ judgement/gauge behavior.
 
 Version `0.4.14.61` advances Arena negotiation to protocol v8 for LN/CN/HCN.
 Casual/private rooms use the selected mode; rated Arena remains LN-only. All
-0.4.14.60 recovery features and the safe all-table update remain present.
-Binary publication and launcher-channel promotion remain separate operations.
+0.4.14.60 recovery features and the safe all-table update remain present. New
+BMS-IR body archives use portable readable names such as
+`[Artist]Song-0123abcd.zip`; legacy full-MD5 archives and retained multi-chart
+packages remain reusable after restart. Binary publication and launcher-channel
+promotion remain separate operations.
 
 Version `0.4.14.60` restores startup-settings search, gameplay-start render-
 stall mitigation and diagnostics, BMS-IR body-download recovery, and
@@ -35,7 +38,7 @@ and performs the post-install song update against only the configured download
 root with parent fallback disabled. Multi-package landing pages remain able to
 continue to the correct later archive candidate.
 
-The current development source saves new packages as portable readable
+Version `0.4.14.61` saves new packages as portable readable
 `[artist]title-<8-character-md5>.zip/.rar/.7z` files. It rediscovers those
 packages and legacy `bmsir-<full-md5>` packages after a client restart, then
 revalidates the requested chart before any network request. A retained

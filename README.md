@@ -18,11 +18,12 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-The current development source restores the ordinary LN/CN/HCN launcher
+Version 0.4.14.61 restores the ordinary LN/CN/HCN launcher
 selection and carries it through decoding, catalog keys, IR ranking, and score
 submission. Casual/private Arena rooms lock the host's selected mode for every
-participant; rated Arena explicitly remains LN. This protocol-v8 source change
-does not by itself publish a new body or plugin package.
+participant; rated Arena explicitly remains LN. New BMS-IR body archives use
+portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
+archives and retained multi-chart packages remain reusable after restart.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -48,7 +49,7 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
-The development source also recovers BMS-IR body downloads across a
+Version 0.4.14.61 also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
 `[Artist]Song-0123abcd.zip`, with the requested chart's eight-character MD5
