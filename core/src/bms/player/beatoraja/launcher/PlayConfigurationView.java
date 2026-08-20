@@ -28,12 +28,14 @@ import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRPhysicalFolderFilter;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.arena.bmsir.BMSIRScoreDatabaseExport;
 import bms.player.beatoraja.song.*;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -205,6 +207,14 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirHideMissingTableSongs;
 	@FXML
+	private CheckBox bmsirPhysicalFolderFilterEnabled;
+	@FXML
+	private VBox bmsirPhysicalFolderFilterOptions;
+	@FXML
+	private VBox bmsirVisiblePhysicalFolders;
+	@FXML
+	private Label bmsirPhysicalFolderEmpty;
+	@FXML
 	private ComboBox<String> bmsirArenaLanguage;
 	@FXML
 	private ComboBox<String> bmsirArenaTargetMode;
@@ -250,6 +260,10 @@ public class PlayConfigurationView implements Initializable {
 	private Button bmsirExportVanillaScoreDb;
 
 	private List<ComboBox<String>> bmsirNumpadCombos;
+	private final LinkedHashMap<String, CheckBox> bmsirPhysicalFolderChecks =
+			new LinkedHashMap<>();
+	private final LinkedHashSet<String> retainedVisiblePhysicalFolders =
+			new LinkedHashSet<>();
 	private List<CheckBox> bmsirSelectModeChecks;
 	private List<Tab> configurationTabOrder = List.of();
 	private List<Node> classicPlayerPanelNodes = List.of();
@@ -639,6 +653,12 @@ public class PlayConfigurationView implements Initializable {
 		bmsirJudgeRankSortSkinNoticeEnabled.disableProperty().bind(
 				bmsirJudgeRankSortEnabled.selectedProperty().not()
 		);
+		bmsirPhysicalFolderFilterOptions.visibleProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
+		bmsirPhysicalFolderFilterOptions.managedProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
 		bmsirNumpadCombos = List.of(
 				bmsirNumpad0,
 				bmsirNumpad1,
@@ -694,6 +714,12 @@ public class PlayConfigurationView implements Initializable {
 		httpDownloadSource.getItems().setAll(HttpDownloadProcessor.DOWNLOAD_SOURCES.keySet());
 		notesdisplaytiming.setValueFactoryValues(PlayerConfig.JUDGETIMING_MIN, PlayerConfig.JUDGETIMING_MAX, 0, 1);
 		resourceController.init(this);
+		resourceController.songPaths().addListener(
+				(ListChangeListener<String>) change -> {
+					rememberVisiblePhysicalFolderChecks();
+					rebuildPhysicalFolderChecks();
+				}
+		);
 		discordController.init(this);
 		obsController.init(this);
 		initializeConfigurationShell(arg1);
@@ -1411,6 +1437,26 @@ public class PlayConfigurationView implements Initializable {
 					entry[0], (CheckBox) requireNode(bmsirSpecificTab, entry[1])
 			));
 		}
+		StackPane physicalFolderOptions = sidebarMovable(
+				bmsirSpecificTab,
+				"bmsirPhysicalFolderFilterOptions"
+		);
+		physicalFolderOptions.setMinHeight(80);
+		VBox physicalFolderOptionsRow = sidebarWorkspaceRow(
+				bmsirSpecificTab,
+				"表示する物理フォルダー",
+				"Visible physical folders",
+				"チェックしたBMS Pathだけを選曲ルートへ残します。全チェックを外すと物理フォルダーをすべて隠せます。",
+				"Keep only checked BMS Paths at the Music Select root; leave all unchecked to hide every physical folder.",
+				physicalFolderOptions
+		);
+		VBox physicalFolderOptionsCard = sidebarSettingCard(physicalFolderOptionsRow);
+		physicalFolderOptionsCard.visibleProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
+		physicalFolderOptionsCard.managedProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
 
 		installSidebarPage(bmsirSpecificTab,
 				sidebarSettingCard(
@@ -1448,8 +1494,12 @@ public class PlayConfigurationView implements Initializable {
 								"When enabled, use the first integer from each table entry for song bars, selected-song LEVEL, and LEVEL sorting. Disable it to use the chart's #PLAYLEVEL."),
 						sidebarSettingRow(bmsirSpecificTab, "bmsirHideMissingTableSongs", "全難易度表で未所持曲を隠す", "Hide missing songs in every table",
 								"難易度表フォルダーでは、ローカルに所持していない曲を一覧から隠します。通常フォルダーや検索には影響しません。",
-								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches.")
+								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirPhysicalFolderFilterEnabled", "選曲ルートの物理フォルダーを絞り込む", "Limit physical folders at the Music Select root",
+								"OFFでは全物理フォルダーを表示します。ONではチェックしたBMS Pathだけを表示します。",
+								"OFF shows every physical folder; ON shows only checked BMS Paths.")
 				),
+				physicalFolderOptionsCard,
 				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaTargetMode", "Arenaターゲット", "Arena target",
 								"Arenaプレイ中のスコアグラフで比較対象にする相手を選びます。",
@@ -2756,6 +2806,49 @@ public class PlayConfigurationView implements Initializable {
 		updatePlayer();
 	}
 
+	private void rememberVisiblePhysicalFolderChecks() {
+		for (Map.Entry<String, CheckBox> entry : bmsirPhysicalFolderChecks.entrySet()) {
+			String path = entry.getKey();
+			retainedVisiblePhysicalFolders.removeIf(
+					stored -> BMSIRPhysicalFolderFilter.samePath(stored, path)
+			);
+			if (entry.getValue().isSelected()) {
+				retainedVisiblePhysicalFolders.add(path);
+			}
+		}
+	}
+
+	private void rebuildPhysicalFolderChecks() {
+		if (bmsirVisiblePhysicalFolders == null || resourceController == null) {
+			return;
+		}
+		bmsirPhysicalFolderChecks.clear();
+		bmsirVisiblePhysicalFolders.getChildren().clear();
+		for (String path : resourceController.songPaths()) {
+			if (path == null || path.isBlank()) {
+				continue;
+			}
+			CheckBox check = new CheckBox(path);
+			check.setMnemonicParsing(false);
+			check.setWrapText(true);
+			check.setMaxWidth(Double.MAX_VALUE);
+			check.setTooltip(new Tooltip(path));
+			check.setAccessibleText(
+					(englishUi ? "Show physical folder: " : "表示する物理フォルダー: ")
+							+ path
+			);
+			check.setSelected(BMSIRPhysicalFolderFilter.containsPath(
+					retainedVisiblePhysicalFolders,
+					path
+			));
+			bmsirPhysicalFolderChecks.put(path, check);
+			bmsirVisiblePhysicalFolders.getChildren().add(check);
+		}
+		boolean empty = bmsirPhysicalFolderChecks.isEmpty();
+		bmsirPhysicalFolderEmpty.setVisible(empty);
+		bmsirPhysicalFolderEmpty.setManaged(empty);
+	}
+
 	public void addPlayer() {
 		String[] ids = PlayerConfig.readAllPlayerID(config.getPlayerpath());
 		for(int i = 1;i < 1000;i++) {
@@ -2816,6 +2909,14 @@ public class PlayConfigurationView implements Initializable {
 		bmsirHideMissingTableSongs.setSelected(
 				player.isBmsirHideMissingTableSongs()
 		);
+		bmsirPhysicalFolderFilterEnabled.setSelected(
+				player.isBmsirPhysicalFolderFilterEnabled()
+		);
+		retainedVisiblePhysicalFolders.clear();
+		retainedVisiblePhysicalFolders.addAll(
+				Arrays.asList(player.getBmsirVisiblePhysicalFolderPaths())
+		);
+		rebuildPhysicalFolderChecks();
 		bmsirArenaLanguage.getSelectionModel().select(
 				"en".equals(player.getBmsirArenaLanguage()) ? 1 : 0
 		);
@@ -3016,6 +3117,15 @@ public class PlayConfigurationView implements Initializable {
 		);
 		player.setBmsirHideMissingTableSongs(
 				bmsirHideMissingTableSongs.isSelected()
+		);
+		player.setBmsirPhysicalFolderFilterEnabled(
+				bmsirPhysicalFolderFilterEnabled.isSelected()
+		);
+		player.setBmsirVisiblePhysicalFolderPaths(
+				bmsirPhysicalFolderChecks.entrySet().stream()
+						.filter(entry -> entry.getValue().isSelected())
+						.map(Map.Entry::getKey)
+						.toArray(String[]::new)
 		);
 		player.setBmsirArenaLanguage(
 				bmsirArenaLanguage.getSelectionModel().getSelectedIndex() == 1
