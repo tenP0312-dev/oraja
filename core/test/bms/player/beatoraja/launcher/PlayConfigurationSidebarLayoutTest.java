@@ -14,6 +14,7 @@ import java.util.ResourceBundle;
 import javafx.geometry.Pos;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,9 +94,10 @@ class PlayConfigurationSidebarLayoutTest {
 
 		Document resource = loadFxml("ResourceConfigurationView.fxml");
 		for (String id : new String[] {
-				"bmsroot", "addSongPathButton", "downloadDirectoryButton", "workDirectoryButton",
-				"tableurl", "updateAllTablesButton", "chooseTablesButton", "addTableUrlButton",
-				"updateDatabaseButton", "rebuildDatabaseButton"
+			"bmsroot", "addSongPathButton", "downloadDirectoryButton", "workDirectoryButton",
+			"tableurl", "updateAllTablesButton", "chooseTablesButton", "addTableUrlButton",
+			"updateDatabaseButton", "rebuildDatabaseButton",
+			"bmsirPhysicalFolderFilterEnabled", "bmsirPhysicalFolderFilterOptions"
 		}) {
 			assertNotNull(elementWithFxId(resource, id));
 		}
@@ -119,6 +121,20 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
+	void physicalFolderVisibilityControlsLiveInResourceSettings() throws Exception {
+		Document play = loadFxml("PlayConfigurationView.fxml");
+		Document resource = loadFxml("ResourceConfigurationView.fxml");
+
+		for (String id : new String[] {
+			"bmsirPhysicalFolderFilterEnabled", "bmsirPhysicalFolderFilterOptions",
+			"bmsirVisiblePhysicalFolders", "bmsirPhysicalFolderEmpty"
+		}) {
+			assertTrue(hasFxId(resource, id), () -> id + " must live in Resource settings");
+			assertFalse(hasFxId(play, id), () -> id + " must not remain in BMS-IR Features");
+		}
+	}
+
+	@Test
 	void everySidebarSourceIsAnInjectedControllerField() throws Exception {
 		assertInjectedNodes("VideoConfigurationView.fxml", VideoConfigurationView.class,
 				"bgaExpand", "bgaOp", "displayMode", "maxFps", "missLayerTime", "monitor", "resolution", "vSync");
@@ -132,7 +148,9 @@ class PlayConfigurationSidebarLayoutTest {
 		assertInjectedNodes("ResourceConfigurationView.fxml", ResourceConfigurationView.class,
 				"addSongPathButton", "addTableUrlButton", "bmsroot", "chooseTablesButton", "downloadDirectoryButton",
 				"rebuildDatabaseButton", "scanSongArchives", "tableurl", "updateDatabaseButton", "updatesong",
-				"updateAllTablesButton", "workDirectoryButton");
+				"updateAllTablesButton", "workDirectoryButton", "bmsirPhysicalFolderEmpty",
+				"bmsirPhysicalFolderFilterEnabled", "bmsirPhysicalFolderFilterOptions",
+				"bmsirVisiblePhysicalFolders");
 		assertInjectedNodes("MusicSelectConfigurationView.fxml", MusicSelectConfigurationView.class,
 				"analogScroll", "analogTicksPerScroll", "chartReplicationMode", "folderlamp", "maxsearchbar",
 				"randomselect", "scrolldurationhigh", "scrolldurationlow", "shownoexistingbar", "skipDecideScreen",
@@ -159,7 +177,6 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
 				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
-				"bmsirPhysicalFolderEmpty", "bmsirPhysicalFolderFilterEnabled", "bmsirPhysicalFolderFilterOptions",
 				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
 				"bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",
 				"bmsirNumpad4", "bmsirNumpad5", "bmsirNumpad6", "bmsirNumpad7", "bmsirNumpad8",
@@ -167,7 +184,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirSelectDifficultyDisplay", "bmsirSelectMode10k", "bmsirSelectMode14k", "bmsirSelectMode24k",
 				"bmsirSelectMode24kDp", "bmsirSelectMode5k", "bmsirSelectMode7k", "bmsirSelectMode9k",
 				"bmsirSelectModeAll", "bmsirStartButtonAction", "bmsirStartHerePreviewEnabled",
-				"bmsirTableLevelDisplayEnabled", "bmsirVisiblePhysicalFolders");
+				"bmsirTableLevelDisplayEnabled");
 	}
 
 	private Document loadFxml(String name) throws Exception {
@@ -189,6 +206,17 @@ class PlayConfigurationSidebarLayoutTest {
 			}
 		}
 		throw new AssertionError("Missing fx:id: " + id);
+	}
+
+	private static boolean hasFxId(Document document, String id) {
+		NodeList elements = document.getElementsByTagName("*");
+		for (int index = 0; index < elements.getLength(); index++) {
+			Element element = (Element) elements.item(index);
+			if (id.equals(element.getAttributeNS(FXML_NAMESPACE, "id"))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void assertInjectedNodes(String fxml, Class<?> controller, String... ids) throws Exception {

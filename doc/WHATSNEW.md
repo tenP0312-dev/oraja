@@ -1,3 +1,13 @@
+# Arena oraja 0.4.14.63
+
+- Moved the physical-folder visibility parent switch and BMS Path checklist
+  from BMS-IR Features to Resource directly below BMS Path.
+- Classic and Sidebar now expose the controls through the same Resource
+  controller.
+- Preserved saved per-player values, the default-OFF behavior, BMS Path
+  ordering, and every Music Select filtering and exclusion rule from
+  `0.4.14.62`.
+
 # Arena oraja 0.4.14.62
 
 - Added a default-OFF, per-player switch to limit physical folders shown at
