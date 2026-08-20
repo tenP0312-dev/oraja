@@ -25,12 +25,13 @@ participant; rated Arena explicitly remains LN. New BMS-IR body archives use
 portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
 archives and retained multi-chart packages remain reusable after restart.
 
-Version 0.4.14.62 adds an opt-in Music Select physical-folder filter under
-BMS-IR Features. Its parent switch is off by default. When enabled, one
-checkbox is shown for each configured BMS Path and only checked physical root
-folders remain at the selector root; leaving every box unchecked creates a
-table-only root without changing difficulty tables, courses, favorites,
-searches, or Arena folders. The choice is stored per player.
+The Resource settings include an opt-in physical-folder filter for Music
+Select directly below the configured BMS Paths. Its parent switch is off by
+default. When enabled, one checkbox is shown for each configured BMS Path and
+only checked physical root folders remain at the selector root; leaving every
+box unchecked creates a table-only root without changing difficulty tables,
+courses, favorites, searches, or Arena folders. The choice is stored per
+player.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore

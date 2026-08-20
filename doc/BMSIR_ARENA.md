@@ -92,13 +92,13 @@ preview, and default-OFF gameplay timing diagnostics. The diagnostic collector
 observes render, input dispatch, BGA, audio, GC, and memory pressure without
 changing scheduling or fallback policy.
 
-Version `0.4.14.62` adds a default-OFF physical-root filter under
-BMS-IR Features. Enabling it reveals the configured BMS Paths as checkboxes and
-keeps only checked physical root folders at the Music Select root. An empty
-selection intentionally hides every physical root for difficulty-table-only
-use. Descendants of a visible root remain unchanged, and difficulty tables,
-courses, favorites, commands, searches, Primary IR roots, and Arena candidates
-are never filtered by this setting.
+The current release source provides a default-OFF physical-root filter in
+Resource settings directly below the configured BMS Paths. Enabling it reveals
+those paths as checkboxes and keeps only checked physical root folders at the
+Music Select root. An empty selection intentionally hides every physical root
+for difficulty-table-only use. Descendants of a visible root remain unchanged,
+and difficulty tables, courses, favorites, commands, searches, Primary IR
+roots, and Arena candidates are never filtered by this setting.
 
 Version `0.4.14.53` keeps the native game-window title stable for OBS, exposes
 the resolved RANDOM lane placement to play skins during READY/PLAY, opens the
@@ -1218,12 +1218,12 @@ in mode-separated rankings, while rated Arena continues to lock LN.
   table folders even while HTTP downloads are enabled. Ordinary folders,
   searches, and Arena candidate lists keep their existing visibility behavior.
 - `選曲ルートに表示する物理フォルダを絞り込む` is a per-player,
-  default-OFF parent switch. OFF preserves every physical root. ON reveals one
-  checkbox for each configured BMS Path and shows only checked roots; zero
-  checks hides all physical roots. It filters only the Music Select root, so
-  descendants of an allowed root and all tables, courses, favorites, commands,
-  searches, Primary IR roots, and Arena candidate folders keep their existing
-  behavior.
+  default-OFF parent switch in Resource settings beside BMS Path. OFF preserves
+  every physical root. ON reveals one checkbox for each configured BMS Path and
+  shows only checked roots; zero checks hides all physical roots. It filters
+  only the Music Select root, so descendants of an allowed root and all tables,
+  courses, favorites, commands, searches, Primary IR roots, and Arena candidate
+  folders keep their existing behavior.
 - During ordinary PLAY with standard RANDOM, hold START and exactly one
   playable key through the DECIDE-to-READY transition to place the first source
   key on that destination. Once READY is visible the input has been captured
