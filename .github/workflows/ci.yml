@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: arena-oraja-${{ matrix.platform }}
-          path: dist/BMS-IR-Arena-oraja-0.4.14.62-${{ matrix.platform }}.jar
+          path: dist/BMS-IR-Arena-oraja-0.4.14.63-${{ matrix.platform }}.jar
           retention-days: 3
           if-no-files-found: error
 

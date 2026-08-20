@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.62**. Its Windows native-audio
+The current client source version is **0.4.14.63**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -25,13 +25,11 @@ participant; rated Arena explicitly remains LN. New BMS-IR body archives use
 portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
 archives and retained multi-chart packages remain reusable after restart.
 
-The Resource settings include an opt-in physical-folder filter for Music
-Select directly below the configured BMS Paths. Its parent switch is off by
-default. When enabled, one checkbox is shown for each configured BMS Path and
-only checked physical root folders remain at the selector root; leaving every
-box unchecked creates a table-only root without changing difficulty tables,
-courses, favorites, searches, or Arena folders. The choice is stored per
-player.
+Version 0.4.14.63 moves the 0.4.14.62 opt-in physical-folder filter from
+BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar now
+expose it from the same Resource controller. Saved per-player values, the
+default-OFF behavior, BMS Path ordering, and all Music Select filtering and
+exclusion rules remain unchanged.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -96,6 +94,13 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.63
+
+Moves the physical-folder visibility parent switch and BMS Path checklist from
+BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar use
+the same Resource controller; saved player settings and filtering behavior are
+unchanged.
 
 ## Arena oraja 0.4.14.62
 
@@ -500,7 +505,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.62
+  --output-dir /release/build-0.4.14.63
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
