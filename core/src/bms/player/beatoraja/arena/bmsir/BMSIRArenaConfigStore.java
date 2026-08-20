@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 17;
+        private int schemaVersion = 18;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -145,6 +145,8 @@ public final class BMSIRArenaConfigStore {
         private String[] selectKeyModes;
         private Boolean tableLevelDisplayEnabled;
         private Boolean hideMissingTableSongs;
+        private Boolean physicalFolderFilterEnabled;
+        private String[] visiblePhysicalFolderPaths;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
         private boolean unrestrictedRating = false;
@@ -208,6 +210,10 @@ public final class BMSIRArenaConfigStore {
                     player.isBmsirTableLevelDisplayEnabled();
             settings.hideMissingTableSongs =
                     player.isBmsirHideMissingTableSongs();
+            settings.physicalFolderFilterEnabled =
+                    player.isBmsirPhysicalFolderFilterEnabled();
+            settings.visiblePhysicalFolderPaths =
+                    player.getBmsirVisiblePhysicalFolderPaths();
             settings.enabled = player.isBmsirArenaEnabled();
             settings.server = player.getBmsirArenaServer();
             settings.unrestrictedRating = player.isBmsirArenaUnrestrictedRating();
@@ -298,6 +304,16 @@ public final class BMSIRArenaConfigStore {
             }
             if (hideMissingTableSongs != null) {
                 player.setBmsirHideMissingTableSongs(hideMissingTableSongs);
+            }
+            if (physicalFolderFilterEnabled != null) {
+                player.setBmsirPhysicalFolderFilterEnabled(
+                        physicalFolderFilterEnabled
+                );
+            }
+            if (visiblePhysicalFolderPaths != null) {
+                player.setBmsirVisiblePhysicalFolderPaths(
+                        visiblePhysicalFolderPaths
+                );
             }
             player.setBmsirArenaEnabled(enabled);
             player.setBmsirArenaServer(server);

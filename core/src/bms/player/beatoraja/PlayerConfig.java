@@ -13,6 +13,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
+import bms.player.beatoraja.arena.bmsir.BMSIRPhysicalFolderFilter;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.exceptions.PlayerConfigException;
 import bms.player.beatoraja.ir.IRConnectionManager;
@@ -269,6 +270,10 @@ public final class PlayerConfig {
 	private boolean bmsirTableLevelDisplayEnabled = true;
 	/** Hide unavailable song/course bars only while browsing difficulty tables. */
 	private boolean bmsirHideMissingTableSongs = false;
+	/** Apply a per-player allow-list to physical root folders in Music Select. */
+	private boolean bmsirPhysicalFolderFilterEnabled = false;
+	/** Configured BMS roots that remain visible while the physical-folder filter is ON. */
+	private String[] bmsirVisiblePhysicalFolderPaths = new String[0];
 
 	private IRConfig[] irconfig;
 
@@ -771,6 +776,25 @@ public final class PlayerConfig {
 
 	public void setBmsirHideMissingTableSongs(boolean enabled) {
 		bmsirHideMissingTableSongs = enabled;
+	}
+
+	public boolean isBmsirPhysicalFolderFilterEnabled() {
+		return bmsirPhysicalFolderFilterEnabled;
+	}
+
+	public void setBmsirPhysicalFolderFilterEnabled(boolean enabled) {
+		bmsirPhysicalFolderFilterEnabled = enabled;
+	}
+
+	public String[] getBmsirVisiblePhysicalFolderPaths() {
+		bmsirVisiblePhysicalFolderPaths = BMSIRPhysicalFolderFilter
+				.normalizeSelections(bmsirVisiblePhysicalFolderPaths);
+		return bmsirVisiblePhysicalFolderPaths.clone();
+	}
+
+	public void setBmsirVisiblePhysicalFolderPaths(String[] paths) {
+		bmsirVisiblePhysicalFolderPaths = BMSIRPhysicalFolderFilter
+				.normalizeSelections(paths);
 	}
 
 	/**
@@ -1609,6 +1633,7 @@ public final class PlayerConfig {
 		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);
 		setBmsirSelectDifficultyStage(bmsirSelectDifficultyStage);
 		setBmsirSelectKeyModes(bmsirSelectKeyModes);
+		setBmsirVisiblePhysicalFolderPaths(bmsirVisiblePhysicalFolderPaths);
 		setBmsirCoverControlMode(bmsirCoverControlMode);
 		setBmsirCoverChangeStep(bmsirCoverChangeStep);
 		setBmsirCoverHispeedAutoAdjustEnabled(

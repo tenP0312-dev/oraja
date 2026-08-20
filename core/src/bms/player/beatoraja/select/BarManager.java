@@ -16,6 +16,7 @@ import bms.player.beatoraja.arena.client.ArenaBar;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 import bms.player.beatoraja.arena.bmsir.BMSIRPrimaryIrTableCache;
+import bms.player.beatoraja.arena.bmsir.BMSIRPhysicalFolderFilter;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
@@ -372,7 +373,10 @@ public class BarManager {
             }
 			dir.clear();
 			sourcebars.clear();
-			l.addAll(new FolderBar(select, null, "e2977170").getChildren());
+			l.addAll(filterRootPhysicalFolders(
+					new FolderBar(select, null, "e2977170").getChildren(),
+					select.resource.getPlayerConfig()
+			));
 			l.add(courses);
 			l.addAll(favorites);
 			appendFolders.keySet().forEach((key) -> {
@@ -602,6 +606,23 @@ public class BarManager {
 		}
 		logger.warn("楽曲がありません");
 		return false;
+	}
+
+	static Bar[] filterRootPhysicalFolders(Bar[] bars, PlayerConfig config) {
+		if (bars == null || config == null
+				|| !config.isBmsirPhysicalFolderFilterEnabled()) {
+			return bars == null ? new Bar[0] : bars;
+		}
+		String[] visiblePaths = config.getBmsirVisiblePhysicalFolderPaths();
+		return Stream.of(bars)
+				.filter(bar -> !(bar instanceof FolderBar folder)
+						|| folder.getFolderData() != null
+						&& BMSIRPhysicalFolderFilter.isVisible(
+								folder.getFolderData().getPath(),
+								true,
+								visiblePaths
+						))
+				.toArray(Bar[]::new);
 	}
 
 	static boolean shouldHideUnavailableBars(
