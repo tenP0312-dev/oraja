@@ -159,6 +159,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
 				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
+				"bmsirPhysicalFolderEmpty", "bmsirPhysicalFolderFilterEnabled", "bmsirPhysicalFolderFilterOptions",
 				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
 				"bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",
 				"bmsirNumpad4", "bmsirNumpad5", "bmsirNumpad6", "bmsirNumpad7", "bmsirNumpad8",
@@ -166,7 +167,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"bmsirSelectDifficultyDisplay", "bmsirSelectMode10k", "bmsirSelectMode14k", "bmsirSelectMode24k",
 				"bmsirSelectMode24kDp", "bmsirSelectMode5k", "bmsirSelectMode7k", "bmsirSelectMode9k",
 				"bmsirSelectModeAll", "bmsirStartButtonAction", "bmsirStartHerePreviewEnabled",
-				"bmsirTableLevelDisplayEnabled");
+				"bmsirTableLevelDisplayEnabled", "bmsirVisiblePhysicalFolders");
 	}
 
 	private Document loadFxml(String name) throws Exception {

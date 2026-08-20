@@ -13,6 +13,7 @@ import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,18 +24,21 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// Nomination and presentation helpers read BMSIRArenaI18n's shared language.
+// Serialize this class with every test that temporarily switches that value.
+@ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.14.61", Version.getArenaClientVersion());
+        assertEquals("0.4.14.62", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
         assertEquals(8, BMSIRArenaClient.protocolVersion());
-        assertEquals("Arena oraja 0.4.14.61", Version.getArenaDisplayName());
+        assertEquals("Arena oraja 0.4.14.62", Version.getArenaDisplayName());
     }
 
     @Test

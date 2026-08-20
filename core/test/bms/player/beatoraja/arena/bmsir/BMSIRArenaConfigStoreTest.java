@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +44,8 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
         player.setBmsirTableLevelDisplayEnabled(false);
         player.setBmsirHideMissingTableSongs(true);
+        player.setBmsirPhysicalFolderFilterEnabled(true);
+        player.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-a", "songs-b"});
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -98,7 +101,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 17"));
+        assertTrue(serialized.contains("\"schemaVersion\": 18"));
         assertTrue(serialized.contains("\"startButtonAction\": \"difficulty\""));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
         assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
@@ -106,6 +109,9 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"selectKeyModes\": ["));
         assertTrue(serialized.contains("\"tableLevelDisplayEnabled\": false"));
         assertTrue(serialized.contains("\"hideMissingTableSongs\": true"));
+        assertTrue(serialized.contains("\"physicalFolderFilterEnabled\": true"));
+        assertTrue(serialized.contains("\"visiblePhysicalFolderPaths\": ["));
+        assertTrue(serialized.contains("\"songs-a\""));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -150,6 +156,8 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
         arenaBody.setBmsirTableLevelDisplayEnabled(false);
         arenaBody.setBmsirHideMissingTableSongs(true);
+        arenaBody.setBmsirPhysicalFolderFilterEnabled(true);
+        arenaBody.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-b"});
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -215,6 +223,11 @@ class BMSIRArenaConfigStoreTest {
         );
         assertFalse(restored.isBmsirTableLevelDisplayEnabled());
         assertTrue(restored.isBmsirHideMissingTableSongs());
+        assertTrue(restored.isBmsirPhysicalFolderFilterEnabled());
+        assertArrayEquals(
+                new String[]{"songs-b"},
+                restored.getBmsirVisiblePhysicalFolderPaths()
+        );
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,
@@ -375,6 +388,8 @@ class BMSIRArenaConfigStoreTest {
                 java.util.Arrays.asList(restored.getBmsirSelectKeyModes())
         );
         assertTrue(restored.isBmsirTableLevelDisplayEnabled());
+        assertFalse(restored.isBmsirPhysicalFolderFilterEnabled());
+        assertArrayEquals(new String[0], restored.getBmsirVisiblePhysicalFolderPaths());
         assertEquals(
                 PlayerConfig.BMSIR_COVER_CONTROL_ORAJA,
                 restored.getBmsirCoverControlMode()

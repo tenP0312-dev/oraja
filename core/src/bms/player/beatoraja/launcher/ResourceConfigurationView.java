@@ -18,6 +18,7 @@ import bms.player.beatoraja.TableDataAccessor;
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -177,6 +178,10 @@ public class ResourceConfigurationView implements Initializable {
 				clipboard.setContent(content);
 			}
 		});
+	}
+
+	ObservableList<String> songPaths() {
+		return bmsroot.getItems();
 	}
 
     public void update(Config config) {

@@ -1,3 +1,15 @@
+# Arena oraja 0.4.14.62
+
+- Added a default-OFF, per-player switch to limit physical folders shown at
+  the Music Select root.
+- When enabled, the launcher shows one checkbox per configured BMS Path and
+  keeps only checked physical roots. Leaving all boxes unchecked creates a
+  difficulty-table-only root.
+- Difficulty tables, courses, favorites, commands, searches, Primary IR
+  roots, and Arena candidate folders are never filtered by this setting.
+- Retains the protocol-v8 LN/CN/HCN behavior, readable archive names, and all
+  recovery features shipped in 0.4.14.61.
+
 # Arena oraja 0.4.14.61
 
 - Restored the ordinary `LONG NOTE` / `CHARGE NOTE` / `HELL CHARGE NOTE`

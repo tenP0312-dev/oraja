@@ -573,6 +573,16 @@
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_TABLE_LEVEL_DISPLAY_DESCRIPTION" wrapText="true" />
 	                    <CheckBox fx:id="bmsirHideMissingTableSongs" mnemonicParsing="false" text="%BMSIR_HIDE_MISSING_TABLE_SONGS" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_HIDE_MISSING_TABLE_SONGS_DESCRIPTION" wrapText="true" />
+	                    <CheckBox fx:id="bmsirPhysicalFolderFilterEnabled" mnemonicParsing="false" text="%BMSIR_PHYSICAL_FOLDER_FILTER_ENABLED" />
+	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_PHYSICAL_FOLDER_FILTER_DESCRIPTION" wrapText="true" />
+	                    <VBox fx:id="bmsirPhysicalFolderFilterOptions" spacing="8.0">
+	                        <padding>
+	                            <Insets left="20.0" />
+	                        </padding>
+	                        <Label maxWidth="680.0" text="%BMSIR_VISIBLE_PHYSICAL_FOLDERS" wrapText="true" />
+	                        <VBox fx:id="bmsirVisiblePhysicalFolders" spacing="6.0" />
+	                        <Label fx:id="bmsirPhysicalFolderEmpty" maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_PHYSICAL_FOLDER_EMPTY" wrapText="true" />
+	                    </VBox>
 	                    <Separator />
 	                    <Label text="%BMSIR_ARENA_TARGET_MODE" />
 	                    <ComboBox fx:id="bmsirArenaTargetMode" prefWidth="180.0" />
