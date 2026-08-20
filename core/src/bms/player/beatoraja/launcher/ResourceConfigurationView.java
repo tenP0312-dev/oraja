@@ -13,12 +13,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import bms.player.beatoraja.Config;
+import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.TableDataAccessor;
+import bms.player.beatoraja.arena.bmsir.BMSIRPhysicalFolderFilter;
 
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.ObservableList;
+import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -64,17 +66,37 @@ public class ResourceConfigurationView implements Initializable {
 	private Button updateDatabaseButton;
 	@FXML
 	private Button rebuildDatabaseButton;
+	@FXML
+	private CheckBox bmsirPhysicalFolderFilterEnabled;
+	@FXML
+	private VBox bmsirPhysicalFolderFilterOptions;
+	@FXML
+	private VBox bmsirVisiblePhysicalFolders;
+	@FXML
+	private Label bmsirPhysicalFolderEmpty;
 
 	private Config config;
 	private ResourceBundle resources;
 	private final LinkedHashSet<String> availableTableUrls = new LinkedHashSet<>();
+	private final LinkedHashMap<String, CheckBox> bmsirPhysicalFolderChecks =
+			new LinkedHashMap<>();
+	private final LinkedHashSet<String> retainedVisiblePhysicalFolders =
+			new LinkedHashSet<>();
 	private PlayConfigurationView main;
 	private String downloadDirectory;
 	private String workDirectory;
+	private boolean englishUi;
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		resources = arg1;
+		englishUi = !"ja".equalsIgnoreCase(arg1.getLocale().getLanguage());
+		bmsirPhysicalFolderFilterOptions.visibleProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
+		bmsirPhysicalFolderFilterOptions.managedProperty().bind(
+				bmsirPhysicalFolderFilterEnabled.selectedProperty()
+		);
 		bmsroot.setCellFactory(new Callback<>() {
 			@Override
 			public ListCell<String> call(ListView<String> param) {
@@ -178,10 +200,75 @@ public class ResourceConfigurationView implements Initializable {
 				clipboard.setContent(content);
 			}
 		});
+		bmsroot.getItems().addListener(
+				(ListChangeListener<String>) change -> {
+					rememberVisiblePhysicalFolderChecks();
+					rebuildPhysicalFolderChecks();
+				}
+		);
 	}
 
-	ObservableList<String> songPaths() {
-		return bmsroot.getItems();
+	void updatePlayer(PlayerConfig player) {
+		bmsirPhysicalFolderFilterEnabled.setSelected(
+				player.isBmsirPhysicalFolderFilterEnabled()
+		);
+		retainedVisiblePhysicalFolders.clear();
+		retainedVisiblePhysicalFolders.addAll(
+				Arrays.asList(player.getBmsirVisiblePhysicalFolderPaths())
+		);
+		rebuildPhysicalFolderChecks();
+	}
+
+	void commitPlayer(PlayerConfig player) {
+		player.setBmsirPhysicalFolderFilterEnabled(
+				bmsirPhysicalFolderFilterEnabled.isSelected()
+		);
+		player.setBmsirVisiblePhysicalFolderPaths(
+				bmsirPhysicalFolderChecks.entrySet().stream()
+						.filter(entry -> entry.getValue().isSelected())
+						.map(Map.Entry::getKey)
+						.toArray(String[]::new)
+		);
+	}
+
+	private void rememberVisiblePhysicalFolderChecks() {
+		for (Map.Entry<String, CheckBox> entry : bmsirPhysicalFolderChecks.entrySet()) {
+			String path = entry.getKey();
+			retainedVisiblePhysicalFolders.removeIf(
+					stored -> BMSIRPhysicalFolderFilter.samePath(stored, path)
+			);
+			if (entry.getValue().isSelected()) {
+				retainedVisiblePhysicalFolders.add(path);
+			}
+		}
+	}
+
+	private void rebuildPhysicalFolderChecks() {
+		bmsirPhysicalFolderChecks.clear();
+		bmsirVisiblePhysicalFolders.getChildren().clear();
+		for (String path : bmsroot.getItems()) {
+			if (path == null || path.isBlank()) {
+				continue;
+			}
+			CheckBox check = new CheckBox(path);
+			check.setMnemonicParsing(false);
+			check.setWrapText(true);
+			check.setMaxWidth(Double.MAX_VALUE);
+			check.setTooltip(new Tooltip(path));
+			check.setAccessibleText(
+					(englishUi ? "Show physical folder: " : "表示する物理フォルダー: ")
+							+ path
+			);
+			check.setSelected(BMSIRPhysicalFolderFilter.containsPath(
+					retainedVisiblePhysicalFolders,
+					path
+			));
+			bmsirPhysicalFolderChecks.put(path, check);
+			bmsirVisiblePhysicalFolders.getChildren().add(check);
+		}
+		boolean empty = bmsirPhysicalFolderChecks.isEmpty();
+		bmsirPhysicalFolderEmpty.setVisible(empty);
+		bmsirPhysicalFolderEmpty.setManaged(empty);
 	}
 
     public void update(Config config) {

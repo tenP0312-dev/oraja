@@ -24,12 +24,13 @@ submission. Casual/private Arena rooms lock the host's selected mode for every
 participant; rated Arena explicitly remains LN. This protocol-v8 source change
 does not by itself publish a new body or plugin package.
 
-The BMS-IR Features settings now include an opt-in physical-folder filter for
-Music Select. Its parent switch is off by default. When enabled, one checkbox
-is shown for each configured BMS Path and only checked physical root folders
-remain at the selector root; leaving every box unchecked creates a table-only
-root without changing difficulty tables, courses, favorites, searches, or
-Arena folders. The choice is stored per player.
+The Resource settings now include an opt-in physical-folder filter for Music
+Select next to the configured BMS Paths. Its parent switch is off by default.
+When enabled, one checkbox is shown for each configured BMS Path and only
+checked physical root folders remain at the selector root; leaving every box
+unchecked creates a table-only root without changing difficulty tables,
+courses, favorites, searches, or Arena folders. The choice is stored per
+player.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
