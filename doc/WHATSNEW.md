@@ -1,3 +1,13 @@
+# Arena oraja 0.4.14.66
+
+- Republished the Windows body as a complete native-audio repair baseline.
+- Included the required PortAudio/JPortAudio DLLs and their pinned sources,
+  licenses, build manifest, and SPDX SBOM in the same body release manifest.
+- Launcher `0.2.28` now restores those files when they are missing from an
+  existing installation while applying the current body update.
+- Preserved the `0.4.14.65` client behavior. Launcher `0.2.28` and plugin
+  `0.0.72` are otherwise unchanged.
+
 # Arena oraja 0.4.14.65
 
 - Removed the non-working pseudo-FHS switch and restored ordinary
