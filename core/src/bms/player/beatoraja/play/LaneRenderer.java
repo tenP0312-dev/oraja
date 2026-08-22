@@ -61,8 +61,6 @@ public class LaneRenderer {
 	private int currentduration;
 	private double currentscroll = 1.0;
 	private final boolean bmsirLr2HispeedFixEnabled;
-	private boolean pseudoFhsLatched;
-	private int lockedGreen;
 
 	private double basebpm;
 	private double nowbpm;
@@ -205,31 +203,14 @@ public class LaneRenderer {
 	}
 
 	public int getDuration() {
-		if (bmsirLr2HispeedFixEnabled) {
-			return pseudoFhsLatched
-					? lockedGreen
-					: BMSIRHispeed.equivalentGreen(playconfig);
-		}
 		return playconfig.getDuration();
 	}
 
 	public void setDuration(int gvalue) {
-		playconfig.setDuration(Math.max(PlayConfig.DURATION_MIN, gvalue));
 		if (bmsirLr2HispeedFixEnabled) {
-			if (pseudoFhsLatched) {
-				lockedGreen = playconfig.getDuration();
-			} else {
-				playconfig.setBmsirBaseScrollSpeed(
-						BMSIRHispeed.baseScrollSpeedForGreen(
-								playconfig,
-								playconfig.getDuration()
-						)
-				);
-				playconfig.setDuration(BMSIRHispeed.equivalentGreen(playconfig));
-			}
-			updateStartHerePreviewMetrics();
 			return;
 		}
+		playconfig.setDuration(Math.max(PlayConfig.DURATION_MIN, gvalue));
 		setLanecover(playconfig.getLanecover());
 	}
 
@@ -300,8 +281,7 @@ public class LaneRenderer {
 	) {
 		setLanecoverValue(lanecover);
 		if (bmsirLr2HispeedFixEnabled) {
-			// LR2 mode keeps the applied speed independent from cover. The
-			// pseudo-FHS path derives speed from lockedGreen when rendered.
+			// LR2 mode keeps the applied speed independent from cover.
 		} else if (recalculateHispeed && Double.isFinite(targetBpm) && targetBpm > 0.0) {
 			resetHispeed(targetBpm);
 		} else {
@@ -383,23 +363,8 @@ public class LaneRenderer {
 			f = hispeedmargin * (b ? 1 : -1);
 		}
 		if (playconfig.getHispeed() + f > 0 && playconfig.getHispeed() + f < 20) {
-			boolean relock = bmsirLr2HispeedFixEnabled && pseudoFhsLatched;
-			if (relock) {
-				pseudoFhsLatched = false;
-			}
 			playconfig.setHispeed(playconfig.getHispeed() + f);
-			if (relock) {
-				lockedGreen = BMSIRHispeed.currentDuration(
-						appliedHispeed(nowbpm, currentscroll),
-						nowbpm,
-						currentscroll,
-						playconfig.isEnablelanecover(),
-						playconfig.getLanecover(),
-						playconfig.isEnablelift(),
-						playconfig.getLift()
-				);
-				pseudoFhsLatched = true;
-			} else if (!bmsirLr2HispeedFixEnabled) {
+			if (!bmsirLr2HispeedFixEnabled) {
 				syncFixedDurationToHispeed();
 			}
 			updateStartHerePreviewMetrics();
@@ -417,28 +382,16 @@ public class LaneRenderer {
 		return bmsirLr2HispeedFixEnabled;
 	}
 
-	public boolean isPseudoFhsLatched() {
-		return pseudoFhsLatched;
-	}
-
-	public boolean togglePseudoFhsLatch() {
-		if (!bmsirLr2HispeedFixEnabled) {
-			return false;
-		}
-		if (pseudoFhsLatched) {
-			pseudoFhsLatched = false;
-		} else {
-			lockedGreen = Math.max(PlayConfig.DURATION_MIN, currentduration);
-			playconfig.setDuration(lockedGreen);
-			pseudoFhsLatched = true;
-		}
-		updateStartHerePreviewMetrics();
-		return pseudoFhsLatched;
-	}
-
 	public void setBmsirBaseScrollSpeed(int value) {
 		playconfig.setBmsirBaseScrollSpeed(
 				BMSIRHispeed.clampBaseScrollSpeed(value)
+		);
+		updateStartHerePreviewMetrics();
+	}
+
+	public void setBmsirHispeedReferenceBpm(int value) {
+		playconfig.setBmsirHispeedReferenceBpm(
+				BMSIRHispeed.clampReferenceBpm(value)
 		);
 		updateStartHerePreviewMetrics();
 	}
@@ -447,20 +400,10 @@ public class LaneRenderer {
 		if (!bmsirLr2HispeedFixEnabled) {
 			return playconfig.getHispeed();
 		}
-		if (pseudoFhsLatched) {
-			return BMSIRHispeed.hispeedForDuration(
-					lockedGreen,
-					bpm,
-					scroll,
-					playconfig.isEnablelanecover(),
-					playconfig.getLanecover(),
-					playconfig.isEnablelift(),
-					playconfig.getLift()
-			);
-		}
 		return BMSIRHispeed.appliedHispeed(
 				playconfig.getHispeed(),
 				playconfig.getBmsirBaseScrollSpeed(),
+				playconfig.getBmsirHispeedReferenceBpm(),
 				playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF,
 				basebpm
 		);

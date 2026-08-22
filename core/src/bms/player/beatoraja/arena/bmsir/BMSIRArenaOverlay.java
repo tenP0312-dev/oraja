@@ -224,6 +224,7 @@ public final class BMSIRArenaOverlay {
         renderModeBanner();
         renderPhaseBanner(false);
         renderPinnedRoomReady(config);
+		renderSpeedBlock(false);
         ImGui.separator();
         if (ImGui.beginChild("##bmsir-arena-scroll-content", 0, 0, false)
                 && ImGui.beginTabBar("##bmsir-arena-tabs")) {
@@ -1021,37 +1022,52 @@ public final class BMSIRArenaOverlay {
 
     private static void renderSpeedBlock(boolean compact) {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
-        if (config == null || !config.isBmsirLr2HispeedFixEnabled()) {
+        if (config == null) {
             return;
 		}
 		int modeId = BMSIRArenaClient.currentPlayModeForLayout();
 		PlayConfig saved = config.getPlayConfig(modeId).getPlayconfig();
 		LaneRenderer live = BMSIRArenaClient.currentLaneRenderer(modeId);
-		PlayConfig active = live != null && live.isBmsirLr2HispeedFixEnabled()
+		boolean enabled = live != null
+				? live.isBmsirLr2HispeedFixEnabled()
+				: config.isBmsirLr2HispeedFixEnabled();
+		PlayConfig active = live != null && enabled
 				? live.getPlayConfig()
 				: saved;
 		int base = active.getBmsirBaseScrollSpeed();
-		int green = live != null
-				? live.getDuration()
-				: BMSIRHispeed.equivalentGreen(active);
-        String latch = live != null && live.isPseudoFhsLatched()
-                ? " / FHS LATCHED"
-                : "";
+		int referenceBpm = active.getBmsirHispeedReferenceBpm();
 
         ImGui.separator();
+		ImBoolean enabledValue = new ImBoolean(enabled);
+		ImGui.beginDisabled(live != null);
+		if (ImGui.checkbox(
+				t("LR2ハイスピ固定", "LR2 fixed HI-SPEED"),
+				enabledValue
+		)) {
+			enabled = enabledValue.get();
+			config.setBmsirLr2HispeedFixEnabled(enabled);
+			saveSettingsOrWarn();
+		}
+		ImGui.endDisabled();
+		if (live != null) {
+			ImGui.sameLine();
+			ImGui.textDisabled(t("次のプレイから変更できます", "Can be changed for the next play"));
+		}
+		if (!enabled) {
+			return;
+		}
         ImGui.text(String.format(
                 Locale.ROOT,
-                "SPEED  %s / FIX %s%s",
+                "SPEED  %s / FIX %s",
                 BMSIRArenaClient.currentPlayModeLabel(),
-                hispeedFixLabel(active.getFixhispeed()),
-                latch
+                hispeedFixLabel(active.getFixhispeed())
         ));
         ImGui.text(String.format(
                 Locale.ROOT,
-                "BASE %d / HS %.2f / GN %d",
+                "BASE %d / REF %d BPM / HS %.2f",
                 base,
-                active.getHispeed(),
-                green
+                referenceBpm,
+                active.getHispeed()
         ));
         String suffix = compact ? "-compact" : "-full";
         if (ImGui.smallButton("-##speed-base-minus" + suffix)) {
@@ -1064,34 +1080,15 @@ public final class BMSIRArenaOverlay {
             applyBaseScroll(config, modeId, base + 1, live);
         }
         ImGui.sameLine();
-        if (ImGui.smallButton("-##speed-green-minus" + suffix)) {
-            applyGreen(config, modeId, Math.max(PlayConfig.DURATION_MIN, green - 1), active, live);
+        if (ImGui.smallButton("-##speed-reference-minus" + suffix)) {
+            applyReferenceBpm(config, modeId, referenceBpm - 1, live);
         }
         ImGui.sameLine();
-        ImGui.text("GN");
+        ImGui.text("REF BPM");
         ImGui.sameLine();
-        if (ImGui.smallButton("+##speed-green-plus" + suffix)) {
-            applyGreen(config, modeId, Math.min(PlayConfig.DURATION_MAX, green + 1), active, live);
+        if (ImGui.smallButton("+##speed-reference-plus" + suffix)) {
+            applyReferenceBpm(config, modeId, referenceBpm + 1, live);
         }
-    }
-
-	private static void applyGreen(
-			PlayerConfig config,
-			int modeId,
-			int green,
-			PlayConfig active,
-			LaneRenderer live
-	) {
-		if (live != null && live.isPseudoFhsLatched()) {
-			live.setDuration(green);
-			return;
-		}
-		applyBaseScroll(
-                config,
-                modeId,
-                BMSIRHispeed.baseScrollSpeedForGreen(active, green),
-                live
-        );
     }
 
     private static void applyBaseScroll(
@@ -1107,6 +1104,21 @@ public final class BMSIRArenaOverlay {
         }
         saveSettingsOrWarn();
     }
+
+	private static void applyReferenceBpm(
+			PlayerConfig config,
+			int modeId,
+			int referenceBpm,
+			LaneRenderer live
+	) {
+		int clamped = BMSIRHispeed.clampReferenceBpm(referenceBpm);
+		config.getPlayConfig(modeId).getPlayconfig()
+				.setBmsirHispeedReferenceBpm(clamped);
+		if (live != null && live.isBmsirLr2HispeedFixEnabled()) {
+			live.setBmsirHispeedReferenceBpm(clamped);
+		}
+		saveSettingsOrWarn();
+	}
 
     static String hispeedFixLabel(int fix) {
         return switch (fix) {
