@@ -1,3 +1,17 @@
+# Arena oraja 0.4.14.65
+
+- Removed the non-working pseudo-FHS switch and restored ordinary
+  START+SELECT/LIFT controls.
+- Removed the BMS-IR-specific equivalent-green editor/readout. Ordinary skin
+  green number reporting continues to use actual BPM, cover, and LIFT.
+- Replaced the fixed 7KEYS label with a selectable BMS-IR settings mode.
+- Added independent 50–400 reference-BPM values per play mode, defaulting to
+  150, alongside the existing base scroll values.
+- Added LR2-style fixed-HI-SPEED ON/OFF, base-scroll, and reference-BPM
+  controls to both full and compact Music Select Arena overlays.
+- Preserved NO SPEED authority and replay snapshots. Launcher `0.2.28` and
+  plugin `0.0.72` are unchanged.
+
 # Arena oraja 0.4.14.64
 
 - Added a default-OFF LR2-style fixed-HI-SPEED override with independent base
