@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.65**. Its Windows native-audio
+The current client source version is **0.4.14.66**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -30,6 +30,12 @@ BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar now
 expose it from the same Resource controller. Saved per-player values, the
 default-OFF behavior, BMS Path ordering, and all Music Select filtering and
 exclusion rules remain unchanged.
+
+Version 0.4.14.66 republishes the Windows body as a complete repair baseline.
+The same signed body release now carries the PortAudio/JPortAudio DLLs plus
+their pinned sources, licenses, build manifest, and SPDX SBOM. Launcher 0.2.28
+therefore restores any missing native-audio files while applying the current
+body update. Client behavior remains the same as 0.4.14.65.
 
 Version 0.4.14.65 refines the default-off LR2-style fixed-HI-SPEED
 override. Each play mode keeps an independent base scroll value, where 100 is
@@ -104,6 +110,15 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.66
+
+Republishes the Windows body as a complete native-audio repair baseline. The
+body manifest includes the required PortAudio/JPortAudio DLLs together with
+their pinned sources, licenses, build manifest, and SPDX SBOM, so Launcher
+0.2.28 downloads any files missing from an existing installation. Client
+behavior, Launcher `0.2.28`, and plugin `0.0.72` are otherwise unchanged from
+0.4.14.65.
 
 ## Arena oraja 0.4.14.65
 
@@ -534,7 +549,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.65
+  --output-dir /release/build-0.4.14.66
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
