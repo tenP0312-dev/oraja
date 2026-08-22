@@ -340,6 +340,10 @@ public final class PlayerConfig {
 	private String bmsirCoverControlMode = BMSIR_COVER_CONTROL_ORAJA;
 	private int bmsirCoverChangeStep = 10;
 	private boolean bmsirCoverHispeedAutoAdjustEnabled = false;
+	/** Override the legacy fixed-HI-SPEED calculation with the LR2 150 BPM base. */
+	private boolean bmsirLr2HispeedFixEnabled = false;
+	/** Allow a short START+SELECT chord to latch the current green number. */
+	private boolean bmsirPseudoFhsEnabled = false;
 	/** Keep the Arena-added JUDGE sorter in the normal Music Select cycle. */
 	private boolean bmsirJudgeRankSortEnabled = true;
 	/** Explain the TITLE image fallback when JUDGE sort is selected. */
@@ -813,6 +817,45 @@ public final class PlayerConfig {
 	public void setBmsirStartHerePreviewEnabled(boolean enabled) {
 		for (Mode mode : bmsirSpecificPlayModes()) {
 			getPlayConfig(mode).getPlayconfig().setStartHerePreviewEnabled(enabled);
+		}
+	}
+
+	public boolean isBmsirLr2HispeedFixEnabled() {
+		return bmsirLr2HispeedFixEnabled;
+	}
+
+	public void setBmsirLr2HispeedFixEnabled(boolean enabled) {
+		bmsirLr2HispeedFixEnabled = enabled;
+	}
+
+	public boolean isBmsirPseudoFhsEnabled() {
+		return bmsirPseudoFhsEnabled;
+	}
+
+	public void setBmsirPseudoFhsEnabled(boolean enabled) {
+		bmsirPseudoFhsEnabled = enabled;
+	}
+
+	public int[] getBmsirBaseScrollSpeeds() {
+		Mode[] modes = bmsirSpecificPlayModes();
+		int[] values = new int[modes.length];
+		for (int index = 0; index < modes.length; index++) {
+			values[index] = getPlayConfig(modes[index])
+					.getPlayconfig()
+					.getBmsirBaseScrollSpeed();
+		}
+		return values;
+	}
+
+	public void setBmsirBaseScrollSpeeds(int[] values) {
+		if (values == null) {
+			return;
+		}
+		Mode[] modes = bmsirSpecificPlayModes();
+		for (int index = 0; index < Math.min(modes.length, values.length); index++) {
+			PlayConfig playConfig = getPlayConfig(modes[index]).getPlayconfig();
+			playConfig.setBmsirBaseScrollSpeed(values[index]);
+			playConfig.validate();
 		}
 	}
 

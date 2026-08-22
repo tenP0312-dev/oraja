@@ -176,6 +176,8 @@ class PlayConfigurationSidebarLayoutTest {
 				"ipfsurl", "overrideDownloadURL", "soundpath", "usecim",
 				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
+				"bmsirLr2HispeedFixEnabled", "bmsirPseudoFhsEnabled", "bmsirHispeedMode",
+				"bmsirBaseScrollSpeed", "bmsirEquivalentGreenNumber",
 				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
 				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
 				"bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",

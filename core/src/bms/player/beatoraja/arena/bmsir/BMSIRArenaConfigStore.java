@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 18;
+        private int schemaVersion = 19;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -171,6 +171,9 @@ public final class BMSIRArenaConfigStore {
         private String coverControlMode;
         private Integer coverChangeStep;
         private boolean coverHispeedAutoAdjustEnabled = false;
+        private Boolean lr2HispeedFixEnabled;
+        private Boolean pseudoFhsEnabled;
+        private int[] baseScrollSpeeds;
         private Boolean judgeRankSortEnabled;
         private Boolean judgeRankSortSkinNoticeEnabled;
         private String[] numpadActions;
@@ -240,6 +243,10 @@ public final class BMSIRArenaConfigStore {
             settings.coverChangeStep = player.getBmsirCoverChangeStep();
             settings.coverHispeedAutoAdjustEnabled =
                     player.isBmsirCoverHispeedAutoAdjustEnabled();
+            settings.lr2HispeedFixEnabled =
+                    player.isBmsirLr2HispeedFixEnabled();
+            settings.pseudoFhsEnabled = player.isBmsirPseudoFhsEnabled();
+            settings.baseScrollSpeeds = player.getBmsirBaseScrollSpeeds();
             settings.judgeRankSortEnabled =
                     player.isBmsirJudgeRankSortEnabled();
             settings.judgeRankSortSkinNoticeEnabled =
@@ -352,6 +359,15 @@ public final class BMSIRArenaConfigStore {
             player.setBmsirCoverHispeedAutoAdjustEnabled(
                     coverHispeedAutoAdjustEnabled
             );
+            if (lr2HispeedFixEnabled != null) {
+                player.setBmsirLr2HispeedFixEnabled(lr2HispeedFixEnabled);
+            }
+            if (pseudoFhsEnabled != null) {
+                player.setBmsirPseudoFhsEnabled(pseudoFhsEnabled);
+            }
+            if (baseScrollSpeeds != null) {
+                player.setBmsirBaseScrollSpeeds(baseScrollSpeeds);
+            }
             if (judgeRankSortEnabled != null) {
                 player.setBmsirJudgeRankSortEnabled(judgeRankSortEnabled);
             }

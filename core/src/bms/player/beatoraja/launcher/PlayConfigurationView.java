@@ -26,6 +26,7 @@ import org.apache.commons.lang3.compare.ComparableUtils;
 import bms.model.Mode;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.play.JudgeAlgorithm;
+import bms.player.beatoraja.play.BMSIRHispeed;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.arena.bmsir.BMSIRSelectKeyMode;
@@ -217,6 +218,16 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirCoverHispeedAutoAdjustEnabled;
 	@FXML
+	private CheckBox bmsirLr2HispeedFixEnabled;
+	@FXML
+	private CheckBox bmsirPseudoFhsEnabled;
+	@FXML
+	private Label bmsirHispeedMode;
+	@FXML
+	private Spinner<Integer> bmsirBaseScrollSpeed;
+	@FXML
+	private Spinner<Integer> bmsirEquivalentGreenNumber;
+	@FXML
 	private CheckBox bmsirJudgeRankSortEnabled;
 	@FXML
 	private CheckBox bmsirJudgeRankSortSkinNoticeEnabled;
@@ -266,6 +277,7 @@ public class PlayConfigurationView implements Initializable {
 	private boolean sidebarPagesInitialized;
 	private boolean sidebarNodesMoved;
 	private boolean englishUi;
+	private boolean updatingBmsirHispeedFields;
 
 	private static final class SidebarNodePlacement {
 		private final Node node;
@@ -636,6 +648,44 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverChangeStep.setValueFactory(
 				new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10)
 		);
+		bmsirBaseScrollSpeed.setValueFactory(
+				new SpinnerValueFactory.IntegerSpinnerValueFactory(
+						PlayConfig.BMSIR_BASE_SCROLL_SPEED_MIN,
+						PlayConfig.BMSIR_BASE_SCROLL_SPEED_MAX,
+						100
+				)
+		);
+		bmsirEquivalentGreenNumber.setValueFactory(
+				new SpinnerValueFactory.IntegerSpinnerValueFactory(
+						PlayConfig.DURATION_MIN,
+						PlayConfig.DURATION_MAX,
+						500
+				)
+		);
+		bmsirPseudoFhsEnabled.disableProperty().bind(
+				bmsirLr2HispeedFixEnabled.selectedProperty().not()
+		);
+		bmsirBaseScrollSpeed.disableProperty().bind(
+				bmsirLr2HispeedFixEnabled.selectedProperty().not()
+		);
+		bmsirEquivalentGreenNumber.disableProperty().bind(
+				bmsirLr2HispeedFixEnabled.selectedProperty().not()
+		);
+		bmsirBaseScrollSpeed.valueProperty().addListener(
+				(observable, oldValue, value) -> updateBmsirEquivalentGreen()
+		);
+		bmsirEquivalentGreenNumber.valueProperty().addListener(
+				(observable, oldValue, value) -> updateBmsirBaseFromGreen()
+		);
+		for (javafx.beans.value.ObservableValue<?> value : List.of(
+				hispeed.valueProperty(),
+				enableLanecover.selectedProperty(),
+				lanecover.valueProperty(),
+				enableLift.selectedProperty(),
+				lift.valueProperty()
+		)) {
+			value.addListener((observable, oldValue, newValue) -> updateBmsirEquivalentGreen());
+		}
 		bmsirJudgeRankSortSkinNoticeEnabled.disableProperty().bind(
 				bmsirJudgeRankSortEnabled.selectedProperty().not()
 		);
@@ -1480,6 +1530,23 @@ public class PlayConfigurationView implements Initializable {
 								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches.")
 				),
 				sidebarSettingCard(
+						sidebarSettingRow(bmsirSpecificTab, "bmsirLr2HispeedFixEnabled", "LR2仕様のHI-SPEED固定", "LR2-style fixed HI-SPEED",
+								"150 BPM基準とモード別基本スクロールで、既存のHI-SPEED FIX計算を上書きします。既定はOFFです。",
+								"Override the existing HI-SPEED FIX calculation with a 150 BPM reference and per-mode base scroll. Off by default."),
+					sidebarSettingRow(bmsirSpecificTab, "bmsirPseudoFhsEnabled", "疑似FHS", "Pseudo FHS",
+								"プレイ中のSTART＋SELECT短押しで現在の緑数字を固定します。選曲に戻る長押し判定は、設定時間と500 msのうち長い方を使います。",
+								"Short-press START + SELECT during play to latch the current green number. The exit hold uses the configured delay, with a minimum of 500 ms."),
+						sidebarSettingRow(bmsirSpecificTab, "対象モード", "Target mode",
+								"Play Optionで現在選択しているモードに追従します。",
+								"Follows the mode currently selected in Play Options.",
+								sidebarReadOnlyLabel(bmsirHispeedMode)),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirBaseScrollSpeed", "基本スクロール", "Base scroll",
+								"100を等速として、モードごとの150 BPM基準速度を設定します。",
+								"Set the per-mode 150 BPM reference speed, where 100 is 1.00x."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirEquivalentGreenNumber", "換算緑数字", "Equivalent green number",
+								"現在のHI-SPEED、SUD+、LIFTから換算します。入力すると基本スクロールを逆算します。",
+								"Calculated from the current HI-SPEED, SUD+, and LIFT. Editing it updates base scroll.")),
+				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaTargetMode", "Arenaターゲット", "Arena target",
 								"Arenaプレイ中のスコアグラフで比較対象にする相手を選びます。",
 								"Choose the comparison target for the score graph during Arena play."),
@@ -2110,6 +2177,14 @@ public class PlayConfigurationView implements Initializable {
 		mirror.setMnemonicParsing(source.isMnemonicParsing());
 		mirror.setTooltip(source.getTooltip());
 		mirror.setOnAction(event -> source.fire());
+		mirror.getStyleClass().add("sidebar-setting-control");
+		return mirror;
+	}
+
+	private Label sidebarReadOnlyLabel(Label source) {
+		Label mirror = new Label();
+		mirror.textProperty().bind(source.textProperty());
+		mirror.disableProperty().bind(source.disableProperty());
 		mirror.getStyleClass().add("sidebar-setting-control");
 		return mirror;
 	}
@@ -2867,6 +2942,10 @@ public class PlayConfigurationView implements Initializable {
 		bmsirCoverHispeedAutoAdjustEnabled.setSelected(
 				player.isBmsirCoverHispeedAutoAdjustEnabled()
 		);
+		bmsirLr2HispeedFixEnabled.setSelected(
+				player.isBmsirLr2HispeedFixEnabled()
+		);
+		bmsirPseudoFhsEnabled.setSelected(player.isBmsirPseudoFhsEnabled());
 		bmsirJudgeRankSortEnabled.setSelected(
 				player.isBmsirJudgeRankSortEnabled()
 		);
@@ -3074,6 +3153,10 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirCoverHispeedAutoAdjustEnabled(
 				bmsirCoverHispeedAutoAdjustEnabled.isSelected()
 		);
+		player.setBmsirLr2HispeedFixEnabled(
+				bmsirLr2HispeedFixEnabled.isSelected()
+		);
+		player.setBmsirPseudoFhsEnabled(bmsirPseudoFhsEnabled.isSelected());
 		player.setBmsirJudgeRankSortEnabled(
 				bmsirJudgeRankSortEnabled.isSelected()
 		);
@@ -3211,9 +3294,14 @@ public class PlayConfigurationView implements Initializable {
 			conf.setHidden(getValue(hidden) / 1000f);
 			conf.setJudgetype(JudgeAlgorithm.values()[judgealgorithm.getValue()].name());
 			conf.setHispeedAutoAdjust(hispeedautoadjust.isSelected());
+			conf.setBmsirBaseScrollSpeed(getValue(bmsirBaseScrollSpeed));
 		}
 		pc = playconfig.getValue();
+		if (pc == null) {
+			return;
+		}
 		PlayConfig conf = player.getPlayConfig(Mode.valueOf(pc.name())).getPlayconfig();
+		updatingBmsirHispeedFields = true;
 		hispeed.getValueFactory().setValue((double) conf.getHispeed());
 		gvalue.getValueFactory().setValue(conf.getDuration());
 		enableConstant.setSelected(conf.isEnableConstant());
@@ -3231,6 +3319,55 @@ public class PlayConfigurationView implements Initializable {
 		hidden.getValueFactory().setValue((int) (conf.getHidden() * 1000));
 		judgealgorithm.setValue(JudgeAlgorithm.getIndex(conf.getJudgetype()));
 		hispeedautoadjust.setSelected(conf.isEnableHispeedAutoAdjust());
+		bmsirHispeedMode.setText(pc.toString());
+		bmsirBaseScrollSpeed.getValueFactory().setValue(
+				conf.getBmsirBaseScrollSpeed()
+		);
+		updatingBmsirHispeedFields = false;
+		updateBmsirEquivalentGreen();
+	}
+
+	private void updateBmsirEquivalentGreen() {
+		if (updatingBmsirHispeedFields
+				|| bmsirBaseScrollSpeed.getValue() == null
+				|| hispeed.getValue() == null) {
+			return;
+		}
+		updatingBmsirHispeedFields = true;
+		bmsirEquivalentGreenNumber.getValueFactory().setValue(
+				BMSIRHispeed.equivalentGreen(bmsirHispeedCalculatorConfig())
+		);
+		updatingBmsirHispeedFields = false;
+	}
+
+	private void updateBmsirBaseFromGreen() {
+		if (updatingBmsirHispeedFields
+				|| bmsirEquivalentGreenNumber.getValue() == null) {
+			return;
+		}
+		updatingBmsirHispeedFields = true;
+		PlayConfig calculator = bmsirHispeedCalculatorConfig();
+		int base = BMSIRHispeed.baseScrollSpeedForGreen(
+				calculator,
+				bmsirEquivalentGreenNumber.getValue()
+		);
+		bmsirBaseScrollSpeed.getValueFactory().setValue(base);
+		calculator.setBmsirBaseScrollSpeed(base);
+		bmsirEquivalentGreenNumber.getValueFactory().setValue(
+				BMSIRHispeed.equivalentGreen(calculator)
+		);
+		updatingBmsirHispeedFields = false;
+	}
+
+	private PlayConfig bmsirHispeedCalculatorConfig() {
+		PlayConfig calculator = new PlayConfig();
+		calculator.setHispeed(hispeed.getValue().floatValue());
+		calculator.setBmsirBaseScrollSpeed(bmsirBaseScrollSpeed.getValue());
+		calculator.setEnablelanecover(enableLanecover.isSelected());
+		calculator.setLanecover(lanecover.getValue() / 1000f);
+		calculator.setEnablelift(enableLift.isSelected());
+		calculator.setLift(lift.getValue() / 1000f);
+		return calculator;
 	}
 
 	private <T> T getValue(Spinner<T> spinner) {
