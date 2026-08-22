@@ -1401,6 +1401,9 @@ public class BMSPlayer extends MainState {
 			target.setHispeed(live.getHispeed());
 			target.setDuration(live.getDuration());
 			target.setBmsirBaseScrollSpeed(live.getBmsirBaseScrollSpeed());
+			target.setBmsirHispeedReferenceBpm(
+					live.getBmsirHispeedReferenceBpm()
+			);
 		} else if (target.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
 			target.setDuration(live.getDuration());
 		} else {

@@ -2,22 +2,21 @@ package bms.player.beatoraja.play;
 
 import bms.player.beatoraja.PlayConfig;
 
-/** Shared LR2-style HI-SPEED and green-number calculations. */
+/** Shared LR2-style HI-SPEED and live-duration calculations. */
 public final class BMSIRHispeed {
-    public static final double REFERENCE_BPM = 150.0;
-
     private BMSIRHispeed() {
     }
 
     public static float appliedHispeed(
             float storedHispeed,
             int baseScrollSpeed,
+            int referenceBpm,
             boolean fixed,
             double targetBpm
     ) {
         double applied = storedHispeed * clampBaseScrollSpeed(baseScrollSpeed) / 100.0;
         if (fixed && Double.isFinite(targetBpm) && targetBpm > 0.0) {
-            applied *= REFERENCE_BPM / targetBpm;
+            applied *= clampReferenceBpm(referenceBpm) / targetBpm;
         }
         if (!Double.isFinite(applied) || applied <= 0.0) {
             return PlayConfig.HISPEED_MIN;
@@ -88,49 +87,6 @@ public final class BMSIRHispeed {
         );
     }
 
-    public static int equivalentGreen(PlayConfig config) {
-        if (config == null) {
-            return PlayConfig.DURATION_MIN;
-        }
-        float applied = appliedHispeed(
-                config.getHispeed(),
-                config.getBmsirBaseScrollSpeed(),
-                false,
-                REFERENCE_BPM
-        );
-        return Math.min(PlayConfig.DURATION_MAX, currentDuration(
-                applied,
-                REFERENCE_BPM,
-                1.0,
-                config.isEnablelanecover(),
-                config.getLanecover(),
-                config.isEnablelift(),
-                config.getLift()
-        ));
-    }
-
-    public static int baseScrollSpeedForGreen(PlayConfig config, int green) {
-        if (config == null || green <= 0
-                || !Float.isFinite(config.getHispeed())
-                || config.getHispeed() <= 0f) {
-            return PlayConfig.BMSIR_BASE_SCROLL_SPEED_MIN;
-        }
-        double visible = 1.0 - effectiveLaneCover(
-                config.isEnablelanecover(),
-                config.getLanecover(),
-                config.isEnablelift(),
-                config.getLift()
-        );
-        double value = 240000.0 * 100.0 * visible
-                / REFERENCE_BPM
-                / config.getHispeed()
-                / green;
-        if (!Double.isFinite(value)) {
-            return PlayConfig.BMSIR_BASE_SCROLL_SPEED_MIN;
-        }
-        return clampBaseScrollSpeed((int) Math.round(value));
-    }
-
     public static double effectiveLaneCover(
             boolean laneCoverEnabled,
             float laneCover,
@@ -150,6 +106,13 @@ public final class BMSIRHispeed {
         return Math.max(
                 PlayConfig.BMSIR_BASE_SCROLL_SPEED_MIN,
                 Math.min(PlayConfig.BMSIR_BASE_SCROLL_SPEED_MAX, value)
+        );
+    }
+
+    public static int clampReferenceBpm(int value) {
+        return Math.max(
+                PlayConfig.BMSIR_HISPEED_REFERENCE_BPM_MIN,
+                Math.min(PlayConfig.BMSIR_HISPEED_REFERENCE_BPM_MAX, value)
         );
     }
 }

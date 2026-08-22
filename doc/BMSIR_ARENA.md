@@ -1,15 +1,9 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.64`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.65`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
-
-Version `0.4.14.64` adds the opt-in LR2-style fixed-HI-SPEED path described
-below. It is default-OFF, uses independent per-mode base scroll values, keeps
-Start Here and active-play green-number conversion aligned, and optionally
-reserves a clean short START+SELECT release for pseudo FHS. NO SPEED remains
-authoritative and replay data snapshots the original setting.
 
 Version `0.4.14.63` moves the physical-root filter from BMS-IR Features to
 Resource directly below BMS Path. Classic and Sidebar use the same Resource
@@ -41,22 +35,21 @@ before replacing live caches, removes orphan `.bmt` files only after success,
 preserves unrelated files, and keeps or restores the previous cache set on any
 failure.
 
-Version `0.4.14.64` adds an opt-in LR2-style fixed-HI-SPEED path to
-the BMS-IR settings. Two global switches control the override and pseudo FHS,
-while 5-key, 7-key, 10-key, 14-key, 9-key, 24-key, and 24-key double retain
-independent base-scroll values. The base scroll is applied at a fixed 150 BPM
-reference and the existing OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects
-the chart BPM target. The displayed and editable equivalent green number uses
-the same SUD+ and LIFT-aware calculation as Start Here and active play.
+Version `0.4.14.65` refines the opt-in LR2-style fixed-HI-SPEED path in
+the BMS-IR settings. One global switch controls the override. The 5-key, 7-key,
+10-key, 14-key, 9-key, 24-key, and 24-key double modes retain independent base
+scroll and reference-BPM values. Base 100 is 1.00x; reference BPM defaults to
+150 and is adjustable from 50 through 400 in steps of 1. The existing
+OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects the chart BPM target.
 
-When both switches are enabled, a clean START+SELECT press released before the
-exit threshold toggles a session-only pseudo-FHS latch. The latch keeps the
-green number fixed while cover or LIFT changes; a second short press returns to
-the LR2 calculation. The normal exit hold remains available, using the larger
-of 500 ms and the configured exit delay. The chord is reserved from ordinary
-cover/HI-SPEED controls while active. NO SPEED courses ignore the override,
-and replay data stores whether the original play used it. Existing configs
-default both switches off and base scroll to 100.
+The BMS-IR settings page has an independent mode selector for these values.
+During Music Select, both the full and compact Arena overlays expose the
+override ON/OFF switch plus base-scroll and reference-BPM controls for the
+selected chart mode. The dedicated equivalent-green editor/readout and pseudo
+FHS are not provided; START+SELECT therefore keeps the ordinary play behavior.
+NO SPEED courses ignore the override, and replay data stores whether the
+original play used it. Existing configs default the switch off, base scroll to
+100, and reference BPM to 150.
 
 Version `0.4.14.58` replaces the untraceable legacy Windows PortAudio and
 JPortAudio binaries with a clean x86-64 build from pinned PortAudio 19.7.0 and
@@ -1373,7 +1366,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.64-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.65-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1394,7 +1387,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.64-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.65-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1413,7 +1406,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.64-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.65-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

@@ -135,6 +135,17 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
+	void lr2HispeedModeIsSelectableAndGreenEditorIsRemoved() throws Exception {
+		Document play = loadFxml("PlayConfigurationView.fxml");
+		Element mode = elementWithFxId(play, "bmsirHispeedMode");
+		assertEquals("ComboBox", mode.getTagName());
+		assertEquals("#updateBmsirHispeedMode", mode.getAttribute("onAction"));
+		assertTrue(hasFxId(play, "bmsirHispeedReferenceBpm"));
+		assertFalse(hasFxId(play, "bmsirPseudoFhsEnabled"));
+		assertFalse(hasFxId(play, "bmsirEquivalentGreenNumber"));
+	}
+
+	@Test
 	void everySidebarSourceIsAnInjectedControllerField() throws Exception {
 		assertInjectedNodes("VideoConfigurationView.fxml", VideoConfigurationView.class,
 				"bgaExpand", "bgaOp", "displayMode", "maxFps", "missLayerTime", "monitor", "resolution", "vSync");
@@ -176,8 +187,8 @@ class PlayConfigurationSidebarLayoutTest {
 				"ipfsurl", "overrideDownloadURL", "soundpath", "usecim",
 				"bmsirArenaGraphOrder", "bmsirArenaLanguage", "bmsirArenaTargetMode", "bmsirCoverChangeStep",
 				"bmsirCoverControlMode", "bmsirCoverHispeedAutoAdjustEnabled", "bmsirDanLocalSyncEnabled",
-				"bmsirLr2HispeedFixEnabled", "bmsirPseudoFhsEnabled", "bmsirHispeedMode",
-				"bmsirBaseScrollSpeed", "bmsirEquivalentGreenNumber",
+				"bmsirLr2HispeedFixEnabled", "bmsirHispeedMode",
+				"bmsirBaseScrollSpeed", "bmsirHispeedReferenceBpm",
 				"bmsirExportVanillaScoreDb", "bmsirHideMissingTableSongs", "bmsirInfoNotificationsEnabled",
 				"bmsirJudgeRankSortEnabled", "bmsirJudgeRankSortSkinNoticeEnabled", "bmsirJudgeTimingRestoreEnabled",
 				"bmsirNumpad0", "bmsirNumpad1", "bmsirNumpad2", "bmsirNumpad3",

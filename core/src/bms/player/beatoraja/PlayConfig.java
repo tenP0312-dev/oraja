@@ -30,6 +30,10 @@ public class PlayConfig implements Cloneable {
 	private int bmsirBaseScrollSpeed = 100;
 	public static final int BMSIR_BASE_SCROLL_SPEED_MIN = 1;
 	public static final int BMSIR_BASE_SCROLL_SPEED_MAX = 2000;
+	/** Per-mode BPM reference used by the BMS-IR LR2-style HI-SPEED override. */
+	private int bmsirHispeedReferenceBpm = 150;
+	public static final int BMSIR_HISPEED_REFERENCE_BPM_MIN = 50;
+	public static final int BMSIR_HISPEED_REFERENCE_BPM_MAX = 400;
 	/** Nullable replay snapshot; ordinary player configuration leaves this null. */
 	private Boolean bmsirLr2HispeedFixReplayEnabled;
 
@@ -158,6 +162,14 @@ public class PlayConfig implements Cloneable {
 
 	public void setBmsirBaseScrollSpeed(int bmsirBaseScrollSpeed) {
 		this.bmsirBaseScrollSpeed = bmsirBaseScrollSpeed;
+	}
+
+	public int getBmsirHispeedReferenceBpm() {
+		return bmsirHispeedReferenceBpm;
+	}
+
+	public void setBmsirHispeedReferenceBpm(int bmsirHispeedReferenceBpm) {
+		this.bmsirHispeedReferenceBpm = bmsirHispeedReferenceBpm;
 	}
 
 	public Boolean getBmsirLr2HispeedFixReplayEnabled() {
@@ -325,6 +337,11 @@ public class PlayConfig implements Cloneable {
 				bmsirBaseScrollSpeed,
 				BMSIR_BASE_SCROLL_SPEED_MIN,
 				BMSIR_BASE_SCROLL_SPEED_MAX
+		);
+		bmsirHispeedReferenceBpm = MathUtils.clamp(
+				bmsirHispeedReferenceBpm,
+				BMSIR_HISPEED_REFERENCE_BPM_MIN,
+				BMSIR_HISPEED_REFERENCE_BPM_MAX
 		);
 		constantFadeinTime = MathUtils.clamp(constantFadeinTime, CONSTANT_FADEIN_MIN, CONSTANT_FADEIN_MAX);
 		hispeedmargin = MathUtils.clamp(hispeedmargin, HISPEEDMARGIN_MIN, HISPEEDMARGIN_MAX);

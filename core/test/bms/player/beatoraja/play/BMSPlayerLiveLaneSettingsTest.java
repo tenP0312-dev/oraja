@@ -65,11 +65,13 @@ class BMSPlayerLiveLaneSettingsTest {
         live.setHispeed(2.75f);
         live.setDuration(431);
         live.setBmsirBaseScrollSpeed(137);
+        live.setBmsirHispeedReferenceBpm(173);
 
         BMSPlayer.copyLiveLaneSettings(saved, live, true);
 
         assertEquals(2.75f, saved.getHispeed());
         assertEquals(431, saved.getDuration());
         assertEquals(137, saved.getBmsirBaseScrollSpeed());
+        assertEquals(173, saved.getBmsirHispeedReferenceBpm());
     }
 }

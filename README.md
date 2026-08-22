@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.64**. Its Windows native-audio
+The current client source version is **0.4.14.65**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -31,16 +31,15 @@ expose it from the same Resource controller. Saved per-player values, the
 default-OFF behavior, BMS Path ordering, and all Music Select filtering and
 exclusion rules remain unchanged.
 
-Version 0.4.14.64 adds a default-off LR2-style fixed-HI-SPEED
-override. It keeps a base scroll value for each play mode, treats 100 as 1.00x,
-and applies the selected legacy HI-SPEED FIX target against a fixed 150 BPM
-reference. Its editable equivalent green number uses the same SUD+ and LIFT
-calculation in Start Here and active play. An independent pseudo-FHS switch
-reserves a clean short START+SELECT chord during play to latch that green
-number; holding the chord still exits, with a minimum 500 ms threshold and any
-longer configured exit delay preserved. Releasing the chord toggles back to
-the LR2 calculation. The override is disabled for NO SPEED constraints and is
-snapshotted into replays.
+Version 0.4.14.65 refines the default-off LR2-style fixed-HI-SPEED
+override. Each play mode keeps an independent base scroll value, where 100 is
+1.00x, and a reference BPM adjustable from 50 through 400 with a default of
+150. The selected legacy OFF/START/MAX/MAIN/MIN HI-SPEED FIX target supplies
+the chart BPM used by the calculation. The BMS-IR settings page can switch the
+mode being edited, and the full and compact Arena overlays can toggle the
+override and edit the current mode's base and reference values during Music
+Select. The override is disabled for NO SPEED constraints and is snapshotted
+into replays. It does not add a pseudo-FHS chord or an equivalent-green editor.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -105,6 +104,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.65
+
+Removes the non-working pseudo FHS option and the BMS-IR-specific equivalent-
+green editor/readout. The LR2-style fixed-HI-SPEED settings now have a real
+mode selector plus independent 50–400 reference-BPM values, defaulting to 150.
+Both full and compact Music Select Arena overlays can toggle the override and
+adjust the current mode's base scroll and reference BPM. Ordinary skin green
+number reporting remains based on actual BPM, cover, and LIFT; NO SPEED and
+replay safeguards remain in force.
 
 ## Arena oraja 0.4.14.64
 
@@ -525,7 +534,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.64
+  --output-dir /release/build-0.4.14.65
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
