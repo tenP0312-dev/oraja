@@ -22,6 +22,7 @@ import bms.player.beatoraja.modmenu.RandomTrainer;
 import bms.player.beatoraja.pattern.LR2RandomPattern;
 import bms.player.beatoraja.play.BMSPlayer;
 import bms.player.beatoraja.play.BMSPlayerRule;
+import bms.player.beatoraja.play.LaneRenderer;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
@@ -581,6 +582,15 @@ public final class BMSIRArenaClient {
                         main.getPlayerConfig()
                 );
     }
+
+	static LaneRenderer currentLaneRenderer(int modeId) {
+		return main != null
+				&& main.getCurrentState() instanceof BMSPlayer player
+				&& player.getMode() != null
+				&& player.getMode().id == modeId
+				? player.getLanerender()
+				: null;
+	}
 
     public static void refreshManiacScoreDisplay() {
         if (main != null && main.getCurrentState() instanceof MusicSelector selector) {

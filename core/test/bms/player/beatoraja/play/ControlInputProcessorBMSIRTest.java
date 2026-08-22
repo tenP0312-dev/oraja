@@ -5,6 +5,7 @@ import bms.player.beatoraja.PlayerConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ControlInputProcessorBMSIRTest {
@@ -98,6 +99,29 @@ class ControlInputProcessorBMSIRTest {
         ));
         assertTrue(ControlInputProcessor.shouldRecalculateCoverHispeed(
                 true, 150.0
+        ));
+    }
+
+    @Test
+    void pseudoFhsUsesAtLeastFiveHundredMillisecondsForExit() {
+        assertEquals(500L, ControlInputProcessor.effectivePseudoFhsExitDuration(0));
+        assertEquals(500L, ControlInputProcessor.effectivePseudoFhsExitDuration(499));
+        assertEquals(900L, ControlInputProcessor.effectivePseudoFhsExitDuration(900));
+    }
+
+    @Test
+    void pseudoFhsTogglesOnlyOnACleanShortReleaseDuringActivePlay() {
+        assertTrue(ControlInputProcessor.shouldTogglePseudoFhs(
+                499L, 500L, false, true
+        ));
+        assertFalse(ControlInputProcessor.shouldTogglePseudoFhs(
+                500L, 500L, false, true
+        ));
+        assertFalse(ControlInputProcessor.shouldTogglePseudoFhs(
+                200L, 500L, true, true
+        ));
+        assertFalse(ControlInputProcessor.shouldTogglePseudoFhs(
+                200L, 500L, false, false
         ));
     }
 }
