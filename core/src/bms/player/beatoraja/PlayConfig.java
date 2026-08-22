@@ -26,6 +26,13 @@ public class PlayConfig implements Cloneable {
 	public static final int DURATION_MAX = 10000;
 	public static final int DURATION_MIN = 1;
 
+	/** BMS-IR LR2-style base scroll speed (100 = 1.00x). */
+	private int bmsirBaseScrollSpeed = 100;
+	public static final int BMSIR_BASE_SCROLL_SPEED_MIN = 1;
+	public static final int BMSIR_BASE_SCROLL_SPEED_MAX = 2000;
+	/** Nullable replay snapshot; ordinary player configuration leaves this null. */
+	private Boolean bmsirLr2HispeedFixReplayEnabled;
+
 	/**
 	 * CONSTANT 使用
 	 */
@@ -143,6 +150,22 @@ public class PlayConfig implements Cloneable {
 
 	public void setDuration(int duration) {
 		this.duration = duration;
+	}
+
+	public int getBmsirBaseScrollSpeed() {
+		return bmsirBaseScrollSpeed;
+	}
+
+	public void setBmsirBaseScrollSpeed(int bmsirBaseScrollSpeed) {
+		this.bmsirBaseScrollSpeed = bmsirBaseScrollSpeed;
+	}
+
+	public Boolean getBmsirLr2HispeedFixReplayEnabled() {
+		return bmsirLr2HispeedFixReplayEnabled;
+	}
+
+	public void setBmsirLr2HispeedFixReplayEnabled(Boolean enabled) {
+		bmsirLr2HispeedFixReplayEnabled = enabled;
 	}
 
 	public boolean isEnableConstant() {
@@ -298,6 +321,11 @@ public class PlayConfig implements Cloneable {
 	public void validate() {
 		hispeed = MathUtils.clamp(hispeed, HISPEED_MIN, HISPEED_MAX);
 		duration = MathUtils.clamp(duration, DURATION_MIN, DURATION_MAX);
+		bmsirBaseScrollSpeed = MathUtils.clamp(
+				bmsirBaseScrollSpeed,
+				BMSIR_BASE_SCROLL_SPEED_MIN,
+				BMSIR_BASE_SCROLL_SPEED_MAX
+		);
 		constantFadeinTime = MathUtils.clamp(constantFadeinTime, CONSTANT_FADEIN_MIN, CONSTANT_FADEIN_MAX);
 		hispeedmargin = MathUtils.clamp(hispeedmargin, HISPEEDMARGIN_MIN, HISPEEDMARGIN_MAX);
 		startHerePreviewMeasures = MathUtils.clamp(

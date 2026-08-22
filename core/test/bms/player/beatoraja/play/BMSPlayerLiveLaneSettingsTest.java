@@ -55,4 +55,21 @@ class BMSPlayerLiveLaneSettingsTest {
         assertEquals(3.25f, saved.getHispeed());
         assertEquals(500, saved.getDuration());
     }
+
+    @Test
+    void lr2OverridePersistsStoredHispeedDurationAndBaseScrollTogether() {
+        PlayConfig saved = new PlayConfig();
+        saved.setFixhispeed(PlayConfig.FIX_HISPEED_MAINBPM);
+
+        PlayConfig live = new PlayConfig();
+        live.setHispeed(2.75f);
+        live.setDuration(431);
+        live.setBmsirBaseScrollSpeed(137);
+
+        BMSPlayer.copyLiveLaneSettings(saved, live, true);
+
+        assertEquals(2.75f, saved.getHispeed());
+        assertEquals(431, saved.getDuration());
+        assertEquals(137, saved.getBmsirBaseScrollSpeed());
+    }
 }

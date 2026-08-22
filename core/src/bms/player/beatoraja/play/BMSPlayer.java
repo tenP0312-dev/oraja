@@ -1381,11 +1381,27 @@ public class BMSPlayer extends MainState {
 			}
 		}
 		PlayConfig pc = resource.getPlayerConfig().getPlayConfig(model.getMode()).getPlayconfig();
-		copyLiveLaneSettings(pc, lanerender.getPlayConfig());
+		copyLiveLaneSettings(
+				pc,
+				lanerender.getPlayConfig(),
+				lanerender.isBmsirLr2HispeedFixEnabled()
+		);
 	}
 
 	static void copyLiveLaneSettings(PlayConfig target, PlayConfig live) {
-		if (target.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
+		copyLiveLaneSettings(target, live, false);
+	}
+
+	static void copyLiveLaneSettings(
+			PlayConfig target,
+			PlayConfig live,
+			boolean bmsirLr2HispeedFixEnabled
+	) {
+		if (bmsirLr2HispeedFixEnabled) {
+			target.setHispeed(live.getHispeed());
+			target.setDuration(live.getDuration());
+			target.setBmsirBaseScrollSpeed(live.getBmsirBaseScrollSpeed());
+		} else if (target.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
 			target.setDuration(live.getDuration());
 		} else {
 			target.setHispeed(live.getHispeed());
