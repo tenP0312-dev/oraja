@@ -11,21 +11,20 @@ LN-only. No release channel or existing v7 artifact changes until a separate
 reviewed build and rollout.
 
 The current development source adds an opt-in LR2-style fixed-HI-SPEED path to
-the BMS-IR settings. Two global switches control the override and pseudo FHS,
-while 5-key, 7-key, 10-key, 14-key, 9-key, 24-key, and 24-key double retain
-independent base-scroll values. The base scroll is applied at a fixed 150 BPM
-reference and the existing OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects
-the chart BPM target. The displayed and editable equivalent green number uses
-the same SUD+ and LIFT-aware calculation as Start Here and active play.
+the BMS-IR settings. One global switch controls the override. The 5-key, 7-key,
+10-key, 14-key, 9-key, 24-key, and 24-key double modes retain independent base
+scroll and reference-BPM values. Base 100 is 1.00x; reference BPM defaults to
+150 and is adjustable from 50 through 400 in steps of 1. The existing
+OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects the chart BPM target.
 
-When both switches are enabled, a clean START+SELECT press released before the
-exit threshold toggles a session-only pseudo-FHS latch. The latch keeps the
-green number fixed while cover or LIFT changes; a second short press returns to
-the LR2 calculation. The normal exit hold remains available, using the larger
-of 500 ms and the configured exit delay. The chord is reserved from ordinary
-cover/HI-SPEED controls while active. NO SPEED courses ignore the override,
-and replay data stores whether the original play used it. Existing configs
-default both switches off and base scroll to 100.
+The BMS-IR settings page has an independent mode selector for these values.
+During Music Select, both the full and compact Arena overlays expose the
+override ON/OFF switch plus base-scroll and reference-BPM controls for the
+selected chart mode. The dedicated equivalent-green editor/readout and pseudo
+FHS are not provided; START+SELECT therefore keeps the ordinary play behavior.
+NO SPEED courses ignore the override, and replay data stores whether the
+original play used it. Existing configs default the switch off, base scroll to
+100, and reference BPM to 150.
 
 Version `0.4.14.58` replaces the untraceable legacy Windows PortAudio and
 JPortAudio binaries with a clean x86-64 build from pinned PortAudio 19.7.0 and
