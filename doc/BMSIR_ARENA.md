@@ -35,6 +35,23 @@ before replacing live caches, removes orphan `.bmt` files only after success,
 preserves unrelated files, and keeps or restores the previous cache set on any
 failure.
 
+The current development source adds an opt-in LR2-style fixed-HI-SPEED path to
+the BMS-IR settings. Two global switches control the override and pseudo FHS,
+while 5-key, 7-key, 10-key, 14-key, 9-key, 24-key, and 24-key double retain
+independent base-scroll values. The base scroll is applied at a fixed 150 BPM
+reference and the existing OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects
+the chart BPM target. The displayed and editable equivalent green number uses
+the same SUD+ and LIFT-aware calculation as Start Here and active play.
+
+When both switches are enabled, a clean START+SELECT press released before the
+exit threshold toggles a session-only pseudo-FHS latch. The latch keeps the
+green number fixed while cover or LIFT changes; a second short press returns to
+the LR2 calculation. The normal exit hold remains available, using the larger
+of 500 ms and the configured exit delay. The chord is reserved from ordinary
+cover/HI-SPEED controls while active. NO SPEED courses ignore the override,
+and replay data stores whether the original play used it. Existing configs
+default both switches off and base scroll to 100.
+
 Version `0.4.14.58` replaces the untraceable legacy Windows PortAudio and
 JPortAudio binaries with a clean x86-64 build from pinned PortAudio 19.7.0 and
 the official Steinberg ASIO SDK 2.3.4. The ASIO SDK's GPL-3.0-only route is

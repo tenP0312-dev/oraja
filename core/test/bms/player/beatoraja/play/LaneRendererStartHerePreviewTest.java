@@ -140,6 +140,6 @@ class LaneRendererStartHerePreviewTest {
         assertEquals(1, LaneRenderer.fixedDurationForHispeed(
                 150.0, 2.0f, true, 1.0f
         ));
-    }
+	}
 
 }

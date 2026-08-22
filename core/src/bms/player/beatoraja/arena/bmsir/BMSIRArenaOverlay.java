@@ -5,6 +5,9 @@ import bms.player.beatoraja.modmenu.FontAwesomeIcons;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.PlayConfig;
+import bms.player.beatoraja.play.BMSIRHispeed;
+import bms.player.beatoraja.play.LaneRenderer;
 import bms.player.beatoraja.song.SongData;
 
 import com.badlogic.gdx.Gdx;
@@ -803,7 +806,7 @@ public final class BMSIRArenaOverlay {
                 )
                 : "##compact-select-" + currentLayoutKey();
         ImGui.setNextWindowPos(18, 72, ImGuiCond.FirstUseEver);
-        ImGui.setNextWindowSize(300, 150, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(300, gameplay ? 235 : 210, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowBgAlpha(0.88f);
         int flags = ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus
@@ -813,6 +816,7 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
+        renderSpeedBlock(true);
         renderPhaseBanner(true);
         if (BMSIRArenaClient.isFillWaiting()) {
             ImGui.text(String.format(
@@ -869,7 +873,7 @@ public final class BMSIRArenaOverlay {
                 VIEWPORT_MARGIN,
                 ImGuiCond.FirstUseEver
         );
-        ImGui.setNextWindowSize(width, 230.0f, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(width, 320.0f, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowBgAlpha(0.88f);
         int flags = ImGuiWindowFlags.NoNav
                 | ImGuiWindowFlags.NoFocusOnAppearing
@@ -887,6 +891,7 @@ public final class BMSIRArenaOverlay {
         }
         renderPhaseBanner(false);
         renderModeBanner();
+        renderSpeedBlock(false);
         renderRatingResult(match);
         renderChatPreview();
         renderForceEndVote(match);
@@ -997,6 +1002,7 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
+        renderSpeedBlock(true);
         renderPhaseBanner(true);
         if (filling) {
             ImGui.text(String.format(
@@ -1011,6 +1017,105 @@ public final class BMSIRArenaOverlay {
             ));
         }
         ImGui.end();
+    }
+
+    private static void renderSpeedBlock(boolean compact) {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        if (config == null || !config.isBmsirLr2HispeedFixEnabled()) {
+            return;
+		}
+		int modeId = BMSIRArenaClient.currentPlayModeForLayout();
+		PlayConfig saved = config.getPlayConfig(modeId).getPlayconfig();
+		LaneRenderer live = BMSIRArenaClient.currentLaneRenderer(modeId);
+		PlayConfig active = live != null && live.isBmsirLr2HispeedFixEnabled()
+				? live.getPlayConfig()
+				: saved;
+		int base = active.getBmsirBaseScrollSpeed();
+		int green = live != null
+				? live.getDuration()
+				: BMSIRHispeed.equivalentGreen(active);
+        String latch = live != null && live.isPseudoFhsLatched()
+                ? " / FHS LATCHED"
+                : "";
+
+        ImGui.separator();
+        ImGui.text(String.format(
+                Locale.ROOT,
+                "SPEED  %s / FIX %s%s",
+                BMSIRArenaClient.currentPlayModeLabel(),
+                hispeedFixLabel(active.getFixhispeed()),
+                latch
+        ));
+        ImGui.text(String.format(
+                Locale.ROOT,
+                "BASE %d / HS %.2f / GN %d",
+                base,
+                active.getHispeed(),
+                green
+        ));
+        String suffix = compact ? "-compact" : "-full";
+        if (ImGui.smallButton("-##speed-base-minus" + suffix)) {
+            applyBaseScroll(config, modeId, base - 1, live);
+        }
+        ImGui.sameLine();
+        ImGui.text("BASE");
+        ImGui.sameLine();
+        if (ImGui.smallButton("+##speed-base-plus" + suffix)) {
+            applyBaseScroll(config, modeId, base + 1, live);
+        }
+        ImGui.sameLine();
+        if (ImGui.smallButton("-##speed-green-minus" + suffix)) {
+            applyGreen(config, modeId, Math.max(PlayConfig.DURATION_MIN, green - 1), active, live);
+        }
+        ImGui.sameLine();
+        ImGui.text("GN");
+        ImGui.sameLine();
+        if (ImGui.smallButton("+##speed-green-plus" + suffix)) {
+            applyGreen(config, modeId, Math.min(PlayConfig.DURATION_MAX, green + 1), active, live);
+        }
+    }
+
+	private static void applyGreen(
+			PlayerConfig config,
+			int modeId,
+			int green,
+			PlayConfig active,
+			LaneRenderer live
+	) {
+		if (live != null && live.isPseudoFhsLatched()) {
+			live.setDuration(green);
+			return;
+		}
+		applyBaseScroll(
+                config,
+                modeId,
+                BMSIRHispeed.baseScrollSpeedForGreen(active, green),
+                live
+        );
+    }
+
+    private static void applyBaseScroll(
+            PlayerConfig config,
+            int modeId,
+            int base,
+            LaneRenderer live
+    ) {
+        int clamped = BMSIRHispeed.clampBaseScrollSpeed(base);
+        config.getPlayConfig(modeId).getPlayconfig().setBmsirBaseScrollSpeed(clamped);
+        if (live != null && live.isBmsirLr2HispeedFixEnabled()) {
+            live.setBmsirBaseScrollSpeed(clamped);
+        }
+        saveSettingsOrWarn();
+    }
+
+    static String hispeedFixLabel(int fix) {
+        return switch (fix) {
+            case PlayConfig.FIX_HISPEED_STARTBPM -> "START";
+            case PlayConfig.FIX_HISPEED_MAXBPM -> "MAX";
+            case PlayConfig.FIX_HISPEED_MAINBPM -> "MAIN";
+            case PlayConfig.FIX_HISPEED_MINBPM -> "MIN";
+            default -> "OFF";
+        };
     }
 
     private static void renderPhaseBanner(boolean compact) {

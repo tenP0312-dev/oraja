@@ -31,6 +31,17 @@ expose it from the same Resource controller. Saved per-player values, the
 default-OFF behavior, BMS Path ordering, and all Music Select filtering and
 exclusion rules remain unchanged.
 
+The BMS-IR settings also provide a default-off LR2-style fixed-HI-SPEED
+override. It keeps a base scroll value for each play mode, treats 100 as 1.00x,
+and applies the selected legacy HI-SPEED FIX target against a fixed 150 BPM
+reference. Its editable equivalent green number uses the same SUD+ and LIFT
+calculation in Start Here and active play. An independent pseudo-FHS switch
+reserves a clean short START+SELECT chord during play to latch that green
+number; holding the chord still exits, with a minimum 500 ms threshold and any
+longer configured exit delay preserved. Releasing the chord toggles back to
+the LR2 calculation. The override is disabled for NO SPEED constraints and is
+snapshotted into replays.
+
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
 returns to the same window style even when fullscreen was saved on shutdown
