@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.64
+
+- Added a default-OFF LR2-style fixed-HI-SPEED override with independent base
+  scroll values for 5-key, 7-key, 10-key, 14-key, 9-key, 24-key, and 24-key
+  double play, using a fixed 150 BPM reference.
+- Made the displayed and editable equivalent green number account for both
+  SUD+ and LIFT, using the same calculation in Start Here and active play.
+- Added an independent pseudo-FHS option: a clean short START+SELECT release
+  latches the current green number, while the normal exit hold uses the larger
+  of 500 ms and the configured exit delay.
+- Preserved NO SPEED constraints and snapshotted the settings into replay data.
+  Existing configurations keep both switches off and base scroll at 100.
+
 # Arena oraja 0.4.14.63
 
 - Moved the physical-folder visibility parent switch and BMS Path checklist
