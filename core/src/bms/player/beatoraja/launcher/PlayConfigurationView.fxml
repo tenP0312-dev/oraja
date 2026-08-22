@@ -592,19 +592,17 @@
 	                    <Separator />
 	                    <CheckBox fx:id="bmsirLr2HispeedFixEnabled" mnemonicParsing="false" text="%BMSIR_LR2_HISPEED_FIX_ENABLED" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_LR2_HISPEED_FIX_DESCRIPTION" wrapText="true" />
-	                    <CheckBox fx:id="bmsirPseudoFhsEnabled" mnemonicParsing="false" text="%BMSIR_PSEUDO_FHS_ENABLED" />
-	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_PSEUDO_FHS_DESCRIPTION" wrapText="true" />
 	                    <HBox alignment="CENTER_LEFT" spacing="8.0">
 	                        <Label text="%MODE" />
-	                        <Label fx:id="bmsirHispeedMode" text="7KEYS" />
+	                        <ComboBox fx:id="bmsirHispeedMode" onAction="#updateBmsirHispeedMode" prefWidth="180.0" />
 	                    </HBox>
 	                    <HBox alignment="CENTER_LEFT" spacing="8.0">
 	                        <Label text="%BMSIR_BASE_SCROLL_SPEED" />
 	                        <Spinner fx:id="bmsirBaseScrollSpeed" editable="true" prefWidth="110.0" />
 	                    </HBox>
 	                    <HBox alignment="CENTER_LEFT" spacing="8.0">
-	                        <Label text="%BMSIR_EQUIV_GREEN_NUMBER" />
-	                        <Spinner fx:id="bmsirEquivalentGreenNumber" editable="true" prefWidth="110.0" />
+	                        <Label text="%BMSIR_HISPEED_REFERENCE_BPM" />
+	                        <Spinner fx:id="bmsirHispeedReferenceBpm" editable="true" prefWidth="110.0" />
 	                    </HBox>
 	                    <Separator />
 	                    <CheckBox fx:id="bmsirJudgeRankSortEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_RANK_SORT_ENABLED" />

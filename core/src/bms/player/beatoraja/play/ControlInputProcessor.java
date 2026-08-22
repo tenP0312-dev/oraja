@@ -17,8 +17,6 @@ import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
  * @author exch
  */
 public final class ControlInputProcessor {
-	static final long PSEUDO_FHS_MINIMUM_EXIT_MILLIS = 500L;
-
 	private final BMSPlayer player;
 
 	private boolean[] hschanged;
@@ -27,9 +25,6 @@ public final class ControlInputProcessor {
 	private boolean startpressed = false;
 	private boolean selectpressed = false;
 	private boolean startAndSelectPressed = false;
-	private boolean pseudoFhsChordActive;
-	private long pseudoFhsChordStartedAt;
-	private boolean pseudoFhsChordHadAdjustment;
 	private boolean cursorpressed;
 	private long lanecovertiming;
 	private long laneCoverStartTiming = Long.MIN_VALUE;
@@ -248,24 +243,9 @@ public final class ControlInputProcessor {
 	public void input() {
 		final LaneRenderer lanerender = player.getLanerender();
 		final BMSPlayerInputProcessor input = player.main.getInputProcessor();
-		final long now = System.currentTimeMillis();
-		final boolean startHeld = input.startPressed();
-		final boolean selectHeld = input.isSelectPressed();
-		final boolean bothHeld = startHeld && selectHeld;
-		final boolean pseudoFhsChordEnabled = isPseudoFhsChordEnabled(lanerender);
-		boolean reserveStartSelect = false;
 		// 各種コントロール入力判定
 		if (enableControl) {
-			if (pseudoFhsChordEnabled) {
-				reserveStartSelect = handlePseudoFhsChord(
-						lanerender,
-						input,
-						startHeld,
-						selectHeld,
-						now
-				);
-			}
-			if (!reserveStartSelect && enableCursor) {
+			if (enableCursor) {
 				if (input.getControlKeyState(ControlKeys.UP)) {
 					if (!cursorpressed) {
 						setCoverValue(-0.01f);
@@ -281,11 +261,11 @@ public final class ControlInputProcessor {
 				}
 			}
 			// move lane cover by mouse wheel
-			if (!reserveStartSelect && input.getScroll() != 0) {
+			if (input.getScroll() != 0) {
 				setCoverValue(- input.getScroll() * 0.005f);
 				input.resetScroll();
 			}
-			if (!reserveStartSelect && (startHeld
+			if ((input.startPressed()
 					|| (player.resource.getPlayerConfig().isWindowHold() && player.timer.isTimerOn(TIMER_PLAY) && !player.isNoteEnd()))) {
 				if ((autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.PRACTICE) && startpressed) {
 					processStart.run();
@@ -306,7 +286,7 @@ public final class ControlInputProcessor {
 			} else {
 				startpressed = false;
 			}
-			if (!reserveStartSelect && selectHeld) {
+			if(input.isSelectPressed()){
 				if ((autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.PRACTICE) && selectpressed) {
 					processSelect.run();
 				} else if ((autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.PRACTICE) && !selectpressed) {
@@ -325,7 +305,7 @@ public final class ControlInputProcessor {
 			} else {
 				selectpressed = false;
 			}
-			if (!reserveStartSelect && bothHeld) {
+			if ((input.startPressed() && input.isSelectPressed())) {
 				if(!startAndSelectPressed) {
 					isChangeLift = !isChangeLift;
 				}
@@ -335,18 +315,13 @@ public final class ControlInputProcessor {
 			}
 		}
 		boolean abortBlocked = BMSIRArenaClient.isAbortInputBlocked();
-		long activeExitDuration = pseudoFhsChordEnabled
-				? effectivePseudoFhsExitDuration(exitPressDuration)
-				: exitPressDuration;
-		long heldDuration = pseudoFhsChordEnabled && pseudoFhsChordActive
-				? now - pseudoFhsChordStartedAt
-				: now - exitpressedtime;
-		if(!abortBlocked && ((bothHeld && heldDuration >= activeExitDuration )||
-				(player.isNoteEnd() && (startHeld || selectHeld)))){
+		long now = System.currentTimeMillis();
+		if(!abortBlocked && ((input.startPressed() && input.isSelectPressed() && now - exitpressedtime > exitPressDuration )||
+				(player.isNoteEnd() && (input.startPressed() || input.isSelectPressed())))){
 			input.startChanged(false);
 			input.setSelectPressed(false);
 			player.stopPlay();
-		}else if(!bothHeld && !pseudoFhsChordActive){
+		}else if(!(input.startPressed() && input.isSelectPressed())){
 			exitpressedtime = now;
 		}
 		// stop playing
@@ -367,91 +342,6 @@ public final class ControlInputProcessor {
 				player.setPlaySpeed(100);
 			}
 		}
-	}
-
-	private boolean isPseudoFhsChordEnabled(LaneRenderer laneRenderer) {
-		PlayerConfig config = player.resource.getPlayerConfig();
-		return config.isBmsirLr2HispeedFixEnabled()
-				&& config.isBmsirPseudoFhsEnabled()
-				&& laneRenderer.isBmsirLr2HispeedFixEnabled();
-	}
-
-	private boolean handlePseudoFhsChord(
-			LaneRenderer laneRenderer,
-			BMSPlayerInputProcessor input,
-			boolean startHeld,
-			boolean selectHeld,
-			long now
-	) {
-		if (startHeld && selectHeld) {
-			if (!pseudoFhsChordActive) {
-				pseudoFhsChordActive = true;
-				pseudoFhsChordStartedAt = now;
-				pseudoFhsChordHadAdjustment = false;
-				startpressedtime = 0L;
-				selectpressedtime = 0L;
-				startpressed = false;
-				selectpressed = false;
-				Arrays.fill(hschanged, true);
-			}
-			if (hasPseudoFhsAdjustmentInput(input)) {
-				pseudoFhsChordHadAdjustment = true;
-			}
-			if (input.getScroll() != 0) {
-				input.resetScroll();
-			}
-			return true;
-		}
-		if (!pseudoFhsChordActive) {
-			return false;
-		}
-		if (startHeld || selectHeld) {
-			return true;
-		}
-
-		long held = Math.max(0L, now - pseudoFhsChordStartedAt);
-		if (shouldTogglePseudoFhs(
-				held,
-				effectivePseudoFhsExitDuration(exitPressDuration),
-				pseudoFhsChordHadAdjustment,
-				player.getState() == BMSPlayer.STATE_PLAY
-		)) {
-			laneRenderer.togglePseudoFhsLatch();
-		}
-		pseudoFhsChordActive = false;
-		pseudoFhsChordHadAdjustment = false;
-		exitpressedtime = now;
-		return true;
-	}
-
-	private boolean hasPseudoFhsAdjustmentInput(BMSPlayerInputProcessor input) {
-		if (input.getScroll() != 0
-				|| input.getControlKeyState(ControlKeys.UP)
-				|| input.getControlKeyState(ControlKeys.DOWN)) {
-			return true;
-		}
-		for (int index = 0; index < hschanged.length; index++) {
-			if (input.getKeyState(index)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	static long effectivePseudoFhsExitDuration(long configuredMillis) {
-		return Math.max(PSEUDO_FHS_MINIMUM_EXIT_MILLIS, configuredMillis);
-	}
-
-	static boolean shouldTogglePseudoFhs(
-			long heldMillis,
-			long exitMillis,
-			boolean hadAdjustment,
-			boolean activePlay
-	) {
-		return activePlay
-				&& !hadAdjustment
-				&& heldMillis >= 0L
-				&& heldMillis < exitMillis;
 	}
 
 	/*

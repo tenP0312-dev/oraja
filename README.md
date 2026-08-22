@@ -25,15 +25,14 @@ participant; rated Arena explicitly remains LN. This protocol-v8 source change
 does not by itself publish a new body or plugin package.
 
 The BMS-IR settings also provide a default-off LR2-style fixed-HI-SPEED
-override. It keeps a base scroll value for each play mode, treats 100 as 1.00x,
-and applies the selected legacy HI-SPEED FIX target against a fixed 150 BPM
-reference. Its editable equivalent green number uses the same SUD+ and LIFT
-calculation in Start Here and active play. An independent pseudo-FHS switch
-reserves a clean short START+SELECT chord during play to latch that green
-number; holding the chord still exits, with a minimum 500 ms threshold and any
-longer configured exit delay preserved. Releasing the chord toggles back to
-the LR2 calculation. The override is disabled for NO SPEED constraints and is
-snapshotted into replays.
+override. Each play mode keeps an independent base scroll value, where 100 is
+1.00x, and a reference BPM adjustable from 50 through 400 with a default of
+150. The selected legacy OFF/START/MAX/MAIN/MIN HI-SPEED FIX target supplies
+the chart BPM used by the calculation. The BMS-IR settings page can switch the
+mode being edited, and the full and compact Arena overlays can toggle the
+override and edit the current mode's base and reference values during Music
+Select. The override is disabled for NO SPEED constraints and is snapshotted
+into replays. It does not add a pseudo-FHS chord or an equivalent-green editor.
 
 The Resource settings now include an opt-in physical-folder filter for Music
 Select next to the configured BMS Paths. Its parent switch is off by default.
