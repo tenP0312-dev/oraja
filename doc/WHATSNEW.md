@@ -1,3 +1,19 @@
+# Arena oraja 0.4.14.69
+
+- Kept the transactional all-table refresh already present in the release
+  line: all configured tables are downloaded and validated before replacement,
+  and any failure preserves the previous caches.
+- Stopped the Music Select BGM and explicit or generated preview synchronously
+  before ordinary or Arena gameplay begins.
+- Restored the default Music Select BGM after an explicit or discovered OpenAL
+  one-shot preview reaches its decoded duration.
+- Added default-OFF timing diagnostics for static-image BGA cache planning,
+  collisions, runtime misses, and texture upload time without changing cache
+  or rendering behavior.
+- Kept bundled default skin assets and definitions unchanged. Launcher
+  `0.2.29`, plugin `0.0.72`, protocol, score behavior, and the Windows
+  native-audio repair baseline are unchanged.
+
 # Arena oraja 0.4.14.68
 
 - Kept the Skin Widget Manager open independently of the F5 parent menu.

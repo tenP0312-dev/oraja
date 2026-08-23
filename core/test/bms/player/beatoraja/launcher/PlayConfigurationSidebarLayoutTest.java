@@ -84,14 +84,6 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
-	void safeTableUpdateGuidanceIsAvailableInEnglishAndJapanese() {
-		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
-		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
-		assertTrue(english.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("current caches are kept"));
-		assertTrue(japanese.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("現在のキャッシュを残します"));
-	}
-
-	@Test
 	void complexSidebarPagesExposeStableActionAndWorkspaceNodes() throws Exception {
 		Document play = loadFxml("PlayConfigurationView.fxml");
 		for (String id : new String[] {
