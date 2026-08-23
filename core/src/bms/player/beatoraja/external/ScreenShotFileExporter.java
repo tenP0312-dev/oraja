@@ -1,5 +1,6 @@
 package bms.player.beatoraja.external;
 
+import bms.player.beatoraja.Config;
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.config.KeyConfiguration;
 import bms.player.beatoraja.decide.MusicDecide;
@@ -86,9 +87,25 @@ public class ScreenShotFileExporter implements ScreenShotExporter {
 
         Pixmap pixmap = new Pixmap(Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(), Pixmap.Format.RGBA8888);
         try {
-            String path = "screenshot/" + sdf.format(Calendar.getInstance().getTime()) + stateName + ".png";
+            Config.ScreenShotFormat format = currentState.resource.getConfig().getScreenshotFormat();
+            String path = "screenshot/" + sdf.format(Calendar.getInstance().getTime())
+                    + stateName + extensionFor(format);
             BufferUtils.copy(pixels, 0, pixmap.getPixels(), pixels.length);
-            PixmapIO.writePNG(new FileHandle(path), pixmap);
+            if (format == Config.ScreenShotFormat.JPG) {
+                BufferedImage image = new BufferedImage(
+                        pixmap.getWidth(),
+                        pixmap.getHeight(),
+                        BufferedImage.TYPE_INT_RGB
+                );
+                for (int y = 0; y < pixmap.getHeight(); y++) {
+                    for (int x = 0; x < pixmap.getWidth(); x++) {
+                        image.setRGB(x, y, pixmap.getPixel(x, y) >>> 8);
+                    }
+                }
+                ImageIO.write(image, "jpg", new File(path));
+            } else {
+                PixmapIO.writePNG(new FileHandle(path), pixmap);
+            }
             logger.info("スクリーンショット保存:" + path);
             pixmap.dispose();
             ImGuiNotify.info(String.format("Screen shot saved: %s", path), 2000);
@@ -138,7 +155,10 @@ public class ScreenShotFileExporter implements ScreenShotExporter {
 
         try {
             WebhookHandler handler = new WebhookHandler();
-            Map<String, Object> payload = handler.createWebhookPayload(currentState);
+            Map<String, Object> payload = handler.createWebhookPayload(
+                    currentState,
+                    Paths.get(path).getFileName().toString()
+            );
             ObjectMapper om = new ObjectMapper();
             String payloadAsString = om.writeValueAsString(payload);
 
@@ -161,6 +181,10 @@ public class ScreenShotFileExporter implements ScreenShotExporter {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    static String extensionFor(Config.ScreenShotFormat format) {
+        return format == Config.ScreenShotFormat.JPG ? ".jpg" : ".png";
     }
 
     private static class ImageTransferable implements Transferable {

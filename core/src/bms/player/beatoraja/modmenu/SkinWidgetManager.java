@@ -51,8 +51,6 @@ public class SkinWidgetManager {
     private static final ImBoolean move_overlay_enabled = new ImBoolean(false);
     private static boolean reset_move_overlay = false;
 
-    public static boolean focus = false;
-
     private static String t(String japanese, String english) {
         return BMSIRArenaI18n.text(japanese, english);
     }
@@ -93,6 +91,13 @@ public class SkinWidgetManager {
         synchronized (LOCK) {
             if (ImGui.begin(t("スキンウィジェット", "Skin Widgets") + "###skin-widgets",
                     showSkinWidgetManagerMenu, ImGuiWindowFlags.AlwaysAutoResize)) {
+                ImGui.pushTextWrapPos(ImGui.getFontSize() * 35.0f);
+                ImGui.textWrapped(t(
+                        "現在のシーンのスキンを一時編集します。書き出すと変更内容をクリップボードへコピーします。",
+                        "Temporarily edits the current scene skin. Export copies the changes to the clipboard."
+                ));
+                ImGui.popTextWrapPos();
+                ImGui.separator();
                 if (widgets.isEmpty()) {
                     ImGui.text(t("スキンが読み込まれていません", "No skin is loaded"));
                 } else {
@@ -376,27 +381,50 @@ public class SkinWidgetManager {
                 if (!(hasChangedX || hasChangedY || hasChangedW || hasChangedH)) {
                     return ;
                 }
-                StringBuilder sb = new StringBuilder("{dst=").append(dst.name);
-                if (hasChangedX) {
-                    sb.append(", x=").append(dst.getDstX());
-                }
-                if (hasChangedY) {
-                    sb.append(", y=").append(dst.getDstY());
-                }
-                if (hasChangedX) {
-                    sb.append(", w=").append(dst.getDstW());
-                }
-                if (hasChangedY) {
-                    sb.append(", h=").append(dst.getDstH());
-                }
-                sb.append("}");
-                changes.add(sb.toString());
+                changes.add(formatExportChange(
+                        dst.name,
+                        dst.getDstX(),
+                        dst.getDstY(),
+                        dst.getDstW(),
+                        dst.getDstH(),
+                        hasChangedX,
+                        hasChangedY,
+                        hasChangedW,
+                        hasChangedH
+                ));
             });
         });
         String changeLogs = String.join("\n", changes);
         Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
         clipboard.setContents(changeLogs);
         ImGuiNotify.info(t("変更内容をクリップボードへコピーしました", "Copied changes to clipboard"));
+    }
+
+    static String formatExportChange(
+            String name,
+            float x,
+            float y,
+            float w,
+            float h,
+            boolean hasChangedX,
+            boolean hasChangedY,
+            boolean hasChangedW,
+            boolean hasChangedH
+    ) {
+        StringBuilder change = new StringBuilder("{dst=").append(name);
+        if (hasChangedX) {
+            change.append(", x=").append(x);
+        }
+        if (hasChangedY) {
+            change.append(", y=").append(y);
+        }
+        if (hasChangedW) {
+            change.append(", w=").append(w);
+        }
+        if (hasChangedH) {
+            change.append(", h=").append(h);
+        }
+        return change.append("}").toString();
     }
 
     /**

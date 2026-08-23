@@ -371,6 +371,17 @@ public class LaneRenderer {
 		}
 	}
 
+	public void addHispeed(float delta) {
+		float next = playconfig.getHispeed() + delta;
+		if (Float.isFinite(next) && next > 0f && next < 20f) {
+			playconfig.setHispeed(next);
+			if (!bmsirLr2HispeedFixEnabled) {
+				syncFixedDurationToHispeed();
+			}
+			updateStartHerePreviewMetrics();
+		}
+	}
+
 	public PlayConfig getPlayConfig() {
 		if (!bmsirLr2HispeedFixEnabled) {
 			syncFixedDurationToHispeed();
@@ -628,7 +639,7 @@ public class LaneRenderer {
 				for (int lane = 0; lane < lanes.length; lane++) {
 					final Note note = tl.getNote(lane);
 					if (note != null && ((note instanceof LongNote ln && (ln.isEnd() ? ln : ln.getPair()).getMicroTime() >= microtime)
-							|| (config.isShowpastnote() && note instanceof NormalNote && note.getState() == 0))) {
+							|| (note instanceof NormalNote && note.getState() == 0))) {
 						b = false;
 						break;
 					}
@@ -741,7 +752,7 @@ public class LaneRenderer {
 								? lanes[lane].processedImage : lanes[lane].noteImage;
 								sprite.draw(s, dstx, dsty, dstw, dsth);
 							}
-						} else if (tl.getMicroTime() >= microtime || (config.isShowpastnote() && note.getState() == 0)) {
+						} else if (tl.getMicroTime() >= microtime || note.getState() == 0) {
 							final TextureRegion s = config.isMarkprocessednote() && note.getState() != 0
 									? lanes[lane].processedImage : lanes[lane].noteImage;
 							sprite.draw(s, dstx, dsty, dstw, dsth);

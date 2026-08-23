@@ -903,11 +903,13 @@ by default. The notice appears when the value is selected and once when Music
 Select restores it. The global INFO-notification switch must also be ON.
 Disabling the extension while it is active normalizes judge-rank sort to TITLE.
 
-The song context menu contains one `BMS-IR Leaderboard` entry. It reads the
-LR2-compatible ranking and selectable ghost directly from BMS-IR over HTTPS;
-the Arena client no longer depends on the old `dream-pro.info` redirect for
-this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS payload,
-cap decompressed data, and keep a short per-chart cache.
+The song context menu keeps separate leaderboard entries. `Primary IR
+Leaderboard` reads the first configured beatoraja IR and refreshes matching
+rival score caches from a successful ranking response. `BMS-IR Leaderboard`
+reads the LR2-compatible ranking and selectable ghost directly from BMS-IR over
+HTTPS; the Arena client no longer depends on the old `dream-pro.info` redirect
+for this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS
+payload, cap decompressed data, and keep a short per-chart cache.
 
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
@@ -1206,6 +1208,23 @@ The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. Long-note behavior
 uses the ordinary enabled LN-type selector; BMS-IR accepts new CN/HCN results
 in mode-separated rankings, while rated Arena continues to lock LN.
+
+Endless Dream compatibility is protected as one maintained inventory rather
+than by branch ancestry. The ED 0.4.0 set covers last-played sorting, Random
+Trainer, DECIDE skipping, live play options, Webhook, both IR leaderboard
+routes, volume normalization, Skin Widget Manager, the song context menu, live
+skin configuration, difficulty-table management, G-BATTLE, CN end caps, and
+OBS WebSocket. Every item records a UI/command entry, stored or session state,
+and an execution path in `tools/ed_0_4_0_feature_parity.json`.
+
+The known fixes that previously existed only after ED 0.4.0 or on distribution
+branches are integrated into `main`: visible sort fallback, Practice Random
+Trainer seed application, independent BGA textures, controller hotplug, live
+rival refresh, separate Primary IR ranking, fatal nonzero exit, per-controller
+JKOC, numeric volume inputs, the Skin Widget Manager `.68` behavior, and the
+top-row `8` `.70` behavior. `tools/distribution_feature_parity.json` fixes that
+list in CI. The final release builder runs both manifests before launching a
+platform build.
 
 - The Input tab option `非アクティブ時も専用コントローラー入力を受け付ける` is OFF by
   default. When enabled, GLFW game controllers continue to drive Music Select,

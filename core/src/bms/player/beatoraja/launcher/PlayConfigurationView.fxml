@@ -471,7 +471,12 @@
                     </Separator>
                     <CheckBox fx:id="usecim" mnemonicParsing="false" prefHeight="25.0" text="%CACHE_SKIN_IMAGE" />
                     <CheckBox fx:id="clipboardScreenshot" mnemonicParsing="false" prefHeight="25.0" text="%CLIPBOARD_SCREENSHOT" />
-
+                    <HBox prefHeight="25.0" prefWidth="300.0">
+                        <children>
+                            <Label prefHeight="25.0" prefWidth="150.0" text="%SCREENSHOT_FORMAT" />
+                            <ComboBox fx:id="screenshotFormat" prefWidth="100.0" />
+                        </children>
+                    </HBox>
                     <Button fx:id="importScoreButton" mnemonicParsing="false" onAction="#importScoreDataFromLR2" text="%IMPORT_LR2_SCORE">
                         <VBox.margin>
                             <Insets top="10.0" />

@@ -6,8 +6,10 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from build_arena_release import ReleaseBuildError, build_release
+from check_feature_parity import FeatureParityError
 
 
 class ParallelArenaBuildTest(unittest.TestCase):
@@ -54,13 +56,14 @@ class ParallelArenaBuildTest(unittest.TestCase):
 
     def test_builds_two_lanes_concurrently_and_writes_state(self) -> None:
         output = self.root / "output"
-        state_path = build_release(
-            windows_worktree=self.windows,
-            macos_worktree=self.macos,
-            java_home=self.jdk,
-            output_dir=output,
-            runner=self._runner,
-        )
+        with patch("build_arena_release.validate_release_repository"):
+            state_path = build_release(
+                windows_worktree=self.windows,
+                macos_worktree=self.macos,
+                java_home=self.jdk,
+                output_dir=output,
+                runner=self._runner,
+            )
         state = json.loads(state_path.read_text(encoding="utf-8"))
         self.assertEqual("built", state["status"])
         self.assertEqual("abcdef1234567890", state["source_commit"])
@@ -83,14 +86,29 @@ class ParallelArenaBuildTest(unittest.TestCase):
             return result
 
         with self.assertRaisesRegex(ReleaseBuildError, "same commit"):
-            build_release(
-                windows_worktree=self.windows,
-                macos_worktree=self.macos,
-                java_home=self.jdk,
-                output_dir=self.root / "unused",
-                runner=mismatch_runner,
-            )
+            with patch("build_arena_release.validate_release_repository"):
+                build_release(
+                    windows_worktree=self.windows,
+                    macos_worktree=self.macos,
+                    java_home=self.jdk,
+                    output_dir=self.root / "unused",
+                    runner=mismatch_runner,
+                )
         self.assertGreater(calls, 0)
+
+    def test_rejects_release_when_feature_parity_fails(self) -> None:
+        with patch(
+            "build_arena_release.validate_release_repository",
+            side_effect=FeatureParityError("feature parity validation failed"),
+        ):
+            with self.assertRaisesRegex(ReleaseBuildError, "feature parity validation failed"):
+                build_release(
+                    windows_worktree=self.windows,
+                    macos_worktree=self.macos,
+                    java_home=self.jdk,
+                    output_dir=self.root / "unused-parity",
+                    runner=self._runner,
+                )
 
 
 if __name__ == "__main__":

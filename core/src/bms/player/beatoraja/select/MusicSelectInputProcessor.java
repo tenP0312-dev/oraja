@@ -3,6 +3,8 @@ package bms.player.beatoraja.select;
 import bms.player.beatoraja.*;
 import bms.player.beatoraja.SystemSoundManager.SoundType;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
+
+import bms.player.beatoraja.input.BMControllerInputProcessor;
 import bms.player.beatoraja.input.KeyCommand;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 import bms.player.beatoraja.select.MusicSelectKeyProperty.MusicSelectKey;
@@ -35,6 +37,7 @@ public final class MusicSelectInputProcessor {
     static final int MANIAC_KEY_4 = 3;
     static final int MANIAC_KEY_6 = 5;
     static final int MANIAC_KEY_7 = 6;
+    static final ControlKeys SHOW_ALL_CHARTS_COMPATIBILITY_KEY = ControlKeys.NUM8;
 
     /**
      * バー移動中のカウンタ
@@ -57,6 +60,7 @@ public final class MusicSelectInputProcessor {
 
     boolean isOptionKeyPressed = false;
     boolean isOptionKeyReleased = false;
+	private boolean difficultyFilterPressed;
 
     // ノーツ表示時間変更のカウンタ
     private long timeChangeDuration;
@@ -129,12 +133,16 @@ public final class MusicSelectInputProcessor {
             SongManagerMenu.forceDisableLastPlayedSort();
             select.executeEvent(EventType.sort);
         }
-        // LNモードの切り替え
-        // endless dream - switching ln disabled in-game
-        // you can only change this in configuration
-        // if (input.isControlKeyPressed(ControlKeys.NUM3)) {
-        //     select.executeEvent(EventType.lnmode);
-        // }
+        // LNモードの切り替え。Arenaの選曲が固定された後は変更しない。
+        if (input.isControlKeyPressed(ControlKeys.NUM3)) {
+            select.executeEvent(EventType.lnmode);
+        }
+
+		boolean currentDifficultyFilterPressed = isDifficultyFilterPressed(input, config);
+		if (currentDifficultyFilterPressed && !difficultyFilterPressed) {
+			barManager.toggleDifficultyFilter();
+		}
+		difficultyFilterPressed = currentDifficultyFilterPressed;
 
         final MusicSelectKeyProperty property = MusicSelectKeyProperty.values()[config.getMusicselectinput()];
 
@@ -444,6 +452,9 @@ public final class MusicSelectInputProcessor {
             if (input.isControlKeyPressed(ControlKeys.NUM7)) {
                 select.executeEvent(EventType.rival);
             }
+            if (input.isControlKeyPressed(SHOW_ALL_CHARTS_COMPATIBILITY_KEY)) {
+                select.execute(MusicSelectCommand.SHOW_ALL_CHARTS);
+            }
             if (input.isControlKeyPressed(ControlKeys.NUM9)) {
                 select.executeEvent(EventType.open_document);
             }
@@ -504,6 +515,34 @@ public final class MusicSelectInputProcessor {
             select.play(OPTION_CHANGE);
         }
     }
+
+	private static boolean isDifficultyFilterPressed(
+			BMSPlayerInputProcessor input,
+			PlayerConfig config
+	) {
+		PlayModeConfig playConfig = config.getPlayConfig(config.getMode());
+		int keyboardKey = playConfig.getKeyboardConfig().getDiffFilter();
+		if (keyboardKey >= 0 && Gdx.input.isKeyPressed(keyboardKey)) {
+			return true;
+		}
+		if (input.getKeyBoardInputProcesseor().getMouseScratchInput().isDiffFilterPressed()
+				|| input.getMidiInputProcessor().isDiffFilterPressed()) {
+			return true;
+		}
+		PlayModeConfig.ControllerConfig[] controllerConfigs = playConfig.getController();
+		for (BMControllerInputProcessor controller : input.getBMInputProcessor()) {
+			for (PlayModeConfig.ControllerConfig controllerConfig : controllerConfigs) {
+				if (controller.getName().equals(controllerConfig.getName())) {
+					int button = controllerConfig.getDiffFilter();
+					if (controller.isButtonPressed(button)) {
+						return true;
+					}
+					break;
+				}
+			}
+		}
+		return false;
+	}
 
     void handleF2(BMSPlayerInputProcessor input, long now) {
         switch (f2HoldDetector.update(

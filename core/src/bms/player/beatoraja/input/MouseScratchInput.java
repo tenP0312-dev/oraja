@@ -11,6 +11,7 @@ public class MouseScratchInput {
     
     private int[] keys;
     private int[] control;
+	private int diffFilter;
 
     private boolean[] mouseScratchState = new boolean[4];
     private boolean[] mouseScratchChanged = new boolean[4];
@@ -107,6 +108,7 @@ public class MouseScratchInput {
         this.keys = msconfig.getKeyAssign().clone();
         this.duration = config.getDuration();
         this.control = new int[] { msconfig.getStart(), msconfig.getSelect() };
+		this.diffFilter = msconfig.getDiffFilter();
 
         this.mouseScratchEnabled = msconfig.isMouseScratchEnabled();
         this.mouseScratchTimeThreshold = msconfig.getMouseScratchTimeThreshold();
@@ -188,6 +190,13 @@ public class MouseScratchInput {
     public int getLastMouseScratch() {
         return lastMouseScratch;
     }
+
+	public boolean isDiffFilterPressed() {
+		return mouseScratchEnabled
+				&& diffFilter >= 0
+				&& diffFilter < mouseScratchState.length
+				&& mouseScratchState[diffFilter];
+	}
 
     public void setLastMouseScratch(int value) {
         this.lastMouseScratch = value;

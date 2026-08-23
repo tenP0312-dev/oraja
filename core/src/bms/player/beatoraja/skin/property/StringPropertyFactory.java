@@ -6,12 +6,15 @@ import bms.player.beatoraja.config.KeyConfiguration;
 import bms.player.beatoraja.config.SkinConfiguration;
 import bms.player.beatoraja.decide.MusicDecide;
 import bms.player.beatoraja.ir.IRScoreData;
+import bms.player.beatoraja.ir.IRUtil;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.modmenu.FreqTrainerMenu;
+import bms.player.beatoraja.modmenu.SongManagerMenu;
 import bms.player.beatoraja.play.BMSPlayer;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.result.AbstractResult;
 import bms.player.beatoraja.result.CourseResult;
+import bms.player.beatoraja.select.BMSIRSelectOptionCompatibility;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.*;
 import bms.player.beatoraja.song.SongData;
@@ -133,7 +136,10 @@ public class StringPropertyFactory {
 		key8(47, createKeyname(7)),
 		key9(48, createKeyname(8)),
 		key10(49, createKeyname(9)),
-		sort(61, (state) -> state.resource.getPlayerConfig().getSortid()),
+		sort(61, (state) -> BMSIRSelectOptionCompatibility.visibleSortName(
+				state.resource.getPlayerConfig().getSortid(),
+				state instanceof MusicSelector && SongManagerMenu.isLastPlayedSortEnabled()
+		)),
 
 		chartreplication(86, (state) -> state.resource.getPlayerConfig().getChartReplicationMode()),
 
@@ -352,7 +358,7 @@ public class StringPropertyFactory {
 					rankingOffset = result.getRankingOffset();
 				}
 				IRScoreData score = irc != null ? irc.getScore(index + rankingOffset) : null;
-				return score != null ? (score.player.length() > 0 ? score.player : "YOU") : "";
+				return score != null ? IRUtil.playerName(state.main, score.player) : "";
 			};
 
 		}

@@ -110,6 +110,25 @@ class BarManagerDifficultyGroupingTest {
         assertSame(secondHyper, ((SongBar) grouped[1]).getSongData());
     }
 
+	@Test
+	void difficultyFilterKeepsRequestedStageOrHighestFallbackPerSong() {
+		SongData firstNormal = song("first-normal", "first", Mode.BEAT_7K.id, 2, 5);
+		SongData firstHyper = song("first-hyper", "first", Mode.BEAT_7K.id, 3, 9);
+		SongData secondBeginner = song("second-beginner", "second", Mode.BEAT_7K.id, 1, 2);
+		SongData secondAnother = song("second-another", "second", Mode.BEAT_7K.id, 4, 11);
+
+		Bar[] filtered = BarManager.filterDifficultyBars(new Bar[]{
+				new SongBar(firstNormal),
+				new SongBar(firstHyper),
+				new SongBar(secondBeginner),
+				new SongBar(secondAnother)
+		}, 3);
+
+		assertEquals(2, filtered.length);
+		assertSame(firstHyper, ((SongBar) filtered[0]).getSongData());
+		assertSame(secondAnother, ((SongBar) filtered[1]).getSongData());
+	}
+
     @Test
     void lr2StageUsesTheNearestLowerDifficultyThenTheLowestAvailable() {
         SongData normal = song("normal", "first", Mode.BEAT_7K.id, 2, 5);

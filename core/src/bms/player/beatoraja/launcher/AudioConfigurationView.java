@@ -12,6 +12,7 @@ import bms.player.beatoraja.AudioConfig.WasapiMode;
 import bms.player.beatoraja.audio.PortAudioDriver;
 import bms.player.beatoraja.audio.PortAudioDriver.AsioUnavailableException;
 import bms.player.beatoraja.audio.PortAudioDriver.DeviceOption;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.CheckBox;
@@ -37,9 +38,15 @@ public class AudioConfigurationView implements Initializable {
 	@FXML
 	private Slider systemvolume;
 	@FXML
+	private Spinner<Double> systemVolumeSpinner;
+	@FXML
 	private Slider keyvolume;
 	@FXML
+	private Spinner<Double> keyVolumeSpinner;
+	@FXML
 	private Slider bgvolume;
+	@FXML
+	private Spinner<Double> bgVolumeSpinner;
 	@FXML
 	private CheckBox normalizeVolume;
 	@FXML
@@ -67,6 +74,9 @@ public class AudioConfigurationView implements Initializable {
 
 		audioFreqOption.getItems().setAll(FrequencyType.UNPROCESSED , FrequencyType.FREQUENCY);
 		audioFastForward.getItems().setAll(FrequencyType.UNPROCESSED , FrequencyType.FREQUENCY);
+		bindSliderToSpinner(systemvolume, systemVolumeSpinner);
+		bindSliderToSpinner(keyvolume, keyVolumeSpinner);
+		bindSliderToSpinner(bgvolume, bgVolumeSpinner);
 	}
 
 	public void update(AudioConfig config) {
@@ -119,7 +129,9 @@ public class AudioConfigurationView implements Initializable {
 	public void updateNormalizeVolume() {
 		boolean enabled = normalizeVolume.isSelected();
 		keyvolume.setDisable(enabled);
+		keyVolumeSpinner.setDisable(enabled);
 		bgvolume.setDisable(enabled);
+		bgVolumeSpinner.setDisable(enabled);
 	}
 
     @FXML
@@ -178,5 +190,12 @@ public class AudioConfigurationView implements Initializable {
 				audio.getValue(),
 				audioname.getValue(),
 				PortAudioDriver.isWindows()));
+	}
+
+	private static void bindSliderToSpinner(Slider slider, Spinner<Double> spinner) {
+		Bindings.bindBidirectional(
+				slider.valueProperty().asObject(),
+				spinner.getValueFactory().valueProperty()
+		);
 	}
 }

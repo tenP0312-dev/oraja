@@ -222,6 +222,12 @@ public class Config implements Validatable {
 
 	private boolean useDiscordRPC = false;
 	private boolean setClipboardScreenshot = false;
+
+	public enum ScreenShotFormat {
+		PNG, JPG
+	}
+
+	private ScreenShotFormat screenshotFormat = ScreenShotFormat.PNG;
 	private String monitorName = "";
     private int webhookOption = 0; // 0 - Off, 1 - Image, 2 - Rich
     private String webhookName = "";
@@ -661,6 +667,16 @@ public class Config implements Validatable {
 		this.setClipboardScreenshot = setClipboardScreenshot;
 	}
 
+	public ScreenShotFormat getScreenshotFormat() {
+		return screenshotFormat != null ? screenshotFormat : ScreenShotFormat.PNG;
+	}
+
+	public void setScreenshotFormat(ScreenShotFormat screenshotFormat) {
+		this.screenshotFormat = screenshotFormat != null
+				? screenshotFormat
+				: ScreenShotFormat.PNG;
+	}
+
 	public boolean isUpdatesong() {
 		return updatesong;
 	}
@@ -946,6 +962,9 @@ public class Config implements Validatable {
 	}
 
     public boolean validate() {
+		if (screenshotFormat == null) {
+			screenshotFormat = ScreenShotFormat.PNG;
+		}
 		displaymode = (displaymode != null) ? displaymode : DisplayMode.WINDOW;
 		lastWindowedDisplayMode = normalizeWindowedDisplayMode(
 				lastWindowedDisplayMode != null ? lastWindowedDisplayMode : displaymode

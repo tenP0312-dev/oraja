@@ -507,7 +507,9 @@ Build the client for the target platform:
 For the final internal-release pass, keep two clean worktrees at the same
 reviewed commit with submodules initialized, then run both platform lanes in
 parallel. The helper validates the commit, version constants, submodules, and
-JDK 17 once; each lane runs in its own worktree to avoid Gradle output races.
+JDK 17 once. It also validates the complete ED 0.4.0 feature inventory and the
+known distribution-to-`main` integration inventory before either lane starts;
+each lane runs in its own worktree to avoid Gradle output races.
 
 ```sh
 python3 tools/build_arena_release.py \
@@ -521,6 +523,11 @@ python3 tools/build_arena_release.py \
 artifact hashes. Do not recreate the worktrees, download the JDK, or initialize
 submodules during every release; refresh the prepared worktrees to the reviewed
 commit before invoking the helper.
+
+Run the same parity gate directly with
+`python3 tools/check_feature_parity.py --root .`. The maintained inventory and
+evidence rules are documented in
+[`docs/ED_FEATURE_PARITY.md`](docs/ED_FEATURE_PARITY.md).
 
 On Windows, use `gradlew.bat` instead of `./gradlew`. Generated jars are
 written under `dist/`.

@@ -128,6 +128,7 @@ public class BMSPlayer extends MainState {
 	private boolean bgaPreparationStarted;
 	private boolean bgaPreparationComplete;
 	private boolean countdownStageReported;
+	private boolean playEndMetricsSent;
 	private long diagnosticPlaySessionId;
 
 	public BMSPlayer(MainController main, PlayerResource resource) {
@@ -154,6 +155,8 @@ public class BMSPlayer extends MainState {
 		BMSIRArenaClient.tracePlayPhase("constructor_begin", this);
 		BMSPlayerMode autoplay = resource.getPlayMode();
 		PlayerConfig config = resource.getPlayerConfig();
+		resource.setFailMeasure(Double.NaN);
+		playEndMetricsSent = false;
 		BMSIRManiacPlayContext maniacContext = null;
 
 		playinfo.randomoption = config.getRandom();
@@ -418,7 +421,6 @@ public class BMSPlayer extends MainState {
 			}
 
 		}
-
 		logger.info("譜面オプション設定");
 		if (replay != null && replay.pattern != null) {
 			// リプレイ譜面再現(PatternModifyLog使用。旧verとの互換性維持用)
@@ -1011,12 +1013,14 @@ public class BMSPlayer extends MainState {
 						}
 						PatternModifier.create(property.random2, 1, model.getMode(), config).modify(model);
 					}
-					PatternModifier.create(property.random, 0, model.getMode(), config).modify(model);
+					PatternModifier player1PatternModifier = PatternModifier.create(
+							property.random, 0, model.getMode(), config);
                     if (RandomTrainer.isActive() && model.getMode() == Mode.BEAT_7K && RandomTrainer.getRandomSeedMap() != null) {
                         HashMap<Integer, Long> seedmap = RandomTrainer.getRandomSeedMap();
                         logger.info("RandomTrainer: Enabled, modifying random seed");
-                        pm.setSeed(seedmap.get(Integer.parseInt(RandomTrainer.getLaneOrder())));
+						player1PatternModifier.setSeed(seedmap.get(Integer.parseInt(RandomTrainer.getLaneOrder())));
                     }
+					player1PatternModifier.modify(model);
                     pm.modify(model);
 
 					gauge = practice.getGauge(model);
@@ -1110,6 +1114,16 @@ public class BMSPlayer extends MainState {
 					}
 					gauge.setType(type);
 				} else if (g == 0) {
+					if (Double.isNaN(resource.getFailMeasure())) {
+						double failMeasure = 0;
+						for (TimeLine timeline : model.getAllTimeLines()) {
+							if (timeline.getMilliTime() > ptime) {
+								break;
+							}
+							failMeasure = timeline.getSection();
+						}
+						resource.setFailMeasure(failMeasure);
+					}
 					switch(config.getGaugeAutoShift()) {
 					case PlayerConfig.GAUGEAUTOSHIFT_NONE:
 						// FAILED移行
@@ -1141,6 +1155,7 @@ public class BMSPlayer extends MainState {
 				if ((input.startPressed() ^ input.isSelectPressed()) && resource.getCourseBMSModels() == null
 						&& autoplay.mode == BMSPlayerMode.Mode.PLAY) {
                     main.getAudioProcessor().setGlobalPitch(1f);
+					sendPlayEndMetrics(true);
 					if (!resource.isUpdateScore()) {
 						resource.getReplayData().randomoptionseed = -1;
 						logger.info("アシストモード時は同じ譜面でリプレイできません");
@@ -1162,6 +1177,7 @@ public class BMSPlayer extends MainState {
 					if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 						resource.setScoreData(createScoreData());
 					}
+					sendPlayEndMetrics(false);
 					resource.setCombo(judge.getCourseCombo());
 					resource.setMaxcombo(judge.getCourseMaxcombo());
 					saveConfig();
@@ -1202,6 +1218,7 @@ public class BMSPlayer extends MainState {
 					if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 						resource.setScoreData(createScoreData());
 					}
+					sendPlayEndMetrics(false);
 					resource.setCombo(judge.getCourseCombo());
 					resource.setMaxcombo(judge.getCourseMaxcombo());
 					saveConfig();
@@ -1233,6 +1250,7 @@ public class BMSPlayer extends MainState {
 				if ((resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
 						&& input.startPressed() ^ input.isSelectPressed()) && resource.getCourseBMSModels() == null) {
 					main.getAudioProcessor().setGlobalPitch(1f);
+					sendPlayEndMetrics(true);
 					if (!resource.isUpdateScore()) {
 						resource.getReplayData().randomoptionseed = -1;
 						logger.info("アシストモード時は同じ譜面でリプレイできません");
@@ -1256,6 +1274,30 @@ public class BMSPlayer extends MainState {
 		}
 
 		prevtime = micronow;
+	}
+
+	private void sendPlayEndMetrics(boolean quickRetry) {
+		if (playEndMetricsSent || judge == null) {
+			return;
+		}
+		int playedNotes = Math.max(0, judge.getPastNotes());
+		int totalNotes = Math.max(0, model != null
+				? model.getTotalNotes()
+				: resource.getSongdata() != null ? resource.getSongdata().getNotes() : 0);
+		long elapsedSeconds = timer.isTimerOn(TIMER_PLAY)
+				? Math.max(0, timer.getNowTime(TIMER_PLAY) / 1000)
+				: 0;
+		BMSIROrajaHelperBridge.publishPlayEnd(
+				resource.getSongdata(),
+				playinfo,
+				model != null ? model.getMode() : null,
+				judge.getScoreData(),
+				playedNotes,
+				totalNotes,
+				elapsedSeconds,
+				quickRetry
+		);
+		playEndMetricsSent = true;
 	}
 
 	public void setPlaySpeed(int playspeed) {
