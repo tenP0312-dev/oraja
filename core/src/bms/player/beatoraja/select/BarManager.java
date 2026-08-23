@@ -1,6 +1,7 @@
 package bms.player.beatoraja.select;
 
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_CLOSE;
+import static bms.player.beatoraja.SystemSoundManager.SoundType.OPTION_CHANGE;
 
 import java.io.BufferedInputStream;
 import java.lang.reflect.Method;
@@ -468,6 +469,14 @@ public class BarManager {
 				}
 			}
 			l.removeAll(remove, true);
+			if (config.getDifficultyFilter() != 0) {
+				Bar[] filtered = filterDifficultyBars(
+						l.toArray(Bar.class),
+						config.getDifficultyFilter()
+				);
+				l.clear();
+				l.addAll(filtered);
+			}
 			if (l.size == 0) {
 				if (removedExistingDirectory) {
 					dir.addLast((DirectoryBar) bar);
@@ -1081,6 +1090,53 @@ public class BarManager {
 		updateBar();
 		select.selectedSongVariantChanged();
 		return true;
+	}
+
+	public int getDifficultyFilter() {
+		return select.resource.getPlayerConfig().getDifficultyFilter();
+	}
+
+	public void toggleDifficultyFilter() {
+		setDifficultyFilter((getDifficultyFilter() + 1) % 6);
+	}
+
+	public void setDifficultyFilter(int difficulty) {
+		select.resource.getPlayerConfig().setDifficultyFilter(
+				Math.max(0, Math.min(5, difficulty))
+		);
+		updateBar();
+		select.play(OPTION_CHANGE);
+	}
+
+	static Bar[] filterDifficultyBars(Bar[] bars, int difficulty) {
+		if (bars == null || difficulty < 1 || difficulty > 5) {
+			return bars == null ? new Bar[0] : bars;
+		}
+		Map<String, List<SongBar>> groups = new LinkedHashMap<>();
+		for (Bar bar : bars) {
+			if (bar instanceof SongBar songBar && songBar.getSongData() != null) {
+				groups.computeIfAbsent(
+						difficultyGroupKey(songBar.getSongData()),
+						ignored -> new ArrayList<>()
+				).add(songBar);
+			}
+		}
+		Set<SongBar> keep = Collections.newSetFromMap(new IdentityHashMap<>());
+		for (List<SongBar> group : groups.values()) {
+			int highest = group.stream()
+					.mapToInt(songBar -> songBar.getSongData().getDifficulty())
+					.max()
+					.orElse(0);
+			boolean hasRequested = group.stream()
+					.anyMatch(songBar -> songBar.getSongData().getDifficulty() == difficulty);
+			int selectedDifficulty = hasRequested ? difficulty : highest;
+			group.stream()
+					.filter(songBar -> songBar.getSongData().getDifficulty() == selectedDifficulty)
+					.forEach(keep::add);
+		}
+		return Stream.of(bars)
+				.filter(bar -> !(bar instanceof SongBar songBar) || keep.contains(songBar))
+				.toArray(Bar[]::new);
 	}
 
 	static int nextDifficultyBarIndex(Bar[] bars, int currentIndex) {

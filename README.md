@@ -10,13 +10,24 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.71**. Its Windows native-audio
+The current client source version is **0.4.14.72**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.72 restores the complete retained LR2oraja Endless Dream
+behavior found by the exact 52-commit history audit. This includes sort-skin
+visibility, Practice Random Trainer seeds, isolated BGA image textures,
+controller hotplug, immediate rival refresh, Primary IR ranking, per-controller
+JKOC, numeric volume inputs, authored LN mode, difficulty filtering, 5K/10K
+result input, screenshots, score deletion, BACKBMP, IR player names, LITONE
+play dates, `oraja_helper`, and Random Select presets. rian DX/X MODE and every
+rianIR submission/replay-send path remain deliberately excluded. Launcher
+0.2.29, plugin 0.0.72, protocol v8, and all `.59` through `.71` fixes remain
+present.
 
 Version 0.4.14.71 hides the Arena play cursor without capturing or confining
 the OS pointer. Mouse movement, the Mod Menu, and leaving play restore cursor
@@ -157,6 +168,15 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.72
+
+Restores the complete retained LR2oraja Endless Dream behavior found by the
+exact 52-commit audit and locks the result in executable feature/history
+gates. rian DX/X MODE and all rianIR submission/replay-send paths remain
+excluded by product-owner decision. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, native audio, and every `.59` through `.71` release fix remain
+present.
 
 ## Arena oraja 0.4.14.71
 
@@ -627,20 +647,27 @@ Build the client for the target platform:
 For the final internal-release pass, keep two clean worktrees at the same
 reviewed commit with submodules initialized, then run both platform lanes in
 parallel. The helper validates the commit, version constants, submodules, and
-JDK 17 once; each lane runs in its own worktree to avoid Gradle output races.
+JDK 17 once. It also validates the complete ED 0.4.0 feature inventory and the
+known distribution-to-`main` integration inventory before either lane starts;
+each lane runs in its own worktree to avoid Gradle output races.
 
 ```sh
 python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.71
+  --output-dir /release/build-0.4.14.72
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
 artifact hashes. Do not recreate the worktrees, download the JDK, or initialize
 submodules during every release; refresh the prepared worktrees to the reviewed
 commit before invoking the helper.
+
+Run the same parity gate directly with
+`python3 tools/check_feature_parity.py --root .`. The maintained inventory and
+evidence rules are documented in
+[`docs/ED_FEATURE_PARITY.md`](docs/ED_FEATURE_PARITY.md).
 
 On Windows, use `gradlew.bat` instead of `./gradlew`. Generated jars are
 written under `dist/`.

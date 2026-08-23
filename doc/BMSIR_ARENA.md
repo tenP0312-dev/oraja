@@ -1,9 +1,18 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.71`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.72`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.72` restores the complete retained LR2oraja Endless Dream
+behavior found by the exact 52-commit history audit. It includes the repaired
+sort, Practice Random Trainer, BGA cache, controller hotplug, rival/Primary IR,
+JKOC/volume, LN-mode, difficulty-filter, result-input, screenshot, score-delete,
+BACKBMP, IR-name, LITONE date, `oraja_helper`, and Random Select paths. rian
+DX/X MODE and every rianIR submission/replay-send path remain deliberately
+excluded. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, native audio, and
+the `.59` through `.71` release fixes remain present.
 
 Version `0.4.14.71` hides the Arena play cursor without capturing or confining
 the OS pointer. Mouse movement, the Mod Menu, and leaving play restore cursor
@@ -950,11 +959,13 @@ by default. The notice appears when the value is selected and once when Music
 Select restores it. The global INFO-notification switch must also be ON.
 Disabling the extension while it is active normalizes judge-rank sort to TITLE.
 
-The song context menu contains one `BMS-IR Leaderboard` entry. It reads the
-LR2-compatible ranking and selectable ghost directly from BMS-IR over HTTPS;
-the Arena client no longer depends on the old `dream-pro.info` redirect for
-this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS payload,
-cap decompressed data, and keep a short per-chart cache.
+The song context menu keeps separate leaderboard entries. `Primary IR
+Leaderboard` reads the first configured beatoraja IR and refreshes matching
+rival score caches from a successful ranking response. `BMS-IR Leaderboard`
+reads the LR2-compatible ranking and selectable ghost directly from BMS-IR over
+HTTPS; the Arena client no longer depends on the old `dream-pro.info` redirect
+for this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS
+payload, cap decompressed data, and keep a short per-chart cache.
 
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
@@ -1257,6 +1268,23 @@ first-timing preview default to ON and may be changed there. Long-note behavior
 uses the ordinary enabled LN-type selector; BMS-IR accepts new CN/HCN results
 in mode-separated rankings, while rated Arena continues to lock LN.
 
+Endless Dream compatibility is protected as one maintained inventory rather
+than by branch ancestry. The ED 0.4.0 set covers last-played sorting, Random
+Trainer, DECIDE skipping, live play options, Webhook, both IR leaderboard
+routes, volume normalization, Skin Widget Manager, the song context menu, live
+skin configuration, difficulty-table management, G-BATTLE, CN end caps, and
+OBS WebSocket. Every item records a UI/command entry, stored or session state,
+and an execution path in `tools/ed_0_4_0_feature_parity.json`.
+
+The known fixes that previously existed only after ED 0.4.0 or on distribution
+branches are integrated into `main`: visible sort fallback, Practice Random
+Trainer seed application, independent BGA textures, controller hotplug, live
+rival refresh, separate Primary IR ranking, fatal nonzero exit, per-controller
+JKOC, numeric volume inputs, the Skin Widget Manager `.68` behavior, and the
+top-row `8` `.70` behavior. `tools/distribution_feature_parity.json` fixes that
+list in CI. The final release builder runs both manifests before launching a
+platform build.
+
 - The Input tab option `非アクティブ時も専用コントローラー入力を受け付ける` is OFF by
   default. When enabled, GLFW game controllers continue to drive Music Select,
   READY, PLAY, and RESULT while another application has focus. PC keyboard,
@@ -1424,7 +1452,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.71-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.72-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1445,7 +1473,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.71-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.72-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1464,7 +1492,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.71-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.72-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

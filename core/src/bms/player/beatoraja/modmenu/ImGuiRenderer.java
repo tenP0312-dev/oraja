@@ -219,7 +219,7 @@ public class ImGuiRenderer {
                 ImGui.treePop();
             }
             ImGui.end();
-        }
+		}
 
         if (SHOW_SKIN_WIDGET_MANAGER.get()) {
             SkinWidgetManager.show(SHOW_SKIN_WIDGET_MANAGER);

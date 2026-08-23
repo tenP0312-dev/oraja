@@ -43,6 +43,10 @@ public class MusicResult extends AbstractResult {
 	}
 
 	private ResultKeyProperty property;
+	private Mode selectedModeBeforeResult;
+	private Mode inputModeBeforeResult;
+	private boolean resultInputModeChanged;
+	private boolean resultInputModeRestored;
 
 	public MusicResult(MainController main) {
 		super(main);
@@ -60,12 +64,30 @@ public class MusicResult extends AbstractResult {
 					resource.getPlayerConfig().getLnmode(), i) ? ReplayStatus.EXIST : ReplayStatus.NOT_EXIST ;			
 		}
 
+		inputModeBeforeResult = resource.getBMSModel().getMode();
+		selectedModeBeforeResult = resource.getPlayerConfig().getMode();
+		Mode resultInputMode = compatibleResultInputMode(inputModeBeforeResult);
+		resultInputModeChanged = resultInputMode != inputModeBeforeResult;
+		resultInputModeRestored = false;
+		if (resultInputModeChanged) {
+			resource.getPlayerConfig().setMode(resultInputMode);
+			main.getInputProcessor().setPlayConfig(
+					resource.getPlayerConfig().getPlayConfig(resultInputMode)
+			);
+		}
+
 		property = ResultKeyProperty.get(resource.getBMSModel().getMode());
 		if (property == null) {
 			property = ResultKeyProperty.BEAT_7K;
 		}
 
 		updateScoreDatabase();
+		BMSIROrajaHelperBridge.publishResult(
+				resource.getSongdata(),
+				resource.getReplayData(),
+				resource.getBMSModel().getMode(),
+				resource.getScoreData()
+		);
 		// リプレイの自動保存
 		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !resource.isFreqOn()) {
 			for (int i = 0; i < REPLAY_SIZE; i++) {
@@ -129,7 +151,7 @@ public class MusicResult extends AbstractResult {
     				break;
     			}
     			
-    			if(send) {
+			if(send) {
 					IRSendStatus queued = new IRSendStatus(irc.connection, resource.getSongdata(), newscore);
 					main.irSendStatus.add(queued);
 					currentScores.add(queued);
@@ -176,6 +198,11 @@ public class MusicResult extends AbstractResult {
 						try {
 							IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, new IRChartData(resource.getSongdata()));
 							if(response.isSucceeded()) {
+								main.getRivalDataAccessor().updateAllRivalsScores(
+										response.getData(),
+										resource.getSongdata(),
+										resource.getPlayerConfig().getLnmode()
+								);
 								ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
 								rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
 								logger.info("IRからのスコア取得成功 : {}", response.getMessage());
@@ -203,6 +230,7 @@ public class MusicResult extends AbstractResult {
 	}
 
 	public void shutdown() {
+		restoreResultInputMode();
 		stop(RESULT_CLEAR);
 		stop(RESULT_FAIL);
 		stop(RESULT_CLOSE);
@@ -256,10 +284,10 @@ public class MusicResult extends AbstractResult {
 								}
 							}
 							// 不合格リザルト
-							main.changeState(MainStateType.COURSERESULT);
+							changeStateAfterRestoring(MainStateType.COURSERESULT);
 						} else {
 							// コーススコアがない場合は選曲画面へ
-							main.changeState(MainStateType.MUSICSELECT);
+							changeStateAfterRestoring(MainStateType.MUSICSELECT);
 						}
 					} else if (resource.nextCourse()) {
 						RankingData songrank = main.getRankingDataCache().get(resource.getSongdata(), main.getPlayerConfig().getLnmode());
@@ -269,10 +297,10 @@ public class MusicResult extends AbstractResult {
 						}
 						resource.setRankingData(songrank);
 
-						main.changeState(MainStateType.PLAY);
+						changeStateAfterRestoring(MainStateType.PLAY);
 					} else {
 						// 合格リザルト
-						main.changeState(MainStateType.COURSERESULT);
+						changeStateAfterRestoring(MainStateType.COURSERESULT);
 					}
 				} else {
 					resource.getPlayerConfig().setGauge(resource.getOrgGaugeOption());
@@ -293,7 +321,7 @@ public class MusicResult extends AbstractResult {
 						// オプションを変更せず同じ譜面でリプレイ
 						resource.getReplayData().randomoptionseed = -1;
 						resource.reloadBMSFile();
-						main.changeState(MainStateType.PLAY);
+						changeStateAfterRestoring(MainStateType.PLAY);
 					} else if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
 							&& key == ResultKeyProperty.ResultKey.REPLAY_SAME) {
 						// 同じ譜面でリプレイ
@@ -304,9 +332,9 @@ public class MusicResult extends AbstractResult {
 							resource.getReplayData().randomoptionseed = -1;
 						}
 						resource.reloadBMSFile();
-						main.changeState(MainStateType.PLAY);
+						changeStateAfterRestoring(MainStateType.PLAY);
 					} else {
-						main.changeState(MainStateType.MUSICSELECT);
+						changeStateAfterRestoring(MainStateType.MUSICSELECT);
 					}
 				}
 			}
@@ -557,5 +585,30 @@ public class MusicResult extends AbstractResult {
 
 	public ScoreData getNewScore() {
 		return resource.getScoreData();
+	}
+
+	static Mode compatibleResultInputMode(Mode mode) {
+		return switch (mode) {
+			case BEAT_5K -> Mode.BEAT_7K;
+			case BEAT_10K -> Mode.BEAT_14K;
+			default -> mode;
+		};
+	}
+
+	private void changeStateAfterRestoring(MainStateType state) {
+		restoreResultInputMode();
+		main.changeState(state);
+	}
+
+	private void restoreResultInputMode() {
+		if (!resultInputModeChanged || resultInputModeRestored) {
+			return;
+		}
+		resource.getPlayerConfig().setMode(selectedModeBeforeResult);
+		main.getInputProcessor().setPlayConfig(
+				resource.getPlayerConfig().getPlayConfig(inputModeBeforeResult)
+		);
+		main.getInputProcessor().resetAllKeyState();
+		resultInputModeRestored = true;
 	}
 }

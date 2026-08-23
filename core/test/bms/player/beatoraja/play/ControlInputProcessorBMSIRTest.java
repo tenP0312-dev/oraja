@@ -101,4 +101,13 @@ class ControlInputProcessorBMSIRTest {
         ));
     }
 
+	@Test
+	void floatingHispeedRequiresManualSpeedAndEveryCoverOff() {
+		assertTrue(ControlInputProcessor.usesFloatingHispeed(false, false, false, false));
+		assertFalse(ControlInputProcessor.usesFloatingHispeed(true, false, false, false));
+		assertFalse(ControlInputProcessor.usesFloatingHispeed(false, true, false, false));
+		assertFalse(ControlInputProcessor.usesFloatingHispeed(false, false, true, false));
+		assertFalse(ControlInputProcessor.usesFloatingHispeed(false, false, false, true));
+	}
+
 }

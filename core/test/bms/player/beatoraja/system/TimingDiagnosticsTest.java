@@ -155,6 +155,7 @@ class TimingDiagnosticsTest {
         assertEquals(256, event.path("cache_slots").asInt());
         assertEquals(256, event.path("initial_uploads").asInt());
         assertEquals(0, event.path("colliding_images").asInt());
+        assertEquals(0, event.path("deferred_images").asInt());
     }
 
     @Test

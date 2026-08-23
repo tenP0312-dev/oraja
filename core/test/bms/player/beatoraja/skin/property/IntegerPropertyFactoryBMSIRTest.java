@@ -2,6 +2,8 @@ package bms.player.beatoraja.skin.property;
 
 import bms.model.Mode;
 import bms.player.beatoraja.ReplayData;
+import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.ScoreDataProperty;
 import bms.player.beatoraja.pattern.Random;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +12,17 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class IntegerPropertyFactoryBMSIRTest {
+
+	@Test
+	void litoneScoreDatePropertyReturnsTheStoredPlayTimestamp() {
+		ScoreData score = new ScoreData();
+		score.setDate(1_777_000_000L);
+		ScoreDataProperty property = new ScoreDataProperty();
+		property.update(score);
+
+		assertEquals(1_777_000_000, IntegerPropertyFactory.scoreDate(property));
+		assertEquals(0, IntegerPropertyFactory.scoreDate(new ScoreDataProperty()));
+	}
 
     @Test
     void fixedShufflePatternsUseLocalOneBasedLaneNumbers() {

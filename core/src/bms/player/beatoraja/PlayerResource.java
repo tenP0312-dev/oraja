@@ -144,6 +144,7 @@ public final class PlayerResource {
 
 	private final BMSLoudnessAnalyzer loudnessAnalyzer;
 	private Future<BMSLoudnessAnalyzer.AnalysisResult> analysisTask;
+	private double failMeasure = Double.NaN;
 
 	public PlayerResource(AudioDriver audio, Config config, PlayerConfig pconfig, BMSLoudnessAnalyzer loudnessAnalyzer) {
 		this.config = config;
@@ -169,6 +170,7 @@ public final class PlayerResource {
 		bmsPaths = null;
 		setTablename("");
 		setTablelevel("");
+		failMeasure = Double.NaN;
 	}
 
 	public boolean setBMSFile(final Path f, BMSPlayerMode mode) {
@@ -184,6 +186,7 @@ public final class PlayerResource {
 		if (model.getAllTimeLines().length == 0) {
 			return false;
 		}
+		preferStoredBackbmp(model, songdata);
 
 		orgmode = model.getMode();
 		bmsresource.setBMSFile(model, chartResource, config, mode);
@@ -202,6 +205,17 @@ public final class PlayerResource {
 			analysisTask = null;
 		}
 		return true;
+	}
+
+	static void preferStoredBackbmp(BMSModel model, SongData song) {
+		if (model == null || song == null) {
+			return;
+		}
+		if ((model.getBackbmp() == null || model.getBackbmp().isEmpty())
+				&& song.getBackbmp() != null
+				&& !song.getBackbmp().isEmpty()) {
+			model.setBackbmp(song.getBackbmp());
+		}
 	}
 
 	public BMSModel loadBMSModel(Path f, int lnmode) {
@@ -763,5 +777,13 @@ public final class PlayerResource {
 
 	public Future<BMSLoudnessAnalyzer.AnalysisResult> getAnalysisTask() {
 		return analysisTask;
+	}
+
+	public double getFailMeasure() {
+		return failMeasure;
+	}
+
+	public void setFailMeasure(double failMeasure) {
+		this.failMeasure = failMeasure;
 	}
 }

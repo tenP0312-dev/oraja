@@ -117,6 +117,17 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
 		return name;
 	}
 
+	public Controller getController() {
+		return controller;
+	}
+
+	public boolean isButtonPressed(int button) {
+		return enabled
+				&& button >= 0
+				&& button < buttonstate.length
+				&& buttonstate[button];
+	}
+
 	public void clear() {
 		Arrays.fill(buttonchanged, false);
 		Arrays.fill(buttontime, Long.MIN_VALUE);

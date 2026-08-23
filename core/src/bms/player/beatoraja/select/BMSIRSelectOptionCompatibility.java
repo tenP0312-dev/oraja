@@ -30,6 +30,30 @@ public final class BMSIRSelectOptionCompatibility {
         return Math.floorMod(current + (direction >= 0 ? 1 : -1), count);
     }
 
+    /**
+     * Legacy image-select skins use ref 12 as an index into their own sort
+     * image list. Last-played sorting is an overlay mode rather than a member
+     * of that list, so retain the configured sorter as a visible fallback
+     * instead of returning {@link Integer#MIN_VALUE} and hiding the object.
+     */
+    public static int visibleSortIndex(int configuredSort, boolean lastPlayedSort) {
+        if (!lastPlayedSort) {
+            return configuredSort;
+        }
+        if (configuredSort < 0 || configuredSort >= BarSorter.defaultSorter.length) {
+            return defaultSortIndex(BarSorter.TITLE);
+        }
+        return configuredSort;
+    }
+
+    /**
+     * Text-capable skins can still identify the effective overlay sort even
+     * though image-only legacy skins intentionally retain their prior icon.
+     */
+    public static String visibleSortName(String configuredSort, boolean lastPlayedSort) {
+        return lastPlayedSort ? "LAST_PLAYED" : configuredSort;
+    }
+
     private static int defaultSortIndex(BarSorter target) {
         for (int index = 0; index < BarSorter.defaultSorter.length; index++) {
             if (BarSorter.defaultSorter[index] == target) {

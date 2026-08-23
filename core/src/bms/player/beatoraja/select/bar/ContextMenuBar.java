@@ -240,6 +240,19 @@ public class ContextMenuBar extends DirectoryBar {
     }
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {
+		if (selector.main.getIRStatus().length > 0) {
+			String irName = selector.main.getIRStatus()[0].config.getIrname();
+			var primaryLeaderboard = new FunctionBar((selector, self) -> {
+				selector.getBarManager().updateBar(new LeaderBoardBar(
+						selector,
+						song,
+						LeaderBoardBar.Source.PRIMARY_IR
+				));
+				selector.play(FOLDER_OPEN);
+			}, BMSIRArenaI18n.text("Primary IR ランキング", "Primary IR Leaderboard")
+					+ (irName == null || irName.isBlank() ? "" : " (" + irName + ")"), STYLE_SPECIAL);
+			options.add(primaryLeaderboard);
+		}
         var leaderboard = new FunctionBar((selector, self) -> {
             selector.getBarManager().updateBar(new LeaderBoardBar(selector, song));
             selector.play(FOLDER_OPEN);

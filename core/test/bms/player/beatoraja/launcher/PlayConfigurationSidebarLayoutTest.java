@@ -151,10 +151,11 @@ class PlayConfigurationSidebarLayoutTest {
 				"bgaExpand", "bgaOp", "displayMode", "maxFps", "missLayerTime", "monitor", "resolution", "vSync");
 		assertInjectedNodes("AudioConfigurationView.fxml", AudioConfigurationView.class,
 				"audio", "audioFastForward", "audioFreqOption", "audiobuffer", "audioname", "audiosamplerate",
-				"audiosim", "bgvolume", "keyvolume", "loopCourseResultSound", "loopResultSound", "normalizeVolume",
-				"systemvolume", "wasapiMode");
+				"audiosim", "bgvolume", "bgVolumeSpinner", "keyvolume", "keyVolumeSpinner",
+				"loopCourseResultSound", "loopResultSound", "normalizeVolume",
+				"systemvolume", "systemVolumeSpinner", "wasapiMode");
 		assertInjectedNodes("InputConfigurationView.fxml", InputConfigurationView.class,
-				"backgroundControllerInput", "controller_tableView", "inputconfig", "inputduration", "jkoc_hack",
+				"backgroundControllerInput", "controller_tableView", "inputconfig", "inputduration",
 				"mouseScratch", "mouseScratchDistance", "mouseScratchMode", "mouseScratchTimeThreshold");
 		assertInjectedNodes("ResourceConfigurationView.fxml", ResourceConfigurationView.class,
 				"addSongPathButton", "addTableUrlButton", "bmsroot", "chooseTablesButton", "downloadDirectoryButton",

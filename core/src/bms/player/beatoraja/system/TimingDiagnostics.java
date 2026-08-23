@@ -239,10 +239,10 @@ public final class TimingDiagnostics {
             int uniqueImages,
             int cacheSlots,
             int initialUploads,
-            int collidingImages) {
+            int deferredImages) {
         Session session = active;
         if (session != null) {
-            session.staticBgaCachePlan(uniqueImages, cacheSlots, initialUploads, collidingImages);
+            session.staticBgaCachePlan(uniqueImages, cacheSlots, initialUploads, deferredImages);
         }
     }
 
@@ -676,13 +676,14 @@ public final class TimingDiagnostics {
                 int uniqueImages,
                 int cacheSlots,
                 int initialUploads,
-                int collidingImages) {
+                int deferredImages) {
             event(
                     "static_bga_cache_plan",
                     "unique_images", Math.max(uniqueImages, 0),
                     "cache_slots", Math.max(cacheSlots, 0),
                     "initial_uploads", Math.max(initialUploads, 0),
-                    "colliding_images", Math.max(collidingImages, 0)
+                    "colliding_images", 0,
+                    "deferred_images", Math.max(deferredImages, 0)
             );
         }
 

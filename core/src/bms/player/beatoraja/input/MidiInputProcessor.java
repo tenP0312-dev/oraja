@@ -25,6 +25,7 @@ public final class MidiInputProcessor extends BMSPlayerInputDevice implements Au
 
 	boolean lastPressedKeyAvailable = false;
 	MidiConfig.Input lastPressedKey = new MidiConfig.Input();
+	private volatile boolean diffFilterPressed;
 
 	// pitch value: -8192 ~ 8191
 	final int pitchThreshold = 8192 / 32;
@@ -82,6 +83,7 @@ public final class MidiInputProcessor extends BMSPlayerInputDevice implements Au
 		setHandler(config.getSelect(), pressed -> {
 			bmsPlayerInputProcessor.setSelectPressed(pressed);
 		});
+		setHandler(config.getDiffFilter(), pressed -> diffFilterPressed = pressed);
 	}
 
 	public void setStartTime(long starttime) {
@@ -90,6 +92,11 @@ public final class MidiInputProcessor extends BMSPlayerInputDevice implements Au
 
 	public void clear() {
 		lastPressedKeyAvailable = false;
+		diffFilterPressed = false;
+	}
+
+	public boolean isDiffFilterPressed() {
+		return diffFilterPressed;
 	}
 
 	public void clearHandlers() {

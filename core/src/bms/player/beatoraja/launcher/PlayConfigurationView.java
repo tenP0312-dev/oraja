@@ -25,6 +25,7 @@ import org.apache.commons.lang3.compare.ComparableUtils;
 
 import bms.model.Mode;
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.Config.ScreenShotFormat;
 import bms.player.beatoraja.play.JudgeAlgorithm;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
@@ -503,6 +504,8 @@ public class PlayConfigurationView implements Initializable {
 
 	@FXML
 	public CheckBox clipboardScreenshot;
+	@FXML
+	private ComboBox<ScreenShotFormat> screenshotFormat;
 
 	static void initComboBox(ComboBox<Integer> combo, final String[] values) {
 		combo.setCellFactory((param) -> new OptionListCell(values));
@@ -725,6 +728,7 @@ public class PlayConfigurationView implements Initializable {
 		resourceController.init(this);
 		discordController.init(this);
 		obsController.init(this);
+		screenshotFormat.getItems().setAll(ScreenShotFormat.values());
 		initializeConfigurationShell(arg1);
 
 		checkNewVersion();
@@ -1174,15 +1178,18 @@ public class PlayConfigurationView implements Initializable {
 								"Choose the output rate; the device default or 44.1 kHz is normally sufficient.")
 				),
 				sidebarSettingCard(
-						sidebarSettingRow(audioTab, "systemvolume", "全体音量", "System volume",
+					sidebarSettingRow(audioTab, "全体音量", "System volume",
 								"ゲーム全体の音量を調整します。",
-								"Adjust the overall game volume."),
-						sidebarSettingRow(audioTab, "keyvolume", "キー音量", "Key volume",
+								"Adjust the overall game volume.",
+								sidebarCompound(sidebarControl(audioTab, "systemvolume"), sidebarControl(audioTab, "systemVolumeSpinner"))),
+					sidebarSettingRow(audioTab, "キー音量", "Key volume",
 								"譜面のキー音だけの音量を調整します。",
-								"Adjust the chart key-sound volume."),
-						sidebarSettingRow(audioTab, "bgvolume", "BGM音量", "BGM volume",
+								"Adjust the chart key-sound volume.",
+								sidebarCompound(sidebarControl(audioTab, "keyvolume"), sidebarControl(audioTab, "keyVolumeSpinner"))),
+					sidebarSettingRow(audioTab, "BGM音量", "BGM volume",
 								"BGMや自動再生音の音量を調整します。",
-								"Adjust BGM and automatically played audio."),
+								"Adjust BGM and automatically played audio.",
+								sidebarCompound(sidebarControl(audioTab, "bgvolume"), sidebarControl(audioTab, "bgVolumeSpinner"))),
 						sidebarSettingRow(audioTab, "normalizeVolume", "譜面音量を正規化", "Normalize chart volume",
 								"曲ごとの音量差を抑えるため、読み込んだ音声の基準音量を揃えます。",
 								"Reduce volume differences by normalizing loaded chart audio.")
@@ -1217,15 +1224,12 @@ public class PlayConfigurationView implements Initializable {
 								"Accept HID/game-controller input while the game is unfocused; keyboard input remains focus-bound."),
 						sidebarSettingRow(inputTab, "inputduration", "最小入力間隔", "Minimum input interval",
 								"同じ入力を再び受け付けるまでの最短時間です。単位は ms です。",
-								"Set the shortest interval before the same input is accepted again, in ms."),
-						sidebarSettingRow(inputTab, "jkoc_hack", "JKOC HACK", "JKOC HACK",
-								"一部の旧型コントローラー向け互換入力処理です。必要な機器だけで有効にします。",
-								"Enable legacy compatibility input handling only for controllers that require it.")
+								"Set the shortest interval before the same input is accepted again, in ms.")
 				),
 				sidebarSettingCard(
 						sidebarWorkspaceRow(inputTab, "接続コントローラー", "Connected controllers",
-								"各プレイサイドの機器、アナログスクラッチ、停止閾値とアルゴリズムを編集します。",
-								"Edit devices, analog scratch, stop thresholds, and algorithms for each play side.",
+								"各プレイサイドのJKOC互換処理、機器、アナログスクラッチ、停止閾値とアルゴリズムを編集します。",
+								"Edit per-side JKOC compatibility, devices, analog scratch, stop thresholds, and algorithms.",
 								controllerWorkspace)
 				),
 				sidebarSettingCard(
@@ -1421,6 +1425,9 @@ public class PlayConfigurationView implements Initializable {
 						sidebarSettingRow(otherTab, "clipboardScreenshot", "スクリーンショットをクリップボードへコピー", "Copy screenshots to clipboard",
 								"スクリーンショット保存時、画像データをOSのクリップボードにもコピーします。",
 								"Copy image data to the OS clipboard whenever a screenshot is saved."),
+						sidebarSettingRow(otherTab, "screenshotFormat", "スクリーンショット保存形式", "Screenshot format",
+								"保存形式をPNGまたはJPGから選びます。Webhook添付の形式も一致します。",
+								"Choose PNG or JPG; webhook attachments use the same format."),
 						sidebarSettingRow(otherTab, "importScoreButton", "LR2スコアをインポート", "Import LR2 scores",
 								"既存のLR2スコアデータベースからローカルスコアを取り込みます。",
 								"Import local scores from an existing LR2 score database.")
@@ -2804,6 +2811,7 @@ public class PlayConfigurationView implements Initializable {
 
         usecim.setSelected(config.isCacheSkinImage());
         clipboardScreenshot.setSelected(config.isSetClipboardWhenScreenshot());
+		screenshotFormat.setValue(config.getScreenshotFormat());
 
 		enableIpfs.setSelected(config.isEnableIpfs());
 		ipfsurl.setText(config.getIpfsUrl());
@@ -3047,6 +3055,7 @@ public class PlayConfigurationView implements Initializable {
 		config.setOverrideDownloadURL(overrideDownloadURL.getText());
 
 		config.setClipboardWhenScreenshot(clipboardScreenshot.isSelected());
+		config.setScreenshotFormat(screenshotFormat.getValue());
 
 		commitPlayer();
 

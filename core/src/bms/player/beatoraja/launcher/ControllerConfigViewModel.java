@@ -13,6 +13,7 @@ import javafx.beans.property.StringProperty;
  */
 public class ControllerConfigViewModel {
     private StringProperty nameProperty = new SimpleStringProperty();
+    private BooleanProperty jkocProperty = new SimpleBooleanProperty();
     private BooleanProperty isAnalogScratchProperty = new SimpleBooleanProperty();
     private ObjectProperty<Integer> analogScratchThresholdProperty = new SimpleIntegerProperty().asObject();
     private ObjectProperty<Integer> analogScratchModeProperty = new SimpleIntegerProperty().asObject();
@@ -23,6 +24,7 @@ public class ControllerConfigViewModel {
         this.config = config;
         
         this.nameProperty.set(config.getName());
+        this.jkocProperty.set(config.getJKOC());
         this.isAnalogScratchProperty.set(config.isAnalogScratch());
         this.analogScratchThresholdProperty.set(config.getAnalogScratchThreshold());
         this.analogScratchModeProperty.set(config.getAnalogScratchMode());
@@ -44,6 +46,14 @@ public class ControllerConfigViewModel {
     }
     public BooleanProperty getIsAnalogScratchProperty() {
         return isAnalogScratchProperty;
+    }
+
+    public boolean isJkoc() {
+        return jkocProperty.get();
+    }
+
+    public BooleanProperty jkocProperty() {
+        return jkocProperty;
     }
 
     public int getAnalogScratchThreshold() {
