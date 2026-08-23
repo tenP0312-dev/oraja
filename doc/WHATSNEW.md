@@ -1,5 +1,16 @@
 # Unreleased
 
+# Arena oraja 0.4.14.73
+
+- Loaded referenced key sounds from a solid 7z archive through one bounded
+  sequential archive pass before parallel audio decoding. This prevents
+  concurrent reads of one solid block from causing checksum failures and
+  missing audio.
+- Removed the per-chart temporary audio copies after loading while leaving the
+  original compressed archive unchanged.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and the complete
+  `0.4.14.72` behavior.
+
 # Arena oraja 0.4.14.72
 
 - Restored the Endless Dream feature paths that had diverged in Arena: the

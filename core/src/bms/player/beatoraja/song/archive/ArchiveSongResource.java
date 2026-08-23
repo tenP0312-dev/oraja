@@ -133,4 +133,12 @@ final class ArchiveSongResource implements SongResource {
 		int separator = entryName.lastIndexOf('/');
 		return separator >= 0 ? entryName.substring(0, separator) : "";
 	}
+
+	Path archive() {
+		return archive;
+	}
+
+	String entryName() {
+		return entryName;
+	}
 }
