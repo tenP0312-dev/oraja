@@ -35,6 +35,15 @@ public interface AudioDriver extends Disposable {
 		} catch (java.io.IOException ignored) {
 		}
 	}
+
+	/**
+	 * Returns the decoded duration of one resource in milliseconds when the
+	 * active driver can expose it. A negative value means that playback-state
+	 * polling remains the only available completion signal.
+	 */
+	default long getDurationMillis(SongResource resource) {
+		return -1L;
+	}
 	
 	/**
 	 * 指定したパスの音源のボリュームを設定する
