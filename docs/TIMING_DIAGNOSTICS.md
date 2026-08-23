@@ -52,7 +52,8 @@ they are intentionally approximate.
 | `bga_pixmap_copy_us` | Pixmap allocation/copy time | Includes a resize allocation when dimensions change |
 | `bga_render_queue_us` | Delay from decoded Pixmap completion to render runnable start | High values indicate a delayed render thread or queued uploads |
 | `bga_texture_lock_us` | Render wait for the shared Pixmap | High values indicate decoder/render contention |
-| `bga_texture_upload_us` | Pixmap preparation and texture update/create | Measures the render-thread upload call, not later GPU execution |
+| `bga_texture_upload_us` | Movie-frame Pixmap preparation and texture update/create | Measures the render-thread upload call, not later GPU execution; it does not include static-image cache churn |
+| `bga_static_runtime_upload_us` | Static-image texture create, size-changing recreate, or same-size update after preparation | A sample is recorded only on a runtime cache miss; measures the render-thread call, not later GPU execution |
 | `openal_play_call_us` | Duration of the libGDX/OpenAL `Sound.play`/`loop` call | OpenAL does not expose this client's device-buffer or hardware latency |
 | `portaudio_enqueue_us` | Time to reserve a mixer input | Includes contention on the mixer-input lock |
 | `portaudio_enqueue_to_mix_us` | Delay until an enqueued sound first enters a mixed buffer | Does not include subsequent backend/device buffering |
@@ -76,15 +77,26 @@ render thread. A PortAudio underflow emits `portaudio_underflow` with
 time from the previous write completion to the next write start, including
 mixer work and scheduling delay.
 
+Static-BGA preparation emits one bounded `static_bga_cache_plan` event per
+chart. `unique_images` is the number of referenced, available static images,
+`cache_slots` is the direct-mapped texture-cache capacity, `initial_uploads` is
+the number selected for preparation, and `colliding_images` is the remaining
+unique-image count that shares an already-selected slot. The event does not
+contain image names or chart paths.
+
 `audio_config` records the selected backend and, for PortAudio/ASIO, the actual
 sample rate, frames per buffer and the theoretical duration of one buffer.
 That duration is not an end-to-end latency claim. The default OpenAL backend
 does not use the PortAudio `deviceBufferSize` setting.
 
 The summary counters include PortAudio underflows, write errors, rejected
-enqueues, BGA decoder/texture errors and skipped uploads. Runtime gauges include
-used/committed/max heap, direct-buffer usage, GC deltas, active movie decoders,
-retained in-memory movie bytes, and current/maximum pending BGA uploads.
+enqueues, BGA decoder/texture errors and skipped uploads. Static-image counters
+include `bga_static_cache_misses` and classify each runtime upload as
+`bga_static_texture_creates`, `bga_static_texture_recreates`, or
+`bga_static_texture_updates`. Preparation uploads are excluded from those four
+counters. Runtime gauges include used/committed/max heap, direct-buffer usage,
+GC deltas, active movie decoders, retained in-memory movie bytes, and
+current/maximum pending movie-BGA uploads.
 
 ## Gameplay-start behavior in the current development source
 
@@ -110,13 +122,21 @@ OpenGL texture work is not moved to a worker thread.
   waiting behind the render loop. Stable `retained_movie_bytes` and decoder
   counts argue against a leak; values that keep rising after songs are released
   justify a lifecycle investigation.
+- For an image-sequence BGA, compare `static_bga_cache_plan.colliding_images`
+  with `bga_static_cache_misses` and `bga_static_runtime_upload_us`. Repeated
+  same-size updates whose maxima align with `render_stall` or a long
+  `render_duration_us` tail are evidence that direct-mapped cache churn is
+  contributing to the hitch. A collision count alone does not prove a visible
+  stall because the chart may rarely revisit those images.
 - PortAudio `mix_us` or `write_us` approaching/exceeding the configured buffer
   duration, underflows, or write errors identify an audio-path problem. OpenAL
   captures can only show call time, not backend/device latency.
 
-The diagnostic switch itself does not change BGA fallback, input polling,
-judgement, keysound scheduling, audio buffering, or thread priorities. The
-gameplay-start changes above apply with diagnostics both OFF and ON.
+The diagnostic switch itself does not change static-BGA cache policy, BGA
+fallback, input polling, judgement, keysound scheduling, audio buffering, or
+thread priorities. When diagnostics are OFF, cache hits do not perform timing
+work and runtime misses only encounter the disabled collector's cheap guards.
+The gameplay-start changes above apply with diagnostics both OFF and ON.
 
 Windows ASIO acceptance still requires same-machine before/after captures.
 Use the matrix from [the tracking Issue](https://github.com/tenP0312-dev/oraja/issues/208):
