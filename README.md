@@ -122,7 +122,10 @@ that were previously missing from the client list.
 Play-skin previews now expose the synthetic session as ordinary play, include
 a silent representative BGA, and drive gauge-increase and gauge-max timers.
 Skins such as WMII can therefore construct their normal-play score graph and
-BGA frame and animate gauge effects without leaving Skin Select.
+BGA frame and animate gauge effects without leaving Skin Select. Falling notes
+now use the synthetic PLAY timer's elapsed time, so they continue from the
+chart start after every preview loop while untimed skin animations still
+rewind.
 
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
