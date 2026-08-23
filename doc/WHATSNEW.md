@@ -1,5 +1,9 @@
 # Unreleased
 
+- Replaced the archive-only song-update completion Alert with one consolidated
+  result dialog. The inherited full-library detected, processed, and
+  added/updated chart counts remain primary; scanned, loaded, and unreadable
+  archive counts appear as a secondary breakdown with the last failure reason.
 - Restored the Endless Dream feature paths that had diverged in Arena: the
   last-played overlay no longer hides legacy skin sort output, Practice Random
   Trainer applies its selected seed, BGA image IDs no longer share a texture,

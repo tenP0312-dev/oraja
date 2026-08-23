@@ -550,7 +550,12 @@ directory instead of selecting one preview for the whole archive. Refreshing
 an archive folder re-enumerates its physical archive. If that read is rejected
 or the containing directory cannot be read, the update fails closed and keeps
 the last indexed folder and songs. The client logs the causal rejection reason
-and shows loaded/rejected archive totals when the update finishes.
+and shows one consolidated result when the update finishes. Detected,
+processed, and added/updated chart-file totals remain the primary result from
+the Endless Dream updater. When archives were checked, the same dialog adds
+checked, loaded, and unreadable archive totals as a secondary breakdown,
+clarifies that archived charts are already included in the chart-file totals,
+and retains the last causal failure reason when applicable.
 
 ### BMS-IR body URL downloads
 
