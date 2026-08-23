@@ -13,6 +13,14 @@ class ImGuiInputCaptureTest {
     }
 
     @Test
+    void idleImguiFrameDoesNotCaptureInput() {
+        ImGuiInputCapture.updateFromImGui(false, false, false, false, false);
+
+        assertFalse(ImGuiInputCapture.isKeyboardCaptured());
+        assertFalse(ImGuiInputCapture.isMouseCaptured());
+    }
+
+    @Test
     void focusedTextInputCapturesKeyboard() {
         ImGuiInputCapture.updateFromImGui(false, true, false, false, false);
 

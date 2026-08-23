@@ -188,12 +188,6 @@ public class ImGuiRenderer {
             if (SHOW_DOWNLOAD_MENU.get()) {
                 DownloadTaskMenu.show(SHOW_DOWNLOAD_MENU);
             }
-            if (SHOW_SKIN_WIDGET_MANAGER.get()) {
-                SkinWidgetManager.focus = true;
-                SkinWidgetManager.show(SHOW_SKIN_WIDGET_MANAGER);
-            } else {
-                SkinWidgetManager.focus = false;
-            }
             if (SHOW_PERFORMANCE_MONITOR.get()) {
                 PerformanceMonitor.show(SHOW_PERFORMANCE_MONITOR);
             }
@@ -227,6 +221,9 @@ public class ImGuiRenderer {
             ImGui.end();
         }
 
+        if (SHOW_SKIN_WIDGET_MANAGER.get()) {
+            SkinWidgetManager.show(SHOW_SKIN_WIDGET_MANAGER);
+        }
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
         }
