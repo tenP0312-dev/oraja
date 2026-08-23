@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.66`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.68`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -34,6 +34,14 @@ every configured difficulty table. It fetches and validates the complete set
 before replacing live caches, removes orphan `.bmt` files only after success,
 preserves unrelated files, and keeps or restores the previous cache set on any
 failure.
+
+Version `0.4.14.68` repairs the Skin Widget Manager. The child window remains
+open independently of the F5 parent menu, its visibility no longer captures
+gameplay input by itself, and width-only or height-only edits are included in
+clipboard export. The manager edits only the current scene skin temporarily;
+it does not edit the separate BMS-IR Arena overlay or write skin source files.
+Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior, and the Windows
+native-audio repair baseline are unchanged.
 
 Version `0.4.14.66` republishes the Windows body as a complete repair
 baseline. Its body manifest contains the PortAudio/JPortAudio DLLs plus the
@@ -1378,7 +1386,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.66-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.68-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1399,7 +1407,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.66-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.68-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1418,7 +1426,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.66-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.68-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

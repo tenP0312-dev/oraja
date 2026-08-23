@@ -10,13 +10,20 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.66**. Its Windows native-audio
+The current client source version is **0.4.14.68**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.68 repairs the Skin Widget Manager. The manager remains open
+independently of the F5 parent menu, its visibility no longer captures gameplay
+input by itself, and width-only or height-only edits are included in clipboard
+export. It edits the current scene skin temporarily and does not edit the
+separate BMS-IR Arena overlay or write skin source files. Launcher 0.2.29 and
+plugin 0.0.72 are unchanged.
 
 Version 0.4.14.61 restores the ordinary LN/CN/HCN launcher
 selection and carries it through decoding, catalog keys, IR ranking, and score
@@ -116,6 +123,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.68
+
+Repairs the Skin Widget Manager so the child window remains open independently
+of the F5 parent menu and no longer captures gameplay input merely because it
+is visible. Clipboard export now includes width-only and height-only changes,
+and the window explains its temporary current-scene scope. The separate BMS-IR
+Arena overlay and skin source files are unchanged. Launcher `0.2.29`, plugin
+`0.0.72`, protocol, score behavior, and the Windows native-audio repair
+baseline are unchanged.
 
 ## Arena oraja 0.4.14.66
 
@@ -555,7 +572,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.66
+  --output-dir /release/build-0.4.14.68
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
