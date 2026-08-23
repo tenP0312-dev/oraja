@@ -80,6 +80,7 @@ public class MainController {
 	private final long boottime = System.currentTimeMillis();
 	private final Calendar cl = Calendar.getInstance();
 	private long mouseMovedTime;
+	private boolean systemCursorHidden;
 	private Config.DisplayMode lastWindowedDisplayMode;
 
 	private MusicDecide decide;
@@ -448,6 +449,30 @@ public class MainController {
 
 	static boolean shouldUpdateDownloadTaskState(Config config) {
 		return config != null && (config.isEnableHttp() || config.isEnableBmsirBodyDownload());
+	}
+
+	enum CursorMode {
+		VISIBLE,
+		HIDDEN,
+		CAPTURED
+	}
+
+	static CursorMode cursorMode(
+			boolean modMenuVisible,
+			boolean playing,
+			boolean arenaEnabled,
+			boolean arenaShowCursor,
+			boolean cursorInactive
+	) {
+		if (modMenuVisible || !playing) {
+			return CursorMode.VISIBLE;
+		}
+		if (arenaEnabled) {
+			return !arenaShowCursor && cursorInactive
+					? CursorMode.HIDDEN
+					: CursorMode.VISIBLE;
+		}
+		return cursorInactive ? CursorMode.CAPTURED : CursorMode.VISIBLE;
 	}
 
 	private static String startupErrorMessage(Throwable error) {
@@ -1245,19 +1270,15 @@ public class MainController {
             	input.setMouseMoved(false);
             	mouseMovedTime = time;
 			}
-            if (
-                    !getShowModMenu()
-                            && current instanceof BMSPlayer
-                            && (
-                                    !player.isBmsirArenaEnabled()
-                                            || !player.isBmsirArenaShowCursor()
-                            )
-            ) {
-                long hideDelay = player.isBmsirArenaEnabled() ? 250L : 2000L;
-                Gdx.input.setCursorCatched(time > mouseMovedTime + hideDelay);
-            } else {
-                Gdx.input.setCursorCatched(false);
-            }
+			boolean arenaEnabled = player.isBmsirArenaEnabled();
+			long hideDelay = arenaEnabled ? 250L : 2000L;
+			applyCursorMode(cursorMode(
+					getShowModMenu(),
+					current instanceof BMSPlayer,
+					arenaEnabled,
+					player.isBmsirArenaShowCursor(),
+					time > mouseMovedTime + hideDelay
+			));
 			// The configurable Arena shortcut must get first chance at function
 			// keys so combinations such as Ctrl+F6 are not consumed as F6.
 			if (input.isActivated(KeyCommand.TOGGLE_BMSIR_ARENA_OVERLAY)) {
@@ -1318,7 +1339,23 @@ public class MainController {
             	download.setDownloadpath(null);
             }
 			finishSongUpdateIfReady();
-        }
+		}
+	}
+
+	private void applyCursorMode(CursorMode mode) {
+		if (mode == CursorMode.HIDDEN) {
+			if (!systemCursorHidden) {
+				Gdx.input.setCursorCatched(false);
+				Gdx.graphics.setSystemCursor(Cursor.SystemCursor.None);
+				systemCursorHidden = true;
+			}
+			return;
+		}
+		if (systemCursorHidden) {
+			Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+			systemCursorHidden = false;
+		}
+		Gdx.input.setCursorCatched(mode == CursorMode.CAPTURED);
 	}
 
 	public void dispose() {

@@ -10,13 +10,19 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.70**. Its Windows native-audio
+The current client source version is **0.4.14.71**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.71 hides the Arena play cursor without capturing or confining
+the OS pointer. Mouse movement, the Mod Menu, and leaving play restore cursor
+visibility. Ordinary non-Arena cursor capture is unchanged. Launcher 0.2.29,
+plugin 0.0.72, protocol, score behavior, native audio, and bundled default
+skins are unchanged.
 
 Version 0.4.14.70 restores top-row `8` as the fixed Music Select compatibility
 shortcut for Show All Charts. Physical NUMPAD 8 remains separately
@@ -137,6 +143,12 @@ a silent representative BGA, and drive gauge-increase and gauge-max timers.
 Skins such as WMII can therefore construct their normal-play score graph and
 BGA frame and animate gauge effects without leaving Skin Select.
 
+The current development source separates Arena play cursor visibility from
+pointer capture. When `Show cursor during play` is off, the cursor becomes
+invisible after the short inactivity delay without being confined to the game
+window. Mouse movement, the Mod Menu, and leaving play restore visibility;
+ordinary non-Arena play keeps its existing inactivity-based cursor capture.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
@@ -145,6 +157,14 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.71
+
+Hides the Arena play cursor without capturing or confining the OS pointer.
+Mouse movement, the Mod Menu, and leaving play restore cursor visibility.
+Ordinary non-Arena cursor capture is unchanged. Launcher `0.2.29`, plugin
+`0.0.72`, protocol, score behavior, native audio, and bundled default skins are
+unchanged.
 
 ## Arena oraja 0.4.14.70
 
@@ -614,7 +634,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.70
+  --output-dir /release/build-0.4.14.71
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
