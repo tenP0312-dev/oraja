@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.ir.IRScoreData;
+import bms.player.beatoraja.ir.IRUtil;
 import com.badlogic.gdx.utils.Array;
 
 import bms.player.beatoraja.MainController;
@@ -384,7 +385,7 @@ class InternetRankingTargetProperty extends TargetProperty {
     			final int index = getTargetRank(main, ranking);
     			final IRScoreData irScore = ranking.getScore(index);
     			final int targetscore = irScore.getExscore();
-    			targetScore.setPlayer(irScore.player.length() > 0 ? irScore.player : "YOU");
+				targetScore.setPlayer(IRUtil.playerName(main, irScore.player));
         		targetScore.setEpg(targetscore / 2);
         		targetScore.setEgr(targetscore % 2);
 				targetScore.setOption(irScore.option);
@@ -405,14 +406,14 @@ class InternetRankingTargetProperty extends TargetProperty {
 				}
 			}
 	    	if(ranking.getState() == RankingData.FINISH) {
-	    		if(ranking.getTotalPlayer() > 0) {
-	    			final int index = getTargetRank(main, ranking);
-	    			final IRScoreData irScore = ranking.getScore(index);
-	    			final int targetscore = irScore.getExscore();
-	    			targetScore.setPlayer(irScore.player.length() > 0 ? irScore.player : "YOU");
-	        		targetScore.setEpg(targetscore / 2);
-	        		targetScore.setEgr(targetscore % 2);
-	    			targetScore.setOption(irScore.option);
+				if(ranking.getTotalPlayer() > 0) {
+					final int index = getTargetRank(main, ranking);
+					final IRScoreData irScore = ranking.getScore(index);
+					final int targetscore = irScore.getExscore();
+					targetScore.setPlayer(IRUtil.playerName(main, irScore.player));
+					targetScore.setEpg(targetscore / 2);
+					targetScore.setEgr(targetscore % 2);
+					targetScore.setOption(irScore.option);
 	    		} else {
 	    			targetScore.setPlayer("NO DATA");
 	    			targetScore.setOption(0);

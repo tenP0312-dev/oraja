@@ -34,9 +34,15 @@ public class WebhookHandler {
     }
 
     private void writeMultipartFile(OutputStream os, String boundary, String name, Path filePath) throws IOException {
+		String filename = filePath.getFileName().toString();
+		String lowerFilename = filename.toLowerCase();
+		String contentType = lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")
+				? "image/jpeg"
+				: "image/png";
         os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
-        os.write(("Content-Disposition: form-data; name=\"" + name + "\"; filename=\"screenshot.png\"\r\n").getBytes("UTF-8"));
-        os.write("Content-Type: image/png\r\n".getBytes("UTF-8"));
+        os.write(("Content-Disposition: form-data; name=\"" + name + "\"; filename=\""
+				+ filename + "\"\r\n").getBytes("UTF-8"));
+        os.write(("Content-Type: " + contentType + "\r\n").getBytes("UTF-8"));
         os.write("\r\n".getBytes("UTF-8"));
 
         // Write file content
@@ -106,6 +112,10 @@ public class WebhookHandler {
     }
 
     public Map<String, Object> createWebhookPayload(MainState currentState) {
+		return createWebhookPayload(currentState, "screenshot.png");
+	}
+
+	public Map<String, Object> createWebhookPayload(MainState currentState, String attachmentName) {
         Map<String, Object> payload = new HashMap<>();
 
         String webhookName = currentState.resource.getConfig().getWebhookName();
@@ -118,7 +128,7 @@ public class WebhookHandler {
             Map<String, String> author = new HashMap<>();
 
             Map<String, String> image = new HashMap<>();
-            image.put("url", "attachment://screenshot.png");
+            image.put("url", "attachment://" + attachmentName);
             embed.put("image", image);
 
             // Score specific

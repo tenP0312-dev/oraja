@@ -122,6 +122,9 @@ public final class PlayerConfig {
 	 * LNモード
 	 */
 	private int lnmode = 0;
+
+	/** LR2-style chart difficulty filter (0: ALL, 1: BEGINNER ... 5: INSANE). */
+	private int difficultyFilter = 0;
 	private boolean forcedcnendings = false;
 	/**
 	 * スクロール追加/削除モード
@@ -457,6 +460,14 @@ public final class PlayerConfig {
 
 	public void setLnmode(int lnmode) {
 		this.lnmode = lnmode;
+	}
+
+	public int getDifficultyFilter() {
+		return difficultyFilter;
+	}
+
+	public void setDifficultyFilter(int difficultyFilter) {
+		this.difficultyFilter = difficultyFilter;
 	}
 
 	public int getRandom2() {
@@ -1769,6 +1780,7 @@ public final class PlayerConfig {
 		judgetiming = MathUtils.clamp(judgetiming, JUDGETIMING_MIN, JUDGETIMING_MAX);
 		misslayerDuration = MathUtils.clamp(misslayerDuration, 0, 5000);
 		lnmode = MathUtils.clamp(lnmode, 0, 2);
+		difficultyFilter = MathUtils.clamp(difficultyFilter, 0, 5);
 		keyJudgeWindowRatePerfectGreat = MathUtils.clamp(keyJudgeWindowRatePerfectGreat, 25, 400);
 		keyJudgeWindowRateGreat = MathUtils.clamp(keyJudgeWindowRateGreat, 0, 400);
 		keyJudgeWindowRateGood = MathUtils.clamp(keyJudgeWindowRateGood, 0, 400);

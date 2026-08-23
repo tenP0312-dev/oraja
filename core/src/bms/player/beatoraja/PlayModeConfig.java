@@ -188,6 +188,8 @@ public class PlayModeConfig {
 
         private int select;
 
+		private int diffFilter = Keys.NUMPAD_0;
+
         private int duration = 16;
 
         public KeyboardConfig() {
@@ -214,6 +216,10 @@ public class PlayModeConfig {
         public int getSelect() {
             return select;
         }
+
+		public int getDiffFilter() {
+			return diffFilter;
+		}
 
         public void setKeyAssign(Mode mode, boolean enable) {
             switch (mode) {
@@ -257,6 +263,7 @@ public class PlayModeConfig {
             }
             start = Keys.Q;
             select = Keys.W;
+			diffFilter = Keys.NUMPAD_0;
         }
 
         public void setKeyAssign(int[] keys) {
@@ -270,6 +277,10 @@ public class PlayModeConfig {
         public void setSelect(int select) {
             this.select = select;
         }
+
+		public void setDiffFilter(int diffFilter) {
+			this.diffFilter = diffFilter;
+		}
 
         public int getDuration() {
             return duration;
@@ -299,6 +310,8 @@ public class PlayModeConfig {
         private int start = -1;
 
         private int select = -1;
+
+		private int diffFilter = -1;
 
         /**
          * マウス皿を利用すてる
@@ -355,6 +368,7 @@ public class PlayModeConfig {
             Arrays.fill(keys, -1);
             start = -1;
             select = -1;
+			diffFilter = -1;
         }
 
         public int[] getKeyAssign() {
@@ -369,6 +383,10 @@ public class PlayModeConfig {
             return select;
         }
 
+		public int getDiffFilter() {
+			return diffFilter;
+		}
+
         public void setKeyAssign(int[] keys) {
             this.keys = keys;
         }
@@ -380,6 +398,10 @@ public class PlayModeConfig {
         public void setSelect(int select) {
             this.select = select;
         }
+
+		public void setDiffFilter(int diffFilter) {
+			this.diffFilter = diffFilter;
+		}
 
         public boolean isMouseScratchEnabled() {
             return mouseScratchEnabled;
@@ -427,6 +449,11 @@ public class PlayModeConfig {
             if (select == -1) return null;
             return MOUSESCRATCH_STRING[select];
         }
+
+		public String getDiffFilterString() {
+			if (diffFilter == -1) return null;
+			return MOUSESCRATCH_STRING[diffFilter];
+		}
     }
 
     /**
@@ -447,6 +474,8 @@ public class PlayModeConfig {
         private int start;
 
         private int select;
+
+		private int diffFilter = -1;
 
         private int duration = 16;
         /**
@@ -510,6 +539,10 @@ public class PlayModeConfig {
             return select;
         }
 
+		public int getDiffFilter() {
+			return diffFilter;
+		}
+
         public void setKeyAssign(Mode mode, int player, boolean enable) {
         	final ControllerConfig con = IIDX_PS2;
             if(player == 0) {
@@ -568,6 +601,7 @@ public class PlayModeConfig {
             }
             start = con.start;
             select = con.select;
+			diffFilter = -1;
         }
 
         public void setKeyAssign(int[] keys) {
@@ -581,6 +615,10 @@ public class PlayModeConfig {
         public void setSelect(int select) {
             this.select = select;
         }
+
+		public void setDiffFilter(int diffFilter) {
+			this.diffFilter = diffFilter;
+		}
 
         public int getDuration() {
             return duration;
@@ -668,6 +706,7 @@ public class PlayModeConfig {
         private Input[] keys;
         private Input start;
         private Input select;
+		private Input diffFilter;
 
         public Input[] getKeys() {
             return keys;
@@ -685,6 +724,10 @@ public class PlayModeConfig {
             return select;
         }
 
+		public Input getDiffFilter() {
+			return diffFilter;
+		}
+
         public void setStart(Input input) {
             start = input;
         }
@@ -692,6 +735,10 @@ public class PlayModeConfig {
         public void setSelect(Input input) {
             select = input;
         }
+
+		public void setDiffFilter(Input input) {
+			diffFilter = input;
+		}
 
         public MidiConfig() {
             this(Mode.BEAT_7K, true);
