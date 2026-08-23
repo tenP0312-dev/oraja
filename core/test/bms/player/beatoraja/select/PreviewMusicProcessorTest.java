@@ -20,7 +20,12 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -130,6 +135,73 @@ class PreviewMusicProcessorTest {
         }
     }
 
+    @Test
+    void shutdownDuringPreviewFadeStopsDefaultMusicBeforeReturning() throws Exception {
+        Path chart = temporary.resolve("fade-race.bms");
+        Path explicit = temporary.resolve("fade-race-preview.wav");
+        Files.writeString(chart, "#TITLE fade race");
+        Files.write(explicit, new byte[]{1});
+        SongData song = new SongData();
+        song.setPath(chart.toString());
+        song.setPreview(explicit.getFileName().toString());
+        RecordingAudioDriver audio = new RecordingAudioDriver();
+        audio.blockDefaultFade = true;
+        PreviewMusicProcessor processor = new PreviewMusicProcessor(audio, config());
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<?> stopTask = null;
+
+        try {
+            processor.setDefault("select.wav");
+            processor.start(song);
+            assertTrue(audio.defaultFadeStarted.await(2, TimeUnit.SECONDS));
+
+            stopTask = executor.submit(() -> {
+                audio.stopCallStarted.countDown();
+                processor.stop();
+            });
+            assertTrue(audio.stopCallStarted.await(2, TimeUnit.SECONDS));
+            audio.releaseDefaultFade.countDown();
+            stopTask.get(2, TimeUnit.SECONDS);
+
+            assertTrue(audio.stopped.contains("select.wav"));
+            assertEquals(0, audio.resourcePlayCount.get());
+        } finally {
+            audio.releaseDefaultFade.countDown();
+            if (stopTask != null) {
+                stopTask.get(2, TimeUnit.SECONDS);
+            }
+            processor.stop();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void shutdownStopsActivePreviewAndMutedDefaultMusic() throws Exception {
+        Path chart = temporary.resolve("active-preview.bms");
+        Path explicit = temporary.resolve("active-preview.wav");
+        Files.writeString(chart, "#TITLE active preview");
+        Files.write(explicit, new byte[]{1});
+        SongData song = new SongData();
+        song.setPath(chart.toString());
+        song.setPreview(explicit.getFileName().toString());
+        RecordingAudioDriver audio = new RecordingAudioDriver();
+        PreviewMusicProcessor processor = new PreviewMusicProcessor(audio, config());
+
+        try {
+            processor.setDefault("select.wav");
+            processor.start(song);
+            assertTrue(audio.resourcePlayed.await(2, TimeUnit.SECONDS));
+            String previewKey = audio.lastResource.cacheKey();
+
+            processor.stop();
+
+            assertTrue(audio.stopped.contains(previewKey));
+            assertTrue(audio.stopped.contains("select.wav"));
+        } finally {
+            processor.stop();
+        }
+    }
+
     private static byte[] eightBitWave() {
         int sampleRate = 8_000;
         int samples = sampleRate;
@@ -152,7 +224,13 @@ class PreviewMusicProcessorTest {
 
     private static final class RecordingAudioDriver implements AudioDriver {
         private final CountDownLatch resourcePlayed = new CountDownLatch(1);
+        private final CountDownLatch defaultFadeStarted = new CountDownLatch(1);
+        private final CountDownLatch releaseDefaultFade = new CountDownLatch(1);
+        private final CountDownLatch stopCallStarted = new CountDownLatch(1);
+        private final Set<String> stopped = ConcurrentHashMap.newKeySet();
+        private final AtomicInteger resourcePlayCount = new AtomicInteger();
         private volatile SongResource lastResource;
+        private volatile boolean blockDefaultFade;
         private float pitch = 1.0f;
 
         @Override
@@ -162,12 +240,29 @@ class PreviewMusicProcessorTest {
         @Override
         public void play(SongResource resource, float volume, boolean loop) {
             lastResource = resource;
+            resourcePlayCount.incrementAndGet();
             resourcePlayed.countDown();
         }
 
-        @Override public void setVolume(String path, float volume) {}
+        @Override
+        public void setVolume(String path, float volume) {
+            if (blockDefaultFade && "select.wav".equals(path)) {
+                defaultFadeStarted.countDown();
+                boolean interrupted = false;
+                while (releaseDefaultFade.getCount() > 0) {
+                    try {
+                        releaseDefaultFade.await();
+                    } catch (InterruptedException ignored) {
+                        interrupted = true;
+                    }
+                }
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
         @Override public boolean isPlaying(String path) { return true; }
-        @Override public void stop(String path) {}
+        @Override public void stop(String path) { stopped.add(path); }
         @Override public void dispose(String path) {}
         @Override public void setModel(BMSModel model) {}
         @Override public void setAdditionalKeySound(int judge, boolean fast, String path) {}

@@ -675,6 +675,11 @@ budget, or retained decoded samples exceed 96 MiB. The selector then keeps its
 ordinary default BGM. These limits do not change gameplay key-sound loading or
 the priority of explicit and automatically discovered previews.
 
+Leaving Music Select synchronously stops both that default BGM and the active
+explicit or generated preview. This includes a shutdown that interrupts the
+default-BGM fade while a preview is starting, so neither ordinary selection nor
+a BMS-IR Arena automatic start can carry Music Select audio into gameplay.
+
 Archive cache revisions combine filesystem identity/change metadata with
 sampled content so ordinary replacements are noticed even when file size and
 modification time were preserved. This revision also invalidates any

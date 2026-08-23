@@ -84,6 +84,11 @@ requests it. Width-only and height-only edits are included when the manager
 exports its temporary current-scene changes to the clipboard. The manager does
 not edit the separate BMS-IR Arena overlay or write skin source files.
 
+Leaving Music Select now synchronously stops both its default BGM and any
+explicit or generated song preview. A play transition can no longer interrupt
+the preview fade and leave the selector BGM loop audible during gameplay; the
+same shutdown path covers ordinary selection and BMS-IR Arena automatic starts.
+
 Version 0.4.14.61 also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
