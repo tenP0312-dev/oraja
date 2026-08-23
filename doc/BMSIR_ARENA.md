@@ -1099,8 +1099,11 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 - Assist chart modifiers, trainer features, BPM guide, custom widened judge,
   CONSTANT, battle, and mode conversion are disabled for that Arena play and
   restored afterward.
-- The cursor checkbox chooses whether Arena play keeps the OS pointer available
-  or uses the ordinary inactivity-based catch behavior.
+- The cursor checkbox chooses whether Arena play keeps the OS pointer visible.
+  When it is off, the short inactivity delay hides the pointer without
+  capturing or confining it to the game window. Mouse movement, the Mod Menu,
+  and leaving play restore visibility. Ordinary non-Arena play retains its
+  existing inactivity-based cursor capture.
 - Start+Select and Escape cannot abort a server-selected Arena chart. This
   applies only while the Arena play is active; Arena OFF and ordinary play keep
   their normal input behavior.
