@@ -84,6 +84,11 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
+Leaving Music Select now synchronously stops both its default BGM and any
+explicit or generated song preview. A play transition can no longer interrupt
+the preview fade and leave the selector BGM loop audible during gameplay; the
+same shutdown path covers ordinary selection and BMS-IR Arena automatic starts.
+
 The development source also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
