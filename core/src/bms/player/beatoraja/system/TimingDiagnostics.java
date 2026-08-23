@@ -63,7 +63,8 @@ public final class TimingDiagnostics {
         BGA_PIXMAP_COPY("bga_pixmap_copy_us"),
         BGA_RENDER_QUEUE("bga_render_queue_us"),
         BGA_TEXTURE_LOCK("bga_texture_lock_us"),
-        BGA_TEXTURE_UPLOAD("bga_texture_upload_us");
+        BGA_TEXTURE_UPLOAD("bga_texture_upload_us"),
+        BGA_STATIC_RUNTIME_UPLOAD("bga_static_runtime_upload_us");
 
         final String jsonName;
 
@@ -80,7 +81,11 @@ public final class TimingDiagnostics {
         BGA_DECODER_STOPPED("bga_decoders_stopped"),
         BGA_DECODE_ERROR("bga_decode_errors"),
         BGA_TEXTURE_ERROR("bga_texture_errors"),
-        BGA_UPLOAD_SKIPPED("bga_uploads_skipped");
+        BGA_UPLOAD_SKIPPED("bga_uploads_skipped"),
+        BGA_STATIC_CACHE_MISS("bga_static_cache_misses"),
+        BGA_STATIC_TEXTURE_CREATE("bga_static_texture_creates"),
+        BGA_STATIC_TEXTURE_RECREATE("bga_static_texture_recreates"),
+        BGA_STATIC_TEXTURE_UPDATE("bga_static_texture_updates");
 
         final String jsonName;
 
@@ -226,6 +231,18 @@ public final class TimingDiagnostics {
         Session session = active;
         if (session != null) {
             session.counters[counter.ordinal()].incrementAndGet();
+        }
+    }
+
+    /** Records one bounded description of the static-BGA cache plan for a chart. */
+    public static void staticBgaCachePlan(
+            int uniqueImages,
+            int cacheSlots,
+            int initialUploads,
+            int collidingImages) {
+        Session session = active;
+        if (session != null) {
+            session.staticBgaCachePlan(uniqueImages, cacheSlots, initialUploads, collidingImages);
         }
     }
 
@@ -653,6 +670,20 @@ public final class TimingDiagnostics {
             }
             json.append('}');
             writer.offer(json.toString());
+        }
+
+        void staticBgaCachePlan(
+                int uniqueImages,
+                int cacheSlots,
+                int initialUploads,
+                int collidingImages) {
+            event(
+                    "static_bga_cache_plan",
+                    "unique_images", Math.max(uniqueImages, 0),
+                    "cache_slots", Math.max(cacheSlots, 0),
+                    "initial_uploads", Math.max(initialUploads, 0),
+                    "colliding_images", Math.max(collidingImages, 0)
+            );
         }
 
         long playSessionStarted(String chartHash) {
