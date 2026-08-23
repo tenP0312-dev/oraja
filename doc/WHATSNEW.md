@@ -1,3 +1,9 @@
+# Unreleased
+
+- Restored top-row `8` as the fixed Music Select compatibility shortcut for
+  `Show All Charts`. Physical NUMPAD 8 remains a separate configurable
+  shortcut and keeps its saved assignment.
+
 # Arena oraja 0.4.14.69
 
 - Kept the transactional all-table refresh already present in the release
