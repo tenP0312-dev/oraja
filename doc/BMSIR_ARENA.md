@@ -1,9 +1,16 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.72`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.73`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.73` loads referenced key sounds from a solid 7z archive in one
+bounded sequential pass before parallel audio decoding. This prevents
+concurrent reads of one solid block from causing checksum failures and silent
+keys. Per-chart temporary copies are removed after loading, and the original
+archive remains compressed and unchanged. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, and all `0.4.14.72` behavior remain unchanged.
 
 Version `0.4.14.72` restores the complete retained LR2oraja Endless Dream
 behavior found by the exact 52-commit history audit. It includes the repaired
@@ -590,8 +597,8 @@ The cache holds at most 128 entries and 2 GiB, removes its live entries on
 normal shutdown, and removes older orphaned files on a later startup without
 touching temporary files owned by another running client.
 
-When a chart references many key sounds in one solid 7z block, the current
-development source traverses that archive once and makes bounded temporary
+When a chart references many key sounds in one solid 7z block, version
+`0.4.14.73` traverses that archive once and makes bounded temporary
 copies of the requested entries before parallel audio decoding. This avoids
 concurrent random reads of the same solid block. The per-chart copies are
 removed as soon as audio loading finishes, while the original 7z remains
@@ -1459,7 +1466,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.72-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.73-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1480,7 +1487,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.72-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.73-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1499,7 +1506,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.72-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.73-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

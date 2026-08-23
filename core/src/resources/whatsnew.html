@@ -28,6 +28,14 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.73</h1>
+        <h2>Load solid 7z key sounds reliably</h2>
+        <ul>
+        <li>Loads referenced key sounds from a solid 7z archive through one bounded sequential pass before parallel audio decoding.</li>
+        <li>Prevents concurrent reads of one solid block from causing checksum failures and missing audio.</li>
+        <li>Removes per-chart temporary audio copies after loading while leaving the original compressed archive unchanged.</li>
+        <li>Launcher 0.2.29, plugin 0.0.72, protocol v8, and the complete 0.4.14.72 behavior remain unchanged.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.72</h1>
         <h2>Restore complete retained Endless Dream behavior</h2>
         <ul>
