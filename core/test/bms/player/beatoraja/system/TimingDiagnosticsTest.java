@@ -87,6 +87,12 @@ class TimingDiagnosticsTest {
         );
         session.metrics[TimingDiagnostics.Metric.RENDER_DURATION.ordinal()]
                 .recordNanos(TimeUnit.MILLISECONDS.toNanos(2));
+        session.metrics[TimingDiagnostics.Metric.BGA_STATIC_RUNTIME_UPLOAD.ordinal()]
+                .recordNanos(TimeUnit.MILLISECONDS.toNanos(3));
+        session.counters[TimingDiagnostics.Counter.BGA_STATIC_CACHE_MISS.ordinal()]
+                .incrementAndGet();
+        session.counters[TimingDiagnostics.Counter.BGA_STATIC_TEXTURE_UPDATE.ordinal()]
+                .incrementAndGet();
         session.playSessionStarted("0123456789abcdef");
         session.playStageChanged("ACTIVE_PLAY");
 
@@ -102,6 +108,16 @@ class TimingDiagnosticsTest {
                 .path("max_at")
                 .asText()
                 .isBlank());
+        assertEquals(1, summary.path("metrics")
+                .path("bga_static_runtime_upload_us")
+                .path("count")
+                .asInt());
+        assertEquals(1, summary.path("counters")
+                .path("bga_static_cache_misses")
+                .asInt());
+        assertEquals(1, summary.path("counters")
+                .path("bga_static_texture_updates")
+                .asInt());
         assertTrue(summary.path("session_id").asLong() > 0);
         assertEquals(1, summary.path("transition_id").asLong());
         assertEquals("0123456789ab", summary.path("chart_id").asText());
@@ -109,6 +125,36 @@ class TimingDiagnosticsTest {
         assertTrue(summary.path("runtime").path("heap_used_bytes").isNumber());
         assertTrue(summary.path("runtime").path("direct_buffer_bytes").isNumber());
         assertTrue(summary.path("counters").isObject());
+    }
+
+    @Test
+    void staticBgaCachePlanEventIsBoundedAndSanitized(@TempDir Path directory) throws Exception {
+        Path log = directory.resolve("timing.log");
+        TimingDiagnostics.Session session = new TimingDiagnostics.Session(
+                log,
+                TimeUnit.DAYS.toNanos(1),
+                4,
+                4_096,
+                2,
+                true
+        );
+
+        session.staticBgaCachePlan(535, 256, 256, -1);
+        session.shutdown();
+
+        JsonNode event = null;
+        for (String line : Files.readAllLines(log)) {
+            JsonNode candidate = JSON.readTree(line);
+            if ("static_bga_cache_plan".equals(candidate.path("event").asText())) {
+                event = candidate;
+                break;
+            }
+        }
+        assertTrue(event != null);
+        assertEquals(535, event.path("unique_images").asInt());
+        assertEquals(256, event.path("cache_slots").asInt());
+        assertEquals(256, event.path("initial_uploads").asInt());
+        assertEquals(0, event.path("colliding_images").asInt());
     }
 
     @Test
