@@ -1139,6 +1139,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Ordinary-play and skin additions
 
+- The Skin Widget Manager remains open independently of the unmodified F5
+  parent menu. Its visibility no longer captures gameplay input by itself;
+  actual ImGui focus, active controls, and text input continue to use the
+  shared capture path. Export includes width-only and height-only changes and
+  copies the temporary current-scene edits to the clipboard. It does not edit
+  the separate BMS-IR Arena overlay or write skin source files.
 - The native game window title stays exactly `Arena oraja` across client
   versions so OBS window-capture rules remain stable. Configuration, What's
   New, startup, and other version-identification surfaces keep the versioned

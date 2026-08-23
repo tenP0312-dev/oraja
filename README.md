@@ -71,6 +71,12 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
+The current development source keeps the Skin Widget Manager open independently
+of the F5 parent menu and captures gameplay input only while ImGui actually
+requests it. Width-only and height-only edits are included when the manager
+exports its temporary current-scene changes to the clipboard. The manager does
+not edit the separate BMS-IR Arena overlay or write skin source files.
+
 Version 0.4.14.61 also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
