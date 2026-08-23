@@ -3496,18 +3496,8 @@ public class PlayConfigurationView implements Initializable {
 					@Override
 					public void run() {
 						loadingBarStage.hide();
-						if (songDatabaseUpdateListener.getArchivesScanned() > 0) {
-							String summary = String.format(bundle.getString("ARCHIVE_SCAN_RESULT"),
-									songDatabaseUpdateListener.getArchivesLoaded(),
-									songDatabaseUpdateListener.getArchivesRejected());
-							Alert.AlertType type = songDatabaseUpdateListener.getArchivesRejected() > 0
-									? Alert.AlertType.WARNING : Alert.AlertType.INFORMATION;
-							if (songDatabaseUpdateListener.getArchivesRejected() > 0) {
-								summary += "\n" + String.format(bundle.getString("ARCHIVE_SCAN_LAST_FAILURE"),
-										songDatabaseUpdateListener.getLastArchiveFailure());
-							}
-							new Alert(type, summary, ButtonType.OK).show();
-						}
+						SongUpdateSummaryDialog.show(root.getScene().getWindow(), bundle,
+								songDatabaseUpdateListener);
 					}
 				});
             } catch (ClassNotFoundException e) {
