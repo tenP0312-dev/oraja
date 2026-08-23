@@ -6,6 +6,7 @@ import bms.player.beatoraja.config.KeyConfiguration;
 import bms.player.beatoraja.config.SkinConfiguration;
 import bms.player.beatoraja.decide.MusicDecide;
 import bms.player.beatoraja.ir.IRScoreData;
+import bms.player.beatoraja.ir.IRUtil;
 import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.modmenu.FreqTrainerMenu;
 import bms.player.beatoraja.modmenu.SongManagerMenu;
@@ -357,7 +358,7 @@ public class StringPropertyFactory {
 					rankingOffset = result.getRankingOffset();
 				}
 				IRScoreData score = irc != null ? irc.getScore(index + rankingOffset) : null;
-				return score != null ? (score.player.length() > 0 ? score.player : "YOU") : "";
+				return score != null ? IRUtil.playerName(state.main, score.player) : "";
 			};
 
 		}

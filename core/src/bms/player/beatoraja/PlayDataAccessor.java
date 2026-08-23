@@ -624,6 +624,59 @@ public final class PlayDataAccessor {
 		scoredb.deleteScoreData(model.getSHA256(), model.containsUndefinedLongNote() ? lnmode : 0);
 	}
 
+	public void deleteScoreData(String sha256, boolean undefinedLongNote, int lnmode) {
+		scoredb.deleteScoreData(sha256, undefinedLongNote ? lnmode : 0);
+	}
+
+	public void deleteScoreData(
+			SongData[] songs,
+			int lnmode,
+			CourseData.CourseDataConstraint[] constraints
+	) {
+		StringBuilder hash = new StringBuilder();
+		boolean undefinedLongNote = false;
+		for (SongData song : songs) {
+			hash.append(song.getSha256());
+			undefinedLongNote |= song.hasUndefinedLongNote();
+		}
+		for (int option = 0; option < 3; option++) {
+			scoredb.deleteScoreData(
+					hash.toString(),
+					courseScoreMode(undefinedLongNote, lnmode, option, constraints)
+			);
+		}
+	}
+
+	static int courseScoreMode(
+			boolean undefinedLongNote,
+			int lnmode,
+			int option,
+			CourseData.CourseDataConstraint[] constraints
+	) {
+		int hispeed = 0;
+		int judge = 0;
+		int gauge = 0;
+		for (CourseData.CourseDataConstraint constraint : constraints) {
+			switch (constraint) {
+			case NO_SPEED -> hispeed = 1;
+			case NO_GOOD -> judge = 1;
+			case NO_GREAT -> judge = 2;
+			case GAUGE_LR2 -> gauge = 1;
+			case GAUGE_5KEYS -> gauge = 2;
+			case GAUGE_7KEYS -> gauge = 3;
+			case GAUGE_9KEYS -> gauge = 4;
+			case GAUGE_24KEYS -> gauge = 5;
+			default -> {
+			}
+			}
+		}
+		return (undefinedLongNote ? lnmode : 0)
+				+ option * 10
+				+ hispeed * 100
+				+ judge * 1000
+				+ gauge * 10000;
+	}
+
 	public boolean existsReplayData(BMSModel model, int lnmode, int index) {
 		boolean ln = model.containsUndefinedLongNote();
 		return Files.exists(Paths.get(this.getReplayDataFilePath(model.getSHA256(), ln, lnmode, index) + ".brd"));

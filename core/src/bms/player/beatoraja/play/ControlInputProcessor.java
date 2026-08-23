@@ -248,10 +248,20 @@ public final class ControlInputProcessor {
 			if (enableCursor) {
 				if (input.getControlKeyState(ControlKeys.UP)) {
 					if (!cursorpressed) {
-						setCoverValue(-0.01f);
+						lanerender.changeHispeed(true);
 						cursorpressed = true;
 					}
 				} else if (input.getControlKeyState(ControlKeys.DOWN)) {
+					if (!cursorpressed) {
+						lanerender.changeHispeed(false);
+						cursorpressed = true;
+					}
+				} else if (input.getControlKeyState(ControlKeys.LEFT)) {
+					if (!cursorpressed) {
+						setCoverValue(-0.01f);
+						cursorpressed = true;
+					}
+				} else if (input.getControlKeyState(ControlKeys.RIGHT)) {
 					if (!cursorpressed) {
 						setCoverValue(0.01f);
 						cursorpressed = true;
@@ -380,6 +390,33 @@ public final class ControlInputProcessor {
 
 	private void changeCoverValue(int key, boolean up) {
 		final BMSPlayerInputProcessor input = player.main.getInputProcessor();
+		final LaneRenderer lanerender = player.getLanerender();
+
+		if (usesFloatingHispeed(
+				hispeedAutoAdjust,
+				lanerender.isEnableLanecover(),
+				lanerender.isEnableLift(),
+				lanerender.isEnableHidden()
+		)) {
+			if (input.isAnalogInput(key)) {
+				int delta = input.getAnalogDiffAndReset(key, 200) * (up ? 1 : -1);
+				if (delta != 0) {
+					lanerender.addHispeed(delta * 0.01f);
+				}
+			} else if (input.getKeyState(key)) {
+				long now = System.currentTimeMillis();
+				if (laneCoverStartTiming == Long.MIN_VALUE) {
+					laneCoverStartTiming = now;
+				}
+				if (now - lanecovertiming > 50) {
+					lanerender.changeHispeed(up);
+					lanecovertiming = now;
+				}
+			} else {
+				laneCoverStartTiming = Long.MIN_VALUE;
+			}
+			return;
+		}
 
 		// move lane cover by START + Scratch
 		if(input.isAnalogInput(key)) {
@@ -401,6 +438,15 @@ public final class ControlInputProcessor {
 				laneCoverStartTiming = Long.MIN_VALUE;
 			}
 		}
+	}
+
+	static boolean usesFloatingHispeed(
+			boolean hispeedAutoAdjust,
+			boolean laneCover,
+			boolean lift,
+			boolean hidden
+	) {
+		return !hispeedAutoAdjust && !laneCover && !lift && !hidden;
 	}
 
 	private void changeDuration(int key, boolean up) {

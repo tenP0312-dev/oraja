@@ -3,6 +3,9 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.BMSModel;
 import bms.model.Mode;
 import bms.player.beatoraja.ReplayData;
+import bms.player.beatoraja.ClearType;
+import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.song.SongData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -59,6 +62,50 @@ public final class BMSIROrajaHelperBridge {
         WRITER.execute(() -> writeMessage(message));
     }
 
+    public static void publishSelectedSong(SongData song) {
+        if (song != null) {
+            publishMessage(selectMessage(song));
+        }
+    }
+
+    public static void publishResult(
+            SongData song,
+            ReplayData replay,
+            Mode mode,
+            ScoreData score
+    ) {
+        if (score != null) {
+            publishMessage(resultMessage(song, replay, mode, score));
+        }
+    }
+
+    public static void publishPlayEnd(
+            SongData song,
+            ReplayData replay,
+            Mode mode,
+            ScoreData score,
+            int playedNotes,
+            int totalNotes,
+            long elapsedSeconds,
+            boolean quickRetry
+    ) {
+        publishMessage(playEndMessage(
+                song,
+                replay,
+                mode,
+                score,
+                playedNotes,
+                totalNotes,
+                elapsedSeconds,
+                quickRetry
+        ));
+    }
+
+    private static void publishMessage(ObjectNode message) {
+        lastPlacement = message.deepCopy();
+        WRITER.execute(() -> writeMessage(message));
+    }
+
     public static void publishScene(String scene) {
         String normalized = switch (scene == null ? "" : scene) {
             case "select", "play", "result" -> scene;
@@ -88,6 +135,7 @@ public final class BMSIROrajaHelperBridge {
         message.put("schemaVersion", 1);
         message.put("updatedAt", System.currentTimeMillis());
         message.put("scene", "play");
+        message.put("event", "song_play");
         message.put("title", model.getTitle());
         message.put("artist", model.getArtist());
         message.put("md5", model.getMD5());
@@ -97,6 +145,7 @@ public final class BMSIROrajaHelperBridge {
         message.put("doublePlay", mode.player == 2);
         message.put("flip", mode.player == 2 && replay.doubleoption == 1);
         message.put("optionId", replay.randomoption);
+        message.put("randomSeed", replay.randomoptionseed);
         message.put(
                 "option",
                 BMSIRArenaClient.playOptionLabel(
@@ -110,6 +159,8 @@ public final class BMSIROrajaHelperBridge {
         );
         if (mode.player == 2) {
             message.put("option2PId", replay.randomoption2);
+            message.put("randomSeed2P", replay.randomoption2seed);
+            message.put("doubleOption", replay.doubleoption);
             message.put(
                     "option2P",
                     BMSIRArenaClient.playOptionLabel(
@@ -123,6 +174,105 @@ public final class BMSIROrajaHelperBridge {
             );
         }
         return message;
+    }
+
+    static ObjectNode selectMessage(SongData song) {
+        return baseMessage("song_select", "select", song);
+    }
+
+    static ObjectNode resultMessage(
+            SongData song,
+            ReplayData replay,
+            Mode mode,
+            ScoreData score
+    ) {
+        ObjectNode message = baseMessage("song_result", "result", song);
+        addOptions(message, replay, mode);
+        message.put("score", score.getExscore());
+        int notes = song != null ? song.getNotes() : score.getNotes();
+        message.put("scoreRate", notes > 0
+                ? score.getExscore() * 100.0f / (notes * 2.0f)
+                : 0.0f);
+        ClearType clear = ClearType.getClearTypeByID(score.getClear());
+        message.put("clearLamp", clear != null ? clear.name() : "NoPlay");
+        message.put("clearLampId", score.getClear());
+        message.put("missCount", score.getMinbp());
+        message.set("judges", judgeMessage(score));
+        return message;
+    }
+
+    static ObjectNode playEndMessage(
+            SongData song,
+            ReplayData replay,
+            Mode mode,
+            ScoreData score,
+            int playedNotes,
+            int totalNotes,
+            long elapsedSeconds,
+            boolean quickRetry
+    ) {
+        ObjectNode message = baseMessage("song_play_end", "play", song);
+        addOptions(message, replay, mode);
+        message.put("playEndMetrics", true);
+        message.put("playedNotes", Math.max(0, playedNotes));
+        message.put("totalNotes", Math.max(0, totalNotes));
+        message.put("elapsedSeconds", Math.max(0, elapsedSeconds));
+        message.put("quickRetry", quickRetry);
+        if (score != null) {
+            message.set("judges", judgeMessage(score));
+        }
+        return message;
+    }
+
+    private static ObjectNode baseMessage(String event, String scene, SongData song) {
+        ObjectNode message = JSON.createObjectNode();
+        message.put("schemaVersion", 1);
+        message.put("updatedAt", System.currentTimeMillis());
+        message.put("event", event);
+        message.put("scene", scene);
+        message.put("title", song != null ? song.getFullTitle() : "");
+        message.put("artist", song != null ? song.getFullArtist() : "");
+        message.put("sha256", song != null ? song.getSha256() : "");
+        message.put("md5", song != null ? song.getMd5() : "");
+        return message;
+    }
+
+    private static void addOptions(ObjectNode message, ReplayData replay, Mode mode) {
+        if (replay == null || mode == null) {
+            return;
+        }
+        message.put("playMode", mode.id);
+        message.put("keyMode", playableKeyCount(mode));
+        message.put("doublePlay", mode.player == 2);
+        message.put("flip", mode.player == 2 && replay.doubleoption == 1);
+        message.put("optionId", replay.randomoption);
+        message.put("randomSeed", replay.randomoptionseed);
+        message.put("option", BMSIRArenaClient.playOptionLabel(replay.randomoption, mode.id));
+        message.put("randomPlacement", sidePlacement(mode, replay, 0, replay.randomoption));
+        if (mode.player == 2) {
+            message.put("option2PId", replay.randomoption2);
+            message.put("randomSeed2P", replay.randomoption2seed);
+            message.put("doubleOption", replay.doubleoption);
+            message.put("option2P", BMSIRArenaClient.playOptionLabel(replay.randomoption2, mode.id));
+            message.put("randomPlacement2P", sidePlacement(mode, replay, 1, replay.randomoption2));
+        }
+    }
+
+    private static ObjectNode judgeMessage(ScoreData score) {
+        ObjectNode judges = JSON.createObjectNode();
+        judges.put("epg", score.getEpg());
+        judges.put("lpg", score.getLpg());
+        judges.put("egr", score.getEgr());
+        judges.put("lgr", score.getLgr());
+        judges.put("egd", score.getEgd());
+        judges.put("lgd", score.getLgd());
+        judges.put("ebd", score.getEbd());
+        judges.put("lbd", score.getLbd());
+        judges.put("epr", score.getEpr());
+        judges.put("lpr", score.getLpr());
+        judges.put("ems", score.getEms());
+        judges.put("lms", score.getLms());
+        return judges;
     }
 
     static int playableKeyCount(Mode mode) {

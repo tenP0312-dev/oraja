@@ -50,6 +50,7 @@ import bms.player.beatoraja.config.SkinPreviewModel;
  */
 public final class MusicSelector extends MainState {
 	private static final Logger logger = LoggerFactory.getLogger(MusicSelector.class);
+	private static final long ORAJA_HELPER_SELECT_SEND_DELAY = 1000;
 
 	// TODO　ミラーランダム段位のスコア表示
 
@@ -118,6 +119,9 @@ public final class MusicSelector extends MainState {
 
 	private SongData playedsong = null;
 	private CourseData playedcourse = null;
+	private SongData pendingOrajaHelperSong;
+	private long pendingOrajaHelperSongTime = -1;
+	private boolean pendingOrajaHelperSongSent = true;
 
 	private PixmapResourcePool banners;
 
@@ -396,6 +400,8 @@ public final class MusicSelector extends MainState {
 		// draw song information
 		resource.setSongdata(current instanceof SongBar ? ((SongBar) current).getSongData() : null);
 		resource.setCourseData(current instanceof GradeBar ? ((GradeBar) current).getCourseData() : null);
+		scheduleSelectedSongToOrajaHelper(current);
+		sendSelectedSongToOrajaHelper(current);
 
 		// preview music
 		if (current instanceof SongBar && resource.getConfig().getSongPreview() != SongPreview.NONE) {
@@ -947,6 +953,7 @@ public final class MusicSelector extends MainState {
 	public void selectedBarMoved() {
 		execute(MusicSelectCommand.RESET_REPLAY);
 		loadSelectedSongImages();
+		scheduleSelectedSongToOrajaHelper(manager.getSelected());
 
 		timer.setTimerOn(TIMER_SONGBAR_CHANGE);
 		if(preview.getSongData() != null && (!(manager.getSelected() instanceof SongBar) ||
@@ -982,6 +989,33 @@ public final class MusicSelector extends MainState {
 			currentir = null;
 			currentRankingDuration = -1;			
 		}
+	}
+
+	private void scheduleSelectedSongToOrajaHelper(Bar current) {
+		if (current instanceof SongBar songBar && songBar.existsSong()) {
+			SongData selected = songBar.getSongData();
+			if (selected != pendingOrajaHelperSong) {
+				pendingOrajaHelperSong = selected;
+				pendingOrajaHelperSongTime = timer.getNowTime();
+				pendingOrajaHelperSongSent = false;
+			}
+		} else {
+			pendingOrajaHelperSong = null;
+			pendingOrajaHelperSongTime = -1;
+			pendingOrajaHelperSongSent = true;
+		}
+	}
+
+	private void sendSelectedSongToOrajaHelper(Bar current) {
+		if (pendingOrajaHelperSongSent || pendingOrajaHelperSong == null
+				|| !(current instanceof SongBar songBar)
+				|| songBar.getSongData() != pendingOrajaHelperSong
+				|| timer.getNowTime()
+				< pendingOrajaHelperSongTime + ORAJA_HELPER_SELECT_SEND_DELAY) {
+			return;
+		}
+		BMSIROrajaHelperBridge.publishSelectedSong(pendingOrajaHelperSong);
+		pendingOrajaHelperSongSent = true;
 	}
 
 	/** Refreshes preview, image, score, replay, and ranking state for one grouped bar. */

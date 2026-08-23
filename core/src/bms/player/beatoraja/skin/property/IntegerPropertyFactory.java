@@ -445,6 +445,15 @@ public class IntegerPropertyFactory {
 				}
 				return Integer.MIN_VALUE;
 			};
+		case NUMBER_SCORE_DATE:
+			return (state) -> scoreDate(state.getScoreDataProperty());
+		case NUMBER_DIFFICULTY_FILTER:
+			return (state) -> state.resource.getPlayerConfig().getDifficultyFilter();
+		case NUMBER_FAIL_MEASURE:
+			return (state) -> {
+				double measure = state.resource.getFailMeasure();
+				return Double.isNaN(measure) ? -1 : (int) measure;
+			};
 		case NUMBER_MISSCOUNT:
 		case NUMBER_MISSCOUNT2:
 			return (state) -> {
@@ -475,6 +484,12 @@ public class IntegerPropertyFactory {
 		}
 		
 		return null;
+	}
+
+	static int scoreDate(ScoreDataProperty property) {
+		return property != null && property.getScoreData() != null
+				? (int) property.getScoreData().getDate()
+				: 0;
 	}
 	
 	public static IntegerProperty getIntegerProperty(String name) {
@@ -772,6 +787,9 @@ public class IntegerPropertyFactory {
 			}
 			return Integer.MIN_VALUE;
 		}), 
+		score_date(378, (state) -> state.getScoreDataProperty().getScoreData() != null
+				? (int) state.getScoreDataProperty().getScoreData().getDate()
+				: 0),
 
 		duration_average(372, (state) -> {
 			if (state instanceof AbstractResult) {
@@ -1037,6 +1055,8 @@ public class IntegerPropertyFactory {
 		bpmguide(306, (state) -> (state.resource.getPlayerConfig().isBpmguide() ? 1 : 0)),
 
 		customjudge(301, (state) -> (state.resource.getPlayerConfig().isCustomJudge() ? 1 : 0)),
+		difficultyfilter(309, (state) -> state.resource.getPlayerConfig().getDifficultyFilter()),
+		difficultyfilter_num(221, (state) -> state.resource.getPlayerConfig().getDifficultyFilter()),
 		lnmode(308, (state) -> {
 			if (state instanceof BMSPlayer || state instanceof MusicResult) {
 				SongData model = state.resource.getSongdata();
