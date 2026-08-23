@@ -88,6 +88,10 @@ Leaving Music Select now synchronously stops both its default BGM and any
 explicit or generated song preview. A play transition can no longer interrupt
 the preview fade and leave the selector BGM loop audible during gameplay; the
 same shutdown path covers ordinary selection and BMS-IR Arena automatic starts.
+OpenAL also uses the decoded duration of an existing explicit or discovered
+one-shot preview, so its natural end restores the default selector BGM even
+though LibGDX `Sound` does not expose a playback-completion query. Loop mode
+continues to play the selected-song preview until the selection changes.
 
 The development source also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network

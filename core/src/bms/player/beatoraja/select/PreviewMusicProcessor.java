@@ -316,17 +316,35 @@ public class PreviewMusicProcessor {
                     stopPreview(false);
                     return;
                 }
+                long oneShotDurationMillis = oneShotDurationMillis(resource);
                 audio.play(
                         resource,
                         config.getAudioConfig().getSystemvolume(),
                         config.getSongPreview() == SongPreview.LOOP);
                 playingResource = resource;
                 playing = resource.cacheKey();
-                oneShotEndsAtNanos = resource instanceof GeneratedPreviewResource generated
-                        && config.getSongPreview() != SongPreview.LOOP
-                        ? System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(generated.durationMs())
+                oneShotEndsAtNanos = oneShotDurationMillis > 0L
+                        ? playbackDeadlineNanos(oneShotDurationMillis)
                         : 0L;
             }
+        }
+
+        private long playbackDeadlineNanos(long durationMillis) {
+            long now = System.nanoTime();
+            long durationNanos = TimeUnit.MILLISECONDS.toNanos(durationMillis);
+            return durationNanos > 0L && now > Long.MAX_VALUE - durationNanos
+                    ? Long.MAX_VALUE
+                    : now + durationNanos;
+        }
+
+        private long oneShotDurationMillis(SongResource resource) {
+            if (config.getSongPreview() == SongPreview.LOOP) {
+                return -1L;
+            }
+            if (resource instanceof GeneratedPreviewResource generated) {
+                return generated.durationMs();
+            }
+            return audio.getDurationMillis(resource);
         }
 
         private boolean previewHasEnded() {

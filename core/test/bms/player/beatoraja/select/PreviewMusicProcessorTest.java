@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PreviewMusicProcessorTest {
@@ -93,6 +94,57 @@ class PreviewMusicProcessorTest {
             assertTrue(audio.resourcePlayed.await(2, TimeUnit.SECONDS));
             assertEquals(0, modelLoads.get());
             assertEquals(explicit.toString(), audio.lastResource.displayPath());
+        } finally {
+            processor.stop();
+        }
+    }
+
+    @Test
+    void explicitOneShotReturnsToDefaultWhenPlaybackPollingStaysTrue() throws Exception {
+        Path chart = temporary.resolve("one-shot.bms");
+        Path explicit = temporary.resolve("one-shot-preview.wav");
+        Files.writeString(chart, "#TITLE one shot");
+        Files.write(explicit, new byte[]{1});
+        SongData song = new SongData();
+        song.setPath(chart.toString());
+        song.setPreview(explicit.getFileName().toString());
+        RecordingAudioDriver audio = new RecordingAudioDriver();
+        audio.resourceDurationMillis = 25L;
+        PreviewMusicProcessor processor = new PreviewMusicProcessor(
+                audio,
+                config(Config.SongPreview.ONCE));
+
+        try {
+            processor.setDefault("select.wav");
+            processor.start(song);
+            assertTrue(audio.resourcePlayed.await(2, TimeUnit.SECONDS));
+            assertTrue(audio.defaultMusicRestored.await(2, TimeUnit.SECONDS));
+            assertTrue(audio.stopped.contains(audio.lastResource.cacheKey()));
+        } finally {
+            processor.stop();
+        }
+    }
+
+    @Test
+    void explicitLoopDoesNotReturnToDefaultAtTheResourceDuration() throws Exception {
+        Path chart = temporary.resolve("loop.bms");
+        Path explicit = temporary.resolve("loop-preview.wav");
+        Files.writeString(chart, "#TITLE loop");
+        Files.write(explicit, new byte[]{1});
+        SongData song = new SongData();
+        song.setPath(chart.toString());
+        song.setPreview(explicit.getFileName().toString());
+        RecordingAudioDriver audio = new RecordingAudioDriver();
+        audio.resourceDurationMillis = 25L;
+        PreviewMusicProcessor processor = new PreviewMusicProcessor(
+                audio,
+                config(Config.SongPreview.LOOP));
+
+        try {
+            processor.setDefault("select.wav");
+            processor.start(song);
+            assertTrue(audio.resourcePlayed.await(2, TimeUnit.SECONDS));
+            assertFalse(audio.defaultMusicRestored.await(250, TimeUnit.MILLISECONDS));
         } finally {
             processor.stop();
         }
@@ -217,8 +269,13 @@ class PreviewMusicProcessorTest {
     }
 
     private static Config config() {
+        return config(Config.SongPreview.LOOP);
+    }
+
+    private static Config config(Config.SongPreview songPreview) {
         Config config = new Config();
         config.setAudioConfig(new AudioConfig());
+        config.setSongPreview(songPreview);
         return config;
     }
 
@@ -227,10 +284,12 @@ class PreviewMusicProcessorTest {
         private final CountDownLatch defaultFadeStarted = new CountDownLatch(1);
         private final CountDownLatch releaseDefaultFade = new CountDownLatch(1);
         private final CountDownLatch stopCallStarted = new CountDownLatch(1);
+        private final CountDownLatch defaultMusicRestored = new CountDownLatch(1);
         private final Set<String> stopped = ConcurrentHashMap.newKeySet();
         private final AtomicInteger resourcePlayCount = new AtomicInteger();
         private volatile SongResource lastResource;
         private volatile boolean blockDefaultFade;
+        private volatile long resourceDurationMillis = -1L;
         private float pitch = 1.0f;
 
         @Override
@@ -245,7 +304,17 @@ class PreviewMusicProcessorTest {
         }
 
         @Override
+        public long getDurationMillis(SongResource resource) {
+            return resourceDurationMillis;
+        }
+
+        @Override
         public void setVolume(String path, float volume) {
+            if ("select.wav".equals(path)
+                    && resourcePlayCount.get() > 0
+                    && volume > 0.0f) {
+                defaultMusicRestored.countDown();
+            }
             if (blockDefaultFade && "select.wav".equals(path)) {
                 defaultFadeStarted.countDown();
                 boolean interrupted = false;
