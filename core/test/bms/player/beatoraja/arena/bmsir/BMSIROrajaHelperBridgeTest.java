@@ -2,6 +2,8 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
 import bms.player.beatoraja.ReplayData;
+import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.song.SongData;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -92,5 +94,38 @@ class BMSIROrajaHelperBridgeTest {
         assertEquals("1234567", message.path("randomPlacement").asText());
         assertEquals("1234567", message.path("randomPlacement2P").asText());
         assertTrue(message.path("doublePlay").asBoolean());
+		assertEquals("song_play", message.path("event").asText());
     }
+
+	@Test
+	void resultAndPlayEndPayloadsCarryScoreAndProgressMetrics() {
+		SongData song = new SongData();
+		song.setTitle("Chart");
+		song.setArtist("Artist");
+		song.setNotes(1000);
+		ScoreData score = new ScoreData();
+		score.setNotes(1000);
+		score.setEpg(700);
+		score.setLpg(50);
+		score.setEgr(100);
+		score.setClear(6);
+		score.setMinbp(12);
+
+		var result = BMSIROrajaHelperBridge.resultMessage(
+				song, new ReplayData(), Mode.BEAT_7K, score
+		);
+		var playEnd = BMSIROrajaHelperBridge.playEndMessage(
+				song, new ReplayData(), Mode.BEAT_7K, score,
+				750, 1000, 42, true
+		);
+
+		assertEquals("song_result", result.path("event").asText());
+		assertEquals(1600, result.path("score").asInt());
+		assertEquals(80.0, result.path("scoreRate").asDouble(), 0.001);
+		assertEquals(700, result.path("judges").path("epg").asInt());
+		assertEquals("song_play_end", playEnd.path("event").asText());
+		assertEquals(750, playEnd.path("playedNotes").asInt());
+		assertEquals(42, playEnd.path("elapsedSeconds").asLong());
+		assertTrue(playEnd.path("quickRetry").asBoolean());
+	}
 }
