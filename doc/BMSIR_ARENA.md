@@ -5,12 +5,15 @@ Status: BMS-IR Arena v1 release branch. This source prepares the unified
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
-Version `0.4.14.73` loads referenced key sounds from a solid 7z archive in one
-bounded sequential pass before parallel audio decoding. This prevents
-concurrent reads of one solid block from causing checksum failures and silent
-keys. Per-chart temporary copies are removed after loading, and the original
-archive remains compressed and unchanged. Launcher `0.2.29`, plugin `0.0.72`,
-protocol v8, and all `0.4.14.72` behavior remain unchanged.
+Version `0.4.14.73` combines the complete song-update result dialog, consistent
+late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The dialog
+keeps full-library chart totals primary and adds archive counts and the last
+failure reason as one secondary breakdown. Base-dependent definitions use the
+file's effective `#BASE` regardless of declaration order. Referenced key sounds
+in one solid 7z block are read sequentially before parallel decode; per-chart
+temporary copies are removed after loading and the original archive stays
+unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all `0.4.14.72`
+behavior remain unchanged.
 
 Version `0.4.14.72` restores the complete retained LR2oraja Endless Dream
 behavior found by the exact 52-commit history audit. It includes the repaired
@@ -147,6 +150,12 @@ fullscreen, saves or exits there, and later starts in fullscreen therefore
 returns to the original window style when F4 is pressed. Existing configs
 without this value infer BORDERLESS from a saved BORDERLESS mode and otherwise
 keep the legacy WINDOW fallback.
+
+The BMS decoder resolves base-dependent extended IDs after the effective
+`#BASE` declaration is known. A late `#BASE 62` therefore maps keysounds, BGA,
+extended BPM/STOP/SCROLL values, and `#LNOBJ` exactly like an early declaration,
+while ordinary base-36 decoding and the original chart-file hashes remain
+unchanged.
 
 The current development source removes the PRELOAD render thread's forced GC
 and blocking loudness-result wait. Loudness completion is polled while the
@@ -620,7 +629,12 @@ directory instead of selecting one preview for the whole archive. Refreshing
 an archive folder re-enumerates its physical archive. If that read is rejected
 or the containing directory cannot be read, the update fails closed and keeps
 the last indexed folder and songs. The client logs the causal rejection reason
-and shows loaded/rejected archive totals when the update finishes.
+and shows one consolidated result when the update finishes. Detected,
+processed, and added/updated chart-file totals remain the primary result from
+the Endless Dream updater. When archives were checked, the same dialog adds
+checked, loaded, and unreadable archive totals as a secondary breakdown,
+clarifies that archived charts are already included in the chart-file totals,
+and retains the last causal failure reason when applicable.
 
 ### BMS-IR body URL downloads
 

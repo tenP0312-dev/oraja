@@ -2,6 +2,14 @@
 
 # Arena oraja 0.4.14.73
 
+- Replaced the archive-only song-update completion Alert with one consolidated
+  result dialog. The inherited full-library detected, processed, and
+  added/updated chart counts remain primary; scanned, loaded, and unreadable
+  archive counts appear as a secondary breakdown with the last failure reason.
+- Applied the file's effective `#BASE` consistently to base-dependent extended
+  header IDs even when `#BASE 62` appears after their definitions. Ordinary
+  base-36 and early-base-62 charts retain their existing interpretation and
+  chart-file hashes.
 - Loaded referenced key sounds from a solid 7z archive through one bounded
   sequential archive pass before parallel audio decoding. This prevents
   concurrent reads of one solid block from causing checksum failures and

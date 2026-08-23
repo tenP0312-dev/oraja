@@ -18,12 +18,15 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-Version 0.4.14.73 loads referenced key sounds from a solid 7z archive in one
-bounded sequential pass before parallel audio decoding. This prevents checksum
-failures and silent keys caused by concurrent random reads of one solid block.
-Per-chart temporary copies are removed after loading, while the original 7z
-stays compressed and unchanged. Launcher 0.2.29, plugin 0.0.72, protocol v8,
-and all 0.4.14.72 behavior remain unchanged.
+Version 0.4.14.73 combines the complete song-update result dialog, consistent
+late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The update
+dialog keeps full-library chart totals primary and adds archive counts and the
+last failure reason as one secondary breakdown. Base-dependent definitions now
+use the file's effective `#BASE` regardless of declaration order. Referenced
+key sounds in one solid 7z block are read sequentially before parallel decode;
+per-chart temporary copies are removed after loading and the original archive
+stays unchanged. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.72
+behavior remain unchanged.
 
 Version 0.4.14.72 restores the complete retained LR2oraja Endless Dream
 behavior found by the exact 52-commit history audit. This includes sort-skin
@@ -97,6 +100,12 @@ returns to the same window style even when fullscreen was saved on shutdown
 and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
+
+The BMS decoder now applies the file's effective `#BASE` setting consistently
+to `#WAVxx`, `#BMPxx`, extended BPM/STOP/SCROLL IDs, and `#LNOBJ`, even when
+`#BASE 62` appears after those definitions. Ordinary base-36 charts and
+base-62 charts that already declare the setting first retain their existing
+interpretation and chart-file hashes.
 
 The current development source also retains per-chart difficulty-table
 comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
@@ -185,10 +194,12 @@ Arena client-version/build gate are activated and verified where applicable.
 
 ## Arena oraja 0.4.14.73
 
+Shows full-library chart totals and archive scan details in one song-update
+result dialog. Resolves base-dependent BMS IDs using the effective `#BASE`
+regardless of whether `#BASE 62` appears before or after the definitions.
 Loads all referenced key sounds from a solid 7z archive through one bounded
-sequential archive pass before parallel audio decoding. This prevents
-concurrent solid-block reads from causing checksum failures and missing audio.
-Temporary copies are removed after chart loading, and the source archive is
+sequential pass before parallel decoding, preventing checksum failures and
+missing audio; temporary copies are removed and the source archive is
 unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and the complete
 `0.4.14.72` behavior remain present.
 
@@ -508,8 +519,10 @@ its bytes are replaced even if simple file metadata is unchanged.
 
 Rejected or unreadable archive refreshes fail closed and preserve the last
 indexed songs. Temporary decoder files have bounded capacity and stale-file
-cleanup, and song loading reports loaded/rejected archive totals with the
-causal rejection reason in the diagnostic log.
+cleanup. Song loading now finishes with one consolidated result: detected,
+processed, and added/updated chart totals remain primary, while checked,
+loaded, and unreadable archive totals appear as a secondary breakdown with the
+causal rejection reason when applicable.
 
 ## Arena oraja 0.4.14.40
 
