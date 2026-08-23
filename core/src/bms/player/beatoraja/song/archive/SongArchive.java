@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Base class for a song archive format. Implementations provide archive-format
@@ -52,6 +54,18 @@ public abstract class SongArchive {
 	public abstract long entrySize(Path archive, String entryName) throws IOException;
 
 	public abstract byte[] readEntry(Path archive, String entryName) throws IOException;
+
+	/**
+	 * Copies a group of entries requested by one consumer. Backends with solid
+	 * compression can override this to traverse the archive only once.
+	 */
+	void copyEntries(Path archive, Map<String, Path> targets) throws IOException {
+		for (Map.Entry<String, Path> target : targets.entrySet()) {
+			try (InputStream input = openEntry(archive, target.getKey())) {
+				Files.copy(input, target.getValue(), StandardCopyOption.REPLACE_EXISTING);
+			}
+		}
+	}
 
 	protected static String normalizeEntryName(String entryName) {
 		String normalized = normalizeEntryNameOrNull(entryName);

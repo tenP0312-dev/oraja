@@ -8,6 +8,8 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +22,7 @@ import bms.player.beatoraja.song.archive.SongArchives;
 public final class SongResources {
 
 	private static final int MAX_MATERIALIZED_ENTRIES = 128;
+	private static final int MAX_BATCH_ENTRIES = 10_000;
 	private static final long MAX_MATERIALIZED_BYTES = 2L * 1024 * 1024 * 1024;
 	private static final String TEMP_FILE_PREFIX = "beatoraja-song-resource-";
 	private static final String PROCESS_TEMP_FILE_PREFIX = TEMP_FILE_PREFIX + ProcessHandle.current().pid() + "-";
@@ -77,6 +80,51 @@ public final class SongResources {
 		}
 		trimMaterializedEntries();
 		return target;
+	}
+
+	/**
+	 * Materializes a bounded group of resources for one load operation. Archive
+	 * backends receive the complete group so solid archives can be traversed
+	 * once. Temporary files stay alive until the returned batch is closed.
+	 */
+	public static MaterializedBatch materializeBatch(Collection<SongResource> resources) throws IOException {
+		Map<String, Path> paths = new LinkedHashMap<>();
+		Map<SongResource, Path> copyTargets = new LinkedHashMap<>();
+		List<Path> ownedPaths = new ArrayList<>();
+		try {
+			for (SongResource resource : resources) {
+				String cacheKey = resource.cacheKey();
+				if (paths.containsKey(cacheKey)) {
+					continue;
+				}
+				Optional<Path> localPath = resource.localPath();
+				if (localPath.isPresent()) {
+					paths.put(cacheKey, localPath.get());
+					continue;
+				}
+				if (copyTargets.size() >= MAX_BATCH_ENTRIES) {
+					throw new IOException("Too many archive resources requested at once");
+				}
+				Path target = Files.createTempFile(PROCESS_TEMP_FILE_PREFIX + "batch-",
+						extensionSuffix(resource.name()));
+				ownedPaths.add(target);
+				copyTargets.put(resource, target);
+				paths.put(cacheKey, target);
+			}
+			SongArchives.copyResources(copyTargets);
+			long totalSize = 0;
+			for (Path ownedPath : ownedPaths) {
+				long size = Files.size(ownedPath);
+				if (size < 0 || totalSize + size < totalSize || totalSize + size > MAX_MATERIALIZED_BYTES) {
+					throw new IOException("Archive resource batch is too large");
+				}
+				totalSize += size;
+			}
+			return new MaterializedBatch(Map.copyOf(paths), List.copyOf(ownedPaths));
+		} catch (IOException | RuntimeException error) {
+			ownedPaths.forEach(SongResources::deleteQuietly);
+			throw error;
+		}
 	}
 
 	private static void trimMaterializedEntries() {
@@ -145,6 +193,31 @@ public final class SongResources {
 	}
 
 	private record MaterializedEntry(Path path, long size) {
+	}
+
+	/** One-operation view of local paths, including caller-scoped temporary files. */
+	public static final class MaterializedBatch implements AutoCloseable {
+		private final Map<String, Path> paths;
+		private final List<Path> ownedPaths;
+		private boolean closed;
+
+		private MaterializedBatch(Map<String, Path> paths, List<Path> ownedPaths) {
+			this.paths = paths;
+			this.ownedPaths = ownedPaths;
+		}
+
+		public Path pathFor(SongResource resource) {
+			return paths.get(resource.cacheKey());
+		}
+
+		@Override
+		public synchronized void close() {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			ownedPaths.forEach(SongResources::deleteQuietly);
+		}
 	}
 
 	private record LocalSongResource(Path path) implements SongResource {

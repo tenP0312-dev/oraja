@@ -590,6 +590,13 @@ The cache holds at most 128 entries and 2 GiB, removes its live entries on
 normal shutdown, and removes older orphaned files on a later startup without
 touching temporary files owned by another running client.
 
+When a chart references many key sounds in one solid 7z block, the current
+development source traverses that archive once and makes bounded temporary
+copies of the requested entries before parallel audio decoding. This avoids
+concurrent random reads of the same solid block. The per-chart copies are
+removed as soon as audio loading finishes, while the original 7z remains
+compressed and unchanged.
+
 ZIP entry names use UTF-8 and fall back to Windows-31J for legacy Japanese
 archives. Archive lookup names use Unicode NFC normalization and
 locale-independent case folding, while the original entry spelling is kept

@@ -11,6 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.Normalizer;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -283,6 +284,32 @@ public final class SongArchives {
 	/** Reads a named entry from an archive whose temporary filename may have no archive suffix. */
 	public static byte[] readEntry(Path archive, String entryName) throws IOException {
 		return archiveForRequired(archive).readEntry(archive, canonicalEntryName(archive, entryName));
+	}
+
+	/**
+	 * Copies a set of resources to caller-owned temporary paths. Entries from
+	 * the same archive are handed to the backend together so solid formats can
+	 * be traversed once instead of reopened for every resource.
+	 */
+	public static void copyResources(Map<SongResource, Path> targets) throws IOException {
+		Map<Path, Map<String, Path>> archiveTargets = new LinkedHashMap<>();
+		for (Map.Entry<SongResource, Path> target : targets.entrySet()) {
+			SongResource resource = target.getKey();
+			if (resource instanceof ArchiveSongResource archiveResource) {
+				Path archive = archiveResource.archive();
+				String entryName = canonicalEntryName(archive, archiveResource.entryName());
+				archiveTargets.computeIfAbsent(archive, ignored -> new LinkedHashMap<>())
+						.put(entryName, target.getValue());
+			} else {
+				try (InputStream input = resource.openStream()) {
+					Files.copy(input, target.getValue(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				}
+			}
+		}
+		for (Map.Entry<Path, Map<String, Path>> archiveTarget : archiveTargets.entrySet()) {
+			archiveForRequired(archiveTarget.getKey())
+					.copyEntries(archiveTarget.getKey(), archiveTarget.getValue());
+		}
 	}
 
 	private static String canonicalEntryName(Path archive, String entryName) throws IOException {
