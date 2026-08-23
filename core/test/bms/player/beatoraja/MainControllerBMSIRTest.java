@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
+import bms.player.beatoraja.MainController.CursorMode;
 
 class MainControllerBMSIRTest {
 
@@ -60,6 +61,46 @@ class MainControllerBMSIRTest {
 		config.setEnableBmsirBodyDownload(false);
 		config.setEnableHttp(true);
 		assertTrue(MainController.shouldUpdateDownloadTaskState(config));
+	}
+
+	@Test
+	void arenaCursorHideNeverCapturesTheOsPointer() {
+		assertEquals(
+				CursorMode.HIDDEN,
+				MainController.cursorMode(false, true, true, false, true)
+		);
+		assertEquals(
+				CursorMode.VISIBLE,
+				MainController.cursorMode(false, true, true, false, false)
+		);
+		assertEquals(
+				CursorMode.VISIBLE,
+				MainController.cursorMode(false, true, true, true, true)
+		);
+	}
+
+	@Test
+	void cursorVisibilityReturnsForMenusAndOutsidePlay() {
+		assertEquals(
+				CursorMode.VISIBLE,
+				MainController.cursorMode(true, true, true, false, true)
+		);
+		assertEquals(
+				CursorMode.VISIBLE,
+				MainController.cursorMode(false, false, true, false, true)
+		);
+	}
+
+	@Test
+	void ordinaryPlayKeepsItsExistingInactivityCapture() {
+		assertEquals(
+				CursorMode.CAPTURED,
+				MainController.cursorMode(false, true, false, false, true)
+		);
+		assertEquals(
+				CursorMode.VISIBLE,
+				MainController.cursorMode(false, true, false, false, false)
+		);
 	}
 
     private static IRConfig ir(String name, String userId) {

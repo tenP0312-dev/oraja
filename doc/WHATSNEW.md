@@ -1,5 +1,9 @@
 # Unreleased
 
+- Hid the Arena play cursor without capturing or confining the OS pointer.
+  Mouse movement, the Mod Menu, and leaving play restore cursor visibility;
+  ordinary non-Arena cursor capture is unchanged.
+
 # Arena oraja 0.4.14.70
 
 - Restored top-row `8` as the fixed Music Select compatibility shortcut for
