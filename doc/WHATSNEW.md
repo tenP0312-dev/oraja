@@ -1,3 +1,14 @@
+# Arena oraja 0.4.14.68
+
+- Kept the Skin Widget Manager open independently of the F5 parent menu.
+- Removed its visibility-wide gameplay input lock; actual ImGui focus, active
+  controls, and text input continue to use the shared capture path.
+- Included width-only and height-only edits in clipboard export.
+- Clarified that the manager temporarily edits only the current scene skin and
+  does not edit the separate BMS-IR Arena overlay or write skin source files.
+- Preserved launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior, and
+  the Windows native-audio repair baseline.
+
 # Arena oraja 0.4.14.66
 
 - Republished the Windows body as a complete native-audio repair baseline.
