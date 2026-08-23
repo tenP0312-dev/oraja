@@ -5,6 +5,7 @@ import bms.player.beatoraja.ResourcePool;
 import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -384,56 +385,51 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 		noteMapSize = notemap.size;
 		Map<Integer, List<Note>> map = new HashMap<>();
 		notemap.iterator().forEachRemaining(m -> map.put(m.key, m.value));
-		map.entrySet().parallelStream().forEach(waventry -> {
+		Map<Integer, SongResource> soundResources = new HashMap<>();
+		Map<String, SongResource> resourcesToMaterialize = new LinkedHashMap<>();
+		for (Map.Entry<Integer, List<Note>> waventry : map.entrySet()) {
 			final int wavid = waventry.getKey();
-			if (progress.get() >= noteMapSize) {
-				return;
-			}
 			if (wavid < 0) {
-				return;
+				continue;
 			}
 			try {
-				SongResource soundResource;
+				final SongResource soundResource;
 				if (wavid < wavcount) {
 					soundResource = directory.resolve(wavlist[wavid]);
 				} else {
 					soundResource = SongResources.local(Paths.get("defaultsound/landmine.wav").toAbsolutePath());
 				}
-				for (Note note : waventry.getValue()) {
-					// 音切りあり・なし両方のデータが必要になるケースがある
-					if (note.getMicroStarttime() == 0 && note.getMicroDuration() == 0) {
-						// 音切りなしのケース
-						wavmap[wavid] = cache.get(new AudioKey(soundResource, note));
-						if (wavmap[wavid] == null) {
-							break;
-						}
-					} else {
-						// 音切りありのケース
-						boolean b = true;
-						if (slicesound[note.getWav()] == null) {
-							slicesound[note.getWav()] = new Array<SliceWav<T>>();
-						}
-						for (SliceWav<T> slice : slicesound[note.getWav()]) {
-							if (slice.starttime == note.getMicroStarttime() && slice.duration == note.getMicroDuration()) {
-								b = false;
-								break;
-							}
-						}
-						if (b) {
-							T sliceaudio = cache.get(new AudioKey(soundResource, note));
-							if (sliceaudio != null) {
-								slicesound[note.getWav()].add(new SliceWav<T>(note, sliceaudio));
-							} else {
-								return;
-							}
+				soundResources.put(wavid, soundResource);
+				if (requiresLoad(soundResource, waventry.getValue())) {
+					for (SongResource candidate : AudioDriver.getResources(soundResource)) {
+						if (candidate.localPath().isEmpty()) {
+							resourcesToMaterialize.putIfAbsent(candidate.cacheKey(), candidate);
 						}
 					}
 				}
 			} catch (IllegalArgumentException e) {
 				logger.warn(e.getMessage());
 			}
-			progress.incrementAndGet();
-		});
+		}
+
+		SongResources.MaterializedBatch materialized = null;
+		try {
+			materialized = SongResources.materializeBatch(resourcesToMaterialize.values());
+			cache.setMaterializedBatch(materialized);
+			map.entrySet().parallelStream()
+					.forEach(entry -> loadAudioEntry(entry, soundResources, slicesound));
+		} catch (IOException error) {
+			logger.warn("アーカイブ音源の一括読み込みに失敗しました。逐次読み込みへ切り替えます: {}",
+					error.getMessage());
+			cache.setMaterializedBatch(null);
+			map.entrySet().stream()
+					.forEach(entry -> loadAudioEntry(entry, soundResources, slicesound));
+		} finally {
+			cache.setMaterializedBatch(null);
+			if (materialized != null) {
+				materialized.close();
+			}
+		}
 
 		logger.info("音源ファイル読み込み完了。音源数:{}", wavmap.length);
 		for (int i = 0; i < wavmap.length; i++) {
@@ -449,6 +445,59 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 		logger.info("AudioCache容量 : {} 開放 : {}", cache.size(), prevsize - cache.size());
 
 		progress.set(noteMapSize);
+	}
+
+	private boolean requiresLoad(SongResource resource, List<Note> notes) {
+		for (Note note : notes) {
+			if (!cache.exists(new AudioKey(resource, note))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void loadAudioEntry(Map.Entry<Integer, List<Note>> waventry,
+			Map<Integer, SongResource> soundResources, Array<SliceWav<T>>[] slicesound) {
+		final int wavid = waventry.getKey();
+		if (progress.get() >= noteMapSize || wavid < 0) {
+			return;
+		}
+		SongResource soundResource = soundResources.get(wavid);
+		if (soundResource == null) {
+			progress.incrementAndGet();
+			return;
+		}
+		for (Note note : waventry.getValue()) {
+			// 音切りあり・なし両方のデータが必要になるケースがある
+			if (note.getMicroStarttime() == 0 && note.getMicroDuration() == 0) {
+				// 音切りなしのケース
+				wavmap[wavid] = cache.get(new AudioKey(soundResource, note));
+				if (wavmap[wavid] == null) {
+					break;
+				}
+			} else {
+				// 音切りありのケース
+				boolean addSlice = true;
+				if (slicesound[note.getWav()] == null) {
+					slicesound[note.getWav()] = new Array<SliceWav<T>>();
+				}
+				for (SliceWav<T> slice : slicesound[note.getWav()]) {
+					if (slice.starttime == note.getMicroStarttime() && slice.duration == note.getMicroDuration()) {
+						addSlice = false;
+						break;
+					}
+				}
+				if (addSlice) {
+					T sliceaudio = cache.get(new AudioKey(soundResource, note));
+					if (sliceaudio != null) {
+						slicesound[note.getWav()].add(new SliceWav<T>(note, sliceaudio));
+					} else {
+						return;
+					}
+				}
+			}
+		}
+		progress.incrementAndGet();
 	}
 	
 	public void setAdditionalKeySound(int judge, boolean fast, String p) {
@@ -673,9 +722,14 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 	}
 
 	class AudioCache extends ResourcePool<AudioKey, T> {
+		private volatile SongResources.MaterializedBatch materializedBatch;
 
 		public AudioCache(int maxgen) {
 			super(maxgen);
+		}
+
+		void setMaterializedBatch(SongResources.MaterializedBatch materializedBatch) {
+			this.materializedBatch = materializedBatch;
 		}
 
 		private ObjectMap<String, PCM> pcmMap = new ObjectMap<String, PCM>();
@@ -686,7 +740,7 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 				for (SongResource resource : AudioDriver.getResources(key.resource)) {
 					wav = pcmMap.get(resource.cacheKey());
 					if (wav == null) {
-						wav = PCM.load(resource, AbstractAudioDriver.this);
+						wav = loadPcm(resource);
 						if (wav != null) {
 							pcmMap.put(resource.cacheKey(), wav);
 						}
@@ -728,13 +782,32 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 
 			private T loadFull(AudioKey key) {
 				for (SongResource resource : AudioDriver.getResources(key.resource)) {
-					T sound = getKeySound(resource);
+					Path materializedPath = materializedPath(resource);
+					T sound;
+					if (materializedPath != null) {
+						PCM pcm = PCM.load(materializedPath, AbstractAudioDriver.this);
+						sound = pcm != null ? getKeySound(pcm) : null;
+					} else {
+						sound = getKeySound(resource);
+					}
 					if (sound != null) {
 						return sound;
 					}
 				}
 				return null;
 			}
+
+		private PCM loadPcm(SongResource resource) {
+			Path materializedPath = materializedPath(resource);
+			return materializedPath != null
+					? PCM.load(materializedPath, AbstractAudioDriver.this)
+					: PCM.load(resource, AbstractAudioDriver.this);
+		}
+
+		private Path materializedPath(SongResource resource) {
+			SongResources.MaterializedBatch current = materializedBatch;
+			return current != null ? current.pathFor(resource) : null;
+		}
 
 		
 		@Override

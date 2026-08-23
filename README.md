@@ -113,6 +113,13 @@ entered the song database. A ready notice tells the player to select the chart
 again to start play; the download action itself does not automatically begin
 gameplay.
 
+The current development source also loads referenced key sounds from a solid
+7z archive in one bounded sequential archive pass before decoding them in
+parallel. This avoids checksum failures and missing audio caused by reopening
+one solid-compression block concurrently for hundreds of entries. The
+temporary audio copies are removed after the chart finishes loading; the
+original archive stays compressed and unchanged.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is

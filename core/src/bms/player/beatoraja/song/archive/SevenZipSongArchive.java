@@ -4,10 +4,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.compress.PasswordRequiredException;
@@ -85,7 +89,7 @@ public final class SevenZipSongArchive extends SongArchive {
 	public InputStream openEntry(Path archive, String entryName) throws IOException {
 		SevenZFile sevenZ = open(archive);
 		try {
-			SevenZArchiveEntry entry = findEntry(sevenZ, archive, entryName);
+			SevenZArchiveEntry entry = findNextEntry(sevenZ, archive, entryName);
 			InputStream stream = new FilterInputStream(sevenZ.getInputStream(entry)) {
 				@Override
 				public void close() throws IOException {
@@ -109,7 +113,7 @@ public final class SevenZipSongArchive extends SongArchive {
 	@Override
 	public byte[] readEntry(Path archive, String entryName) throws IOException {
 		try (SevenZFile sevenZ = open(archive)) {
-			SevenZArchiveEntry entry = findEntry(sevenZ, archive, entryName);
+			SevenZArchiveEntry entry = findNextEntry(sevenZ, archive, entryName);
 			long size = entry.getSize();
 			if (size > MAX_CHART_SIZE) {
 				throw new IOException("7z chart is too large: " + entryName);
@@ -120,6 +124,50 @@ public final class SevenZipSongArchive extends SongArchive {
 			}
 		} catch (PasswordRequiredException e) {
 			throw new IOException("Password protected 7z archives are not supported: " + archive, e);
+		}
+	}
+
+	@Override
+	void copyEntries(Path archive, Map<String, Path> targets) throws IOException {
+		Map<String, Path> remaining = new HashMap<>(targets);
+		try (SevenZFile sevenZ = open(archive)) {
+			SevenZArchiveEntry entry;
+			long totalSize = 0;
+			int entryCount = 0;
+			while ((entry = sevenZ.getNextEntry()) != null) {
+				if (++entryCount > MAX_ENTRY_COUNT) {
+					throw new IOException("7z contains too many entries: " + archive);
+				}
+				validate(entry, archive);
+				if (entry.isDirectory()) {
+					continue;
+				}
+				long size = entry.getSize();
+				if (size < 0 || totalSize + size < totalSize || totalSize + size > MAX_EXTRACTED_SIZE) {
+					throw new IOException("7z is too large after decompression: " + archive);
+				}
+				totalSize += size;
+				String name = normalizeEntryNameOrNull(entry.getName());
+				if (name == null) {
+					throw new IOException("Unsafe 7z entry: " + entry.getName());
+				}
+				Path target = remaining.remove(name);
+				if (target == null) {
+					continue;
+				}
+				try (InputStream input = limitStream(sevenZ.getInputStream(entry), size,
+						"7z resource is too large: " + name)) {
+					Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+				}
+				if (remaining.isEmpty()) {
+					return;
+				}
+			}
+		} catch (PasswordRequiredException e) {
+			throw new IOException("Password protected 7z archives are not supported: " + archive, e);
+		}
+		if (!remaining.isEmpty()) {
+			throw new IOException("7z entries do not exist: " + String.join(", ", remaining.keySet()));
 		}
 	}
 
@@ -136,6 +184,17 @@ public final class SevenZipSongArchive extends SongArchive {
 
 	private SevenZArchiveEntry findEntry(SevenZFile sevenZ, Path archive, String entryName) throws IOException {
 		for (SevenZArchiveEntry entry : sevenZ.getEntries()) {
+			validate(entry, archive);
+			if (!entry.isDirectory() && entryName.equals(normalizeEntryNameOrNull(entry.getName()))) {
+				return entry;
+			}
+		}
+		throw new IOException("7z entry does not exist: " + entryName);
+	}
+
+	private SevenZArchiveEntry findNextEntry(SevenZFile sevenZ, Path archive, String entryName) throws IOException {
+		SevenZArchiveEntry entry;
+		while ((entry = sevenZ.getNextEntry()) != null) {
 			validate(entry, archive);
 			if (!entry.isDirectory() && entryName.equals(normalizeEntryNameOrNull(entry.getName()))) {
 				return entry;
