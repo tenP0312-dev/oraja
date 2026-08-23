@@ -66,9 +66,16 @@ public class RankingData {
 		Thread irprocess = new Thread(() -> {
 			final IRStatus[] ir = mainstate.main.getIRStatus();
 	        IRResponse<IRScoreData[]> response = null;
-	        if(song instanceof SongData) {
-	        	 response = ir[0].connection.getPlayData(null, new IRChartData((SongData) song));
-	        } else if(song instanceof CourseData) {
+			if(song instanceof SongData songData) {
+				response = ir[0].connection.getPlayData(null, new IRChartData(songData));
+				if (response.isSucceeded()) {
+					mainstate.main.getRivalDataAccessor().updateAllRivalsScores(
+							response.getData(),
+							songData,
+							mainstate.main.getPlayerConfig().getLnmode()
+					);
+				}
+			} else if(song instanceof CourseData) {
 		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, mainstate.main.getPlayerConfig().getLnmode()));
 	        }
 	        if(response.isSucceeded()) {

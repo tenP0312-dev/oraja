@@ -85,4 +85,38 @@ class BMSIRSelectOptionCompatibilityTest {
         assertEquals(BarSorter.TITLE.name(), player.getSortid());
     }
 
+    @Test
+    void lastPlayedSortKeepsLegacyImageReferenceVisible() {
+        assertEquals(
+                4,
+                BMSIRSelectOptionCompatibility.visibleSortIndex(4, true)
+        );
+        assertEquals(
+                0,
+                BMSIRSelectOptionCompatibility.visibleSortIndex(
+                        Integer.MIN_VALUE,
+                        true
+                )
+        );
+        assertEquals(
+                Integer.MIN_VALUE,
+                BMSIRSelectOptionCompatibility.visibleSortIndex(
+                        Integer.MIN_VALUE,
+                        false
+                )
+        );
+    }
+
+    @Test
+    void textSortPropertyNamesTheEffectiveLastPlayedMode() {
+        assertEquals(
+                "LAST_PLAYED",
+                BMSIRSelectOptionCompatibility.visibleSortName("LEVEL", true)
+        );
+        assertEquals(
+                "LEVEL",
+                BMSIRSelectOptionCompatibility.visibleSortName("LEVEL", false)
+        );
+    }
+
 }

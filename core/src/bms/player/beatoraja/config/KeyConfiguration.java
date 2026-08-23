@@ -136,6 +136,13 @@ public class KeyConfiguration extends MainState {
 		final float scaleX = (float) getSkin().getScaleX();
 		final float scaleY = (float) getSkin().getScaleY();
 
+		// Controller connect/disconnect callbacks run before this frame. Refresh
+		// the array so a newly connected device is immediately configurable.
+		controllers = input.getBMInputProcessor();
+		for (BMControllerInputProcessor controller : controllers) {
+			controller.setEnable(true);
+		}
+
 		if (this.shape == null) {
 			Pixmap plainPixmap = new Pixmap(2,1, Pixmap.Format.RGBA8888);
 			plainPixmap.setColor(Color.WHITE);

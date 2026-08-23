@@ -32,18 +32,27 @@ public class BGImageProcessor {
 	/**
 	 * BGイメージのキャッシュ
 	 */
-	private Texture[] bgacache;
-	/**
-	 * キャッシュされているBGイメージID
-	 */
-	private int[] bgacacheid;
+	private final Map<Integer, Texture> bgacache;
+	private final int bgacacheCapacity;
 
 	private final PixmapResourcePool cache;
 	private IncrementalPreparation<Texture> preparation;
 
 	public BGImageProcessor(int size, int maxgen) {
-		bgacache = new Texture[size];
-		bgacacheid = new int[size];
+		bgacacheCapacity = Math.max(size, 1);
+		bgacache = new LinkedHashMap<>(bgacacheCapacity + 1, 0.75f, true) {
+			@Override
+			protected boolean removeEldestEntry(Map.Entry<Integer, Texture> eldest) {
+				if (size() <= bgacacheCapacity) {
+					return false;
+				}
+				Texture texture = eldest.getValue();
+				if (texture != null) {
+					texture.dispose();
+				}
+				return true;
+			}
+		};
 		cache = new PixmapResourcePool(maxgen) {
 
 			protected Pixmap convert(Pixmap pixmap) {
@@ -94,13 +103,12 @@ public class BGImageProcessor {
 		if (preparation != null) {
 			preparation.drainDisposalsTo(disposals);
 		}
-		Arrays.fill(bgacacheid, -1);
-		for (Texture bga : bgacache) {
+		for (Texture bga : bgacache.values()) {
 			if (bga != null) {
 				disposals.addLast(bga);
 			}
 		}
-		Arrays.fill(bgacache, null);
+		bgacache.clear();
 
 		int[] imageIds = new int[timelines.length * 2];
 		int imageIndex = 0;
@@ -108,16 +116,16 @@ public class BGImageProcessor {
 			imageIds[imageIndex++] = tl.getBGA();
 			imageIds[imageIndex++] = tl.getLayer();
 		}
-		CachePlan cachePlan = calculateCachePlan(bgacache.length, imageIds, this::hasImage);
+		CachePlan cachePlan = calculateCachePlan(bgacacheCapacity, imageIds, this::hasImage);
 		preparation = new IncrementalPreparation<>(
 				disposals,
 				cachePlan.uploads()
 		);
 		TimingDiagnostics.staticBgaCachePlan(
 				cachePlan.uniqueImages(),
-				bgacache.length,
+				bgacacheCapacity,
 				cachePlan.uploads().length,
-				cachePlan.collidingImages()
+				cachePlan.deferredImages()
 		);
 		logger.info("BGA incremental texture preparation queued - textures:{} disposals:{}",
 				cachePlan.uploads().length, disposals.size());
@@ -149,42 +157,31 @@ public class BGImageProcessor {
 	}
 
 	private Texture getTexture(int id, boolean preparationUpload) {
-		final int cid = id % bgacache.length;
-		// BGイメージキャッシュにTextureがある場合
-		if (bgacacheid[cid] == id) {
-			return bgacache[cid];
+		Texture cachedTexture = bgacache.get(id);
+		if (cachedTexture != null) {
+			return cachedTexture;
 		}
 		// BGイメージキャッシュにTextureがない場合
-		if (id < bgamap.length && bgamap[id] != null){
+		if (id >= 0 && id < bgamap.length && bgamap[id] != null){
 			long startedNanos = preparationUpload ? 0 : TimingDiagnostics.start();
 			if (!preparationUpload) {
 				TimingDiagnostics.increment(TimingDiagnostics.Counter.BGA_STATIC_CACHE_MISS);
 			}
+			Texture texture;
 			try {
-				if(bgacache[cid] == null) {
-					if (!preparationUpload) {
-						TimingDiagnostics.increment(TimingDiagnostics.Counter.BGA_STATIC_TEXTURE_CREATE);
-					}
-					bgacache[cid] = new Texture(bgamap[id]);
-				} else if(bgacache[cid].getWidth() != bgamap[id].getWidth() || bgacache[cid].getHeight() != bgamap[id].getHeight()){
-					if (!preparationUpload) {
-						TimingDiagnostics.increment(TimingDiagnostics.Counter.BGA_STATIC_TEXTURE_RECREATE);
-					}
-					bgacache[cid].dispose();
-					bgacache[cid] = new Texture(bgamap[id]);
-				} else {
-					if (!preparationUpload) {
-						TimingDiagnostics.increment(TimingDiagnostics.Counter.BGA_STATIC_TEXTURE_UPDATE);
-					}
-					bgacache[cid].draw(bgamap[id], 0, 0);
+				if (!preparationUpload) {
+					TimingDiagnostics.increment(TimingDiagnostics.Counter.BGA_STATIC_TEXTURE_CREATE);
 				}
+				// Each image owns an independent Texture. Repainting a direct-mapped
+				// slot can leave an earlier draw using pixels from another BGA.
+				texture = new Texture(bgamap[id]);
+				bgacache.put(id, texture);
 			} finally {
 				if (!preparationUpload) {
 					TimingDiagnostics.finish(TimingDiagnostics.Metric.BGA_STATIC_RUNTIME_UPLOAD, startedNanos);
 				}
 			}
-			bgacacheid[cid] = id;
-			return bgacache[cid];
+			return texture;
 		}
 		return null;
 	}
@@ -193,7 +190,6 @@ public class BGImageProcessor {
 		if (cacheSize <= 0 || imageIds.length == 0) {
 			return new CachePlan(new int[0], 0, 0);
 		}
-		boolean[] scheduledSlots = new boolean[cacheSize];
 		BitSet referencedImages = new BitSet();
 		int[] uploads = new int[Math.min(cacheSize, imageIds.length)];
 		int uploadCount = 0;
@@ -204,9 +200,7 @@ public class BGImageProcessor {
 			}
 			referencedImages.set(id);
 			uniqueImages++;
-			int slot = id % cacheSize;
-			if (!scheduledSlots[slot]) {
-				scheduledSlots[slot] = true;
+			if (uploadCount < cacheSize) {
 				uploads[uploadCount++] = id;
 			}
 		}
@@ -217,7 +211,7 @@ public class BGImageProcessor {
 		);
 	}
 
-	record CachePlan(int[] uploads, int uniqueImages, int collidingImages) {
+	record CachePlan(int[] uploads, int uniqueImages, int deferredImages) {
 	}
 
 	/**
@@ -228,12 +222,12 @@ public class BGImageProcessor {
 			preparation.disposeRemaining(Texture::dispose);
 			preparation = null;
 		}
-		for (Texture bga : bgacache) {
+		for (Texture bga : bgacache.values()) {
 			if (bga != null) {
 				bga.dispose();
 			}
 		}
-		bgacache = new Texture[0];
+		bgacache.clear();
 
 		cache.dispose();
 	}

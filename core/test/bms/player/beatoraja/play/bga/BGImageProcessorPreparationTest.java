@@ -12,16 +12,16 @@ import org.junit.jupiter.api.Test;
 
 class BGImageProcessorPreparationTest {
     @Test
-    void cachePlanCountsUniqueImagesAndDirectMappedCollisions() {
+    void cachePlanKeepsDistinctIdsThatPreviouslyCollided() {
         BGImageProcessor.CachePlan plan = BGImageProcessor.calculateCachePlan(
                 4,
                 new int[] {1, 5, 1, 2, 6, 3, -1, 7},
                 id -> id != 7
         );
 
-        assertArrayEquals(new int[] {1, 2, 3}, plan.uploads());
+        assertArrayEquals(new int[] {1, 5, 2, 6}, plan.uploads());
         assertEquals(5, plan.uniqueImages());
-        assertEquals(2, plan.collidingImages());
+        assertEquals(1, plan.deferredImages());
     }
 
     @Test

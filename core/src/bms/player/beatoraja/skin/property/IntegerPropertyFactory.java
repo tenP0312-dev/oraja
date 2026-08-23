@@ -20,6 +20,7 @@ import bms.player.beatoraja.play.*;
 import bms.player.beatoraja.result.AbstractResult;
 import bms.player.beatoraja.result.AbstractResult.TimingDistribution;
 import bms.player.beatoraja.result.CourseResult;
+import bms.player.beatoraja.select.BMSIRSelectOptionCompatibility;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
@@ -1069,10 +1070,12 @@ public class IntegerPropertyFactory {
 			}
 			return Integer.MIN_VALUE;
 		}),
-		sort(12, (state) ->
-             ((state instanceof MusicSelector && !SongManagerMenu.isLastPlayedSortEnabled())
-              ? ((MusicSelector) state).getSort()
-              : Integer.MIN_VALUE)),
+		sort(12, (state) -> state instanceof MusicSelector selector
+				? BMSIRSelectOptionCompatibility.visibleSortIndex(
+						selector.getSort(),
+						SongManagerMenu.isLastPlayedSortEnabled()
+				)
+				: Integer.MIN_VALUE),
 		gaugetype_1p(40, (state) -> {
 			if(state instanceof BMSPlayer) {
 				return ((BMSPlayer)state).getGauge().getType();
