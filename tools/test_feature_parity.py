@@ -5,7 +5,12 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from check_feature_parity import FeatureParityError, validate_manifest, validate_release_repository
+from check_feature_parity import (
+    FeatureParityError,
+    _audit_commit_digest,
+    validate_manifest,
+    validate_release_repository,
+)
 
 
 class FeatureParityTest(unittest.TestCase):
@@ -42,6 +47,34 @@ class FeatureParityTest(unittest.TestCase):
     def test_release_validation_requires_every_manifest(self) -> None:
         with self.assertRaisesRegex(FeatureParityError, "required parity manifest is missing"):
             validate_release_repository(self.root, ("missing.json",))
+
+    def test_schema_two_requires_a_complete_unique_commit_ledger(self) -> None:
+        manifest = self._manifest()
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        data.update({
+            "schema_version": 2,
+            "expected_audit_commit_count": 1,
+            "audit_commits": [{
+                "commit": "a" * 40,
+                "status": "integrated",
+                "feature": "feature",
+                "note": "covered",
+            }],
+        })
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+
+        self.assertEqual([], validate_manifest(self.root, manifest))
+
+        data["audit_commits"].append(data["audit_commits"][0])
+        data["expected_audit_commit_count"] = 2
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        errors = validate_manifest(self.root, manifest)
+        self.assertTrue(any("duplicate audited commit" in error for error in errors))
+
+    def test_audit_commit_digest_is_order_independent_but_content_sensitive(self) -> None:
+        expected = _audit_commit_digest(["a" * 40, "b" * 40])
+        self.assertEqual(expected, _audit_commit_digest(["b" * 40, "a" * 40]))
+        self.assertNotEqual(expected, _audit_commit_digest(["a" * 40, "c" * 40]))
 
 
 if __name__ == "__main__":
