@@ -1,5 +1,8 @@
 # Unreleased
 
+- Hid the Arena play cursor without capturing or confining the OS pointer.
+  Mouse movement, the Mod Menu, and leaving play restore cursor visibility;
+  ordinary non-Arena cursor capture is unchanged.
 - Fixed Skin Select PLAY previews so falling notes restart and continue on
   every loop instead of disappearing after the first iteration.
 - Saved newly accepted BMS-IR body archives as portable readable

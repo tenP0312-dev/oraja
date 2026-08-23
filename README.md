@@ -127,6 +127,12 @@ now use the synthetic PLAY timer's elapsed time, so they continue from the
 chart start after every preview loop while untimed skin animations still
 rewind.
 
+The current development source separates Arena play cursor visibility from
+pointer capture. When `Show cursor during play` is off, the cursor becomes
+invisible after the short inactivity delay without being confined to the game
+window. Mouse movement, the Mod Menu, and leaving play restore visibility;
+ordinary non-Arena play keeps its existing inactivity-based cursor capture.
+
 GitHub pushes do not publish official binaries automatically. Public packages
 are built, signed where applicable, verified, and released through the BMS-IR
 release procedure.
