@@ -144,6 +144,11 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 	 */
 	protected abstract boolean isPlaying(T id);
 
+	/** Returns the decoded duration in milliseconds, or a negative value. */
+	protected long durationMillis(T id) {
+		return -1L;
+	}
+
 	/**
 	 * 音源データが再生されていれば停止する
 	 * 
@@ -186,6 +191,12 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 		if (sound != null) {
 			play(sound, volume, loop);
 		}
+	}
+
+	@Override
+	public long getDurationMillis(SongResource resource) {
+		final AudioElement<T> sound = getSound(resource);
+		return sound != null ? durationMillis(sound.audio) : -1L;
 	}
 	
 	private AudioElement<T> getSound(String p) {

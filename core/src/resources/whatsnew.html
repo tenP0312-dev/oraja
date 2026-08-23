@@ -28,6 +28,15 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Arena oraja 0.4.14.69</h1>
+        <h2>Selected non-skin reliability and diagnostics update</h2>
+        <ul>
+        <li>Kept the transactional all-table refresh: every configured table is downloaded and validated before live caches are replaced, and any failure preserves the previous caches.</li>
+        <li>Stopped the Music Select BGM and explicit or generated preview synchronously before ordinary or Arena gameplay begins.</li>
+        <li>Restored the default Music Select BGM after an explicit or discovered OpenAL one-shot preview reaches its decoded duration.</li>
+        <li>Added default-OFF diagnostics for static-image BGA cache planning, collisions, runtime misses, and texture upload time without changing cache or rendering behavior.</li>
+        <li>Bundled default skin assets and definitions are unchanged. Launcher 0.2.29, plugin 0.0.72, protocol, score behavior, and the Windows native-audio repair baseline are unchanged.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.68</h1>
         <h2>Repair the Skin Widget Manager</h2>
         <ul>

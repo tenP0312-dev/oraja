@@ -10,13 +10,21 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.68**. Its Windows native-audio
+The current client source version is **0.4.14.69**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.69 keeps the safe all-table refresh and adds the remaining
+selected non-skin changes. Leaving Music Select now stops its BGM and preview
+synchronously before ordinary or Arena gameplay. Explicit and discovered
+OpenAL one-shot previews return to the default selector BGM at their decoded
+duration. Default-OFF diagnostics now measure static-image BGA cache planning,
+collisions, runtime misses, and texture upload time without changing the cache
+or rendering policy. Bundled default skin assets and definitions are unchanged.
 
 Version 0.4.14.68 repairs the Skin Widget Manager. The manager remains open
 independently of the F5 parent menu, its visibility no longer captures gameplay
@@ -84,6 +92,15 @@ requests it. Width-only and height-only edits are included when the manager
 exports its temporary current-scene changes to the clipboard. The manager does
 not edit the separate BMS-IR Arena overlay or write skin source files.
 
+Leaving Music Select now synchronously stops both its default BGM and any
+explicit or generated song preview. A play transition can no longer interrupt
+the preview fade and leave the selector BGM loop audible during gameplay; the
+same shutdown path covers ordinary selection and BMS-IR Arena automatic starts.
+OpenAL also uses the decoded duration of an existing explicit or discovered
+one-shot preview, so its natural end restores the default selector BGM even
+though LibGDX `Sound` does not expose a playback-completion query. Loop mode
+continues to play the selected-song preview until the selection changes.
+
 Version 0.4.14.61 also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
@@ -123,6 +140,19 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.69
+
+Keeps the transactional all-table refresh already present in the release line:
+every configured table is downloaded and validated before live caches are
+replaced, and any failure preserves the previous caches. Music Select now
+stops its BGM and explicit or generated preview synchronously before ordinary
+or Arena gameplay begins. OpenAL one-shot previews return to the default BGM
+after their decoded duration. Default-OFF diagnostics add static-image BGA
+cache-plan, collision, miss, and texture-upload measurements without changing
+cache or rendering behavior. Bundled default skin assets and definitions are
+unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior, and
+the Windows native-audio repair baseline remain unchanged.
 
 ## Arena oraja 0.4.14.68
 
@@ -572,7 +602,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.68
+  --output-dir /release/build-0.4.14.69
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

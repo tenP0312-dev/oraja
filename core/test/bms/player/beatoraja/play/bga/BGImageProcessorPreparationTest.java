@@ -1,5 +1,6 @@
 package bms.player.beatoraja.play.bga;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,6 +11,19 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class BGImageProcessorPreparationTest {
+    @Test
+    void cachePlanCountsUniqueImagesAndDirectMappedCollisions() {
+        BGImageProcessor.CachePlan plan = BGImageProcessor.calculateCachePlan(
+                4,
+                new int[] {1, 5, 1, 2, 6, 3, -1, 7},
+                id -> id != 7
+        );
+
+        assertArrayEquals(new int[] {1, 2, 3}, plan.uploads());
+        assertEquals(5, plan.uniqueImages());
+        assertEquals(2, plan.collidingImages());
+    }
+
     @Test
     void advancesDisposalsAndUploadsWithinIndependentBudgets() {
         ArrayDeque<String> pendingDisposals = new ArrayDeque<>(List.of("old-a", "old-b", "old-c"));

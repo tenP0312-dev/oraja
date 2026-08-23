@@ -1352,9 +1352,9 @@ public class BMSPlayer extends MainState {
 			return true;
 		}
 		if (!bgaPreparationStarted) {
+			TimingDiagnostics.playStageChanged("LOADING_BGA");
 			bga.beginPrepare(this);
 			bgaPreparationStarted = true;
-			TimingDiagnostics.playStageChanged("LOADING_BGA");
 		}
 		bgaPreparationComplete = bga.advancePreparation();
 		return bgaPreparationComplete;

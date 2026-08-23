@@ -131,7 +131,7 @@ public class PreviewMusicProcessor {
         generatedExecutor.shutdownNow();
         PreviewThread active = preview;
         if (active != null) {
-            active.requestStop();
+            active.requestStopAndStopPlayback();
         }
         preview = null;
     }
@@ -238,6 +238,7 @@ public class PreviewMusicProcessor {
 
     private final class PreviewThread extends Thread {
 
+        private final Object playbackLock = new Object();
         private volatile boolean stop;
         private SongResource playingResource;
         private String playing;
@@ -251,24 +252,20 @@ public class PreviewMusicProcessor {
 
         @Override
         public void run() {
-            audio.play(defaultMusic, config.getAudioConfig().getSystemvolume(), true);
-            playing = defaultMusic;
-            currentVolume = config.getAudioConfig().getSystemvolume();
+            synchronized (playbackLock) {
+                if (!stop) {
+                    audio.play(defaultMusic, config.getAudioConfig().getSystemvolume(), true);
+                    playing = defaultMusic;
+                    currentVolume = config.getAudioConfig().getSystemvolume();
+                }
+            }
             while (!stop) {
                 PreviewCommand command = takeLatestCommand();
                 if (command != null) {
                     process(command);
-                } else if (playingResource != null && previewHasEnded()) {
+                } else if (previewHasEnded()) {
                     switchToDefault();
-                } else if (currentVolume != config.getAudioConfig().getSystemvolume()) {
-                    float volume = config.getAudioConfig().getSystemvolume();
-                    if (playingResource != null) {
-                        audio.setVolume(playingResource, volume);
-                    } else {
-                        audio.setVolume(playing, volume);
-                    }
-                    currentVolume = volume;
-                } else {
+                } else if (!updateVolume()) {
                     try {
                         Thread.sleep(50);
                     } catch (InterruptedException ignored) {
@@ -278,7 +275,9 @@ public class PreviewMusicProcessor {
                     }
                 }
             }
-            stopPreview(false);
+            synchronized (playbackLock) {
+                stopPreview(false);
+            }
         }
 
         private PreviewCommand takeLatestCommand() {
@@ -308,47 +307,95 @@ public class PreviewMusicProcessor {
         }
 
         private void playResource(SongResource resource) {
-            if (resource == null || resource.cacheKey().equals(playing)) {
-                return;
+            synchronized (playbackLock) {
+                if (stop || resource == null || resource.cacheKey().equals(playing)) {
+                    return;
+                }
+                stopPreview(true);
+                if (stop) {
+                    stopPreview(false);
+                    return;
+                }
+                long oneShotDurationMillis = oneShotDurationMillis(resource);
+                audio.play(
+                        resource,
+                        config.getAudioConfig().getSystemvolume(),
+                        config.getSongPreview() == SongPreview.LOOP);
+                playingResource = resource;
+                playing = resource.cacheKey();
+                oneShotEndsAtNanos = oneShotDurationMillis > 0L
+                        ? playbackDeadlineNanos(oneShotDurationMillis)
+                        : 0L;
             }
-            stopPreview(true);
-            audio.play(
-                    resource,
-                    config.getAudioConfig().getSystemvolume(),
-                    config.getSongPreview() == SongPreview.LOOP);
-            playingResource = resource;
-            playing = resource.cacheKey();
-            oneShotEndsAtNanos = resource instanceof GeneratedPreviewResource generated
-                    && config.getSongPreview() != SongPreview.LOOP
-                    ? System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(generated.durationMs())
-                    : 0L;
+        }
+
+        private long playbackDeadlineNanos(long durationMillis) {
+            long now = System.nanoTime();
+            long durationNanos = TimeUnit.MILLISECONDS.toNanos(durationMillis);
+            return durationNanos > 0L && now > Long.MAX_VALUE - durationNanos
+                    ? Long.MAX_VALUE
+                    : now + durationNanos;
+        }
+
+        private long oneShotDurationMillis(SongResource resource) {
+            if (config.getSongPreview() == SongPreview.LOOP) {
+                return -1L;
+            }
+            if (resource instanceof GeneratedPreviewResource generated) {
+                return generated.durationMs();
+            }
+            return audio.getDurationMillis(resource);
         }
 
         private boolean previewHasEnded() {
-            return oneShotEndsAtNanos > 0L
-                    ? System.nanoTime() >= oneShotEndsAtNanos
-                    : !audio.isPlaying(playingResource);
+            synchronized (playbackLock) {
+                if (stop || playingResource == null) {
+                    return false;
+                }
+                return oneShotEndsAtNanos > 0L
+                        ? System.nanoTime() >= oneShotEndsAtNanos
+                        : !audio.isPlaying(playingResource);
+            }
+        }
+
+        private boolean updateVolume() {
+            synchronized (playbackLock) {
+                float volume = config.getAudioConfig().getSystemvolume();
+                if (stop || currentVolume == volume) {
+                    return false;
+                }
+                if (playingResource != null) {
+                    audio.setVolume(playingResource, volume);
+                } else if (playing != null && !playing.isEmpty()) {
+                    audio.setVolume(playing, volume);
+                }
+                currentVolume = volume;
+                return true;
+            }
         }
 
         private void switchToDefault() {
-            if (playingResource == null) {
-                return;
+            synchronized (playbackLock) {
+                if (stop || playingResource == null) {
+                    return;
+                }
+                stopPreview(true);
+                if (stop) {
+                    stopPreview(false);
+                    return;
+                }
+                audio.setVolume(defaultMusic, config.getAudioConfig().getSystemvolume());
+                playing = defaultMusic;
             }
-            stopPreview(true);
-            audio.setVolume(defaultMusic, config.getAudioConfig().getSystemvolume());
-            playing = defaultMusic;
         }
 
         private void stopPreview(boolean pause) {
-            if (playing == null || playing.isEmpty()) {
-                return;
-            }
             if (playingResource != null) {
                 audio.stop(playingResource);
                 audio.dispose(playingResource);
                 playingResource = null;
                 oneShotEndsAtNanos = 0L;
-            } else if (pause) {
+            } else if (pause && playing != null && !playing.isEmpty()) {
                 for (int index = 10; index >= 0 && !stop; index--) {
                     float volume = index * 0.1f * config.getAudioConfig().getSystemvolume();
                     audio.setVolume(playing, volume);
@@ -360,14 +407,18 @@ public class PreviewMusicProcessor {
                         }
                     }
                 }
-            } else {
-                audio.stop(playing);
+            }
+            if (!pause && !defaultMusic.isEmpty()) {
+                audio.stop(defaultMusic);
             }
         }
 
-        private void requestStop() {
+        private void requestStopAndStopPlayback() {
             stop = true;
             interrupt();
+            synchronized (playbackLock) {
+                stopPreview(false);
+            }
         }
     }
 
