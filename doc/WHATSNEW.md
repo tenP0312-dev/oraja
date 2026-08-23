@@ -1,8 +1,12 @@
 # Unreleased
 
+# Arena oraja 0.4.14.70
+
 - Restored top-row `8` as the fixed Music Select compatibility shortcut for
   `Show All Charts`. Physical NUMPAD 8 remains a separate configurable
   shortcut and keeps its saved assignment.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior,
+  native audio, and bundled default skins.
 
 # Arena oraja 0.4.14.69
 
