@@ -38,13 +38,13 @@ public class InputConfigurationView implements Initializable {
 	@FXML
 	private CheckBox backgroundControllerInput;
     @FXML
-    private CheckBox jkoc_hack;
-    @FXML
     private TableView<ControllerConfigViewModel> controller_tableView;
     @FXML
     private TableColumn<ControllerConfigViewModel, String> playsideCol;
     @FXML
     private TableColumn<ControllerConfigViewModel, String> nameCol;
+    @FXML
+    private TableColumn<ControllerConfigViewModel, Boolean> jkocCol;
     @FXML
     private TableColumn<ControllerConfigViewModel, Boolean> isAnalogCol;
     @FXML
@@ -110,6 +110,7 @@ public class InputConfigurationView implements Initializable {
 	nameCol.setEditable(false);
 	playsideCol.setSortable(false);
 	nameCol.setSortable(false);
+	jkocCol.setSortable(false);
 	isAnalogCol.setSortable(false);
 	analogThresholdCol.setSortable(false);
 	analogModeCol.setSortable(false);
@@ -119,11 +120,13 @@ public class InputConfigurationView implements Initializable {
 		? Integer.toString(listControllerConfigViewModel.indexOf(col.getValue()) + 1) + "P"
 		: ""));
 	nameCol.setCellValueFactory(col -> col.getValue().getNameProperty());
+	jkocCol.setCellValueFactory(col -> col.getValue().jkocProperty());
 	isAnalogCol.setCellValueFactory(col -> col.getValue().getIsAnalogScratchProperty());
 	analogThresholdCol.setCellValueFactory(col -> col.getValue().getAnalogScratchThresholdProperty());
 	analogModeCol.setCellValueFactory(col -> col.getValue().getAnalogScratchModeProperty());
 
 	nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
+	jkocCol.setCellFactory(CheckBoxTableCell.forTableColumn(jkocCol));
 	isAnalogCol.setCellFactory(CheckBoxTableCell.forTableColumn(isAnalogCol));
 	analogThresholdCol.setCellFactory(col -> new SpinnerCell(1, 1000, 100, 1));
 	analogModeCol.setCellFactory(ComboBoxTableCell.forTableColumn(new IntegerStringConverter() {
@@ -156,7 +159,6 @@ public class InputConfigurationView implements Initializable {
 
 	for (PlayModeConfig.ControllerConfig controller : conf.getController()) {
 	    inputduration.getValueFactory().setValue(controller.getDuration());
-	    jkoc_hack.setSelected(controller.getJKOC());
 	}
 
     }
@@ -173,7 +175,7 @@ public class InputConfigurationView implements Initializable {
             for(ControllerConfigViewModel vm : this.controller_tableView.getItems()) {
         	PlayModeConfig.ControllerConfig controller = vm.getConfig();
         	controller.setDuration(inputduration.getValue());
-                controller.setJKOC(jkoc_hack.isSelected());
+                controller.setJKOC(vm.isJkoc());
                 controller.setAnalogScratch(vm.getIsAnalogScratchProperty().get());
                 controller.setAnalogScratchThreshold(vm.getAnalogScratchThreshold());
                 controller.setAnalogScratchMode(vm.getAnalogScratchMode());

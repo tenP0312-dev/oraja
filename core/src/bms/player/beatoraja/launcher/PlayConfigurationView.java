@@ -1174,15 +1174,18 @@ public class PlayConfigurationView implements Initializable {
 								"Choose the output rate; the device default or 44.1 kHz is normally sufficient.")
 				),
 				sidebarSettingCard(
-						sidebarSettingRow(audioTab, "systemvolume", "全体音量", "System volume",
+					sidebarSettingRow(audioTab, "全体音量", "System volume",
 								"ゲーム全体の音量を調整します。",
-								"Adjust the overall game volume."),
-						sidebarSettingRow(audioTab, "keyvolume", "キー音量", "Key volume",
+								"Adjust the overall game volume.",
+								sidebarCompound(sidebarControl(audioTab, "systemvolume"), sidebarControl(audioTab, "systemVolumeSpinner"))),
+					sidebarSettingRow(audioTab, "キー音量", "Key volume",
 								"譜面のキー音だけの音量を調整します。",
-								"Adjust the chart key-sound volume."),
-						sidebarSettingRow(audioTab, "bgvolume", "BGM音量", "BGM volume",
+								"Adjust the chart key-sound volume.",
+								sidebarCompound(sidebarControl(audioTab, "keyvolume"), sidebarControl(audioTab, "keyVolumeSpinner"))),
+					sidebarSettingRow(audioTab, "BGM音量", "BGM volume",
 								"BGMや自動再生音の音量を調整します。",
-								"Adjust BGM and automatically played audio."),
+								"Adjust BGM and automatically played audio.",
+								sidebarCompound(sidebarControl(audioTab, "bgvolume"), sidebarControl(audioTab, "bgVolumeSpinner"))),
 						sidebarSettingRow(audioTab, "normalizeVolume", "譜面音量を正規化", "Normalize chart volume",
 								"曲ごとの音量差を抑えるため、読み込んだ音声の基準音量を揃えます。",
 								"Reduce volume differences by normalizing loaded chart audio.")
@@ -1217,15 +1220,12 @@ public class PlayConfigurationView implements Initializable {
 								"Accept HID/game-controller input while the game is unfocused; keyboard input remains focus-bound."),
 						sidebarSettingRow(inputTab, "inputduration", "最小入力間隔", "Minimum input interval",
 								"同じ入力を再び受け付けるまでの最短時間です。単位は ms です。",
-								"Set the shortest interval before the same input is accepted again, in ms."),
-						sidebarSettingRow(inputTab, "jkoc_hack", "JKOC HACK", "JKOC HACK",
-								"一部の旧型コントローラー向け互換入力処理です。必要な機器だけで有効にします。",
-								"Enable legacy compatibility input handling only for controllers that require it.")
+								"Set the shortest interval before the same input is accepted again, in ms.")
 				),
 				sidebarSettingCard(
 						sidebarWorkspaceRow(inputTab, "接続コントローラー", "Connected controllers",
-								"各プレイサイドの機器、アナログスクラッチ、停止閾値とアルゴリズムを編集します。",
-								"Edit devices, analog scratch, stop thresholds, and algorithms for each play side.",
+								"各プレイサイドのJKOC互換処理、機器、アナログスクラッチ、停止閾値とアルゴリズムを編集します。",
+								"Edit per-side JKOC compatibility, devices, analog scratch, stop thresholds, and algorithms.",
 								controllerWorkspace)
 				),
 				sidebarSettingCard(

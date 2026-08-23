@@ -37,16 +37,6 @@
             </valueFactory>
         </NumericSpinner>
     </HBox>
-    <HBox prefHeight="37.0" prefWidth="723.0">
-        <VBox.margin>
-            <Insets left="10.0" top="10.0" />
-        </VBox.margin>
-        <CheckBox fx:id="jkoc_hack" mnemonicParsing="false" prefHeight="18.0" prefWidth="130.0" text="%JKOC_HACK">
-            <HBox.margin>
-                <Insets right="20.0" />
-            </HBox.margin>
-        </CheckBox>
-    </HBox>
     <HBox prefHeight="74.0" prefWidth="723.0">
         <VBox.margin>
             <Insets left="10.0" top="10.0" />
@@ -54,10 +44,11 @@
 	    <TableView fx:id="controller_tableView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
 			<columns>
 				<TableColumn fx:id="playsideCol" prefWidth="40.0" text="" />
-				<TableColumn fx:id="nameCol" prefWidth="185.0" text="" />
-				<TableColumn fx:id="isAnalogCol" prefWidth="185.0" text="%ANALOG_SCRATCH" />
-				<TableColumn fx:id="analogThresholdCol" prefWidth="185.0" text="%ANALOG_SCRATCH_THRESHOLD" />
-				<TableColumn fx:id="analogModeCol" prefWidth="185.0" text="%ANALOG_SCRATCH_ALGORITHM" />
+				<TableColumn fx:id="nameCol" prefWidth="145.0" text="" />
+				<TableColumn fx:id="jkocCol" prefWidth="90.0" text="%JKOC_HACK" />
+				<TableColumn fx:id="isAnalogCol" prefWidth="145.0" text="%ANALOG_SCRATCH" />
+				<TableColumn fx:id="analogThresholdCol" prefWidth="165.0" text="%ANALOG_SCRATCH_THRESHOLD" />
+				<TableColumn fx:id="analogModeCol" prefWidth="165.0" text="%ANALOG_SCRATCH_ALGORITHM" />
 			</columns>
 		</TableView>
     </HBox>
