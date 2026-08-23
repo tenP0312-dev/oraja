@@ -2,6 +2,7 @@ package bms.player.beatoraja;
 
 import java.io.File;
 import java.nio.file.*;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.Stream;
@@ -25,11 +26,16 @@ public final class RivalDataAccessor {
 	/**
 	 * ライバル情報
 	 */
-	private PlayerInformation[] rivals = new PlayerInformation[0];
+	private volatile PlayerInformation[] rivals = new PlayerInformation[0];
 	/**
 	 * ライバルスコアデータキャッシュ
 	 */
-	private ScoreDataCache[] rivalcaches = new ScoreDataCache[0];
+	private volatile ScoreDataCache[] rivalcaches = new ScoreDataCache[0];
+	/**
+	 * Databases backing each cache. Kept index-aligned with rivals so a
+	 * successful chart-ranking response can update the active rival cache.
+	 */
+	private volatile ScoreDatabaseAccessor[] rivaldatabases = new ScoreDatabaseAccessor[0];
 
 	/**
 	 * ライバル情報を取得する
@@ -58,6 +64,41 @@ public final class RivalDataAccessor {
 	 */
 	public int getRivalCount() {
 		return rivals.length;
+	}
+
+	public void updateAllRivalsScores(IRScoreData[] scores, SongData song, int lnmode) {
+		if (scores == null || song == null) {
+			return;
+		}
+		PlayerInformation[] currentRivals = rivals;
+		ScoreDataCache[] currentCaches = rivalcaches;
+		ScoreDatabaseAccessor[] currentDatabases = rivaldatabases;
+		int count = Math.min(currentRivals.length,
+				Math.min(currentCaches.length, currentDatabases.length));
+		for (int index = 0; index < count; index++) {
+			IRScoreData score = findRivalScore(scores, currentRivals[index].getName());
+			if (score == null) {
+				continue;
+			}
+			updateRivalScore(score, currentDatabases[index], currentCaches[index], song, lnmode);
+		}
+	}
+
+	static void updateRivalScore(IRScoreData score, ScoreDatabaseAccessor database,
+			ScoreDataCache cache, SongData song, int lnmode) {
+		database.setScoreData(score.convertToScoreData());
+		cache.update(song, lnmode);
+	}
+
+	static IRScoreData findRivalScore(IRScoreData[] scores, String playerName) {
+		if (scores == null || playerName == null) {
+			return null;
+		}
+		return Stream.of(scores)
+				.filter(Objects::nonNull)
+				.filter(score -> playerName.equals(score.player))
+				.findFirst()
+				.orElse(null);
 	}
 
 	public void update(MainController main) {
@@ -92,6 +133,7 @@ public final class RivalDataAccessor {
 					// ライバルキャッシュ作成
 					Array<PlayerInformation> rivals = new Array<PlayerInformation>();
 					Array<ScoreDataCache> rivalcaches = new Array<ScoreDataCache>();
+					Array<ScoreDatabaseAccessor> rivaldatabases = new Array<ScoreDatabaseAccessor>();
 					
 					if(main.getIRStatus()[0].config.isImportrival()) {
 						for(IRPlayerData irplayer : response.getData()) {
@@ -100,9 +142,9 @@ public final class RivalDataAccessor {
 							rival.setName(irplayer.name);
 							rival.setRank(irplayer.rank);
 							final ScoreDatabaseAccessor scoredb = new ScoreDatabaseAccessor("rival/" + main.getIRStatus()[0].config.getIrname() + rival.getId() + ".db");
-							
-							rivals.add(rival);
-							rivalcaches.add(new ScoreDataCache() {
+							scoredb.createTable();
+							scoredb.setInformation(rival);
+							ScoreDataCache rivalcache = new ScoreDataCache() {
 
 								@Override
 								protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
@@ -112,13 +154,16 @@ public final class RivalDataAccessor {
 								protected void readScoreDatasFromSource(ScoreDataCollector collector, SongData[] songs, int lnmode) {
 									scoredb.getScoreDatas(collector,songs, lnmode);
 								}
-							});
+							};
+
+							rivals.add(rival);
+							rivalcaches.add(rivalcache);
+							rivaldatabases.add(scoredb);
 							new Thread(() -> {
-								scoredb.createTable();
-								scoredb.setInformation(rival);
 								IRResponse<IRScoreData[]> scores = main.getIRStatus()[0].connection.getPlayData(irplayer, null);
 								if(scores.isSucceeded()) {
 									scoredb.setScoreData(convert(scores.getData()));
+									rivalcache.clear();
 									logger.info("IRからのライバルスコア取得完了 : {}", rival.getName());
 								} else {
 									logger.warn("IRからのライバルスコア取得失敗 : {}", scores.getMessage());
@@ -161,6 +206,7 @@ public final class RivalDataAccessor {
 											},songs, lnmode);
 										}
 									});
+									rivaldatabases.add(scoredb);
 									logger.info("ローカルに保存されているライバルスコア取得完了 : {}", info.getName());
 								}
 							}
@@ -170,6 +216,7 @@ public final class RivalDataAccessor {
 					}
 					this.rivals = rivals.toArray(PlayerInformation.class);
 					this.rivalcaches = rivalcaches.toArray(ScoreDataCache.class);
+					this.rivaldatabases = rivaldatabases.toArray(ScoreDatabaseAccessor.class);
 					
 //					Array<String> targets = new Array<String>(TargetProperty.getTargets());
 //					for(int i = 0;i < this.rivals.length;i++) {

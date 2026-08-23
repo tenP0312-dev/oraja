@@ -1,6 +1,9 @@
 package bms.player.beatoraja.select.bar;
 
+import java.util.Arrays;
+import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.ir.IRChartData;
+import bms.player.beatoraja.ir.IRResponse;
 import bms.player.beatoraja.ir.IRScoreData;
 import bms.player.beatoraja.ir.LeaderboardEntry;
 import bms.player.beatoraja.ir.LR2IRAccessor;
@@ -22,13 +25,24 @@ import static bms.player.beatoraja.select.bar.FunctionBar.STYLE_COURSE;
 import static bms.player.beatoraja.select.bar.FunctionBar.STYLE_TABLE;
 
 public class LeaderBoardBar extends DirectoryBar {
+	public enum Source {
+		PRIMARY_IR,
+		BMS_IR
+	}
+
 	private final SongData songData;
 	private final String title;
+	private final Source source;
 
 	public LeaderBoardBar(MusicSelector selector, SongData songData) {
+		this(selector, songData, Source.BMS_IR);
+	}
+
+	public LeaderBoardBar(MusicSelector selector, SongData songData, Source source) {
 		super(selector);
 		this.songData = songData;
 		this.title = songData.getFullTitle();
+		this.source = source;
 	}
 
 	@Override
@@ -38,6 +52,9 @@ public class LeaderBoardBar extends DirectoryBar {
 
 	@Override
 	public Bar[] getChildren() {
+		if (source == Source.PRIMARY_IR) {
+			return loadPrimaryIrLeaderboard();
+		}
 		if (BMSIRManiacApiClient.hasOnlineRanking(selector.main, songData)) {
 			return fromIRScoreData(BMSIRManiacApiClient.loadLeaderboard(selector.main, songData));
 		}
@@ -54,6 +71,50 @@ public class LeaderBoardBar extends DirectoryBar {
 		return fromIRScoreData(scoreData);
 	}
 
+	private Bar[] loadPrimaryIrLeaderboard() {
+		MainController.IRStatus[] statuses = selector.main.getIRStatus();
+		if (statuses.length == 0) {
+			ImGuiNotify.warning("Primary IR is not configured.");
+			return new Bar[0];
+		}
+		MainController.IRStatus primary = statuses[0];
+		IRResponse<IRScoreData[]> response = primary.connection.getPlayData(
+				null,
+				new IRChartData(songData)
+		);
+		if (!response.isSucceeded()) {
+			ImGuiNotify.error(String.format(
+					"Failed to load Primary IR leaderboard: %s",
+					response.getMessage()
+			));
+			return new Bar[0];
+		}
+		IRScoreData[] responseScores = response.getData() != null
+				? response.getData()
+				: new IRScoreData[0];
+		selector.main.getRivalDataAccessor().updateAllRivalsScores(
+				responseScores,
+				songData,
+				selector.main.getPlayerConfig().getLnmode()
+		);
+		ScoreData localScoreData = selector.getScoreDataCache().readScoreData(
+				songData,
+				selector.main.getPlayerConfig().getLnmode()
+		);
+		IRScoreData localScore = localScoreData != null
+				? new IRScoreData(localScoreData)
+				: null;
+		LeaderboardEntry[] leaderboard = Arrays.stream(responseScores)
+				.filter(score -> score != null
+						&& (localScore == null || score.player == null || !score.player.isEmpty()))
+				.sorted((left, right) -> Integer.compare(right.getExscore(), left.getExscore()))
+				.map(LeaderboardEntry::newEntryPrimaryIR)
+				.toArray(LeaderboardEntry[]::new);
+		return localScore != null
+				? fromIRScoreData(localScore, leaderboard)
+				: fromIRScoreData(leaderboard);
+	}
+
 	/**
 	 * Convert some ir scores to bars
 	 *
@@ -65,7 +126,8 @@ public class LeaderBoardBar extends DirectoryBar {
 	public FunctionBar[] fromIRScoreData(LeaderboardEntry[] irScoreData) {
 		FunctionBar[] bars = new FunctionBar[irScoreData.length];
 		for (int i = 0; i < irScoreData.length; i++) {
-			bars[i] = createFunctionBar(i + 1, irScoreData[i], irScoreData[i].getIrScore().player.isEmpty());
+			String player = irScoreData[i].getIrScore().player;
+			bars[i] = createFunctionBar(i + 1, irScoreData[i], player == null || player.isEmpty());
 		}
 		return bars;
 	}
@@ -105,7 +167,7 @@ public class LeaderBoardBar extends DirectoryBar {
 			}
 		}
 		if (!inserted) {
-			bars[id] = createFunctionBar(id, LeaderboardEntry.newEntryPrimaryIR(localScore), true);
+			bars[id] = createFunctionBar(id + 1, LeaderboardEntry.newEntryPrimaryIR(localScore), true);
 		}
 		return bars;
 	}
