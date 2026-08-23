@@ -19,6 +19,9 @@ jobs:
       - name: Test release and native-audio validators
         run: python3 -m unittest discover -s tools -p 'test_*.py' -v
 
+      - name: Verify ED and distribution feature parity
+        run: python3 tools/check_feature_parity.py --root .
+
   body:
     name: Body (${{ matrix.platform }})
     strategy:

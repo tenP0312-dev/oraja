@@ -20,6 +20,8 @@ import tempfile
 import time
 from typing import Callable, Sequence
 
+from check_feature_parity import FeatureParityError, validate_release_repository
+
 
 VERSION_JAVA_RE = re.compile(r'ARENA_CLIENT_VERSION\s*=\s*"([0-9.]+)"')
 VERSION_GRADLE_RE = re.compile(r'archiveVersion\.set\("([0-9.]+)"\)')
@@ -114,6 +116,10 @@ def validate_worktree(root: Path, runner: Runner) -> tuple[str, str]:
     ]
     if invalid:
         raise ReleaseBuildError(f"release worktree submodules are not at reviewed commits: {root}")
+    try:
+        validate_release_repository(root)
+    except FeatureParityError as exc:
+        raise ReleaseBuildError(str(exc)) from exc
     return commit, source_version(root)
 
 

@@ -1,5 +1,18 @@
 # Unreleased
 
+- Restored the Endless Dream feature paths that had diverged in Arena: the
+  last-played overlay no longer hides legacy skin sort output, Practice Random
+  Trainer applies its selected seed, BGA image IDs no longer share a texture,
+  controller hotplug refreshes live, and fetched IR rankings refresh rivals.
+- Restored separate Primary IR and BMS-IR leaderboard entries, per-controller
+  JKOC settings, synchronized numeric volume inputs, and nonzero fatal exit
+  status.
+- Integrated the distributed Skin Widget Manager fixes and the top-row `8`
+  compatibility action into `main`; NUMPAD `8` remains an independent input.
+- Added executable ED 0.4.0 and distribution-fix inventories. CI and the final
+  release builder now reject a source tree that loses a feature entry, state
+  path, execution path, or protected regression test.
+
 # Arena oraja 0.4.14.71
 
 - Hid the Arena play cursor without capturing or confining the OS pointer.
