@@ -1,8 +1,12 @@
 # Unreleased
 
+# Arena oraja 0.4.14.71
+
 - Hid the Arena play cursor without capturing or confining the OS pointer.
   Mouse movement, the Mod Menu, and leaving play restore cursor visibility;
   ordinary non-Arena cursor capture is unchanged.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior,
+  native audio, and bundled default skins.
 
 # Arena oraja 0.4.14.70
 
