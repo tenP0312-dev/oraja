@@ -508,8 +508,10 @@ its bytes are replaced even if simple file metadata is unchanged.
 
 Rejected or unreadable archive refreshes fail closed and preserve the last
 indexed songs. Temporary decoder files have bounded capacity and stale-file
-cleanup, and song loading reports loaded/rejected archive totals with the
-causal rejection reason in the diagnostic log.
+cleanup. Song loading now finishes with one consolidated result: detected,
+processed, and added/updated chart totals remain primary, while checked,
+loaded, and unreadable archive totals appear as a secondary breakdown with the
+causal rejection reason when applicable.
 
 ## Arena oraja 0.4.14.40
 
