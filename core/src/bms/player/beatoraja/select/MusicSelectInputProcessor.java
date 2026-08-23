@@ -35,6 +35,7 @@ public final class MusicSelectInputProcessor {
     static final int MANIAC_KEY_4 = 3;
     static final int MANIAC_KEY_6 = 5;
     static final int MANIAC_KEY_7 = 6;
+    static final ControlKeys SHOW_ALL_CHARTS_COMPATIBILITY_KEY = ControlKeys.NUM8;
 
     /**
      * バー移動中のカウンタ
@@ -443,6 +444,9 @@ public final class MusicSelectInputProcessor {
 
             if (input.isControlKeyPressed(ControlKeys.NUM7)) {
                 select.executeEvent(EventType.rival);
+            }
+            if (input.isControlKeyPressed(SHOW_ALL_CHARTS_COMPATIBILITY_KEY)) {
+                select.execute(MusicSelectCommand.SHOW_ALL_CHARTS);
             }
             if (input.isControlKeyPressed(ControlKeys.NUM9)) {
                 select.executeEvent(EventType.open_document);

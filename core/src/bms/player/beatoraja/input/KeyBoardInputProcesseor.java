@@ -6,7 +6,6 @@ import bms.player.beatoraja.PlayModeConfig.KeyboardConfig;
 import bms.player.beatoraja.Resolution;
 import bms.player.beatoraja.modmenu.ArenaMenu;
 import bms.player.beatoraja.modmenu.ImGuiInputCapture;
-import bms.player.beatoraja.modmenu.SkinWidgetManager;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
@@ -102,8 +101,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	}
 
 	public synchronized void poll(final long microtime) {
-		boolean captureRequested = SkinWidgetManager.focus
-				|| ArenaMenu.isFocused
+		boolean captureRequested = ArenaMenu.isFocused
 				|| BMSIRArenaOverlay.isHotkeyCaptureActive()
 				|| ImGuiInputCapture.isKeyboardCaptured();
 		if (captureRequested) {
