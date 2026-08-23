@@ -13,6 +13,7 @@ import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.system.TimingDiagnostics;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.backends.lwjgl3.audio.OpenALSound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.files.FileHandleStream;
 import com.badlogic.gdx.utils.GdxRuntimeException;
@@ -155,6 +156,25 @@ public class GdxSoundDriver extends AbstractAudioDriver<Sound> {
 	@Override
 	protected void setVolume(AudioElement<Sound> id, float volume) {
 		id.audio.setVolume(id.id, volume);
+	}
+
+	@Override
+	protected long durationMillis(Sound sound) {
+		return openAlDurationMillis(sound);
+	}
+
+	static long openAlDurationMillis(Sound sound) {
+		if (!(sound instanceof OpenALSound openAlSound)) {
+			return -1L;
+		}
+		float durationSeconds = openAlSound.duration();
+		if (!Float.isFinite(durationSeconds) || durationSeconds <= 0.0f) {
+			return -1L;
+		}
+		double durationMillis = durationSeconds * 1_000.0d;
+		return durationMillis >= Long.MAX_VALUE
+				? Long.MAX_VALUE
+				: Math.max(1L, Math.round(durationMillis));
 	}
 	
 	@Override

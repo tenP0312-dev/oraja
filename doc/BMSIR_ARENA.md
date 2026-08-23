@@ -679,6 +679,11 @@ Leaving Music Select synchronously stops both that default BGM and the active
 explicit or generated preview. This includes a shutdown that interrupts the
 default-BGM fade while a preview is starting, so neither ordinary selection nor
 a BMS-IR Arena automatic start can carry Music Select audio into gameplay.
+For OpenAL, an existing explicit or discovered preview in one-shot mode uses
+the decoded source duration as its completion deadline. Its natural end
+therefore restores the default selector BGM without relying on LibGDX
+`Sound`'s unavailable playback-completion query; loop mode remains active until
+the selection changes.
 
 Archive cache revisions combine filesystem identity/change metadata with
 sampled content so ordinary replacements are noticed even when file size and
