@@ -88,6 +88,12 @@ returns to the original window style when F4 is pressed. Existing configs
 without this value infer BORDERLESS from a saved BORDERLESS mode and otherwise
 keep the legacy WINDOW fallback.
 
+The BMS decoder resolves base-dependent extended IDs after the effective
+`#BASE` declaration is known. A late `#BASE 62` therefore maps keysounds, BGA,
+extended BPM/STOP/SCROLL values, and `#LNOBJ` exactly like an early declaration,
+while ordinary base-36 decoding and the original chart-file hashes remain
+unchanged.
+
 The current development source removes the PRELOAD render thread's forced GC
 and blocking loudness-result wait. Loudness completion is polled while the
 loading screen continues to render, with the existing timeout/fallback kept.

@@ -49,6 +49,12 @@ and restored at the next startup. Existing configurations without the added
 return-mode value infer it from their saved non-fullscreen mode and otherwise
 retain the legacy WINDOW fallback.
 
+The BMS decoder now applies the file's effective `#BASE` setting consistently
+to `#WAVxx`, `#BMPxx`, extended BPM/STOP/SCROLL IDs, and `#LNOBJ`, even when
+`#BASE 62` appears after those definitions. Ordinary base-36 charts and
+base-62 charts that already declare the setting first retain their existing
+interpretation and chart-file hashes.
+
 The current development source also retains per-chart difficulty-table
 comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
 active table entry is exposed to skins as string property `tablecomment`
