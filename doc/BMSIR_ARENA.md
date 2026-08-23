@@ -1182,7 +1182,10 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   advance the independent 1P/2P judgement, combo, key-beam, end-of-note, and
   full-combo timers used by 14-key skins. Each loop resets the lane scan and
   input state, tap key beams release after a bounded hold, and charge-note
-  pairs drive the held-LN body and HOLD timers. All data-backed previews also
+  pairs drive the held-LN body and HOLD timers. Falling-note position uses the
+  synthetic PLAY timer's elapsed time rather than the cycle-relative skin
+  frame time, so later loops restart from the chart beginning instead of
+  producing a negative chart time. All data-backed previews also
   rewind untimed one-shot destinations, cached custom timers/events, and movie
   sources at the loop boundary, so DECIDE, PLAY, RESULT, and COURSE RESULT
   intro/fade animations replay after the first iteration. RESULT and COURSE

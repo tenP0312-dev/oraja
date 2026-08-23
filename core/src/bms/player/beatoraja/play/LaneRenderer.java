@@ -439,8 +439,13 @@ public class LaneRenderer {
 			}
 		}
 		
-		time = (main.timer.isTimerOn(TIMER_PLAY) ? time - main.timer.getTimer(TIMER_PLAY) : 
-			(main.timer.isTimerOn(141) ? time - main.timer.getTimer(141) : 0)) + config.getJudgetiming();
+		time = activeTimelineTime(
+				main.timer.isTimerOn(TIMER_PLAY),
+				main.timer.getNowTime(TIMER_PLAY),
+				main.timer.isTimerOn(141),
+				main.timer.getNowTime(141),
+				config.getJudgetiming()
+		);
 		if (main.getState() == BMSPlayer.STATE_PRACTICE) {
 			time = main.getPracticeConfiguration().getPracticeProperty().starttime;
 			pos = chartStartTimelinePosition();
@@ -891,6 +896,24 @@ public class LaneRenderer {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Resolves the chart clock from elapsed timers instead of the skin object's
+	 * frame time. Skin Select intentionally rewinds that frame time on each
+	 * preview loop while TimerManager keeps an absolute monotonic origin.
+	 */
+	static long activeTimelineTime(
+			boolean playTimerOn,
+			long playTimerElapsed,
+			boolean chartPreviewTimerOn,
+			long chartPreviewTimerElapsed,
+			int judgeTiming
+	) {
+		long elapsed = playTimerOn
+				? playTimerElapsed
+				: chartPreviewTimerOn ? chartPreviewTimerElapsed : 0L;
+		return elapsed + judgeTiming;
 	}
 
 	private void updateStartHerePreviewMetrics() {

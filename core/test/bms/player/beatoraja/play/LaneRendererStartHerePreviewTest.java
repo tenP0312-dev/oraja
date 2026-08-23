@@ -14,6 +14,26 @@ class LaneRendererStartHerePreviewTest {
 	}
 
 	@Test
+	void skinPreviewLoopUsesPlayTimerElapsedInsteadOfCycleRelativeFrameTime() {
+		assertEquals(250L, LaneRenderer.activeTimelineTime(
+				true, 250L, true, 1_250L, 0
+		));
+		assertEquals(243L, LaneRenderer.activeTimelineTime(
+				true, 250L, false, 0L, -7
+		));
+	}
+
+	@Test
+	void loadingChartPreviewKeepsItsIndependentElapsedClock() {
+		assertEquals(1_250L, LaneRenderer.activeTimelineTime(
+				false, 0L, true, 1_250L, 0
+		));
+		assertEquals(0L, LaneRenderer.activeTimelineTime(
+				false, 0L, false, 0L, 0
+		));
+	}
+
+	@Test
 	void noteThicknessGrowsFromTheChartAnchorInsteadOfShiftingItsCenter() {
 		assertEquals(105f, LaneRenderer.noteDestinationY(100f, 5f));
 	}

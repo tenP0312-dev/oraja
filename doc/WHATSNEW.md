@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fixed Skin Select PLAY previews so falling notes restart and continue on
+  every loop instead of disappearing after the first iteration.
 - Saved newly accepted BMS-IR body archives as portable readable
   `[artist]title-<8-character-md5>.zip/.rar/.7z` files while preserving the
   detected archive format and no-overwrite validation.
