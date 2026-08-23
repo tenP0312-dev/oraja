@@ -163,7 +163,10 @@ The current development source assigns `選択曲の全譜面表示` / `Show all
 for selected song` to physical NUMPAD 8 by default. Like the other physical
 NUMPAD shortcuts, it can be reassigned or cleared in the startup configuration.
 An unchanged legacy default shortcut map gains this NUMPAD 8 assignment on
-load, while customized maps retain their stored assignments.
+load, while customized maps retain their stored assignments. The top-row `8`
+key remains a fixed Music Select compatibility shortcut for the same operation;
+it is separate from and does not alter the configurable physical NUMPAD 8
+assignment.
 On an LR2-style grouped song row it opens a local virtual folder containing
 only that row's retained difficulty variants as separate charts; it does not
 query every chart in the physical folder, regroup the result, change the global
