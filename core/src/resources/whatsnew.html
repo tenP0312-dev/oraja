@@ -29,8 +29,10 @@
 
     <body style="background-color:#f4f4f4;">
         <h1>Arena oraja 0.4.14.73</h1>
-        <h2>Load solid 7z key sounds reliably</h2>
+        <h2>Complete song updates and load difficult charts reliably</h2>
         <ul>
+        <li>Shows full-library chart totals and archive scan details together in one song-update result dialog.</li>
+        <li>Maps base-dependent BMS IDs with the effective #BASE even when #BASE 62 appears after their definitions.</li>
         <li>Loads referenced key sounds from a solid 7z archive through one bounded sequential pass before parallel audio decoding.</li>
         <li>Prevents concurrent reads of one solid block from causing checksum failures and missing audio.</li>
         <li>Removes per-chart temporary audio copies after loading while leaving the original compressed archive unchanged.</li>

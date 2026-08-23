@@ -18,12 +18,15 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-Version 0.4.14.73 loads referenced key sounds from a solid 7z archive in one
-bounded sequential pass before parallel audio decoding. This prevents checksum
-failures and silent keys caused by concurrent random reads of one solid block.
-Per-chart temporary copies are removed after loading, while the original 7z
-stays compressed and unchanged. Launcher 0.2.29, plugin 0.0.72, protocol v8,
-and all 0.4.14.72 behavior remain unchanged.
+Version 0.4.14.73 combines the complete song-update result dialog, consistent
+late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The update
+dialog keeps full-library chart totals primary and adds archive counts and the
+last failure reason as one secondary breakdown. Base-dependent definitions now
+use the file's effective `#BASE` regardless of declaration order. Referenced
+key sounds in one solid 7z block are read sequentially before parallel decode;
+per-chart temporary copies are removed after loading and the original archive
+stays unchanged. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.72
+behavior remain unchanged.
 
 Version 0.4.14.72 restores the complete retained LR2oraja Endless Dream
 behavior found by the exact 52-commit history audit. This includes sort-skin
@@ -191,10 +194,12 @@ Arena client-version/build gate are activated and verified where applicable.
 
 ## Arena oraja 0.4.14.73
 
+Shows full-library chart totals and archive scan details in one song-update
+result dialog. Resolves base-dependent BMS IDs using the effective `#BASE`
+regardless of whether `#BASE 62` appears before or after the definitions.
 Loads all referenced key sounds from a solid 7z archive through one bounded
-sequential archive pass before parallel audio decoding. This prevents
-concurrent solid-block reads from causing checksum failures and missing audio.
-Temporary copies are removed after chart loading, and the source archive is
+sequential pass before parallel decoding, preventing checksum failures and
+missing audio; temporary copies are removed and the source archive is
 unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and the complete
 `0.4.14.72` behavior remain present.
 
