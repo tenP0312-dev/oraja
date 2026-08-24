@@ -98,8 +98,16 @@ override. Each play mode keeps an independent base scroll value, where 100 is
 the chart BPM used by the calculation. The BMS-IR settings page can switch the
 mode being edited, and the full and compact Arena overlays can toggle the
 override and edit the current mode's base and reference values during Music
-Select. The override is disabled for NO SPEED constraints and is snapshotted
-into replays. It does not add a pseudo-FHS chord or an equivalent-green editor.
+Select. The overlays now also provide an AUTO/current-chart or explicit-mode
+editor selector and a numeric per-mode HI-SPEED change-step field from 0.00
+through 10.00. The override is disabled for NO SPEED constraints and is
+snapshotted into replays. It does not add a pseudo-FHS chord or an
+equivalent-green editor.
+
+The launcher Skin settings provide a default-on switch for the live Skin
+Select preview. Turning it off skips preview construction, reload, and render
+work while leaving skin selection and all custom options available. The choice
+is stored per player in the normal player configuration.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore

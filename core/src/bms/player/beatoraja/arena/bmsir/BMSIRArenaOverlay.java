@@ -24,6 +24,7 @@ import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
+import imgui.type.ImFloat;
 import imgui.type.ImInt;
 import imgui.type.ImString;
 
@@ -113,6 +114,9 @@ public final class BMSIRArenaOverlay {
     private static final ImInt TARGET_MODE = new ImInt(0);
     private static final ImInt GRAPH_ORDER = new ImInt(0);
     private static final ImInt LANGUAGE = new ImInt(0);
+    private static final ImInt HISPEED_EDITOR_MODE = new ImInt(0);
+    private static final ImFloat HISPEED_CHANGE_STEP = new ImFloat(0.25f);
+    private static final int[] HISPEED_EDITOR_MODE_IDS = {0, 5, 7, 10, 14, 9, 25, 50};
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
     private static final Set<String> CUSTOM_LEVELS = new HashSet<>();
     private static final Map<Integer, String> USER_TABLE_KEYS =
@@ -807,7 +811,7 @@ public final class BMSIRArenaOverlay {
                 )
                 : "##compact-select-" + currentLayoutKey();
         ImGui.setNextWindowPos(18, 72, ImGuiCond.FirstUseEver);
-        ImGui.setNextWindowSize(300, gameplay ? 235 : 210, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(300, gameplay ? 295 : 270, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowBgAlpha(0.88f);
         int flags = ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus
@@ -988,7 +992,7 @@ public final class BMSIRArenaOverlay {
         );
         ImGui.setNextWindowSize(
                 width,
-                filling ? 150.0f : 120.0f,
+                filling ? 220.0f : 190.0f,
                 ImGuiCond.FirstUseEver
         );
         ImGui.setNextWindowBgAlpha(0.88f);
@@ -1025,21 +1029,45 @@ public final class BMSIRArenaOverlay {
         if (config == null) {
             return;
 		}
-		int modeId = BMSIRArenaClient.currentPlayModeForLayout();
+		String suffix = compact ? "-compact" : "-full";
+		int currentModeId = resolveHispeedEditorMode(
+				PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT,
+				BMSIRArenaClient.currentPlayModeForLayout()
+		);
+		HISPEED_EDITOR_MODE.set(hispeedEditorModeIndex(
+				config.getBmsirHispeedEditorMode()
+		));
+		ImGui.setNextItemWidth(compact ? 150.0f : 210.0f);
+		if (ImGui.combo(
+				t("編集MODE", "Edit mode") + "##speed-editor-mode" + suffix,
+				HISPEED_EDITOR_MODE,
+				hispeedEditorModeLabels()
+		)) {
+			config.setBmsirHispeedEditorMode(
+					hispeedEditorModeId(HISPEED_EDITOR_MODE.get())
+			);
+			saveSettingsOrWarn();
+		}
+		int modeId = resolveHispeedEditorMode(
+				config.getBmsirHispeedEditorMode(),
+				currentModeId
+		);
 		PlayConfig saved = config.getPlayConfig(modeId).getPlayconfig();
 		LaneRenderer live = BMSIRArenaClient.currentLaneRenderer(modeId);
-		boolean enabled = live != null
-				? live.isBmsirLr2HispeedFixEnabled()
+		LaneRenderer currentLive = BMSIRArenaClient.currentLaneRenderer(currentModeId);
+		boolean enabled = currentLive != null
+				? currentLive.isBmsirLr2HispeedFixEnabled()
 				: config.isBmsirLr2HispeedFixEnabled();
 		PlayConfig active = live != null && enabled
 				? live.getPlayConfig()
 				: saved;
 		int base = active.getBmsirBaseScrollSpeed();
 		int referenceBpm = active.getBmsirHispeedReferenceBpm();
+		float hispeedChangeStep = active.getHispeedMargin();
 
         ImGui.separator();
 		ImBoolean enabledValue = new ImBoolean(enabled);
-		ImGui.beginDisabled(live != null);
+		ImGui.beginDisabled(currentLive != null);
 		if (ImGui.checkbox(
 				t("LR2ハイスピ固定", "LR2 fixed HI-SPEED"),
 				enabledValue
@@ -1049,7 +1077,7 @@ public final class BMSIRArenaOverlay {
 			saveSettingsOrWarn();
 		}
 		ImGui.endDisabled();
-		if (live != null) {
+		if (currentLive != null) {
 			ImGui.sameLine();
 			ImGui.textDisabled(t("次のプレイから変更できます", "Can be changed for the next play"));
 		}
@@ -1058,18 +1086,18 @@ public final class BMSIRArenaOverlay {
 		}
         ImGui.text(String.format(
                 Locale.ROOT,
-                "SPEED  %s / FIX %s",
-                BMSIRArenaClient.currentPlayModeLabel(),
+				"EDIT %s / FIX %s",
+				hispeedEditorModeLabel(config.getBmsirHispeedEditorMode(), modeId),
                 hispeedFixLabel(active.getFixhispeed())
         ));
         ImGui.text(String.format(
                 Locale.ROOT,
-                "BASE %d / REF %d BPM / HS %.2f",
+				"BASE %d / REF %d BPM / HS %.2f / STEP %.2f",
                 base,
                 referenceBpm,
-                active.getHispeed()
+				active.getHispeed(),
+				hispeedChangeStep
         ));
-        String suffix = compact ? "-compact" : "-full";
         if (ImGui.smallButton("-##speed-base-minus" + suffix)) {
             applyBaseScroll(config, modeId, base - 1, live);
         }
@@ -1089,7 +1117,99 @@ public final class BMSIRArenaOverlay {
         if (ImGui.smallButton("+##speed-reference-plus" + suffix)) {
             applyReferenceBpm(config, modeId, referenceBpm + 1, live);
         }
+		HISPEED_CHANGE_STEP.set(hispeedChangeStep);
+		ImGui.setNextItemWidth(compact ? 120.0f : 180.0f);
+		if (ImGui.inputFloat(
+				t("HI-SPEED変化間隔", "HI-SPEED change step")
+						+ "##speed-change-step" + suffix,
+				HISPEED_CHANGE_STEP
+		)) {
+			applyHispeedChangeStep(
+					config,
+					modeId,
+					HISPEED_CHANGE_STEP.get(),
+					live
+			);
+		}
+		ImGui.textDisabled(t(
+				"数値入力 0.00～10.00（モード別）",
+				"Numeric input 0.00-10.00 (per mode)"
+		));
     }
+
+	static int[] hispeedEditorModeIds() {
+		return HISPEED_EDITOR_MODE_IDS.clone();
+	}
+
+	static int hispeedEditorModeIndex(int modeId) {
+		int normalized = PlayerConfig.normalizeBmsirHispeedEditorMode(modeId);
+		for (int index = 0; index < HISPEED_EDITOR_MODE_IDS.length; index++) {
+			if (HISPEED_EDITOR_MODE_IDS[index] == normalized) {
+				return index;
+			}
+		}
+		return 0;
+	}
+
+	static int hispeedEditorModeId(int index) {
+		return index >= 0 && index < HISPEED_EDITOR_MODE_IDS.length
+				? HISPEED_EDITOR_MODE_IDS[index]
+				: PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT;
+	}
+
+	static int resolveHispeedEditorMode(int configuredModeId, int currentModeId) {
+		int configured = PlayerConfig.normalizeBmsirHispeedEditorMode(
+				configuredModeId
+		);
+		if (configured != PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT) {
+			return configured;
+		}
+		int current = PlayerConfig.normalizeBmsirHispeedEditorMode(currentModeId);
+		return current != PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT
+				? current
+				: 7;
+	}
+
+	private static String[] hispeedEditorModeLabels() {
+		String[] labels = new String[HISPEED_EDITOR_MODE_IDS.length];
+		labels[0] = t("自動（選択中）", "Auto (current)");
+		for (int index = 1; index < labels.length; index++) {
+			labels[index] = hispeedEditorModeShortLabel(
+					HISPEED_EDITOR_MODE_IDS[index]
+			);
+		}
+		return labels;
+	}
+
+	private static String hispeedEditorModeLabel(int configuredModeId, int resolvedModeId) {
+		String resolved = hispeedEditorModeShortLabel(resolvedModeId);
+		return configuredModeId == PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT
+				? t("自動→", "Auto -> ") + resolved
+				: resolved;
+	}
+
+	private static String hispeedEditorModeShortLabel(int modeId) {
+		return switch (modeId) {
+			case 5 -> "5KEY";
+			case 7 -> "7KEY";
+			case 9 -> "9KEY / PMS";
+			case 10 -> "10KEY DP";
+			case 14 -> "14KEY DP";
+			case 25 -> "24KEY";
+			case 50 -> "24KEY DP";
+			default -> "7KEY";
+		};
+	}
+
+	static float clampHispeedChangeStep(float value) {
+		if (!Float.isFinite(value)) {
+			return PlayConfig.HISPEEDMARGIN_MIN;
+		}
+		return Math.max(
+				PlayConfig.HISPEEDMARGIN_MIN,
+				Math.min(PlayConfig.HISPEEDMARGIN_MAX, value)
+		);
+	}
 
     private static void applyBaseScroll(
             PlayerConfig config,
@@ -1116,6 +1236,23 @@ public final class BMSIRArenaOverlay {
 				.setBmsirHispeedReferenceBpm(clamped);
 		if (live != null && live.isBmsirLr2HispeedFixEnabled()) {
 			live.setBmsirHispeedReferenceBpm(clamped);
+		}
+		saveSettingsOrWarn();
+	}
+
+	private static void applyHispeedChangeStep(
+			PlayerConfig config,
+			int modeId,
+			float value,
+			LaneRenderer live
+	) {
+		float clamped = clampHispeedChangeStep(value);
+		PlayConfig saved = config.getPlayConfig(modeId).getPlayconfig();
+		saved.setHispeedMargin(clamped);
+		saved.validate();
+		if (live != null && live.isBmsirLr2HispeedFixEnabled()) {
+			live.getPlayConfig().setHispeedMargin(clamped);
+			live.getPlayConfig().validate();
 		}
 		saveSettingsOrWarn();
 	}

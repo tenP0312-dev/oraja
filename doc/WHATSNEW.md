@@ -1,5 +1,11 @@
 # Arena oraja 0.4.14.74
 
+- Added a default-on per-player Skin Select live-preview switch. Turning it off
+  skips preview construction, reload, and rendering without disabling skin
+  selection or custom options.
+- Added AUTO/current-chart and explicit play-mode selection to the LR2
+  fixed-HI-SPEED overlay editor, plus a labeled numeric per-mode HI-SPEED
+  change-step field with a validated 0.00--10.00 range.
 - Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
   concurrent-reader regression test, preventing false checksum failures when
   movie BGA materialization overlaps the solid-7z key-sound pass.
