@@ -37,6 +37,8 @@ public class SkinConfigurationView implements Initializable {
 	private ScrollPane skinconfig;
 	@FXML
 	private Button skinUpdateButton;
+	@FXML
+	private CheckBox skinSelectPreviewEnabled;
 
 	private PlayerConfig player;
 	private SkinType mode = null;
@@ -237,11 +239,15 @@ public class SkinConfigurationView implements Initializable {
 
     public void update(PlayerConfig player) {
     	this.player = player;
+		skinSelectPreviewEnabled.setSelected(player.isSkinSelectPreviewEnabled());
     	skintypeSelector.setValue(SkinType.PLAY_7KEYS);
 		updateSkinType(SkinType.PLAY_7KEYS);
     }
 
     public void commit() {
+		if (player != null) {
+			player.setSkinSelectPreviewEnabled(skinSelectPreviewEnabled.isSelected());
+		}
     	commitSkinType();
     	commitSkinHeader();
     }

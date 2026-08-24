@@ -50,6 +50,7 @@ public final class PlayerConfig {
 	public static final String BMSIR_SELECT_ACTION_KEY_MODE = "key_mode";
 	public static final String BMSIR_SELECT_DIFFICULTY_DISPLAY_SEPARATE = "separate";
 	public static final String BMSIR_SELECT_DIFFICULTY_DISPLAY_LR2 = "lr2";
+	public static final int BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT = 0;
 
 	/**
 	 * 旧コンフィグパス。そのうち削除
@@ -218,6 +219,8 @@ public final class PlayerConfig {
 
 	private SkinConfig[] skin = new SkinConfig[SkinType.getMaxSkinTypeID() + 1];
 	private SkinConfig[] skinHistory;
+	/** Show the live off-screen preview while configuring skins. */
+	private boolean skinSelectPreviewEnabled = true;
 
 	private PlayModeConfig mode5 = new PlayModeConfig(Mode.BEAT_5K);
 
@@ -345,6 +348,8 @@ public final class PlayerConfig {
 	private boolean bmsirCoverHispeedAutoAdjustEnabled = false;
 	/** Override the legacy fixed-HI-SPEED calculation with the LR2-style base. */
 	private boolean bmsirLr2HispeedFixEnabled = false;
+	/** 0 follows the current chart; other values pin the overlay editor mode. */
+	private int bmsirHispeedEditorMode = BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT;
 	/** Keep the Arena-added JUDGE sorter in the normal Music Select cycle. */
 	private boolean bmsirJudgeRankSortEnabled = true;
 	/** Explain the TITLE image fallback when JUDGE sort is selected. */
@@ -837,6 +842,24 @@ public final class PlayerConfig {
 		bmsirLr2HispeedFixEnabled = enabled;
 	}
 
+	public int getBmsirHispeedEditorMode() {
+		bmsirHispeedEditorMode = normalizeBmsirHispeedEditorMode(
+				bmsirHispeedEditorMode
+		);
+		return bmsirHispeedEditorMode;
+	}
+
+	public void setBmsirHispeedEditorMode(int modeId) {
+		bmsirHispeedEditorMode = normalizeBmsirHispeedEditorMode(modeId);
+	}
+
+	public static int normalizeBmsirHispeedEditorMode(int modeId) {
+		return switch (modeId) {
+			case 5, 7, 9, 10, 14, 25, 50 -> modeId;
+			default -> BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT;
+		};
+	}
+
 	public int[] getBmsirBaseScrollSpeeds() {
 		Mode[] modes = bmsirSpecificPlayModes();
 		int[] values = new int[modes.length];
@@ -879,6 +902,29 @@ public final class PlayerConfig {
 		for (int index = 0; index < Math.min(modes.length, values.length); index++) {
 			PlayConfig playConfig = getPlayConfig(modes[index]).getPlayconfig();
 			playConfig.setBmsirHispeedReferenceBpm(values[index]);
+			playConfig.validate();
+		}
+	}
+
+	public float[] getBmsirHispeedMargins() {
+		Mode[] modes = bmsirSpecificPlayModes();
+		float[] values = new float[modes.length];
+		for (int index = 0; index < modes.length; index++) {
+			values[index] = getPlayConfig(modes[index])
+					.getPlayconfig()
+					.getHispeedMargin();
+		}
+		return values;
+	}
+
+	public void setBmsirHispeedMargins(float[] values) {
+		if (values == null) {
+			return;
+		}
+		Mode[] modes = bmsirSpecificPlayModes();
+		for (int index = 0; index < Math.min(modes.length, values.length); index++) {
+			PlayConfig playConfig = getPlayConfig(modes[index]).getPlayconfig();
+			playConfig.setHispeedMargin(values[index]);
 			playConfig.validate();
 		}
 	}
@@ -1595,6 +1641,14 @@ public final class PlayerConfig {
 
 	public void setChartPreview(boolean chartPreview) {
 		this.chartPreview = chartPreview;
+	}
+
+	public boolean isSkinSelectPreviewEnabled() {
+		return skinSelectPreviewEnabled;
+	}
+
+	public void setSkinSelectPreviewEnabled(boolean enabled) {
+		skinSelectPreviewEnabled = enabled;
 	}
 
 	public String getId() {

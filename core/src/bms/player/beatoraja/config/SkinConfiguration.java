@@ -466,6 +466,14 @@ public class SkinConfiguration extends MainState {
 		return type != null && type != SkinType.SKIN_SELECT;
 	}
 
+	static boolean shouldLoadPreview(
+			boolean enabled,
+			SkinType type,
+			boolean hasPreviewObject
+	) {
+		return enabled && supportsPreview(type) && hasPreviewObject;
+	}
+
 	private boolean hasPreviewObject() {
 		if (skin == null) {
 			return false;
@@ -479,9 +487,12 @@ public class SkinConfiguration extends MainState {
 	}
 
 	private void loadSelectedSkinPreview() {
+		boolean previewObjectAvailable = hasPreviewObject();
+		boolean previewEnabled = player.isSkinSelectPreviewEnabled();
 		if (selectedSkinHeader == null || config == null || config.getPath() == null
-				|| !supportsPreview(type) || !hasPreviewObject()) {
-			if (selectedSkinHeader != null && supportsPreview(type) && !hasPreviewObject()) {
+				|| !shouldLoadPreview(previewEnabled, type, previewObjectAvailable)) {
+			if (selectedSkinHeader != null && previewEnabled
+					&& supportsPreview(type) && !previewObjectAvailable) {
 				logger.info("Skin Selectスキンにプレビュー表示枠がないため読み込みを省略します");
 			}
 			setSelectedSkin(null, null);
