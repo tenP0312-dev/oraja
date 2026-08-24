@@ -1,5 +1,8 @@
 # Unreleased
 
+- Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
+  concurrent-reader regression test, preventing false checksum failures when
+  movie BGA materialization overlaps the solid-7z key-sound pass.
 - Replaced the archive-only song-update completion Alert with one consolidated
   result dialog. The inherited full-library detected, processed, and
   added/updated chart counts remain primary; scanned, loaded, and unreadable
