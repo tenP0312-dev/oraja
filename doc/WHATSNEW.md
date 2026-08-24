@@ -1,5 +1,9 @@
 # Unreleased
 
+- Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
+  concurrent-reader regression test, preventing false checksum failures when
+  movie BGA materialization overlaps the solid-7z key-sound pass.
+
 # Arena oraja 0.4.14.73
 
 - Replaced the archive-only song-update completion Alert with one consolidated

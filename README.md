@@ -160,6 +160,11 @@ one solid-compression block concurrently for hundreds of entries. The
 temporary audio copies are removed after the chart finishes loading; the
 original archive stays compressed and unchanged.
 
+Independent readers of the same solid 7z are also safe when movie BGA
+materialization overlaps that key-sound pass. Apache Commons Compress 1.26.2
+removes the shared skip-buffer race present in 1.26.1, and a concurrent-reader
+regression test covers later entries in one repository-owned solid archive.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is

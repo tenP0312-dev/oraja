@@ -613,6 +613,13 @@ concurrent random reads of the same solid block. The per-chart copies are
 removed as soon as audio loading finishes, while the original 7z remains
 compressed and unchanged.
 
+Movie BGA materialization may overlap that key-sound pass through an
+independent archive reader. The client therefore uses Apache Commons Compress
+1.26.2, which fixes the 1.26.1 shared-buffer race that could report a false
+checksum failure during simultaneous `SevenZFile` reads. A repository-owned
+solid-archive fixture gates concurrent access to later entries without adding
+third-party song data.
+
 ZIP entry names use UTF-8 and fall back to Windows-31J for legacy Japanese
 archives. Archive lookup names use Unicode NFC normalization and
 locale-independent case folding, while the original entry spelling is kept
