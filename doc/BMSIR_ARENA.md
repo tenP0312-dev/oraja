@@ -19,12 +19,15 @@ OFF/START/MAX/MAIN/MIN HI-SPEED FIX choice selects the chart BPM target.
 
 The BMS-IR settings page has an independent mode selector for these values.
 During Music Select, both the full and compact Arena overlays expose the
-override ON/OFF switch plus base-scroll and reference-BPM controls for the
-selected chart mode. The dedicated equivalent-green editor/readout and pseudo
-FHS are not provided; START+SELECT therefore keeps the ordinary play behavior.
-NO SPEED courses ignore the override, and replay data stores whether the
-original play used it. Existing configs default the switch off, base scroll to
-100, and reference BPM to 150.
+override ON/OFF switch plus base-scroll and reference-BPM controls. The
+overlay editor follows the selected chart mode by default or can be pinned to
+5KEY, 7KEY, 9KEY/PMS, 10KEY DP, 14KEY DP, 24KEY, or 24KEY DP. A labeled
+numeric field edits the normal per-mode HI-SPEED change margin from 0.00
+through 10.00. The dedicated equivalent-green editor/readout and pseudo FHS
+are not provided; START+SELECT therefore keeps the ordinary play behavior. NO
+SPEED courses ignore the override, and replay data stores whether the original
+play used it. Existing configs default the switch off, the editor to follow
+the current chart, base scroll to 100, and reference BPM to 150.
 
 Version `0.4.14.58` replaces the untraceable legacy Windows PortAudio and
 JPortAudio binaries with a clean x86-64 build from pinned PortAudio 19.7.0 and
@@ -769,7 +772,10 @@ judge-rank sort cycle and its skin notice upgrade it to schema 15. Historic
 schema-15 IIDX FHS keys are ignored and removed on the next sidecar save. The
 missing-table-song filter upgrades the sidecar to schema 16, the
 difficulty-table LEVEL display switch upgrades it to schema 17, and the
-physical-root visibility filter upgrades it to schema 18.
+physical-root visibility filter upgrades it to schema 18. The overlay
+HI-SPEED editor mode and per-mode numeric change margins upgrade it to schema
+21; older sidecars keep current-chart editing and the existing player-config
+margins until their next save.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -1184,6 +1190,10 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
   destination with the same ID. JSON and Lua skins use the same explicit
   `skinpreview` declaration; LR2 Skin Select skins can use reference image 105.
+  The launcher Skin settings include a per-player switch that is ON by default.
+  Turning it OFF skips preview construction, reload, and rendering while skin
+  selection, custom options, files, and offsets remain available. Turning it
+  back ON and reopening Skin Select restores the ordinary preview path.
   For existing JSON/Lua Skin Select skins without that declaration, the client
   finds the large change-skin click target (event 190, at least 160 x 90) and
   prefers a later, similarly shaped visual contained inside it. That visual is
