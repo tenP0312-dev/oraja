@@ -19,6 +19,7 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
 import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.model.Mode;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
+import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
 
 import static bms.player.beatoraja.select.bar.FunctionBar.*;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_OPEN;
@@ -240,8 +241,9 @@ public class ContextMenuBar extends DirectoryBar {
     }
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {
-		if (selector.main.getIRStatus().length > 0) {
-			String irName = selector.main.getIRStatus()[0].config.getIrname();
+		MainController.IRStatus[] irStatuses = selector.main.getIRStatus();
+		if (shouldShowPrimaryIrLeaderboard(irStatuses)) {
+			String irName = irStatuses[0].config.getIrname();
 			var primaryLeaderboard = new FunctionBar((selector, self) -> {
 				selector.getBarManager().updateBar(new LeaderBoardBar(
 						selector,
@@ -259,6 +261,16 @@ public class ContextMenuBar extends DirectoryBar {
         }, "BMS-IR Leaderboard", STYLE_SPECIAL);
         options.add(leaderboard);
     }
+
+	static boolean shouldShowPrimaryIrLeaderboard(MainController.IRStatus[] irStatuses) {
+		return irStatuses != null
+				&& irStatuses.length > 0
+				&& irStatuses[0] != null
+				&& irStatuses[0].config != null
+				&& !BMSIRDanCourseCache.isBmsirPrimaryName(
+						irStatuses[0].config.getIrname()
+				);
+	}
 
     private void addMetaEntries(ArrayList<Bar> options) {
         var bmsirPage = new FunctionBar((selector, self) -> {
