@@ -89,6 +89,11 @@ simple seven-cell square placeholder at
 `assets/skin/default/bmsir-controls-placeholder.png` so it can be replaced
 without changing the skin definitions.
 
+When BMS-IR is the configured Primary IR, the song context menu shows only the
+dedicated `BMS-IR Leaderboard` instead of a second generic Primary IR entry for
+the same service. A different configured Primary IR keeps its separately
+labeled leaderboard beside the BMS-IR ghost/G-BATTLE and MANIAC route.
+
 The current development source also removes two render-thread blockers from
 gameplay startup: the PRELOAD transition no longer invokes `System.gc()` or
 waits on an unfinished loudness-analysis task. Static BGA texture disposal and
