@@ -1,4 +1,13 @@
-# Unreleased
+# Arena oraja 0.4.14.74
+
+- Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
+  concurrent-reader regression test, preventing false checksum failures when
+  movie BGA materialization overlaps the solid-7z key-sound pass.
+- When BMS-IR is Primary IR, kept only the dedicated `BMS-IR Leaderboard`
+  instead of showing a second generic entry for the same service. Other
+  Primary IR services retain their separate leaderboard.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.73` behavior.
 
 # Arena oraja 0.4.14.73
 

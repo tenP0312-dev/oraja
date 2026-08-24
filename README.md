@@ -10,13 +10,20 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.73**. Its Windows native-audio
+The current client source version is **0.4.14.74**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.74 updates the 7z reader to Apache Commons Compress 1.26.2 so
+overlapping movie-BGA materialization and solid-7z key-sound loading no longer
+cause false checksum failures. When BMS-IR is the configured Primary IR, the
+song context menu also keeps only the dedicated `BMS-IR Leaderboard`; another
+Primary IR still keeps its separately labeled leaderboard. Launcher 0.2.29,
+plugin 0.0.72, protocol v8, and all 0.4.14.73 behavior remain unchanged.
 
 Version 0.4.14.73 combines the complete song-update result dialog, consistent
 late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The update
@@ -115,6 +122,11 @@ control its width, font size, placement, and practical visible line count.
 Comments are contextual to the selected table and do not alter local song
 metadata.
 
+When BMS-IR is the configured Primary IR, the song context menu shows only the
+dedicated `BMS-IR Leaderboard` instead of a second generic Primary IR entry for
+the same service. A different configured Primary IR keeps its separately
+labeled leaderboard beside the BMS-IR ghost/G-BATTLE and MANIAC route.
+
 The current development source also removes two render-thread blockers from
 gameplay startup: the PRELOAD transition no longer invokes `System.gc()` or
 waits on an unfinished loudness-analysis task. Static BGA texture disposal and
@@ -160,6 +172,11 @@ one solid-compression block concurrently for hundreds of entries. The
 temporary audio copies are removed after the chart finishes loading; the
 original archive stays compressed and unchanged.
 
+Independent readers of the same solid 7z are also safe when movie BGA
+materialization overlaps that key-sound pass. Apache Commons Compress 1.26.2
+removes the shared skip-buffer race present in 1.26.1, and a concurrent-reader
+regression test covers later entries in one repository-owned solid archive.
+
 The Resource built-in-table picker keeps configured built-in tables visible as
 checked choices. Players can check new tables or uncheck configured built-in
 tables, then apply both additions and removals together. The apply action is
@@ -191,6 +208,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.74
+
+Updates Apache Commons Compress to 1.26.2, preventing false solid-7z checksum
+failures when movie-BGA materialization overlaps the key-sound load. When
+BMS-IR is Primary IR, the song context menu now shows one dedicated
+`BMS-IR Leaderboard` instead of duplicating the same service through the
+generic Primary IR entry. Other Primary IR services retain their separate
+leaderboard. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.73` behavior remain present.
 
 ## Arena oraja 0.4.14.73
 
@@ -692,7 +719,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.73
+  --output-dir /release/build-0.4.14.74
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

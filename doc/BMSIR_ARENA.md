@@ -1,9 +1,16 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.73`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.74`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.74` updates Apache Commons Compress to 1.26.2 so independent
+readers no longer corrupt solid-7z stream state when movie-BGA materialization
+overlaps key-sound loading. When BMS-IR is Primary IR, the song context menu
+also shows only the dedicated `BMS-IR Leaderboard`; other Primary IR services
+retain their separately labeled leaderboard. Launcher `0.2.29`, plugin
+`0.0.72`, protocol v8, and all `0.4.14.73` behavior remain unchanged.
 
 Version `0.4.14.73` combines the complete song-update result dialog, consistent
 late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The dialog
@@ -613,6 +620,13 @@ concurrent random reads of the same solid block. The per-chart copies are
 removed as soon as audio loading finishes, while the original 7z remains
 compressed and unchanged.
 
+Movie BGA materialization may overlap that key-sound pass through an
+independent archive reader. The client therefore uses Apache Commons Compress
+1.26.2, which fixes the 1.26.1 shared-buffer race that could report a false
+checksum failure during simultaneous `SevenZFile` reads. A repository-owned
+solid-archive fixture gates concurrent access to later entries without adding
+third-party song data.
+
 ZIP entry names use UTF-8 and fall back to Windows-31J for legacy Japanese
 archives. Archive lookup names use Unicode NFC normalization and
 locale-independent case folding, while the original entry spelling is kept
@@ -987,13 +1001,15 @@ by default. The notice appears when the value is selected and once when Music
 Select restores it. The global INFO-notification switch must also be ON.
 Disabling the extension while it is active normalizes judge-rank sort to TITLE.
 
-The song context menu keeps separate leaderboard entries. `Primary IR
-Leaderboard` reads the first configured beatoraja IR and refreshes matching
-rival score caches from a successful ranking response. `BMS-IR Leaderboard`
-reads the LR2-compatible ranking and selectable ghost directly from BMS-IR over
-HTTPS; the Arena client no longer depends on the old `dream-pro.info` redirect
-for this feature. Ranking reads request gzip, accept the BMS-IR Shift-JIS
-payload, cap decompressed data, and keep a short per-chart cache.
+The song context menu avoids duplicate routes to the same service. When
+BMS-IR is the configured Primary IR, it shows only `BMS-IR Leaderboard`. When
+another service is Primary IR, its separately labeled `Primary IR Leaderboard`
+remains available and refreshes matching rival score caches from a successful
+ranking response. `BMS-IR Leaderboard` reads the LR2-compatible ranking and
+selectable ghost directly from BMS-IR over HTTPS; the Arena client no longer
+depends on the old `dream-pro.info` redirect for this feature. Ranking reads
+request gzip, accept the BMS-IR Shift-JIS payload, cap decompressed data, and
+keep a short per-chart cache.
 
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
@@ -1307,7 +1323,7 @@ and an execution path in `tools/ed_0_4_0_feature_parity.json`.
 The known fixes that previously existed only after ED 0.4.0 or on distribution
 branches are integrated into `main`: visible sort fallback, Practice Random
 Trainer seed application, independent BGA textures, controller hotplug, live
-rival refresh, separate Primary IR ranking, fatal nonzero exit, per-controller
+rival refresh, separate non-BMS Primary IR ranking, fatal nonzero exit, per-controller
 JKOC, numeric volume inputs, the Skin Widget Manager `.68` behavior, and the
 top-row `8` `.70` behavior. `tools/distribution_feature_parity.json` fixes that
 list in CI. The final release builder runs both manifests before launching a
@@ -1480,7 +1496,7 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 The artifact name identifies the unified BMS-IR Arena oraja client:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.73-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.74-macos-aarch64.jar
 ```
 
 The public page offers two forms for each supported OS:
@@ -1501,7 +1517,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.73-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.74-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1520,7 +1536,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.73-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.74-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
