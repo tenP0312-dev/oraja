@@ -10,13 +10,20 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.73**. Its Windows native-audio
+The current client source version is **0.4.14.74**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.74 updates the 7z reader to Apache Commons Compress 1.26.2 so
+overlapping movie-BGA materialization and solid-7z key-sound loading no longer
+cause false checksum failures. When BMS-IR is the configured Primary IR, the
+song context menu also keeps only the dedicated `BMS-IR Leaderboard`; another
+Primary IR still keeps its separately labeled leaderboard. Launcher 0.2.29,
+plugin 0.0.72, protocol v8, and all 0.4.14.73 behavior remain unchanged.
 
 Version 0.4.14.73 combines the complete song-update result dialog, consistent
 late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The update
@@ -201,6 +208,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.74
+
+Updates Apache Commons Compress to 1.26.2, preventing false solid-7z checksum
+failures when movie-BGA materialization overlaps the key-sound load. When
+BMS-IR is Primary IR, the song context menu now shows one dedicated
+`BMS-IR Leaderboard` instead of duplicating the same service through the
+generic Primary IR entry. Other Primary IR services retain their separate
+leaderboard. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.73` behavior remain present.
 
 ## Arena oraja 0.4.14.73
 
@@ -702,7 +719,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.73
+  --output-dir /release/build-0.4.14.74
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
