@@ -107,6 +107,7 @@ class PlayConfigurationSidebarLayoutTest {
 		Document skin = loadFxml("SkinConfigurationView.fxml");
 		assertNotNull(elementWithFxId(skin, "skinUpdateButton"));
 		assertNotNull(elementWithFxId(skin, "skinconfig"));
+		assertNotNull(elementWithFxId(skin, "skinSelectPreviewEnabled"));
 
 		Document table = loadFxml("TableEditorView.fxml");
 		assertNotNull(elementWithFxId(table, "tableSaveButton"));
@@ -168,7 +169,7 @@ class PlayConfigurationSidebarLayoutTest {
 				"randomselect", "scrolldurationhigh", "scrolldurationlow", "shownoexistingbar", "skipDecideScreen",
 				"songPreview", "useSongInfo");
 		assertInjectedNodes("SkinConfigurationView.fxml", SkinConfigurationView.class,
-				"skinUpdateButton", "skinconfig", "skinheaderSelector", "skintypeSelector");
+				"skinSelectPreviewEnabled", "skinUpdateButton", "skinconfig", "skinheaderSelector", "skintypeSelector");
 		assertInjectedNodes("IRConfigurationView.fxml", IRConfigurationView.class,
 				"bmsirArenaEnabled", "bmsirArenaServer", "importrival", "importscore", "irhome", "irname",
 				"irpassword", "irsend", "iruserid", "primarybutton");

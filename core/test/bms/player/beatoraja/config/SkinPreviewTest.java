@@ -4,11 +4,13 @@ import bms.model.BMSModel;
 import bms.model.LongNote;
 import bms.model.Note;
 import bms.model.TimeLine;
+import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.TimerManager;
 import bms.player.beatoraja.skin.CustomTimer;
 import bms.player.beatoraja.skin.Skin;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinType;
+import com.badlogic.gdx.utils.Json;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumSet;
@@ -22,6 +24,44 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkinPreviewTest {
+	@Test
+	void skinSelectPreviewSettingDefaultsOnAndRoundTripsThroughPlayerConfig() {
+		PlayerConfig player = new PlayerConfig();
+		assertTrue(player.isSkinSelectPreviewEnabled());
+
+		player.setSkinSelectPreviewEnabled(false);
+		PlayerConfig restored = new Json().fromJson(
+				PlayerConfig.class,
+				PlayerConfig.getConfigJson(player)
+		);
+
+		assertFalse(restored.isSkinSelectPreviewEnabled());
+	}
+
+	@Test
+	void disabledSkinSelectPreviewBlocksLoadingUntilReenabled() {
+		assertFalse(SkinConfiguration.shouldLoadPreview(
+				false,
+				SkinType.PLAY_7KEYS,
+				true
+		));
+		assertTrue(SkinConfiguration.shouldLoadPreview(
+				true,
+				SkinType.PLAY_7KEYS,
+				true
+		));
+		assertFalse(SkinConfiguration.shouldLoadPreview(
+				true,
+				SkinType.SKIN_SELECT,
+				true
+		));
+		assertFalse(SkinConfiguration.shouldLoadPreview(
+				true,
+				SkinType.PLAY_7KEYS,
+				false
+		));
+	}
+
 	@Test
 	void onlyRecursiveSkinSelectIsExcludedFromPreview() {
 		EnumSet<SkinType> excluded = EnumSet.of(

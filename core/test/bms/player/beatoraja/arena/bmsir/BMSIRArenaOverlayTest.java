@@ -18,6 +18,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 // ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
 @ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaOverlayTest {
+	@Test
+	void hispeedEditorCanFollowTheChartOrPinEverySupportedMode() {
+		assertEquals(Mode.BEAT_14K.id, BMSIRArenaOverlay.resolveHispeedEditorMode(
+				PlayerConfig.BMSIR_HISPEED_EDITOR_FOLLOW_CURRENT,
+				Mode.BEAT_14K.id
+		));
+		assertEquals(Mode.POPN_9K.id, BMSIRArenaOverlay.resolveHispeedEditorMode(
+				Mode.POPN_9K.id,
+				Mode.BEAT_7K.id
+		));
+		assertEquals(Mode.BEAT_7K.id, BMSIRArenaOverlay.resolveHispeedEditorMode(
+				999,
+				999
+		));
+
+		for (int modeId : BMSIRArenaOverlay.hispeedEditorModeIds()) {
+			int index = BMSIRArenaOverlay.hispeedEditorModeIndex(modeId);
+			assertEquals(modeId, BMSIRArenaOverlay.hispeedEditorModeId(index));
+		}
+	}
+
+	@Test
+	void hispeedChangeStepRejectsNonFiniteValuesAndClampsTheSavedRange() {
+		assertEquals(0.0f, BMSIRArenaOverlay.clampHispeedChangeStep(Float.NaN));
+		assertEquals(0.0f, BMSIRArenaOverlay.clampHispeedChangeStep(-1.0f));
+		assertEquals(0.25f, BMSIRArenaOverlay.clampHispeedChangeStep(0.25f));
+		assertEquals(10.0f, BMSIRArenaOverlay.clampHispeedChangeStep(999.0f));
+	}
+
     @Test
     void utf8InputBuffersReserveFourBytesPerCodePoint() {
         assertEquals(801, BMSIRArenaOverlay.utf8BufferCapacity(200));

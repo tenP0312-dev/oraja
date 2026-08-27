@@ -1,3 +1,14 @@
+# Arena oraja 0.4.14.75
+
+- Added a default-on per-player Skin Select live-preview switch. Turning it off
+  skips preview construction, reload, and rendering without disabling skin
+  selection or custom options.
+- Added AUTO/current-chart and explicit play-mode selection to the LR2
+  fixed-HI-SPEED overlay editor, plus a labeled numeric per-mode HI-SPEED
+  change-step field with a validated 0.00--10.00 range.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.74` behavior.
+
 # Arena oraja 0.4.14.74
 
 - Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
