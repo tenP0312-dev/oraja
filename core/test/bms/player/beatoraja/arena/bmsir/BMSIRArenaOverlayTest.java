@@ -47,6 +47,34 @@ class BMSIRArenaOverlayTest {
 		assertEquals(10.0f, BMSIRArenaOverlay.clampHispeedChangeStep(999.0f));
 	}
 
+	@Test
+	void coverChangeStepClampsAndUpdatesTheSharedPlayerSetting() {
+		assertEquals(1, BMSIRArenaOverlay.clampCoverChangeStep(0));
+		assertEquals(500, BMSIRArenaOverlay.clampCoverChangeStep(500));
+		assertEquals(1000, BMSIRArenaOverlay.clampCoverChangeStep(2000));
+
+		PlayerConfig config = new PlayerConfig();
+		BMSIRArenaOverlay.applyCoverChangeStep(config, 25);
+		assertEquals(25, config.getBmsirCoverChangeStep());
+		BMSIRArenaOverlay.applyCoverChangeStep(config, -1);
+		assertEquals(1, config.getBmsirCoverChangeStep());
+	}
+
+	@Test
+	void coverChangeStepLabelExplainsTheStartSixSevenControl() {
+		BMSIRArenaI18n.setLanguage("ja");
+		assertEquals(
+				"カバー変更幅（START+6/7）",
+				BMSIRArenaOverlay.coverChangeStepLabel()
+		);
+
+		BMSIRArenaI18n.setLanguage("en");
+		assertEquals(
+				"Lane-cover step (START+6/7)",
+				BMSIRArenaOverlay.coverChangeStepLabel()
+		);
+	}
+
     @Test
     void utf8InputBuffersReserveFourBytesPerCodePoint() {
         assertEquals(801, BMSIRArenaOverlay.utf8BufferCapacity(200));

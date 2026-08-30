@@ -919,7 +919,10 @@ setter and event are effective only on Music Select and persist immediately.
 `INFO通知を表示する` controls all transient ImGui INFO toasts as one group.
 It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
 controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
-is independent and OFF by default, so START+6/7 changes the selected cover
+is independent and OFF by default. The startup setting and the full or compact
+Arena overlay edit the same global integer; the overlay labels it with the
+START+6/7 control so it is not confused with the per-mode HI-SPEED change
+step. START+6/7 changes the selected cover
 without changing HI-SPEED unless recalculation is explicitly enabled. Music
 Select cycles the five legacy HI-SPEED FIX values: `OFF / START / MAX / MAIN /
 MIN`. A value `5` saved by the removed standalone IIDX FHS migrates to START
