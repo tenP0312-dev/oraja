@@ -115,6 +115,7 @@ public final class BMSIRArenaOverlay {
     private static final ImInt GRAPH_ORDER = new ImInt(0);
     private static final ImInt LANGUAGE = new ImInt(0);
     private static final ImInt HISPEED_EDITOR_MODE = new ImInt(0);
+    private static final ImInt COVER_CHANGE_STEP = new ImInt(10);
     private static final ImFloat HISPEED_CHANGE_STEP = new ImFloat(0.25f);
     private static final int[] HISPEED_EDITOR_MODE_IDS = {0, 5, 7, 10, 14, 9, 25, 50};
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
@@ -1048,6 +1049,20 @@ public final class BMSIRArenaOverlay {
 			);
 			saveSettingsOrWarn();
 		}
+		COVER_CHANGE_STEP.set(config.getBmsirCoverChangeStep());
+		ImGui.setNextItemWidth(compact ? 120.0f : 180.0f);
+		if (ImGui.inputInt(
+				coverChangeStepLabel() + "##cover-change-step" + suffix,
+				COVER_CHANGE_STEP
+		)) {
+			applyCoverChangeStep(config, COVER_CHANGE_STEP.get());
+			COVER_CHANGE_STEP.set(config.getBmsirCoverChangeStep());
+			saveSettingsOrWarn();
+		}
+		ImGui.textDisabled(t(
+				"数値入力 1～1000（全MODE共通）",
+				"Numeric input 1-1000 (shared across modes)"
+		));
 		int modeId = resolveHispeedEditorMode(
 				config.getBmsirHispeedEditorMode(),
 				currentModeId
@@ -1209,6 +1224,21 @@ public final class BMSIRArenaOverlay {
 				PlayConfig.HISPEEDMARGIN_MIN,
 				Math.min(PlayConfig.HISPEEDMARGIN_MAX, value)
 		);
+	}
+
+	static String coverChangeStepLabel() {
+		return t(
+				"カバー変更幅（START+6/7）",
+				"Lane-cover step (START+6/7)"
+		);
+	}
+
+	static int clampCoverChangeStep(int value) {
+		return Math.max(1, Math.min(1000, value));
+	}
+
+	static void applyCoverChangeStep(PlayerConfig config, int value) {
+		config.setBmsirCoverChangeStep(clampCoverChangeStep(value));
 	}
 
     private static void applyBaseScroll(
