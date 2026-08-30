@@ -1,8 +1,10 @@
 package bms.player.beatoraja.select.bar;
 
+import bms.model.Mode;
 import bms.player.beatoraja.CourseData;
 import bms.player.beatoraja.TableData;
 import bms.player.beatoraja.TableDataAccessor;
+import bms.player.beatoraja.arena.bmsir.BMSIRTableKeyModeFilter;
 import bms.player.beatoraja.select.*;
 import bms.player.beatoraja.song.SongData;
 
@@ -35,6 +37,7 @@ public class TableBar extends DirectoryBar {
     private Bar[] children;
     private final TableDataAccessor.TableAccessor tr;
     private final boolean difficultyLevelFolders;
+    private BMSIRTableKeyModeFilter.TableModes keyModes;
 
     public TableBar(MusicSelector selector, TableData td, TableDataAccessor.TableAccessor tr) {
 		this(selector, td, tr, false);
@@ -67,6 +70,7 @@ public class TableBar extends DirectoryBar {
 
     public void setTableData(TableData td) {
     	this.td = td;
+		keyModes = BMSIRTableKeyModeFilter.analyze(td);
 		boolean tableLevelDisplayEnabled = difficultyLevelFolders
 				&& selector.main.getPlayerConfig().isBmsirTableLevelDisplayEnabled();
 		levels = Stream.of(td.getFolder()).map(folder -> new HashBar(
@@ -123,5 +127,9 @@ public class TableBar extends DirectoryBar {
 
     public TableData getTableData() {
 		return td;
+	}
+
+	public boolean isVisibleForKeyMode(Mode selectedMode) {
+		return keyModes.isVisible(selectedMode);
 	}
 }
