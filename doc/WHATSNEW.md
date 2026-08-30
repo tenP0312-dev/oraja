@@ -6,6 +6,9 @@
 - Added AUTO/current-chart and explicit play-mode selection to the LR2
   fixed-HI-SPEED overlay editor, plus a labeled numeric per-mode HI-SPEED
   change-step field with a validated 0.00--10.00 range.
+- Added a labeled 1--1000 START+6/7 lane-cover step field to the full and
+  compact Arena overlays. It edits the existing global player setting and
+  remains separate from the per-mode HI-SPEED change step.
 - Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
   `0.4.14.74` behavior.
 

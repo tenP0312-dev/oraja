@@ -108,9 +108,11 @@ mode being edited, and the full and compact Arena overlays can toggle the
 override and edit the current mode's base and reference values during Music
 Select. The overlays now also provide an AUTO/current-chart or explicit-mode
 editor selector and a numeric per-mode HI-SPEED change-step field from 0.00
-through 10.00. The override is disabled for NO SPEED constraints and is
-snapshotted into replays. It does not add a pseudo-FHS chord or an
-equivalent-green editor.
+through 10.00. Both overlays also expose the global START+6/7 lane-cover step
+as a labeled integer from 1 through 1000; it remains separate from the
+per-mode HI-SPEED change step. The override is disabled for NO SPEED
+constraints and is snapshotted into replays. It does not add a pseudo-FHS
+chord or an equivalent-green editor.
 
 The launcher Skin settings provide a default-on switch for the live Skin
 Select preview. Turning it off skips preview construction, reload, and render
