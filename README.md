@@ -119,6 +119,12 @@ Select preview. Turning it off skips preview construction, reload, and render
 work while leaving skin selection and all custom options available. The choice
 is stored per player in the normal player configuration.
 
+At the Music Select root, a concrete key-mode selection now hides a difficulty
+table only when every chart and course entry has a resolved mode and none
+matches the selection. Mixed tables remain visible for each mode they contain,
+ALL shows every table, and any legacy or incomplete table with an unresolved
+entry stays reachable instead of being guessed away.
+
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
 returns to the same window style even when fullscreen was saved on shutdown

@@ -1371,8 +1371,13 @@ platform build.
   current table/search scope, using the nearest lower available difficulty or
   the lowest chart when the exact stage is missing. Unchecked concrete key
   modes are hidden throughout Music Select and are omitted from every mode
-  cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
-  retains all concrete modes. An empty allow-list is normalized to 7K.
+  cycle. At the selector root, a concrete mode also hides a difficulty-table
+  bar when every folder and course chart has a known mode and none matches. A
+  mixed table remains visible for each mode it contains; a table with any
+  unresolved entry remains visible, avoiding false removal of legacy or
+  incomplete metadata. ALL adds the combined view to the cycle and keeps every
+  table visible; a legacy ALL-only setting retains all concrete modes. An empty
+  allow-list is normalized to 7K.
 - `難易度表の難易度をLEVEL表示に使う` is a per-player, default-ON switch.
   When enabled, each song bar and the selected-song LEVEL display inside a
   difficulty table prefer the first contiguous decimal integer in that table

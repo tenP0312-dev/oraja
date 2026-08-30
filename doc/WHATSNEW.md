@@ -1,5 +1,8 @@
 # Arena oraja 0.4.14.75
 
+- Filtered root difficulty-table bars by the active concrete key mode. Mixed
+  tables remain visible for their contained modes, ALL shows every table, and
+  any unresolved chart or course mode keeps the table safely reachable.
 - Added a default-on per-player Skin Select live-preview switch. Turning it off
   skips preview construction, reload, and rendering without disabling skin
   selection or custom options.
