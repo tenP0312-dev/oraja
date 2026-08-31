@@ -26,6 +26,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +43,7 @@ final class BMSIRMyTableClient {
     private static final int MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
     private static final AtomicLong SESSION = new AtomicLong();
     private static final BMSIRMyTableDraft DRAFT = new BMSIRMyTableDraft();
+    private static volatile BatchCache batchCache = BatchCache.empty();
 
     private static volatile MainController main;
     private static volatile JsonNode snapshot = emptySnapshot();
@@ -64,6 +66,7 @@ final class BMSIRMyTableClient {
         appliedSequence = 0L;
         requestRunning = false;
         DRAFT.clear();
+        batchCache = BatchCache.empty();
         statusMessage = text("マイ難易度表を読み込んでいます", "Loading My Difficulty Table");
         errorMessage = "";
         requestSnapshot(session);
@@ -78,6 +81,7 @@ final class BMSIRMyTableClient {
         appliedSequence = 0L;
         requestRunning = false;
         DRAFT.clear();
+        batchCache = BatchCache.empty();
         statusMessage = "";
         errorMessage = "";
     }
@@ -238,6 +242,198 @@ final class BMSIRMyTableClient {
         return result;
     }
 
+    /** Stages a controller-only level change without discarding the entry comment. */
+    static synchronized BMSIRMyTableDraft.StageResult stageEntryLevel(
+            SongData song,
+            String level
+    ) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.EntryChange pending = DRAFT.entryFor(song, authoritative);
+        String comment = pending != null && !pending.removal()
+                ? pending.comment()
+                : authoritative == null ? "" : authoritative.path("comment").asText("");
+        return stageEntry(song, level, comment);
+    }
+
+
+    static synchronized void toggleBatchEntry(SongData song, String targetLevel) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.EntryChange pending = DRAFT.entryFor(song, authoritative);
+        String authoritativeLevel = authoritative == null ? "" : authoritative.path("level").asText("");
+        if (pending != null && !pending.removal() && targetLevel.equals(pending.level())) {
+            String retainedComment = pending.comment();
+            if (authoritative == null) {
+                stageRemoval(song);
+            } else {
+                stageEntry(song, authoritativeLevel, retainedComment);
+            }
+        } else if (authoritative != null && targetLevel.equals(authoritativeLevel)
+                && (pending == null || pending.removal())) {
+            if (pending != null) {
+                stageEntryLevel(song, targetLevel);
+            } else {
+                stageRemoval(song);
+            }
+        } else {
+            stageEntryLevel(song, targetLevel);
+        }
+        refreshBatchCache();
+    }
+
+    static synchronized boolean beginBatchCache(String targetLevel) {
+        if (targetLevel == null || targetLevel.isBlank()
+                || !tableLevels(snapshot).contains(targetLevel)) {
+            return false;
+        }
+        batchCache = BatchCache.from(snapshot, DRAFT.entries(), targetLevel);
+        return true;
+    }
+
+    static void endBatchCache() {
+        batchCache = BatchCache.empty();
+    }
+
+    static int batchLamp(
+            SongData song,
+            String targetLevel,
+            int noPlayLamp,
+            int failedLamp,
+            int easyLamp,
+            int hardLamp,
+            int exHardLamp
+    ) {
+        BatchCache.Entry entry = batchCache.entryFor(song);
+        if (entry == null) {
+            return noPlayLamp;
+        }
+        String authoritativeLevel = entry.authoritativeLevel();
+        BMSIRMyTableDraft.EntryChange pending = entry.pending();
+        if (pending != null) {
+            if (pending.removal()) {
+                return targetLevel.equals(authoritativeLevel) ? failedLamp : easyLamp;
+            }
+            if (targetLevel.equals(pending.level())) {
+                return authoritativeLevel.isBlank() || !targetLevel.equals(authoritativeLevel)
+                        ? exHardLamp : hardLamp;
+            }
+        }
+        if (authoritativeLevel.isBlank()) {
+            return noPlayLamp;
+        }
+        return targetLevel.equals(authoritativeLevel) ? hardLamp : easyLamp;
+    }
+
+    static BatchSummary batchSummary() {
+        return batchCache.summary();
+    }
+
+    static List<BatchLevelSummary> batchSummaries() {
+        List<BatchLevelSummary> summaries = new ArrayList<>();
+        List<BMSIRMyTableDraft.EntryChange> pendingChanges = DRAFT.entries();
+        for (String level : tableLevels(snapshot)) {
+            BatchSummary summary = BatchCache.from(snapshot, pendingChanges, level).summary();
+            if (summary.additions() != 0 || summary.changes() != 0 || summary.deletions() != 0) {
+                summaries.add(new BatchLevelSummary(level, summary));
+            }
+        }
+        return List.copyOf(summaries);
+    }
+
+    static record BatchLevelSummary(String level, BatchSummary summary) {
+    }
+
+    private static void refreshBatchCache() {
+        String targetLevel = batchCache.targetLevel();
+        if (!targetLevel.isBlank()) {
+            batchCache = BatchCache.from(snapshot, DRAFT.entries(), targetLevel);
+        }
+    }
+
+    static record BatchSummary(int additions, int changes, int deletions) {
+    }
+
+    private record BatchCache(String targetLevel, Map<String, Entry> entries, BatchSummary summary) {
+        record Entry(String authoritativeLevel, BMSIRMyTableDraft.EntryChange pending) {
+        }
+
+        static BatchCache empty() {
+            return new BatchCache("", Map.of(), new BatchSummary(0, 0, 0));
+        }
+
+        static BatchCache from(
+                JsonNode ownerSnapshot,
+                List<BMSIRMyTableDraft.EntryChange> pendingChanges,
+                String targetLevel
+        ) {
+            Map<String, Entry> indexed = new HashMap<>();
+            int additions = 0;
+            int changes = 0;
+            int deletions = 0;
+            JsonNode entries = ownerSnapshot.path("table").path("entries");
+            if (entries.isArray()) {
+                for (JsonNode item : entries) {
+                    Entry entry = new Entry(item.path("level").asText(""), null);
+                    index(indexed, entry,
+                            item.path("entry_hash").asText(""),
+                            item.path("md5").asText(""),
+                            item.path("bms_ir_hash").asText(""),
+                            item.path("sha256").asText(""));
+                }
+            }
+            for (BMSIRMyTableDraft.EntryChange pending : pendingChanges) {
+                Entry existing = first(indexed, pending.key(), pending.md5(), pending.sha256(), pending.entryHash());
+                String authoritativeLevel = existing == null ? "" : existing.authoritativeLevel();
+                if (pending.removal()) {
+                    if (targetLevel.equals(authoritativeLevel)) {
+                        deletions++;
+                    }
+                } else if (targetLevel.equals(pending.level())) {
+                    if (authoritativeLevel.isBlank()) {
+                        additions++;
+                    } else {
+                        changes++;
+                    }
+                }
+                Entry updated = new Entry(authoritativeLevel, pending);
+                index(indexed, updated,
+                        pending.key(), pending.md5(), pending.sha256(), pending.entryHash());
+            }
+            return new BatchCache(targetLevel, Map.copyOf(indexed), new BatchSummary(additions, changes, deletions));
+        }
+
+        Entry entryFor(SongData song) {
+            if (song == null) {
+                return null;
+            }
+            Entry md5 = entries.get(normalizedHash(song.getMd5(), 32));
+            return md5 != null ? md5 : entries.get(normalizedHash(song.getSha256(), 64));
+        }
+
+        private static Entry first(Map<String, Entry> indexed, String... keys) {
+            for (String key : keys) {
+                Entry entry = indexed.get(normalizedKey(key));
+                if (entry != null) {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        private static void index(Map<String, Entry> indexed, Entry entry, String... keys) {
+            for (String key : keys) {
+                String normalized = normalizedKey(key);
+                if (!normalized.isBlank()) {
+                    indexed.put(normalized, entry);
+                }
+            }
+        }
+
+        private static String normalizedKey(String raw) {
+            String md5 = normalizedHash(raw, 32);
+            return md5.isBlank() ? normalizedHash(raw, 64) : md5;
+        }
+    }
+
     static synchronized BMSIRMyTableDraft.StageResult stageRemoval(SongData song) {
         JsonNode authoritative = entryFor(snapshot, song);
         BMSIRMyTableDraft.StageResult result = DRAFT.stageRemove(
@@ -392,6 +588,29 @@ final class BMSIRMyTableClient {
         }
         return null;
     }
+
+    static List<String> tableLevels(JsonNode ownerSnapshot) {
+        List<String> levels = new ArrayList<>();
+        JsonNode table = ownerSnapshot == null ? null : ownerSnapshot.path("table");
+        if (table == null || !table.isObject()) {
+            return levels;
+        }
+        JsonNode entries = table.path("entries");
+        if (!entries.isArray()) {
+            return levels;
+        }
+        for (JsonNode entry : entries) {
+            String level = limited(entry.path("level").asText("-"), 32).trim();
+            if (level.isEmpty()) {
+                level = "-";
+            }
+            if (!levels.contains(level)) {
+                levels.add(level);
+            }
+        }
+        return levels;
+    }
+
 
     static ObjectNode tablePayload(
             String action,
