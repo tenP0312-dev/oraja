@@ -13,6 +13,7 @@ import bms.player.beatoraja.skin.property.EventFactory.EventType;
 
 import bms.player.beatoraja.modmenu.SongManagerMenu;
 import bms.player.beatoraja.modmenu.ImGuiRenderer;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 
@@ -37,6 +38,7 @@ public final class MusicSelectInputProcessor {
     static final int MANIAC_KEY_4 = 3;
     static final int MANIAC_KEY_6 = 5;
     static final int MANIAC_KEY_7 = 6;
+    static final int[] MY_TABLE_BATCH_EDIT_KEYS = {0, 2, 4, 6};
     static final ControlKeys SHOW_ALL_CHARTS_COMPATIBILITY_KEY = ControlKeys.NUM8;
 
     /**
@@ -72,6 +74,7 @@ public final class MusicSelectInputProcessor {
     private final SelectHoldDetector startHoldDetector = new SelectHoldDetector();
     private final SelectHoldDetector selectHoldDetector = new SelectHoldDetector();
     private final ChordHoldDetector maniacChordDetector = new ChordHoldDetector();
+    private final ChordHoldDetector myTableBatchCommitDetector = new ChordHoldDetector();
     private final RepeatPressDetector maniacDownDetector = new RepeatPressDetector();
     private final RepeatPressDetector maniacUpDetector = new RepeatPressDetector();
     private final PressEdgeDetector maniacSelectDetector = new PressEdgeDetector();
@@ -99,6 +102,12 @@ public final class MusicSelectInputProcessor {
         final Bar current = select.getBarManager().getSelected();
 
         long now = System.currentTimeMillis();
+        if (BMSIRArenaClient.finishMyDifficultyTableBatchApply()) {
+            return;
+        }
+        if (BMSIRArenaClient.finishMyDifficultyTableApplyNotification()) {
+            return;
+        }
         handleF2(input, now);
         if (ImGuiRenderer.isManiacOptionsOpen()) {
             return;
@@ -145,6 +154,10 @@ public final class MusicSelectInputProcessor {
 		difficultyFilterPressed = currentDifficultyFilterPressed;
 
         final MusicSelectKeyProperty property = MusicSelectKeyProperty.values()[config.getMusicselectinput()];
+
+        if (handleMyDifficultyTableBatchEdit(input, barManager, current, now)) {
+            return;
+        }
 
         String startAction = config.getBmsirStartButtonAction();
         String selectAction = config.getBmsirSelectButtonAction();
@@ -404,19 +417,23 @@ public final class MusicSelectInputProcessor {
             bar.input();
             select.setPanelState(0);
 
-            if (current instanceof FunctionBar &&
+            if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()
+                    && current instanceof FunctionBar &&
                 (property.isPressed(input, PRACTICE, true) ||
                  property.isPressed(input, AUTO, true) ||
                  property.isPressed(input, REPLAY, true))) {
                 select.selectSong(BMSPlayerMode.PLAY);
             }
-            else if ((current instanceof SongBar || current instanceof TableBar ||
+            else if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()
+                    && (current instanceof SongBar || current instanceof TableBar ||
                       current instanceof HashBar) &&
                      (property.isPressed(input, PRACTICE, true) ||
                       property.isPressed(input, AUTO, true))) {
                 select.execute(MusicSelectCommand.SHOW_CONTEXT_MENU);
             }
-            else if (current instanceof SelectableBar) {
+            else if (current instanceof SelectableBar
+                    && !(current instanceof SongBar
+                            && BMSIRArenaClient.isMyDifficultyTableBatchEditing())) {
                 if (property.isPressed(input, PLAY, true) || input.isControlKeyPressed(ControlKeys.RIGHT) || input.isControlKeyPressed(ControlKeys.ENTER)) {
                     // play
                     select.selectSong(BMSPlayerMode.PLAY);
@@ -433,7 +450,7 @@ public final class MusicSelectInputProcessor {
                 else if (property.isPressed(input, NEXT_REPLAY, true)) {
                     if (current instanceof FunctionBar) {
                         input.resetKeyChangedTime(1);
-                        select.getBarManager().close();
+                        closeCurrentBar(barManager);
 					}
                     else {
                         // change replay
@@ -461,7 +478,7 @@ public final class MusicSelectInputProcessor {
             // close folder
             if (property.isPressed(input, MusicSelectKey.FOLDER_CLOSE, true) || input.isControlKeyPressed(ControlKeys.LEFT)) {
                 input.resetKeyChangedTime(1);
-                select.getBarManager().close();
+                closeCurrentBar(barManager);
             }
 
     		if(input.isActivated(KeyCommand.AUTOPLAY_FOLDER)) {
@@ -502,8 +519,65 @@ public final class MusicSelectInputProcessor {
         if (input.isControlKeyPressed(ControlKeys.ESCAPE)) {
             boolean isTopLevel = select.getBarManager().getDirectory().isEmpty();
             if (isTopLevel) { select.main.exit(); }
-            else { select.getBarManager().close(); }
+            else { closeCurrentBar(barManager); }
         }
+    }
+
+    private void closeCurrentBar(BarManager barManager) {
+        if (BMSIRArenaClient.isMyDifficultyTableBatchConfirmationOpen()) {
+            BMSIRArenaClient.closeMyDifficultyTableBatchConfirmation();
+        }
+        barManager.close();
+    }
+
+    private boolean handleMyDifficultyTableBatchEdit(
+            BMSPlayerInputProcessor input,
+            BarManager barManager,
+            Bar current,
+            long now
+    ) {
+        if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()) {
+            myTableBatchCommitDetector.update(false, now);
+            return false;
+        }
+        boolean commitChord = input.startPressed() && input.isSelectPressed();
+        if (commitChord) {
+            if (!(current instanceof MyDifficultyTableBatchConfirmBar)
+                    && myTableBatchCommitDetector.update(true, now)) {
+                barManager.updateBar(new MyDifficultyTableBatchConfirmBar(select));
+                BMSIRArenaClient.openMyDifficultyTableBatchConfirmation();
+                select.play(SoundType.FOLDER_OPEN);
+            }
+            for (int key : MY_TABLE_BATCH_EDIT_KEYS) {
+                input.resetKeyChangedTime(key);
+            }
+            return true;
+        }
+        myTableBatchCommitDetector.update(false, now);
+        if (input.startPressed() || input.isSelectPressed()) {
+            // START+SELECT is reserved for the batch-commit confirmation chord.
+            startHoldDetector.cancel();
+            selectHoldDetector.cancel();
+            return true;
+        }
+        if (!(current instanceof SongBar songBar)) {
+            return false;
+        }
+        if (input.isControlKeyPressed(ControlKeys.ENTER)) {
+            BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
+            select.play(OPTION_CHANGE);
+            return true;
+        }
+        for (int key : MY_TABLE_BATCH_EDIT_KEYS) {
+            if (input.getKeyState(key)) {
+                if (input.resetKeyChangedTime(key)) {
+                    BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
+                    select.play(OPTION_CHANGE);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     private void runShortButtonAction(String action, BarManager barManager) {

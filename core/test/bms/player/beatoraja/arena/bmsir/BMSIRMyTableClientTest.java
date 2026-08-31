@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -150,6 +151,20 @@ class BMSIRMyTableClientTest {
         snapshot.putNull("table");
         snapshot.put("revision", "none");
         assertNull(BMSIRMyTableClient.tableData(snapshot));
+    }
+
+    @Test
+    void listsOnlyExistingLevelsWithoutDuplicatesForControllerEditing() {
+        ObjectNode snapshot = snapshot();
+        ArrayNode entries = (ArrayNode) snapshot.path("table").path("entries");
+        entries.addObject().put("level", "1");
+        entries.addObject().put("level", " 2.5 ");
+        entries.addObject().put("level", "");
+
+        assertIterableEquals(
+                java.util.List.of("1", "2", "2.5", "-"),
+                BMSIRMyTableClient.tableLevels(snapshot)
+        );
     }
 
     private static ObjectNode snapshot() {

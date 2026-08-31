@@ -1,6 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.player.beatoraja.arena.lobby.GraphMenu;
+import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
@@ -8,6 +9,7 @@ import bms.player.beatoraja.Version;
 import bms.player.beatoraja.controller.Lwjgl3ControllerManager;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.controllers.Controller;
@@ -61,6 +63,25 @@ public class ImGuiRenderer {
     private static ImBoolean SHOW_SKIN_MENU = new ImBoolean(false);
     private static ImBoolean SHOW_MISC_SETTING = new ImBoolean(false);
     private static ImBoolean SHOW_MANIAC_OPTIONS = new ImBoolean(false);
+    private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_FONT_SCALE = 1.300f;
+    private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_X_RATIO = 0.346f;
+    private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_Y_RATIO = 0.094f;
+    private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_WIDTH_RATIO = 0.249f;
+    private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_HEIGHT_RATIO = 0.120f;
+    private static final float[] MY_TABLE_BATCH_INDICATOR_FONT_SCALE = {
+            MY_TABLE_BATCH_INDICATOR_DEFAULT_FONT_SCALE};
+    private static boolean myTableBatchIndicatorLayoutCustomized;
+    private static float myTableBatchIndicatorX;
+    private static float myTableBatchIndicatorY;
+    private static float myTableBatchIndicatorWidth;
+    private static float myTableBatchIndicatorHeight;
+    private static boolean myTableBatchIndicatorDefaultLayoutCaptured;
+    private static float myTableBatchIndicatorDefaultX;
+    private static float myTableBatchIndicatorDefaultY;
+    private static float myTableBatchIndicatorDefaultWidth;
+    private static float myTableBatchIndicatorDefaultHeight;
+    private static boolean myTableBatchIndicatorLayoutEditingLastFrame;
+    private static boolean myTableBatchIndicatorResetLayoutRequested;
 
 
     public static void init() {
@@ -227,8 +248,149 @@ public class ImGuiRenderer {
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
         }
+        renderMyDifficultyTableBatchIndicator();
         BMSIRArenaOverlay.render();
         ImGuiNotify.renderNotifications();
+    }
+
+    /**
+     * A non-interactive indicator keeps the controller batch-edit state visible
+     * without requiring every music-select skin to add a dedicated text widget.
+     */
+    private static void saveMyDifficultyTableBatchIndicatorLayout() {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        if (config == null || windowWidth <= 0 || windowHeight <= 0) {
+            return;
+        }
+        config.setBmsirMyTableBatchOverlayFontScale(MY_TABLE_BATCH_INDICATOR_FONT_SCALE[0]);
+        config.setBmsirMyTableBatchOverlayXRatio(myTableBatchIndicatorX / windowWidth);
+        config.setBmsirMyTableBatchOverlayYRatio(myTableBatchIndicatorY / windowHeight);
+        config.setBmsirMyTableBatchOverlayWidthRatio(myTableBatchIndicatorWidth / windowWidth);
+        config.setBmsirMyTableBatchOverlayHeightRatio(myTableBatchIndicatorHeight / windowHeight);
+        BMSIRArenaClient.saveArenaConfig();
+    }
+
+    private static void renderMyDifficultyTableBatchIndicator() {
+        if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()) {
+            return;
+        }
+        boolean layoutEditing = Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.ALT_RIGHT);
+
+        if (!myTableBatchIndicatorDefaultLayoutCaptured) {
+            PlayerConfig config = BMSIRArenaClient.playerConfig();
+            if (config != null) {
+                MY_TABLE_BATCH_INDICATOR_FONT_SCALE[0] = config.getBmsirMyTableBatchOverlayFontScale();
+                myTableBatchIndicatorDefaultX = windowWidth * config.getBmsirMyTableBatchOverlayXRatio();
+                myTableBatchIndicatorDefaultY = windowHeight * config.getBmsirMyTableBatchOverlayYRatio();
+                myTableBatchIndicatorDefaultWidth = windowWidth * config.getBmsirMyTableBatchOverlayWidthRatio();
+                myTableBatchIndicatorDefaultHeight = windowHeight * config.getBmsirMyTableBatchOverlayHeightRatio();
+            } else {
+                myTableBatchIndicatorDefaultX = windowWidth * MY_TABLE_BATCH_INDICATOR_DEFAULT_X_RATIO;
+                myTableBatchIndicatorDefaultY = windowHeight * MY_TABLE_BATCH_INDICATOR_DEFAULT_Y_RATIO;
+                myTableBatchIndicatorDefaultWidth = windowWidth * MY_TABLE_BATCH_INDICATOR_DEFAULT_WIDTH_RATIO;
+                myTableBatchIndicatorDefaultHeight = windowHeight * MY_TABLE_BATCH_INDICATOR_DEFAULT_HEIGHT_RATIO;
+            }
+            myTableBatchIndicatorDefaultLayoutCaptured = true;
+
+        }
+        // The upper center is left open by the default music-select skins, above
+        // their difficulty-table caption and clear of the song list.
+        ImGui.setNextWindowPos(
+                windowWidth * 0.50f,
+                windowHeight * 0.16f,
+                ImGuiCond.FirstUseEver,
+                0.50f,
+                0.50f
+        );
+        if (!layoutEditing || myTableBatchIndicatorResetLayoutRequested) {
+            float indicatorX = myTableBatchIndicatorLayoutCustomized
+                    ? myTableBatchIndicatorX : myTableBatchIndicatorDefaultX;
+            float indicatorY = myTableBatchIndicatorLayoutCustomized
+                    ? myTableBatchIndicatorY : myTableBatchIndicatorDefaultY;
+            float indicatorWidth = myTableBatchIndicatorLayoutCustomized
+                    ? myTableBatchIndicatorWidth : myTableBatchIndicatorDefaultWidth;
+            float indicatorHeight = myTableBatchIndicatorLayoutCustomized
+                    ? myTableBatchIndicatorHeight : myTableBatchIndicatorDefaultHeight;
+            ImGui.setNextWindowPos(indicatorX, indicatorY, ImGuiCond.Always);
+            ImGui.setNextWindowSize(
+                    indicatorWidth, indicatorHeight, ImGuiCond.Always
+            );
+        }
+        ImGui.setNextWindowBgAlpha(0.84f);
+        int flags = ImGuiWindowFlags.AlwaysAutoResize
+                | ImGuiWindowFlags.NoDecoration
+                | ImGuiWindowFlags.NoInputs
+                | ImGuiWindowFlags.NoNav
+                | ImGuiWindowFlags.NoSavedSettings
+                | ImGuiWindowFlags.NoFocusOnAppearing
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+        flags &= ~ImGuiWindowFlags.AlwaysAutoResize;
+        if (layoutEditing) {
+            flags &= ~(ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDecoration
+                    | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoSavedSettings);
+            flags |= ImGuiWindowFlags.NoCollapse;
+        }
+        String windowName = layoutEditing
+                ? "マイ難易度表オーバーレイ##my-difficulty-table-batch-indicator"
+                : "##my-difficulty-table-batch-indicator";
+        if (ImGui.begin(windowName, flags)) {
+            BMSIRArenaClient.MyDifficultyTableBatchSummary summary =
+                    BMSIRArenaClient.myDifficultyTableBatchSummary();
+            boolean confirmationOpen = BMSIRArenaClient.isMyDifficultyTableBatchConfirmationOpen();
+            ImGui.setWindowFontScale(MY_TABLE_BATCH_INDICATOR_FONT_SCALE[0]);
+            ImGui.textUnformatted(
+                    "マイ難易度表：" + BMSIRArenaClient.myDifficultyTableBatchDisplayName()
+                            + "を編集中"
+            );
+            if (confirmationOpen) {
+                var levelSummaries = BMSIRArenaClient.myDifficultyTableBatchLevelSummaries();
+                if (levelSummaries.isEmpty()) {
+                    ImGui.textUnformatted("保留中の変更はありません");
+                } else {
+                    for (BMSIRArenaClient.MyDifficultyTableBatchLevelSummary level : levelSummaries) {
+                        BMSIRArenaClient.MyDifficultyTableBatchSummary levelSummary = level.summary();
+                        ImGui.textUnformatted(level.displayName() + "：追加 " + levelSummary.additions()
+                                + "・変更 " + levelSummary.changes() + "・削除 " + levelSummary.deletions());
+                    }
+                }
+            } else {
+                ImGui.textUnformatted("保留：追加 " + summary.additions() + "・変更 " + summary.changes() + "・削除 " + summary.deletions());
+            }
+            if (!confirmationOpen) {
+            ImGui.textDisabled("ランプ：HARD=現在 / EASY=別レベル / EX-HARD=追加・変更予定");
+            ImGui.textDisabled("FAILED=削除予定 / NO PLAY=未登録");
+            ImGui.textDisabled("クリック / Enter / 1・3・5・7：保留切替");
+            ImGui.textDisabled("START + SELECT 長押し：反映確認");
+            }
+            if (layoutEditing) {
+                ImGui.separator();
+                ImGui.textDisabled("タイトルバーをドラッグ：移動 / 端をドラッグ：サイズ変更");
+                ImGui.sliderFloat("文字サイズ", MY_TABLE_BATCH_INDICATOR_FONT_SCALE, 0.8f, 3.0f);
+                if (ImGui.button("デフォルトに戻す")) {
+                    MY_TABLE_BATCH_INDICATOR_FONT_SCALE[0] = MY_TABLE_BATCH_INDICATOR_DEFAULT_FONT_SCALE;
+                    myTableBatchIndicatorLayoutCustomized = true;
+                    myTableBatchIndicatorX = myTableBatchIndicatorDefaultX;
+                    myTableBatchIndicatorY = myTableBatchIndicatorDefaultY;
+                    myTableBatchIndicatorWidth = myTableBatchIndicatorDefaultWidth;
+                    myTableBatchIndicatorHeight = myTableBatchIndicatorDefaultHeight;
+                    myTableBatchIndicatorResetLayoutRequested = true;
+                } else if (myTableBatchIndicatorResetLayoutRequested) {
+                    myTableBatchIndicatorResetLayoutRequested = false;
+                } else {
+                    myTableBatchIndicatorLayoutCustomized = true;
+                    myTableBatchIndicatorX = ImGui.getWindowPosX();
+                    myTableBatchIndicatorY = ImGui.getWindowPosY();
+                    myTableBatchIndicatorWidth = ImGui.getWindowSizeX();
+                    myTableBatchIndicatorHeight = ImGui.getWindowSizeY();
+                }
+            }
+        }
+        ImGui.end();
+        if (!layoutEditing && myTableBatchIndicatorLayoutEditingLastFrame) {
+            saveMyDifficultyTableBatchIndicatorLayout();
+        }
+        myTableBatchIndicatorLayoutEditingLastFrame = layoutEditing;
     }
 
 
