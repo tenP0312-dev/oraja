@@ -167,6 +167,68 @@ class BMSIRMyTableClientTest {
         );
     }
 
+    @Test
+    void batchLampUsesTheEffectivePendingLevelAfterSwitchingTargets() {
+        ObjectNode snapshot = snapshot();
+        SongData song = new SongData();
+        song.setMd5(MD5);
+        BMSIRMyTableDraft.EntryChange moved = new BMSIRMyTableDraft.EntryChange(
+                MD5,
+                "upsert_entry",
+                "BMS Chart",
+                MD5,
+                "",
+                "",
+                "2",
+                "first\nsecond"
+        );
+        BMSIRMyTableClient.BatchCache cache = BMSIRMyTableClient.BatchCache.from(
+                snapshot,
+                java.util.List.of(moved),
+                "2"
+        );
+
+        assertEquals(2, BMSIRMyTableClient.batchLamp(
+                cache, song, "1", 0, 1, 2, 3, 4
+        ));
+        assertEquals(4, BMSIRMyTableClient.batchLamp(
+                cache, song, "2", 0, 1, 2, 3, 4
+        ));
+        assertEquals(new BMSIRMyTableClient.BatchSummary(0, 1, 0), cache.summary());
+    }
+
+    @Test
+    void summarizesAllPendingLevelsInOnePassIncludingANewLevel() {
+        ObjectNode snapshot = snapshot();
+        BMSIRMyTableDraft.EntryChange moved = new BMSIRMyTableDraft.EntryChange(
+                MD5, "upsert_entry", "BMS Chart", MD5, "", "", "2", "first\nsecond"
+        );
+        BMSIRMyTableDraft.EntryChange removed = new BMSIRMyTableDraft.EntryChange(
+                BMSON_KEY, "remove_entry", "bmson Chart", "", "", BMSON_KEY, "2", ""
+        );
+        String addedMd5 = "d".repeat(32);
+        BMSIRMyTableDraft.EntryChange added = new BMSIRMyTableDraft.EntryChange(
+                addedMd5, "upsert_entry", "New Chart", addedMd5, "", "", "3", ""
+        );
+
+        assertEquals(
+                java.util.List.of(
+                        new BMSIRMyTableClient.BatchLevelSummary(
+                                "2",
+                                new BMSIRMyTableClient.BatchSummary(0, 1, 1)
+                        ),
+                        new BMSIRMyTableClient.BatchLevelSummary(
+                                "3",
+                                new BMSIRMyTableClient.BatchSummary(1, 0, 0)
+                        )
+                ),
+                BMSIRMyTableClient.batchSummaries(
+                        snapshot,
+                        java.util.List.of(moved, removed, added)
+                )
+        );
+    }
+
     private static ObjectNode snapshot() {
         ObjectNode snapshot = JSON.createObjectNode();
         snapshot.put("ok", true);

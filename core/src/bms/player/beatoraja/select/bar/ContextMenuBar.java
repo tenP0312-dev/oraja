@@ -250,7 +250,10 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(new FunctionBar((selector, self) -> {
             selector.getBarManager().updateBar(new MyDifficultyTableEditorBar(selector, song));
             selector.play(FOLDER_OPEN);
-        }, "マイ難易度表を編集(レベル)", STYLE_SPECIAL));
+        }, BMSIRArenaI18n.text(
+                "マイ難易度表を編集（レベル）",
+                "Edit My Difficulty Table (level)"
+        ), STYLE_SPECIAL));
     }
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {
@@ -465,7 +468,10 @@ public class ContextMenuBar extends DirectoryBar {
             options.add(new FunctionBar((selector, self) -> {
                 selector.getBarManager().updateBar(new MyDifficultyTableBatchEditorBar(selector));
                 selector.play(FOLDER_OPEN);
-            }, "マイ難易度表を編集(一括)", STYLE_SPECIAL));
+            }, BMSIRArenaI18n.text(
+                    "マイ難易度表を編集（一括）",
+                    "Edit My Difficulty Table (batch)"
+            ), STYLE_SPECIAL));
         }
 
         var fillMissingCharts = new FunctionBar((selector, self) -> {

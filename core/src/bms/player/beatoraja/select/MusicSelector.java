@@ -425,7 +425,7 @@ public final class MusicSelector extends MainState {
 		}
 
 		// read bms information
-		if (timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + notesGraphDuration && !showNoteGraph && play == null) {
+		if (!batchEditing && timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + notesGraphDuration && !showNoteGraph && play == null) {
 			if (current instanceof SongBar && ((SongBar) current).existsSong()) {
 				SongData song = resource.getSongdata();
 				new Thread(() -> loadPreviewModel(song), "music-select-chart-info").start();
@@ -586,8 +586,10 @@ public final class MusicSelector extends MainState {
 		if (BMSIRArenaClient.isMyDifficultyTableBatchEditing()
 				&& current instanceof SongBar songBar
 				&& songBar.existsSong()) {
-			BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
-			play(OPTION_CHANGE);
+			if (!BMSIRArenaClient.isMyDifficultyTableBusy()) {
+				BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
+				play(OPTION_CHANGE);
+			}
 			return;
 		}
 		if (BMSIRArenaClient.isSelectionBlocked() && !BMSIRArenaClient.isNominationOpen()) {
@@ -999,7 +1001,11 @@ public final class MusicSelector extends MainState {
 		rankingContext = IRRankingContext.from(config);
 		execute(MusicSelectCommand.RESET_REPLAY);
 		boolean batchEditing = BMSIRArenaClient.isMyDifficultyTableBatchEditing();
-		if (!batchEditing) {
+		if (batchEditing) {
+			preview.start(null);
+			resource.getBMSResource().setBanner(null);
+			resource.getBMSResource().setStagefile(null);
+		} else {
 			loadSelectedSongImages();
 			scheduleSelectedSongToOrajaHelper(manager.getSelected());
 		}
@@ -1089,7 +1095,9 @@ public final class MusicSelector extends MainState {
 	public void selectSong(BMSPlayerMode mode) {
 		Bar selected = manager.getSelected();
 		if (BMSIRArenaClient.isMyDifficultyTableBatchEditing() && !(selected instanceof FunctionBar)) {
-			if (selected instanceof SongBar songBar && songBar.existsSong()) {
+			if (!BMSIRArenaClient.isMyDifficultyTableBusy()
+					&& selected instanceof SongBar songBar
+					&& songBar.existsSong()) {
 				BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
 				play(OPTION_CHANGE);
 			}

@@ -116,6 +116,12 @@ public final class MusicSelectInputProcessor {
             return;
         }
 
+        // Batch-edit lane keys overlap with ordinary Music Select shortcuts on
+        // keyboard layouts, so consume them before NUM1/NUM3 are dispatched.
+        if (handleMyDifficultyTableBatchEdit(input, barManager, current, now)) {
+            return;
+        }
+
         if (input.isControlKeyPressed(ControlKeys.NUM0)) {
             // 検索用ポップアップ表示。これ必要？
             Gdx.input.getTextInput(new Input.TextInputListener() {
@@ -154,10 +160,6 @@ public final class MusicSelectInputProcessor {
 		difficultyFilterPressed = currentDifficultyFilterPressed;
 
         final MusicSelectKeyProperty property = MusicSelectKeyProperty.values()[config.getMusicselectinput()];
-
-        if (handleMyDifficultyTableBatchEdit(input, barManager, current, now)) {
-            return;
-        }
 
         String startAction = config.getBmsirStartButtonAction();
         String selectAction = config.getBmsirSelectButtonAction();
@@ -539,6 +541,15 @@ public final class MusicSelectInputProcessor {
         if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()) {
             myTableBatchCommitDetector.update(false, now);
             return false;
+        }
+        if (BMSIRArenaClient.isMyDifficultyTableBusy()) {
+            myTableBatchCommitDetector.update(false, now);
+            startHoldDetector.cancel();
+            selectHoldDetector.cancel();
+            for (int key : MY_TABLE_BATCH_EDIT_KEYS) {
+                input.resetKeyChangedTime(key);
+            }
+            return true;
         }
         boolean commitChord = input.startPressed() && input.isSelectPressed();
         if (commitChord) {
