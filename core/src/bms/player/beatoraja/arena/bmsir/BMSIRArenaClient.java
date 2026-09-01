@@ -27,6 +27,7 @@ import bms.player.beatoraja.play.LaneRenderer;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
+import bms.player.beatoraja.select.bar.MyDifficultyTableBatchConfirmBar;
 import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.select.bar.TableBar;
 import bms.player.beatoraja.song.SongData;
@@ -223,12 +224,33 @@ public final class BMSIRArenaClient {
     }
 
     public static void stageMyDifficultyTableLevel(SongData song, String level) {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
         BMSIRMyTableClient.stageEntryLevel(song, level);
     }
 
 
     public static void stageMyDifficultyTableRemoval(SongData song) {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
         BMSIRMyTableClient.stageRemoval(song);
+    }
+
+    public static boolean isMyDifficultyTableBusy() {
+        return BMSIRMyTableClient.isBusy();
+    }
+
+    private static boolean rejectMyDifficultyTableEditWhileBusy() {
+        if (!BMSIRMyTableClient.isBusy()) {
+            return false;
+        }
+        ImGuiNotify.info(t(
+                "通信完了までお待ちください",
+                "Wait for the current request to finish"
+        ));
+        return true;
     }
 
     public static boolean applyMyDifficultyTableChanges() {
@@ -290,7 +312,19 @@ public final class BMSIRArenaClient {
         String error = BMSIRMyTableClient.errorMessage();
         if (BMSIRMyTableClient.draftCount() == 0 && error.isBlank()) {
             ImGuiNotify.info(t("マイ難易度表への変更を反映しました", "My Difficulty Table changes applied"));
-            endMyDifficultyTableBatchEdit();
+            MainController controller = main;
+            boolean closeConfirmation = myTableBatchConfirmationOpen;
+            clearMyDifficultyTableBatchEdit();
+            if (controller != null && controller.getCurrentState() instanceof MusicSelector selector) {
+                if (closeConfirmation
+                        && selector.getBarManager().getDirectory().size > 0
+                        && selector.getBarManager().getDirectory().last()
+                        instanceof MyDifficultyTableBatchConfirmBar) {
+                    selector.getBarManager().close();
+                } else {
+                    selector.getBarManager().updateBar();
+                }
+            }
             return true;
         }
         ImGuiNotify.error(error.isBlank()
@@ -300,6 +334,9 @@ public final class BMSIRArenaClient {
     }
 
     public static void discardMyDifficultyTableChanges() {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
         BMSIRMyTableClient.discardDraft();
     }
 
@@ -313,8 +350,7 @@ public final class BMSIRArenaClient {
 
     public static boolean startMyDifficultyTableBatchEdit(String level) {
         MyDifficultyTableEditorState state = myDifficultyTableEditorState(null);
-        if (!state.ready() || state.selectionRequired() || level == null || level.isBlank()
-                || !state.levels().contains(level)) {
+        if (!canStartMyDifficultyTableBatchEdit(state, level)) {
             return false;
         }
         if (!BMSIRMyTableClient.beginBatchCache(level)) {
@@ -322,7 +358,7 @@ public final class BMSIRArenaClient {
         }
         myTableBatchLevel = level;
         myTableBatchDisplayName = state.symbol().isBlank()
-                ? "レベル" + level
+                ? t("レベル", "Level ") + level
                 : state.symbol() + level;
         refreshMyDifficultyTableBatchLevelSummaryCache();
         MainController controller = main;
@@ -330,6 +366,20 @@ public final class BMSIRArenaClient {
             selector.getBarManager().suspendBackgroundContentLoading();
         }
         return true;
+    }
+
+    static boolean canStartMyDifficultyTableBatchEdit(
+            MyDifficultyTableEditorState state,
+            String level
+    ) {
+        return state != null
+                && state.ready()
+                && !state.selectionRequired()
+                && state.levelEditable()
+                && !state.busy()
+                && level != null
+                && !level.isBlank()
+                && state.levels().contains(level);
     }
 
     public static boolean isMyDifficultyTableBatchEditing() {
@@ -360,7 +410,9 @@ public final class BMSIRArenaClient {
         String symbol = myDifficultyTableEditorState(null).symbol();
         myTableBatchLevelSummaryCache = BMSIRMyTableClient.batchSummaries().stream()
                 .map(summary -> new MyDifficultyTableBatchLevelSummary(
-                        symbol.isBlank() ? "レベル" + summary.level() : symbol + summary.level(),
+                        symbol.isBlank()
+                                ? t("レベル", "Level ") + summary.level()
+                                : symbol + summary.level(),
                         new MyDifficultyTableBatchSummary(
                                 summary.summary().additions(),
                                 summary.summary().changes(),
@@ -391,9 +443,13 @@ public final class BMSIRArenaClient {
         }
     }
     /** Discards every staged change when the controller batch editor is cancelled. */
-    public static void cancelMyDifficultyTableBatchEdit() {
+    public static boolean cancelMyDifficultyTableBatchEdit() {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return false;
+        }
         BMSIRMyTableClient.discardDraft();
         endMyDifficultyTableBatchEdit();
+        return true;
     }
 
 
@@ -414,7 +470,8 @@ public final class BMSIRArenaClient {
 
     public static void toggleMyDifficultyTableBatchEntry(SongData song) {
         String targetLevel = myTableBatchLevel;
-        if (targetLevel.isBlank() || song == null) {
+        if (targetLevel.isBlank() || song == null || rejectMyDifficultyTableEditWhileBusy()
+                || !myDifficultyTableEditorState(song).levelEditable()) {
             return;
         }
         BMSIRMyTableClient.toggleBatchEntry(song, targetLevel);
@@ -518,9 +575,7 @@ public final class BMSIRArenaClient {
     public static synchronized void initialize(MainController controller) {
         installCrashHandler();
         shutdown();
-        myTableBatchLevel = "";
         main = controller;
-        myTableBatchConfirmationOpen = false;
         initialized = true;
         BMSIRArenaI18n.setLanguage(
                 controller.getPlayerConfig().getBmsirArenaLanguage()
@@ -634,8 +689,7 @@ public final class BMSIRArenaClient {
 
     public static synchronized void shutdown() {
         BMSIRMyTableClient.shutdown();
-        myTableBatchLevel = "";
-        myTableBatchConfirmationOpen = false;
+        clearMyDifficultyTableBatchEdit();
         BMSIRArenaLog.event(
                 "shutdown",
                 "match_id", currentMatchId,

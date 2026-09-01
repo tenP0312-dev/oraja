@@ -158,6 +158,17 @@ the game list is collapsed until opened or matched by a search. The BMS-IR
 section contains all 33 supported table families, including the 13 presets
 that were previously missing from the client list.
 
+My Difficulty Table entries can now be staged from controller-navigable Music
+Select menus. A per-chart menu uses the table's existing levels, while a batch
+mode lets the player mark several charts for one level with button 1/3/5/7,
+Enter, or a left click. The batch overlay shows the effective pending state in
+the song lamps and opens a level-by-level confirmation after holding
+START+SELECT. Requests remain atomic and revision-bound; master-managed levels
+stay read-only, an in-flight save blocks further edits, and a failed save keeps
+the draft for retry. The overlay position, size, and text scale are saved per
+player and can be restored to their factory defaults. Physical-client control
+feel remains a final manual acceptance item before merge or distribution.
+
 Play-skin previews now expose the synthetic session as ordinary play, include
 a silent representative BGA, and drive gauge-increase and gauge-max timers.
 Skins such as WMII can therefore construct their normal-play score graph and

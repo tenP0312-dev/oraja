@@ -1,6 +1,7 @@
 package bms.player.beatoraja.select.bar;
 
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.select.MusicSelector;
 
 import java.util.ArrayList;
@@ -19,7 +20,10 @@ public final class MyDifficultyTableBatchEditorBar extends DirectoryBar {
 
     @Override
     public String getTitle() {
-        return "マイ難易度表を編集(一括)";
+        return BMSIRArenaI18n.text(
+                "マイ難易度表を編集（一括）",
+                "Edit My Difficulty Table (batch)"
+        );
     }
 
     @Override
@@ -32,21 +36,36 @@ public final class MyDifficultyTableBatchEditorBar extends DirectoryBar {
         ArrayList<Bar> options = new ArrayList<>();
         BMSIRArenaClient.MyDifficultyTableEditorState state =
                 BMSIRArenaClient.myDifficultyTableEditorState(null);
-        if (!state.ready() || state.selectionRequired()) {
+        if (state.busy()) {
+            options.add(new FunctionBar((currentSelector, self) -> {},
+                    BMSIRArenaI18n.text("マイ難易度表を通信中です", "My Difficulty Table request in progress"),
+                    STYLE_SEARCH));
+        } else if (!state.ready() || state.selectionRequired()) {
             options.add(new FunctionBar((currentSelector, self) ->
                     BMSIRArenaClient.reloadMyDifficultyTable(),
-                    "マイ難易度表を再読み込み", STYLE_SPECIAL));
+                    BMSIRArenaI18n.text("マイ難易度表を再読み込み", "Reload My Difficulty Table"),
+                    STYLE_SPECIAL));
+        } else if (!state.levelEditable()) {
+            options.add(new FunctionBar((currentSelector, self) -> {},
+                    BMSIRArenaI18n.text(
+                            "この表のレベルはマスター表から同期されます",
+                            "Levels in this table are synchronized from its master table"
+                    ), STYLE_SEARCH));
         } else if (state.levels().isEmpty()) {
             options.add(new FunctionBar((currentSelector, self) -> {},
-                    "登録済みレベルがありません", STYLE_SEARCH));
+                    BMSIRArenaI18n.text("登録済みレベルがありません", "There are no registered levels"),
+                    STYLE_SEARCH));
         } else {
             for (String level : state.levels()) {
+                String displayLevel = state.symbol().isBlank()
+                        ? BMSIRArenaI18n.text("レベル", "Level ") + level
+                        : state.symbol() + level;
                 options.add(new FunctionBar((currentSelector, self) -> {
                     if (BMSIRArenaClient.startMyDifficultyTableBatchEdit(level)) {
                         currentSelector.getBarManager().updateBar(null);
                         currentSelector.play(FOLDER_OPEN);
                     }
-                }, state.symbol() + level + " を編集", STYLE_TABLE));
+                }, BMSIRArenaI18n.text(displayLevel + " を編集", "Edit " + displayLevel), STYLE_TABLE));
             }
         }
         return options.toArray(new Bar[0]);

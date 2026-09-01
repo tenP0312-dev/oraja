@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -239,6 +240,7 @@ final class BMSIRMyTableClient {
         reportStageResult(result, authoritative == null
                 ? text("譜面の追加を保留しました", "Chart addition staged")
                 : text("譜面の変更を保留しました", "Chart changes staged"));
+        refreshBatchCache();
         return result;
     }
 
@@ -277,7 +279,6 @@ final class BMSIRMyTableClient {
         } else {
             stageEntryLevel(song, targetLevel);
         }
-        refreshBatchCache();
     }
 
     static synchronized boolean beginBatchCache(String targetLevel) {
@@ -302,7 +303,29 @@ final class BMSIRMyTableClient {
             int hardLamp,
             int exHardLamp
     ) {
-        BatchCache.Entry entry = batchCache.entryFor(song);
+        return batchLamp(
+                batchCache,
+                song,
+                targetLevel,
+                noPlayLamp,
+                failedLamp,
+                easyLamp,
+                hardLamp,
+                exHardLamp
+        );
+    }
+
+    static int batchLamp(
+            BatchCache cache,
+            SongData song,
+            String targetLevel,
+            int noPlayLamp,
+            int failedLamp,
+            int easyLamp,
+            int hardLamp,
+            int exHardLamp
+    ) {
+        BatchCache.Entry entry = cache == null ? null : cache.entryFor(song);
         if (entry == null) {
             return noPlayLamp;
         }
@@ -310,12 +333,13 @@ final class BMSIRMyTableClient {
         BMSIRMyTableDraft.EntryChange pending = entry.pending();
         if (pending != null) {
             if (pending.removal()) {
-                return targetLevel.equals(authoritativeLevel) ? failedLamp : easyLamp;
+                return targetLevel.equals(authoritativeLevel) ? failedLamp : noPlayLamp;
             }
             if (targetLevel.equals(pending.level())) {
                 return authoritativeLevel.isBlank() || !targetLevel.equals(authoritativeLevel)
                         ? exHardLamp : hardLamp;
             }
+            return easyLamp;
         }
         if (authoritativeLevel.isBlank()) {
             return noPlayLamp;
@@ -328,15 +352,49 @@ final class BMSIRMyTableClient {
     }
 
     static List<BatchLevelSummary> batchSummaries() {
-        List<BatchLevelSummary> summaries = new ArrayList<>();
-        List<BMSIRMyTableDraft.EntryChange> pendingChanges = DRAFT.entries();
-        for (String level : tableLevels(snapshot)) {
-            BatchSummary summary = BatchCache.from(snapshot, pendingChanges, level).summary();
-            if (summary.additions() != 0 || summary.changes() != 0 || summary.deletions() != 0) {
-                summaries.add(new BatchLevelSummary(level, summary));
+        return batchSummaries(snapshot, DRAFT.entries());
+    }
+
+    static List<BatchLevelSummary> batchSummaries(
+            JsonNode ownerSnapshot,
+            List<BMSIRMyTableDraft.EntryChange> pendingChanges
+    ) {
+        LinkedHashMap<String, int[]> counts = new LinkedHashMap<>();
+        for (String level : tableLevels(ownerSnapshot)) {
+            counts.put(level, new int[3]);
+        }
+        BatchCache authoritative = BatchCache.from(ownerSnapshot, List.of(), "");
+        for (BMSIRMyTableDraft.EntryChange pending : pendingChanges) {
+            BatchCache.Entry existing = BatchCache.first(
+                    authoritative.entries(),
+                    pending.key(),
+                    pending.md5(),
+                    pending.sha256(),
+                    pending.entryHash()
+            );
+            String authoritativeLevel = existing == null ? "" : existing.authoritativeLevel();
+            String summaryLevel = pending.removal() ? authoritativeLevel : pending.level();
+            if (summaryLevel.isBlank()) {
+                continue;
+            }
+            int[] summary = counts.computeIfAbsent(summaryLevel, ignored -> new int[3]);
+            if (pending.removal()) {
+                summary[2]++;
+            } else if (authoritativeLevel.isBlank()) {
+                summary[0]++;
+            } else {
+                summary[1]++;
             }
         }
-        return List.copyOf(summaries);
+        return counts.entrySet().stream()
+                .map(entry -> new BatchLevelSummary(
+                        entry.getKey(),
+                        new BatchSummary(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2])
+                ))
+                .filter(entry -> entry.summary().additions() != 0
+                        || entry.summary().changes() != 0
+                        || entry.summary().deletions() != 0)
+                .toList();
     }
 
     static record BatchLevelSummary(String level, BatchSummary summary) {
@@ -352,7 +410,7 @@ final class BMSIRMyTableClient {
     static record BatchSummary(int additions, int changes, int deletions) {
     }
 
-    private record BatchCache(String targetLevel, Map<String, Entry> entries, BatchSummary summary) {
+    static record BatchCache(String targetLevel, Map<String, Entry> entries, BatchSummary summary) {
         record Entry(String authoritativeLevel, BMSIRMyTableDraft.EntryChange pending) {
         }
 
@@ -409,7 +467,7 @@ final class BMSIRMyTableClient {
             return md5 != null ? md5 : entries.get(normalizedHash(song.getSha256(), 64));
         }
 
-        private static Entry first(Map<String, Entry> indexed, String... keys) {
+        static Entry first(Map<String, Entry> indexed, String... keys) {
             for (String key : keys) {
                 Entry entry = indexed.get(normalizedKey(key));
                 if (entry != null) {
@@ -445,6 +503,7 @@ final class BMSIRMyTableClient {
         reportStageResult(result, authoritative == null
                 ? text("保留中の追加を取り消しました", "Pending addition cancelled")
                 : text("譜面の削除を保留しました", "Chart removal staged"));
+        refreshBatchCache();
         return result;
     }
 
@@ -488,6 +547,7 @@ final class BMSIRMyTableClient {
         if (DRAFT.undoEntry(key)) {
             statusMessage = text("保留中の変更を取り消しました", "Pending change removed");
             errorMessage = "";
+            refreshBatchCache();
         }
     }
 
@@ -500,6 +560,7 @@ final class BMSIRMyTableClient {
 
     static synchronized void discardDraft() {
         DRAFT.clear();
+        refreshBatchCache();
         statusMessage = text("保留中の変更をすべて破棄しました", "All pending changes discarded");
         errorMessage = "";
     }
@@ -590,25 +651,23 @@ final class BMSIRMyTableClient {
     }
 
     static List<String> tableLevels(JsonNode ownerSnapshot) {
-        List<String> levels = new ArrayList<>();
+        LinkedHashSet<String> levels = new LinkedHashSet<>();
         JsonNode table = ownerSnapshot == null ? null : ownerSnapshot.path("table");
         if (table == null || !table.isObject()) {
-            return levels;
+            return List.of();
         }
         JsonNode entries = table.path("entries");
         if (!entries.isArray()) {
-            return levels;
+            return List.of();
         }
         for (JsonNode entry : entries) {
             String level = limited(entry.path("level").asText("-"), 32).trim();
             if (level.isEmpty()) {
                 level = "-";
             }
-            if (!levels.contains(level)) {
-                levels.add(level);
-            }
+            levels.add(level);
         }
-        return levels;
+        return List.copyOf(levels);
     }
 
 
@@ -793,6 +852,7 @@ final class BMSIRMyTableClient {
                 acceptSnapshot(body, expectedSession);
                 if (clearDraftOnSuccess) {
                     DRAFT.clear();
+                    refreshBatchCache();
                 }
                 statusMessage = successMessage;
             } catch (Exception error) {
@@ -830,6 +890,7 @@ final class BMSIRMyTableClient {
             pendingTable = data;
             pendingSequence++;
         }
+        refreshBatchCache();
         if (Gdx.app != null) {
             Gdx.app.postRunnable(BMSIRMyTableClient::applyPendingIfSafe);
         }
