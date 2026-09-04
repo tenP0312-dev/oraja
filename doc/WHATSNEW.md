@@ -1,3 +1,16 @@
+# Arena oraja 0.4.14.77
+
+- Added an optional neutral Skin Scene v1 resource for JSON and Lua skins.
+- Added compile-time schema and safety validation, deterministic clocks and
+  timeline interpolation, nested 2D/3D transforms, focal-camera projection,
+  perspective-correct textured meshes, color transforms, and named blends.
+- Added nested alpha/color masks, bounded texture references, disposal and
+  rendering metrics, malformed/non-finite input handling, and a self-authored
+  projective-grid sample.
+- Kept skins without a scene on the existing SpriteBatch path.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.76` behavior.
+
 # Arena oraja 0.4.14.76
 
 - Added a validated 0.01--20.00 field to the full and compact Arena overlays
