@@ -11,6 +11,9 @@ import bms.player.beatoraja.play.BMSPlayer;
 
 import bms.player.beatoraja.skin.property.TimerProperty;
 import bms.player.beatoraja.skin.property.TimerPropertyFactory;
+import bms.player.beatoraja.skin.scene.FrameDrivenSkinObject;
+import bms.player.beatoraja.skin.scene.SkinSceneObject;
+import bms.player.beatoraja.skin.scene.render.SceneRenderer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -100,6 +103,10 @@ public class Skin {
 	private final Map<Class, Queue<Long>> avemDraw;
 	public long pcntPrepare;
 	public long pcntDraw;
+	public long sceneEvaluationMicros;
+	public int sceneActiveCommands;
+	public int sceneDrawCalls;
+	public int sceneTransformedVertices;
 
 	public Skin(SkinHeader header) {
 		this.header = header;
@@ -272,12 +279,21 @@ public class Skin {
 				final long time = state.timer.getNowTime();
 				var startPrepare = System.nanoTime();
 				for (SkinObject obj : objectarray) {
+					if (obj instanceof FrameDrivenSkinObject) {
+						continue;
+					}
 					var objPrepare = System.nanoTime();
 					obj.prepare(time, state);
 					tempmap.get(obj.getClass())[1] += (System.nanoTime() - objPrepare);
 				}
 				pcntPrepare = (System.nanoTime() - startPrepare) / 1000;
 				nextpreparetime += ((microtime - nextpreparetime) / prepareduration + 1) * prepareduration;
+			}
+			final long frameTime = state.timer.getNowTime();
+			for (SkinObject obj : objectarray) {
+				if (obj instanceof FrameDrivenSkinObject frameDriven) {
+					frameDriven.prepareFrame(frameTime, microtime, state);
+				}
 			}
 		
 			var startDraw = System.nanoTime();
@@ -299,21 +315,45 @@ public class Skin {
 				pcntmap.get(k)[6] = Math.max(pcntmap.get(k)[6], v[4]);
 			});
 			pcntDraw = (System.nanoTime() - startDraw) / 1000;
+			updateSceneMetrics();
 
 		} else {
 			if (nextpreparetime <= microtime) {
 				final long time = state.timer.getNowTime();
 				for (SkinObject obj : objectarray) {
-					obj.prepare(time, state);
+					if (!(obj instanceof FrameDrivenSkinObject)) {
+						obj.prepare(time, state);
+					}
 				}
 
 				nextpreparetime += ((microtime - nextpreparetime) / prepareduration + 1) * prepareduration;
+			}
+			final long frameTime = state.timer.getNowTime();
+			for (SkinObject obj : objectarray) {
+				if (obj instanceof FrameDrivenSkinObject frameDriven) {
+					frameDriven.prepareFrame(frameTime, microtime, state);
+				}
 			}
 
 			for (SkinObject obj : objectarray) {
 				if (obj.draw && obj.visible) {
 					obj.draw(renderer);
 				}
+			}
+		}
+	}
+
+	private void updateSceneMetrics() {
+		sceneEvaluationMicros = 0;
+		sceneActiveCommands = 0;
+		sceneDrawCalls = 0;
+		sceneTransformedVertices = 0;
+		for (SkinObject object : objectarray) {
+			if (object instanceof SkinSceneObject scene) {
+				sceneEvaluationMicros += scene.getEvaluator().getEvaluationMicros();
+				sceneActiveCommands += scene.getEvaluator().getEvaluatedLeaves();
+				sceneDrawCalls += scene.getRenderDrawCalls();
+				sceneTransformedVertices += scene.getTransformedVertices();
 			}
 		}
 	}
@@ -348,7 +388,7 @@ public class Skin {
 		final long microtime = state.timer.getNowMicroTime();
 		if (nextpreparetime <= microtime) {
 			for (SkinObject obj : objectarray) {
-				if (safelyDisabledObjects.contains(obj)) {
+				if (safelyDisabledObjects.contains(obj) || obj instanceof FrameDrivenSkinObject) {
 					continue;
 				}
 				try {
@@ -359,6 +399,17 @@ public class Skin {
 			}
 
 			nextpreparetime += ((microtime - nextpreparetime) / prepareduration + 1) * prepareduration;
+		}
+
+		for (SkinObject obj : objectarray) {
+			if (safelyDisabledObjects.contains(obj) || !(obj instanceof FrameDrivenSkinObject frameDriven)) {
+				continue;
+			}
+			try {
+				frameDriven.prepareFrame(stateTime, stateTime * 1000L, state);
+			} catch (Throwable e) {
+				disablePreviewObject(obj, e);
+			}
 		}
 
 		for (SkinObject obj : objectarray) {
@@ -407,6 +458,10 @@ public class Skin {
 			if(!obj.isDisposed()) {
 				obj.dispose();
 			}
+		}
+		if (renderer != null) {
+			renderer.dispose();
+			renderer = null;
 		}
 	}
 
@@ -486,6 +541,7 @@ public class Skin {
 		public static final int TYPE_DISTANCE_FIELD = 5;
 		
 		private final Color color = new Color(Color.WHITE);
+		private SceneRenderer sceneRenderer;
 		
 		private Color orgcolor;
 		
@@ -502,6 +558,25 @@ public class Skin {
 
 		public SpriteBatch getSpriteBatch() {
 			return sprite;
+		}
+
+		public void drawScene(SkinSceneObject scene) {
+			try {
+				if (sceneRenderer == null) {
+					sceneRenderer = new SceneRenderer(sprite);
+				}
+				sceneRenderer.draw(scene);
+			} catch (Throwable error) {
+				scene.disable(error);
+				logger.warn("Skin Scene rendererを初期化できないためsceneを無効化しました", error);
+			}
+		}
+
+		public void dispose() {
+			if (sceneRenderer != null) {
+				sceneRenderer.dispose();
+				sceneRenderer = null;
+			}
 		}
 
 		public void draw(BitmapFont font, String s, float x, float y, Color c) {

@@ -1203,12 +1203,19 @@ public class MainController {
 					message.setLength(0);
 					systemfont.draw(sprite, message.append("Skin Draw Time ").append(current.getSkin().pcntDraw), debugTextXpos,
 							config.getResolution().height - 218);
+					message.setLength(0);
+					systemfont.draw(sprite, message.append("Skin Scene eval/commands/draws/vertices ")
+							.append(current.getSkin().sceneEvaluationMicros).append(" / ")
+							.append(current.getSkin().sceneActiveCommands).append(" / ")
+							.append(current.getSkin().sceneDrawCalls).append(" / ")
+							.append(current.getSkin().sceneTransformedVertices), debugTextXpos,
+							config.getResolution().height - 242);
 					var i = 0;
 					var l = current.getSkin().pcntmap.keySet().stream().mapToInt(c->c.getSimpleName().length()).max().orElse(1);
 					var f = "%" + l + "s";
 					message.setLength(0);
 					message.append(String.format(f,"SkinObject")).append(" num // prepare cur/avg/max // draw cur/avg/max");
-					systemfont.draw(sprite, message, debugTextXpos, config.getResolution().height - 242);
+					systemfont.draw(sprite, message, debugTextXpos, config.getResolution().height - 266);
 					var entrys = current.getSkin().pcntmap.entrySet().stream()
 						.sorted((e1,e2) -> e1.getKey().getSimpleName().compareTo(e2.getKey().getSimpleName()))
 						.toList();
@@ -1222,7 +1229,7 @@ public class MainController {
 						.append(e.getValue()[4]/100).append(" / ")
 						.append(e.getValue()[5]/100000).append(" / ")
 						.append(e.getValue()[6]/100);
-						systemfont.draw(sprite, message, debugTextXpos, config.getResolution().height - (266 + i * 24));
+						systemfont.draw(sprite, message, debugTextXpos, config.getResolution().height - (290 + i * 24));
 						i++;
 					}
 				}
