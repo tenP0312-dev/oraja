@@ -84,6 +84,16 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
+	void forcedLongNoteSettingIsDiscoverableInEnglishAndJapanese() {
+		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
+		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
+		assertEquals("Long Note Modify Mode", english.getString("LONGNOTE_MODE"));
+		assertTrue(japanese.getString("LONGNOTE_MODE").contains("強制LN"));
+		assertEquals("Long Note Modify Rate", english.getString("LONGNOTE_MODIFYRATE"));
+		assertTrue(japanese.getString("LONGNOTE_MODIFYRATE").contains("変換率"));
+	}
+
+	@Test
 	void complexSidebarPagesExposeStableActionAndWorkspaceNodes() throws Exception {
 		Document play = loadFxml("PlayConfigurationView.fxml");
 		for (String id : new String[] {

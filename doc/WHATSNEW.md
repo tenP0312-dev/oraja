@@ -1,3 +1,19 @@
+# Arena oraja 0.4.14.76
+
+- Added a validated 0.01--20.00 field to the full and compact Arena overlays
+  for directly editing the selected mode's LR2 HI-SPEED. A matching live lane
+  updates immediately.
+- Added a labeled 1--1000 START+6/7 lane-cover step field to both overlays. It
+  edits the existing shared player setting and remains separate from the
+  per-mode HI-SPEED change step.
+- Renamed the existing Japanese Long Note Modify settings to expose the
+  forced-LN conversion clearly without changing OFF, REMOVE, or ADD behavior.
+- Filtered root difficulty-table bars by the active concrete key mode. Mixed
+  tables remain visible for their contained modes, ALL shows every table, and
+  any unresolved chart or course mode keeps the table safely reachable.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.75` behavior.
+
 # Arena oraja 0.4.14.75
 
 - Added a default-on per-player Skin Select live-preview switch. Turning it off

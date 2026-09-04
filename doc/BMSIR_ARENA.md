@@ -1,9 +1,17 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.75`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.76`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.76` lets the full and compact Arena overlays edit the selected
+mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
+lane-cover step from 1 through 1000. Japanese settings name the existing
+forced-LN conversion explicitly. At the Music Select root, a concrete key-mode
+selection hides only tables whose resolved chart and course modes are all
+incompatible; mixed and unresolved tables remain reachable. Launcher `0.2.29`,
+plugin `0.0.72`, protocol v8, and all `0.4.14.75` behavior remain unchanged.
 
 Version `0.4.14.75` adds a default-on per-player launcher switch that can skip
 Skin Select live-preview construction, reload, and rendering without changing
@@ -118,8 +126,14 @@ override ON/OFF switch plus base-scroll and reference-BPM controls. The
 overlay editor follows the selected chart mode by default or can be pinned to
 5KEY, 7KEY, 9KEY/PMS, 10KEY DP, 14KEY DP, 24KEY, or 24KEY DP. A labeled
 numeric field edits the normal per-mode HI-SPEED change margin from 0.00
-through 10.00. The dedicated equivalent-green editor/readout and pseudo FHS
-are not provided; START+SELECT therefore keeps the ordinary play behavior. NO
+through 10.00. A separate numeric field directly edits the selected mode's
+HI-SPEED from 0.01 through 20.00 and updates a matching live lane immediately.
+The launcher names the existing `Long Note Modify Mode` as
+`強制LN／ロングノート変換` in Japanese, while preserving its OFF, REMOVE, and
+ADD LN/CN/HCN/ALL behavior, so the option remains visible in both the classic
+and searchable sidebar layouts. The dedicated equivalent-green editor/readout
+and pseudo FHS are not provided; START+SELECT therefore keeps the ordinary
+play behavior. NO
 SPEED courses ignore the override, and replay data stores whether the original
 play used it. Existing configs default the switch off, the editor to follow
 the current chart, base scroll to 100, and reference BPM to 150.
@@ -1000,7 +1014,10 @@ setter and event are effective only on Music Select and persist immediately.
 `INFO通知を表示する` controls all transient ImGui INFO toasts as one group.
 It does not hide warnings, errors, dialogs, or Arena phase warnings. Cover
 controls accept a step from 1 through 1000. `カバー変更時にHI-SPEEDを再計算`
-is independent and OFF by default, so START+6/7 changes the selected cover
+is independent and OFF by default. The startup setting and the full or compact
+Arena overlay edit the same global integer; the overlay labels it with the
+START+6/7 control so it is not confused with the per-mode HI-SPEED change
+step. START+6/7 changes the selected cover
 without changing HI-SPEED unless recalculation is explicitly enabled. Music
 Select cycles the five legacy HI-SPEED FIX values: `OFF / START / MAX / MAIN /
 MIN`. A value `5` saved by the removed standalone IIDX FHS migrates to START
@@ -1368,8 +1385,13 @@ platform build.
   current table/search scope, using the nearest lower available difficulty or
   the lowest chart when the exact stage is missing. Unchecked concrete key
   modes are hidden throughout Music Select and are omitted from every mode
-  cycle. ALL adds the combined view to the cycle; a legacy ALL-only setting
-  retains all concrete modes. An empty allow-list is normalized to 7K.
+  cycle. At the selector root, a concrete mode also hides a difficulty-table
+  bar when every folder and course chart has a known mode and none matches. A
+  mixed table remains visible for each mode it contains; a table with any
+  unresolved entry remains visible, avoiding false removal of legacy or
+  incomplete metadata. ALL adds the combined view to the cycle and keeps every
+  table visible; a legacy ALL-only setting retains all concrete modes. An empty
+  allow-list is normalized to 7K.
 - `難易度表の難易度をLEVEL表示に使う` is a per-player, default-ON switch.
   When enabled, each song bar and the selected-song LEVEL display inside a
   difficulty table prefer the first contiguous decimal integer in that table
@@ -1511,11 +1533,20 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 ./gradlew clean shadowJar --no-daemon -Dplatform=macos -Darch=aarch64
 ```
 
-The artifact name identifies the unified BMS-IR Arena oraja client:
+The internal build artifact name identifies the unified BMS-IR Arena oraja
+client and its native platform:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.75-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.76-macos-aarch64.jar
 ```
+
+GitHub distribution uses two OS-specific prereleases in this canonical source
+repository. Their tags are `test-<version>-windows-x86-64` and
+`test-<version>-macos-aarch64`, both at the same reviewed commit, and each
+contains exactly one body asset named `Arena-oraja.jar`. This keeps the public
+filename stable while preventing native libraries from being mixed across
+platforms. GitHub's automatic source archives therefore contain oraja body
+source; the patch-server repository does not host these body releases.
 
 The public page offers two forms for each supported OS:
 
@@ -1535,7 +1566,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.75-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.76-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1554,7 +1585,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.75-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.76-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

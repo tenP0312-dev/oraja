@@ -454,7 +454,12 @@ public class BarManager {
 			}
 			Array<Bar> remove = new Array<>();
 			for (Bar b : l) {
-				if (b instanceof SongBar songBar && songBar.getSongData() != null) {
+				if (bar == null
+						&& b instanceof TableBar tableBar
+						&& tableBar != courses
+						&& !tableBar.isVisibleForKeyMode(mode)) {
+					remove.add(b);
+				} else if (b instanceof SongBar songBar && songBar.getSongData() != null) {
 					final SongData song = songBar.getSongData();
 					if ((!showInvisibleCharts && (song.getFavorite()
 							& (SongData.INVISIBLE_SONG | SongData.INVISIBLE_CHART)) != 0)

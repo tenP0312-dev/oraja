@@ -10,13 +10,21 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.75**. Its Windows native-audio
+The current client source version is **0.4.14.76**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.76 lets the full and compact Arena overlays edit the selected
+mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
+lane-cover step from 1 through 1000. The existing forced-LN conversion is now
+named explicitly in Japanese settings, and a concrete Music Select key-mode
+filter hides only difficulty tables that resolve entirely to incompatible
+modes. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.75 behavior
+remain unchanged.
 
 Version 0.4.14.75 adds a default-on per-player switch that can disable Skin
 Select live-preview work without affecting skin selection or custom options.
@@ -108,14 +116,24 @@ mode being edited, and the full and compact Arena overlays can toggle the
 override and edit the current mode's base and reference values during Music
 Select. The overlays now also provide an AUTO/current-chart or explicit-mode
 editor selector and a numeric per-mode HI-SPEED change-step field from 0.00
-through 10.00. The override is disabled for NO SPEED constraints and is
-snapshotted into replays. It does not add a pseudo-FHS chord or an
-equivalent-green editor.
+through 10.00. A separate numeric field edits the selected mode's actual
+HI-SPEED value from 0.01 through 20.00 and applies it to the live lane when a
+matching play is active. Both overlays also expose the global START+6/7
+lane-cover step as a labeled integer from 1 through 1000; it remains separate
+from the per-mode HI-SPEED change step. The override is disabled for NO SPEED
+constraints and is snapshotted into replays. It does not add a pseudo-FHS
+chord or an equivalent-green editor.
 
 The launcher Skin settings provide a default-on switch for the live Skin
 Select preview. Turning it off skips preview construction, reload, and render
 work while leaving skin selection and all custom options available. The choice
 is stored per player in the normal player configuration.
+
+At the Music Select root, a concrete key-mode selection now hides a difficulty
+table only when every chart and course entry has a resolved mode and none
+matches the selection. Mixed tables remain visible for each mode they contain,
+ALL shows every table, and any legacy or incomplete table with an unresolved
+entry stays reachable instead of being guessed away.
 
 The current development source keeps the last non-fullscreen WINDOW or
 BORDERLESS mode separately from the active fullscreen setting. F4 therefore
@@ -224,6 +242,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.76
+
+Adds direct 0.01--20.00 LR2 HI-SPEED editing and shared 1--1000 START+6/7
+lane-cover step editing to both Arena overlay layouts. Japanese settings now
+name the existing forced-LN conversion explicitly. At the Music Select root,
+a concrete key-mode selection hides only tables whose resolved chart and
+course modes are all incompatible; mixed and unresolved tables remain
+reachable. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.75` behavior remain present.
 
 ## Arena oraja 0.4.14.75
 
@@ -745,13 +773,21 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.75
+  --output-dir /release/build-0.4.14.76
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
-artifact hashes. Do not recreate the worktrees, download the JDK, or initialize
-submodules during every release; refresh the prepared worktrees to the reviewed
-commit before invoking the helper.
+artifact hashes. It also stages one `Arena-oraja.jar` under each OS-specific
+`github-releases/` directory and records two prerelease targets in
+`tenP0312-dev/oraja`: `test-<version>-windows-x86-64` and
+`test-<version>-macos-aarch64`. Both tags must target the recorded reviewed
+commit. Keeping the platforms on separate releases permits the same canonical
+asset name on both, and GitHub's automatic source archives are then generated
+from this body repository. The versioned filenames under `artifacts/` remain
+internal build identities and are not public asset names. Do not recreate the
+worktrees, download the JDK, or initialize submodules during every release;
+refresh the prepared worktrees to the reviewed commit before invoking the
+helper.
 
 Run the same parity gate directly with
 `python3 tools/check_feature_parity.py --root .`. The maintained inventory and

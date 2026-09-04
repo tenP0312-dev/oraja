@@ -2,6 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.PlayConfig;
 import com.badlogic.gdx.Input.Keys;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +46,63 @@ class BMSIRArenaOverlayTest {
 		assertEquals(0.0f, BMSIRArenaOverlay.clampHispeedChangeStep(-1.0f));
 		assertEquals(0.25f, BMSIRArenaOverlay.clampHispeedChangeStep(0.25f));
 		assertEquals(10.0f, BMSIRArenaOverlay.clampHispeedChangeStep(999.0f));
+	}
+
+	@Test
+	void hispeedValueRejectsNonFiniteValuesAndClampsThePlayableRange() {
+		assertEquals(PlayConfig.HISPEED_MIN, BMSIRArenaOverlay.clampHispeedValue(Float.NaN));
+		assertEquals(PlayConfig.HISPEED_MIN, BMSIRArenaOverlay.clampHispeedValue(-1.0f));
+		assertEquals(3.25f, BMSIRArenaOverlay.clampHispeedValue(3.25f));
+		assertEquals(PlayConfig.HISPEED_MAX, BMSIRArenaOverlay.clampHispeedValue(999.0f));
+	}
+
+	@Test
+	void hispeedValueUpdatesOnlyTheSelectedModeWhenThereIsNoLiveRenderer() {
+		PlayerConfig config = new PlayerConfig();
+		config.getPlayConfig(Mode.BEAT_7K).getPlayconfig().setHispeed(1.0f);
+		config.getPlayConfig(Mode.BEAT_14K).getPlayconfig().setHispeed(2.0f);
+
+		BMSIRArenaOverlay.applyHispeedValue(config, Mode.BEAT_7K.id, 3.5f, null);
+
+		assertEquals(3.5f, config.getPlayConfig(Mode.BEAT_7K).getPlayconfig().getHispeed());
+		assertEquals(2.0f, config.getPlayConfig(Mode.BEAT_14K).getPlayconfig().getHispeed());
+	}
+
+	@Test
+	void hispeedValueLabelFollowsTheOverlayLanguage() {
+		BMSIRArenaI18n.setLanguage("ja");
+		assertEquals("HI-SPEED値", BMSIRArenaOverlay.hispeedValueLabel());
+
+		BMSIRArenaI18n.setLanguage("en");
+		assertEquals("HI-SPEED value", BMSIRArenaOverlay.hispeedValueLabel());
+	}
+
+	@Test
+	void coverChangeStepClampsAndUpdatesTheSharedPlayerSetting() {
+		assertEquals(1, BMSIRArenaOverlay.clampCoverChangeStep(0));
+		assertEquals(500, BMSIRArenaOverlay.clampCoverChangeStep(500));
+		assertEquals(1000, BMSIRArenaOverlay.clampCoverChangeStep(2000));
+
+		PlayerConfig config = new PlayerConfig();
+		BMSIRArenaOverlay.applyCoverChangeStep(config, 25);
+		assertEquals(25, config.getBmsirCoverChangeStep());
+		BMSIRArenaOverlay.applyCoverChangeStep(config, -1);
+		assertEquals(1, config.getBmsirCoverChangeStep());
+	}
+
+	@Test
+	void coverChangeStepLabelExplainsTheStartSixSevenControl() {
+		BMSIRArenaI18n.setLanguage("ja");
+		assertEquals(
+				"カバー変更幅（START+6/7）",
+				BMSIRArenaOverlay.coverChangeStepLabel()
+		);
+
+		BMSIRArenaI18n.setLanguage("en");
+		assertEquals(
+				"Lane-cover step (START+6/7)",
+				BMSIRArenaOverlay.coverChangeStepLabel()
+		);
 	}
 
     @Test
