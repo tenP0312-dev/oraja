@@ -382,6 +382,20 @@ public class LaneRenderer {
 		}
 	}
 
+	public void setHispeed(float hispeed) {
+		if (!Float.isFinite(hispeed)) {
+			return;
+		}
+		playconfig.setHispeed(Math.max(
+				PlayConfig.HISPEED_MIN,
+				Math.min(PlayConfig.HISPEED_MAX, hispeed)
+		));
+		if (!bmsirLr2HispeedFixEnabled) {
+			syncFixedDurationToHispeed();
+		}
+		updateStartHerePreviewMetrics();
+	}
+
 	public PlayConfig getPlayConfig() {
 		if (!bmsirLr2HispeedFixEnabled) {
 			syncFixedDurationToHispeed();
