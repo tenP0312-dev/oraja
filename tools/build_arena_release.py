@@ -30,6 +30,8 @@ LANES = {
     "windows-x86-64": ("windows", "x86-64"),
     "macos-aarch64": ("macos", "aarch64"),
 }
+RELEASE_REPOSITORY = "tenP0312-dev/oraja"
+RELEASE_ASSET_NAME = "Arena-oraja.jar"
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -134,6 +136,12 @@ def _artifact_identity(path: Path, *, display_path: str | None = None) -> dict[s
     }
 
 
+def release_tag(version: str, lane: str) -> str:
+    if lane not in LANES:
+        raise ReleaseBuildError(f"unsupported release lane: {lane}")
+    return f"test-{version}-{lane}"
+
+
 def _run_lane(
     *,
     lane: str,
@@ -180,6 +188,19 @@ def _run_lane(
         lane_state["artifact"] = _artifact_identity(
             destination, display_path=f"artifacts/{destination.name}"
         )
+        release_asset = staging / "github-releases" / lane / RELEASE_ASSET_NAME
+        release_asset.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(artifact, release_asset)
+        lane_state["github_release"] = {
+            "repository": RELEASE_REPOSITORY,
+            "tag": release_tag(version, lane),
+            "prerelease": True,
+            "asset_name": RELEASE_ASSET_NAME,
+            "asset": _artifact_identity(
+                release_asset,
+                display_path=f"github-releases/{lane}/{RELEASE_ASSET_NAME}",
+            ),
+        }
     except ReleaseBuildError as exc:
         lane_state["returncode"] = 1
         lane_state["validation_error"] = str(exc)
@@ -235,12 +256,17 @@ def build_release(
             lanes = [futures[lane].result() for lane in LANES]
         status = "built" if all(lane["returncode"] == 0 for lane in lanes) else "failed"
         state = {
-            "schema_version": 1,
+            "schema_version": 2,
             "status": status,
             "version": windows_version,
             "source_commit": windows_commit,
             "java_home": str(java_home),
             "lanes": lanes,
+            "github_releases": [
+                lane["github_release"]
+                for lane in lanes
+                if "github_release" in lane
+            ],
         }
         state_path = staging / "build-state.json"
         state_path.write_text(

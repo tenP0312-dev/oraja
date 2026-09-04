@@ -23,8 +23,14 @@ override ON/OFF switch plus base-scroll and reference-BPM controls. The
 overlay editor follows the selected chart mode by default or can be pinned to
 5KEY, 7KEY, 9KEY/PMS, 10KEY DP, 14KEY DP, 24KEY, or 24KEY DP. A labeled
 numeric field edits the normal per-mode HI-SPEED change margin from 0.00
-through 10.00. The dedicated equivalent-green editor/readout and pseudo FHS
-are not provided; START+SELECT therefore keeps the ordinary play behavior. NO
+through 10.00. A separate numeric field directly edits the selected mode's
+HI-SPEED from 0.01 through 20.00 and updates a matching live lane immediately.
+The launcher names the existing `Long Note Modify Mode` as
+`強制LN／ロングノート変換` in Japanese, while preserving its OFF, REMOVE, and
+ADD LN/CN/HCN/ALL behavior, so the option remains visible in both the classic
+and searchable sidebar layouts. The dedicated equivalent-green editor/readout
+and pseudo FHS are not provided; START+SELECT therefore keeps the ordinary
+play behavior. NO
 SPEED courses ignore the override, and replay data stores whether the original
 play used it. Existing configs default the switch off, the editor to follow
 the current chart, base scroll to 100, and reference BPM to 150.
@@ -1435,11 +1441,20 @@ architecture. For example, the macOS Apple Silicon canary is built with:
 ./gradlew clean shadowJar --no-daemon -Dplatform=macos -Darch=aarch64
 ```
 
-The artifact name identifies the unified BMS-IR Arena oraja client:
+The internal build artifact name identifies the unified BMS-IR Arena oraja
+client and its native platform:
 
 ```text
 BMS-IR-Arena-oraja-0.4.14.58-macos-aarch64.jar
 ```
+
+GitHub distribution uses two OS-specific prereleases in this canonical source
+repository. Their tags are `test-<version>-windows-x86-64` and
+`test-<version>-macos-aarch64`, both at the same reviewed commit, and each
+contains exactly one body asset named `Arena-oraja.jar`. This keeps the public
+filename stable while preventing native libraries from being mixed across
+platforms. GitHub's automatic source archives therefore contain oraja body
+source; the patch-server repository does not host these body releases.
 
 The public page offers two forms for each supported OS:
 

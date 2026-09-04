@@ -8,7 +8,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from build_arena_release import ReleaseBuildError, build_release
+from build_arena_release import ReleaseBuildError, build_release, release_tag
 from check_feature_parity import FeatureParityError
 
 
@@ -65,11 +65,41 @@ class ParallelArenaBuildTest(unittest.TestCase):
                 runner=self._runner,
             )
         state = json.loads(state_path.read_text(encoding="utf-8"))
+        self.assertEqual(2, state["schema_version"])
         self.assertEqual("built", state["status"])
         self.assertEqual("abcdef1234567890", state["source_commit"])
         self.assertEqual(2, len(state["lanes"]))
         self.assertTrue((output / "artifacts/BMS-IR-Arena-oraja-1.2.3-windows-x86-64.jar").is_file())
         self.assertTrue((output / "logs/macos-aarch64.log").is_file())
+        self.assertEqual(
+            [
+                "test-1.2.3-windows-x86-64",
+                "test-1.2.3-macos-aarch64",
+            ],
+            [release["tag"] for release in state["github_releases"]],
+        )
+        for lane in ("windows-x86-64", "macos-aarch64"):
+            asset = output / "github-releases" / lane / "Arena-oraja.jar"
+            self.assertTrue(asset.is_file())
+            release = next(
+                item for item in state["github_releases"]
+                if item["tag"] == release_tag("1.2.3", lane)
+            )
+            self.assertEqual("tenP0312-dev/oraja", release["repository"])
+            self.assertEqual("Arena-oraja.jar", release["asset_name"])
+            self.assertEqual(asset.stat().st_size, release["asset"]["size"])
+
+    def test_release_tags_keep_same_named_platform_assets_separate(self) -> None:
+        self.assertEqual(
+            "test-1.2.3-windows-x86-64",
+            release_tag("1.2.3", "windows-x86-64"),
+        )
+        self.assertEqual(
+            "test-1.2.3-macos-aarch64",
+            release_tag("1.2.3", "macos-aarch64"),
+        )
+        with self.assertRaisesRegex(ReleaseBuildError, "unsupported release lane"):
+            release_tag("1.2.3", "linux-x86-64")
 
     def test_rejects_mismatched_worktree_commit_before_build(self) -> None:
         calls = 0
