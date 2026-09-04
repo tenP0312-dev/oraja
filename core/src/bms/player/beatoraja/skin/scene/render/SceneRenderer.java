@@ -33,6 +33,7 @@ public final class SceneRenderer {
 			if (resumeSprite) sprite.end();
 			Gdx.gl.glDisable(GL20.GL_CULL_FACE);
 			Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+			masks.begin();
 			SceneEvaluator evaluator = object.getEvaluator();
 			rootTransform.set(evaluator.getRootTransform());
 			modelTransform.set(sprite.getTransformMatrix()).mul(rootTransform);

@@ -29,6 +29,13 @@
 
     <body style="background-color:#f4f4f4;">
         <h1>Unreleased</h1>
+        <h2>Correct and efficient Skin Scene reloads</h2>
+        <ul>
+        <li>Scene resources with <code>timer: 0</code> now start with the state just like resources that omit <code>timer</code>.</li>
+        <li>Consecutive commands stay batched while their texture, blend, camera, and hard rectangle mask stack remain unchanged.</li>
+        <li>Image-only edits reload scene textures, and the generated default quad stays upright for both canvas origins.</li>
+        <li>Skin Scene v1 exposes seven blend modes and nested hard rectangle masks; it does not expose alpha/color masks.</li>
+        </ul>
         <h2>Key-compatible difficulty-table roots</h2>
         <ul>
         <li>A concrete key-mode selection hides a root difficulty table only when all of its folder and course charts have resolved modes and none matches.</li>

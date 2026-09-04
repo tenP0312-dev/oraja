@@ -1,6 +1,7 @@
 package bms.player.beatoraja.skin.scene.render;
 
 import bms.player.beatoraja.skin.scene.RenderCommand;
+import bms.player.beatoraja.skin.scene.SceneCompiler;
 import bms.player.beatoraja.skin.scene.SceneProjection;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -19,12 +20,15 @@ final class MaskStack {
 	private final float[][] projected = new float[8][8];
 	private final float[] homogeneousPoint = new float[3];
 	private final IntBuffer viewport = BufferUtils.newIntBuffer(4);
+	private final MaskState state = new MaskState();
 	private boolean warnedMissingStencil;
 
 	boolean apply(RenderCommand command, ProjectiveBatch batch, Texture texture,
 			Matrix4 screenTransform) {
+		if (state.matches(command)) return true;
 		batch.flush();
 		resetState();
+		state.clear();
 		if (command.maskCount == 0) return true;
 		viewport.clear();
 		Gdx.gl.glGetIntegerv(GL20.GL_VIEWPORT, viewport);
@@ -39,17 +43,22 @@ final class MaskStack {
 			axisAligned &= isAxisAligned(projected[i]);
 		}
 		if (axisAligned) {
-			return applyScissor(command.maskCount);
+			boolean applied = applyScissor(command.maskCount);
+			if (applied) state.set(command);
+			return applied;
 		}
 		if (Gdx.graphics.getBufferFormat().stencil > 0) {
 			applyStencil(command, batch, texture);
+			state.set(command);
 			return true;
 		}
 		if (!warnedMissingStencil) {
 			warnedMissingStencil = true;
 			logger.warn("No stencil buffer is available; projective scene masks use a conservative scissor fallback");
 		}
-		return applyScissorBounds(command.maskCount);
+		boolean applied = applyScissorBounds(command.maskCount);
+		if (applied) state.set(command);
+		return applied;
 	}
 
 	private boolean applyScissor(int count) {
@@ -159,8 +168,56 @@ final class MaskStack {
 		return Math.abs(left - right) <= EPSILON;
 	}
 
-	void reset() {
+	void begin() {
+		state.clear();
 		resetState();
+	}
+
+	void reset() {
+		state.clear();
+		resetState();
+	}
+
+	static final class MaskState {
+		private int count;
+		private final float[][] world = new float[SceneCompiler.MAX_MASK_DEPTH][16];
+		private final float[][] rect = new float[SceneCompiler.MAX_MASK_DEPTH][4];
+		private final int[] projection = new int[SceneCompiler.MAX_MASK_DEPTH];
+		private final float[][] camera = new float[SceneCompiler.MAX_MASK_DEPTH][4];
+
+		boolean matches(RenderCommand command) {
+			if (count != command.maskCount) return false;
+			for (int i = 0; i < count; i++) {
+				if (projection[i] != command.maskProjection[i]
+						|| !equal(world[i], command.maskWorld[i], 16)
+						|| !equal(rect[i], command.maskRect[i], 4)
+						|| !equal(camera[i], command.maskCamera[i], 4)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		void set(RenderCommand command) {
+			count = command.maskCount;
+			for (int i = 0; i < count; i++) {
+				System.arraycopy(command.maskWorld[i], 0, world[i], 0, 16);
+				System.arraycopy(command.maskRect[i], 0, rect[i], 0, 4);
+				projection[i] = command.maskProjection[i];
+				System.arraycopy(command.maskCamera[i], 0, camera[i], 0, 4);
+			}
+		}
+
+		void clear() {
+			count = 0;
+		}
+
+		private static boolean equal(float[] left, float[] right, int length) {
+			for (int i = 0; i < length; i++) {
+				if (Float.floatToIntBits(left[i]) != Float.floatToIntBits(right[i])) return false;
+			}
+			return true;
+		}
 	}
 
 	private static void resetState() {

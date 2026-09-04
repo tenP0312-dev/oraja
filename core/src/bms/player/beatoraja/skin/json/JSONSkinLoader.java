@@ -18,6 +18,7 @@ import bms.player.beatoraja.play.bga.BGAProcessor;
 import bms.player.beatoraja.skin.*;
 import bms.player.beatoraja.skin.SkinHeader.CustomItem;
 import bms.player.beatoraja.skin.lua.SkinLuaAccessor;
+import bms.player.beatoraja.skin.property.TimerProperty;
 import bms.player.beatoraja.skin.scene.SceneResourceCache;
 import bms.player.beatoraja.skin.scene.SkinSceneObject;
 
@@ -511,7 +512,8 @@ public class JSONSkinLoader extends SkinLoader {
 		try {
 			File file = getPath(skinPath.getParent() + "/" + definition.path, filemap);
 			resources = SceneResourceCache.acquire(file.toPath());
-			SkinSceneObject object = new SkinSceneObject(resources, definition.timer, definition.cycle,
+			SkinSceneObject object = new SkinSceneObject(resources,
+					resolveSceneTimer(definition.timer), definition.cycle,
 					definition.playbackRate, definition.loop);
 			resources = null;
 			return object;
@@ -524,6 +526,11 @@ public class JSONSkinLoader extends SkinLoader {
 				resources.close();
 			}
 		}
+	}
+
+	/** Scene timer 0 follows the traditional untimed-resource convention. */
+	static TimerProperty resolveSceneTimer(TimerProperty timer) {
+		return timer != null && timer.getTimerId() == 0 ? null : timer;
 	}
 
 	boolean claimsSceneId(String id) {
