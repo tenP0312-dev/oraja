@@ -10,13 +10,21 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.75**. Its Windows native-audio
+The current client source version is **0.4.14.76**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.76 lets the full and compact Arena overlays edit the selected
+mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
+lane-cover step from 1 through 1000. The existing forced-LN conversion is now
+named explicitly in Japanese settings, and a concrete Music Select key-mode
+filter hides only difficulty tables that resolve entirely to incompatible
+modes. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.75 behavior
+remain unchanged.
 
 Version 0.4.14.75 adds a default-on per-player switch that can disable Skin
 Select live-preview work without affecting skin selection or custom options.
@@ -234,6 +242,16 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.76
+
+Adds direct 0.01--20.00 LR2 HI-SPEED editing and shared 1--1000 START+6/7
+lane-cover step editing to both Arena overlay layouts. Japanese settings now
+name the existing forced-LN conversion explicitly. At the Music Select root,
+a concrete key-mode selection hides only tables whose resolved chart and
+course modes are all incompatible; mixed and unresolved tables remain
+reachable. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.75` behavior remain present.
 
 ## Arena oraja 0.4.14.75
 
@@ -755,7 +773,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.75
+  --output-dir /release/build-0.4.14.76
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
