@@ -108,9 +108,11 @@ mode being edited, and the full and compact Arena overlays can toggle the
 override and edit the current mode's base and reference values during Music
 Select. The overlays now also provide an AUTO/current-chart or explicit-mode
 editor selector and a numeric per-mode HI-SPEED change-step field from 0.00
-through 10.00. Both overlays also expose the global START+6/7 lane-cover step
-as a labeled integer from 1 through 1000; it remains separate from the
-per-mode HI-SPEED change step. The override is disabled for NO SPEED
+through 10.00. A separate numeric field edits the selected mode's actual
+HI-SPEED value from 0.01 through 20.00 and applies it to the live lane when a
+matching play is active. Both overlays also expose the global START+6/7
+lane-cover step as a labeled integer from 1 through 1000; it remains separate
+from the per-mode HI-SPEED change step. The override is disabled for NO SPEED
 constraints and is snapshotted into replays. It does not add a pseudo-FHS
 chord or an equivalent-green editor.
 
@@ -757,9 +759,17 @@ python3 tools/build_arena_release.py \
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
-artifact hashes. Do not recreate the worktrees, download the JDK, or initialize
-submodules during every release; refresh the prepared worktrees to the reviewed
-commit before invoking the helper.
+artifact hashes. It also stages one `Arena-oraja.jar` under each OS-specific
+`github-releases/` directory and records two prerelease targets in
+`tenP0312-dev/oraja`: `test-<version>-windows-x86-64` and
+`test-<version>-macos-aarch64`. Both tags must target the recorded reviewed
+commit. Keeping the platforms on separate releases permits the same canonical
+asset name on both, and GitHub's automatic source archives are then generated
+from this body repository. The versioned filenames under `artifacts/` remain
+internal build identities and are not public asset names. Do not recreate the
+worktrees, download the JDK, or initialize submodules during every release;
+refresh the prepared worktrees to the reviewed commit before invoking the
+helper.
 
 Run the same parity gate directly with
 `python3 tools/check_feature_parity.py --root .`. The maintained inventory and
