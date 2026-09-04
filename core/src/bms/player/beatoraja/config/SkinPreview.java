@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.glutils.GLFrameBuffer.FrameBufferBuilder;
 import com.badlogic.gdx.math.Matrix4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,7 +184,10 @@ public final class SkinPreview extends SkinObject {
 		}
 		bufferWidth = width;
 		bufferHeight = height;
-		frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, bufferWidth, bufferHeight, false);
+		FrameBufferBuilder builder = new FrameBufferBuilder(bufferWidth, bufferHeight);
+		builder.addBasicColorTextureAttachment(Pixmap.Format.RGBA8888);
+		builder.addBasicStencilDepthPackedRenderBuffer();
+		frameBuffer = builder.build();
 		Texture texture = frameBuffer.getColorBufferTexture();
 		frameRegion = new TextureRegion(texture);
 		frameRegion.flip(false, true);
