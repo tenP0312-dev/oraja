@@ -1,5 +1,13 @@
 # Unreleased
 
+- Fixed Skin Scene resources with `timer: 0` so they start with the state just
+  like resources that omit `timer`.
+- Kept consecutive commands batched while their texture, blend, camera, and
+  hard rectangle mask stack remain unchanged.
+- Reloaded a scene texture after an image-only edit, and kept the generated
+  default quad upright for both top-left and bottom-left canvases.
+- Clarified that Skin Scene v1 provides seven blend modes and nested hard
+  rectangle masks; it does not provide alpha/color masks.
 - Filtered root difficulty-table bars by the active concrete key mode. Mixed
   tables remain visible for their contained modes, ALL shows every table, and
   any unresolved chart or course mode keeps the table safely reachable.

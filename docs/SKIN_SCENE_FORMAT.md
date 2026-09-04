@@ -36,9 +36,9 @@ alpha、回転、offset、draw条件は既存destinationの規則に従います
 resource idと重複した場合、またはsceneのloadに失敗した場合はそのdestinationだけを
 無効にし、同名の画像などへ暗黙にfallbackしません。
 
-`cycle`はミリ秒で、0ならdocumentの`duration`を使います。`timer`を省略したsceneは
-state開始から進みます。時刻は描画フレームごとの絶対microsecondから計算され、skinの
-prepare FPS設定では間引かれません。
+`cycle`はミリ秒で、0ならdocumentの`duration`を使います。`timer`を省略するか0を
+指定したsceneはstate開始から進みます。時刻は描画フレームごとの絶対microsecondから
+計算され、skinのprepare FPS設定では間引かれません。
 
 ## Document
 
@@ -73,7 +73,8 @@ textureは`id`, `path`, `filter` (`nearest`/`linear`), `wrapX`, `wrapY`
 
 meshは`positions`（xyz）、`uv`、triangle `indices`を持ちます。外部配列の行列は
 row-majorですが、mesh positionはscene pixel単位です。meshを省略したtexture leafは
-`0..1`の共有quadを使います。16-bit index batchのため、1 meshは65532頂点・196596
+`0..1`の共有quadを使い、top-left/bottom-leftのどちらでも画像が正立する既定UVを
+選びます。16-bit index batchのため、1 meshは65532頂点・196596
 index以下です。UVの`(0,0)`は読み込んだ画像の先頭（上側）を指します。
 
 ## Clipとinstance
