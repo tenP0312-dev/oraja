@@ -18,6 +18,8 @@ import bms.player.beatoraja.play.bga.BGAProcessor;
 import bms.player.beatoraja.skin.*;
 import bms.player.beatoraja.skin.SkinHeader.CustomItem;
 import bms.player.beatoraja.skin.lua.SkinLuaAccessor;
+import bms.player.beatoraja.skin.scene.SceneResourceCache;
+import bms.player.beatoraja.skin.scene.SkinSceneObject;
 
 /**
  * JSONスキンローダー
@@ -35,6 +37,8 @@ public class JSONSkinLoader extends SkinLoader {
 
 	Map<String, SourceData> sourceMap;
 	Map<String, SkinTextBitmap.SkinTextBitmapSource> bitmapSourceMap;
+	private Map<String, JsonSkin.SceneResource> sceneMap = java.util.Collections.emptyMap();
+	private Set<String> claimedSceneIds = java.util.Collections.emptySet();
 
 	protected final SkinLuaAccessor lua;
 
@@ -288,6 +292,7 @@ public class JSONSkinLoader extends SkinLoader {
 
 			sourceMap = new HashMap<>();
 			bitmapSourceMap = new HashMap<>();
+			prepareSceneResources(sk);
 
 			JsonSkinObjectLoader objectLoader = null;
 			switch(type) {
@@ -352,15 +357,16 @@ public class JSONSkinLoader extends SkinLoader {
                 bmpFontLoader.load();
             }
 
-            for (JsonSkin.Destination dst : sk.destination) {
+			for (JsonSkin.Destination dst : sk.destination) {
 				SkinObject obj = null;
-				try {
-					int id = Integer.parseInt(dst.id);
-					if (id < 0) {
-						obj = new SkinImage(-id);
+				if (!claimsSceneId(dst.id)) {
+					try {
+						int id = Integer.parseInt(dst.id);
+						if (id < 0) {
+							obj = new SkinImage(-id);
+						}
+					} catch (Exception e) {
 					}
-				} catch (Exception e) {
-
 				}
 				if (obj == null) {
 					if(objectLoader != null) {
@@ -421,6 +427,111 @@ public class JSONSkinLoader extends SkinLoader {
 			return null;
 		}
 		return skin;
+	}
+
+	void prepareSceneResources(JsonSkin.Skin skin) {
+		Map<String, JsonSkin.SceneResource> scenes = new HashMap<>();
+		Set<String> claimedIds = new HashSet<>();
+		Set<String> blockedIds = new HashSet<>();
+		Set<String> ordinaryIds = new HashSet<>();
+		collectIds(ordinaryIds, skin.source, value -> value.id);
+		collectIds(ordinaryIds, skin.font, value -> value.id);
+		collectIds(ordinaryIds, skin.image, value -> value.id);
+		collectIds(ordinaryIds, skin.imageset, value -> value.id);
+		collectIds(ordinaryIds, skin.value, value -> value.id);
+		collectIds(ordinaryIds, skin.floatvalue, value -> value.id);
+		collectIds(ordinaryIds, skin.text, value -> value.id);
+		collectIds(ordinaryIds, skin.slider, value -> value.id);
+		collectIds(ordinaryIds, skin.graph, value -> value.id);
+		collectIds(ordinaryIds, skin.gaugegraph, value -> value.id);
+		collectIds(ordinaryIds, skin.judgegraph, value -> value.id);
+		collectIds(ordinaryIds, skin.bpmgraph, value -> value.id);
+		collectIds(ordinaryIds, skin.radargraph, value -> value.id);
+		collectIds(ordinaryIds, skin.hiterrorvisualizer, value -> value.id);
+		collectIds(ordinaryIds, skin.timingvisualizer, value -> value.id);
+		collectIds(ordinaryIds, skin.timingdistributiongraph, value -> value.id);
+		collectIds(ordinaryIds, skin.hiddenCover, value -> value.id);
+		collectIds(ordinaryIds, skin.liftCover, value -> value.id);
+		collectIds(ordinaryIds, skin.judge, value -> value.id);
+		collectIds(ordinaryIds, skin.pmchara, value -> value.id);
+		collectId(ordinaryIds, skin.note == null ? null : skin.note.id);
+		collectId(ordinaryIds, skin.gauge == null ? null : skin.gauge.id);
+		collectId(ordinaryIds, skin.bga == null ? null : skin.bga.id);
+		collectId(ordinaryIds, skin.skinpreview == null ? null : skin.skinpreview.id);
+		collectId(ordinaryIds, skin.songlist == null ? null : skin.songlist.id);
+		JsonSkin.SceneResource[] definitions = skin.scenes == null
+				? new JsonSkin.SceneResource[0] : skin.scenes;
+		for (JsonSkin.SceneResource scene : definitions) {
+			if (scene == null || scene.id == null || scene.id.isBlank()) {
+				logger.warn("Ignoring a scene resource with a missing id or path");
+				continue;
+			}
+			claimedIds.add(scene.id);
+			if (scene.path == null || scene.path.isBlank()) {
+				logger.warn("Ignoring skin scene {} with a missing path", scene.id);
+				scenes.remove(scene.id);
+				blockedIds.add(scene.id);
+				continue;
+			}
+			if (ordinaryIds.contains(scene.id) || blockedIds.contains(scene.id)
+					|| scenes.putIfAbsent(scene.id, scene) != null) {
+				logger.warn("Ignoring duplicate skin resource id: {}", scene.id);
+				scenes.remove(scene.id);
+				blockedIds.add(scene.id);
+			}
+		}
+		sceneMap = scenes;
+		claimedSceneIds = claimedIds;
+	}
+
+	private interface IdReader<T> {
+		String read(T value);
+	}
+
+	private static <T> void collectIds(Set<String> ids, T[] values, IdReader<T> reader) {
+		if (values == null) return;
+		for (T value : values) {
+			if (value != null) {
+				String id = reader.read(value);
+				if (id != null) ids.add(id);
+			}
+		}
+	}
+
+	private static void collectId(Set<String> ids, String id) {
+		if (id != null) ids.add(id);
+	}
+
+	SkinObject loadSceneObject(String id, Path skinPath) {
+		JsonSkin.SceneResource definition = sceneMap.get(id);
+		if (definition == null) {
+			return null;
+		}
+		SceneResourceCache.Handle resources = null;
+		try {
+			File file = getPath(skinPath.getParent() + "/" + definition.path, filemap);
+			resources = SceneResourceCache.acquire(file.toPath());
+			SkinSceneObject object = new SkinSceneObject(resources, definition.timer, definition.cycle,
+					definition.playbackRate, definition.loop);
+			resources = null;
+			return object;
+		} catch (Throwable error) {
+			logger.warn("Failed to load skin scene {} from {}: {}", id, definition.path,
+					error.getMessage());
+			return null;
+		} finally {
+			if (resources != null) {
+				resources.close();
+			}
+		}
+	}
+
+	boolean claimsSceneId(String id) {
+		return claimedSceneIds.contains(id);
+	}
+
+	boolean hasEnabledSceneId(String id) {
+		return sceneMap.containsKey(id);
 	}
 
 	private void setDestination(Skin skin, SkinObject obj, JsonSkin.Destination dst) {

@@ -143,6 +143,9 @@ public class MainLoader extends Application {
 			MainController main = new MainController(bmsPath, config, player, playerMode, songUpdated);
 
 			Lwjgl3ApplicationConfiguration gdxConfig = new Lwjgl3ApplicationConfiguration();
+			// Neutral skin scenes use stencil for projectively transformed and nested
+			// hard masks. Existing SpriteBatch rendering does not consume it.
+			gdxConfig.setBackBufferConfig(8, 8, 8, 8, 16, 8, 0);
             // This line is provided for macos-fix, the original issue is mac dropped the OpenGL full support,
             // according to the document from libgdx, mac machine now only supports OpenGL 3.2 and needs to emulate GL30
             // to make libgdx work
