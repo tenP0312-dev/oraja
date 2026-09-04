@@ -10,7 +10,7 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.77**. Its Windows native-audio
+The current client source version is **0.4.14.78**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -18,13 +18,21 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
+Version 0.4.14.78 makes Skin Scene resources with `timer: 0` state-relative,
+keeps compatible command leaves batched across unchanged hard rectangle mask
+state, reloads textures after image-only edits, and keeps generated quads
+upright for both canvas origins. Its documentation now describes the seven
+implemented blend modes and nested hard rectangle masks precisely. Launcher
+0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.77 behavior remain
+unchanged.
+
 Version 0.4.14.77 adds the optional neutral Skin Scene v1 resource to JSON and
 Lua skins. It provides validated scene compilation, deterministic timelines,
-nested transforms and masks, 2D/3D textured meshes with perspective-correct
-UVs, color and blend controls, bounded resource handling, metrics, and a
-self-authored sample. Skins without a scene keep the existing SpriteBatch
-path. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.76 behavior
-remain unchanged.
+nested transforms, 2D/3D textured meshes with perspective-correct UVs, color
+transforms, seven named blend modes, nested hard rectangle masks, bounded
+resource handling, metrics, and a self-authored sample. Skins without a scene
+keep the existing SpriteBatch path. Launcher 0.2.29, plugin 0.0.72, protocol
+v8, and all 0.4.14.76 behavior remain unchanged.
 
 Version 0.4.14.76 lets the full and compact Arena overlays edit the selected
 mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
@@ -263,16 +271,25 @@ covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
 
+## Arena oraja 0.4.14.78
+
+Treats `timer: 0` like an omitted scene timer, retains batching until texture,
+blend, camera, or the nested hard rectangle mask stack changes, reloads
+textures after image-only edits, and keeps generated quads upright for both
+canvas origins. The format exposes seven blend modes and nested hard rectangle
+masks; it does not expose alpha/color masks. Launcher `0.2.29`, plugin
+`0.0.72`, protocol v8, and all `0.4.14.77` behavior remain present.
+
 ## Arena oraja 0.4.14.77
 
 Adds the optional neutral Skin Scene v1 resource for JSON and Lua skins. Scene
 documents are compiled and validated before use, then render deterministic
 timelines, nested 2D/3D transforms, perspective-correct textured meshes,
-projective nested masks, color transforms, and named blend modes. Invalid or
-non-finite input fails safely, retained resources are bounded and disposed,
-and metrics plus a self-authored sample are included. Skins without a scene
-keep the existing SpriteBatch path. Launcher `0.2.29`, plugin `0.0.72`,
-protocol v8, and all `0.4.14.76` behavior remain present.
+projective nested hard rectangle masks, color transforms, and seven named
+blend modes. Invalid or non-finite input fails safely, retained resources are
+bounded and disposed, and metrics plus a self-authored sample are included.
+Skins without a scene keep the existing SpriteBatch path. Launcher `0.2.29`,
+plugin `0.0.72`, protocol v8, and all `0.4.14.76` behavior remain present.
 
 ## Arena oraja 0.4.14.76
 
@@ -804,7 +821,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.77
+  --output-dir /release/build-0.4.14.78
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
