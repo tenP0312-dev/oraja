@@ -46,6 +46,15 @@ Select preview. Turning it off skips preview construction, reload, and render
 work while leaving skin selection and all custom options available. The choice
 is stored per player in the normal player configuration.
 
+The current development source also provides an optional neutral Skin Scene v1
+resource for JSON and Lua skins. A scene can mix nested timelines, 2D/3D
+affine and focal-camera transforms, textured meshes with perspective-correct
+UVs, pivoted animation, affine/HSL color, named blend modes, frame overrides,
+and projective nested rectangle masks at an ordinary destination position.
+Skins without a scene remain on the legacy SpriteBatch path. The public format,
+safety limits, and self-authored sample are documented in
+[the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).
+
 The Resource settings now include an opt-in physical-folder filter for Music
 Select next to the configured BMS Paths. Its parent switch is off by default.
 When enabled, one checkbox is shown for each configured BMS Path and only

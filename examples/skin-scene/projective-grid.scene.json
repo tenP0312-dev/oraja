@@ -1,0 +1,167 @@
+{
+  "formatVersion": 1,
+  "canvas": {
+    "width": 320,
+    "height": 180,
+    "origin": "top-left"
+  },
+  "timebase": {
+    "ticksPerSecond": 60000
+  },
+  "duration": 120000,
+  "textures": [
+    {
+      "id": "checker",
+      "path": "checker.png",
+      "filter": "linear",
+      "wrapX": "clamp",
+      "wrapY": "clamp",
+      "premultipliedAlpha": false
+    }
+  ],
+  "meshes": [
+    {
+      "id": "tilted-quad",
+      "positions": [0, 0, 0, 96, 0, 40, 96, 96, 40, 0, 96, 0],
+      "uv": [0, 0, 1, 0, 1, 1, 0, 1],
+      "indices": [0, 1, 2, 2, 3, 0]
+    }
+  ],
+  "clips": [
+    {
+      "id": "root",
+      "duration": 120000,
+      "framesPerSecond": 60,
+      "instances": [
+        {
+          "id": "background",
+          "depth": 0,
+          "kind": "texture",
+          "ref": "checker",
+          "start": 0,
+          "end": 120000,
+          "blend": "normal",
+          "transformTrack": {
+            "kind": "affine2",
+            "interpolation": "step",
+            "keys": [
+              {"t": 0, "value": [320, 0, 0, 180, 0, 0]}
+            ]
+          },
+          "colorTrack": {
+            "interpolation": "linear",
+            "keys": [
+              {"t": 0, "mul": [0.2, 0.2, 0.2, 1]},
+              {"t": 120000, "mul": [0.4, 0.4, 0.4, 1]}
+            ]
+          }
+        },
+        {
+          "id": "projective-group",
+          "depth": 10,
+          "kind": "clip",
+          "ref": "masked-content",
+          "start": 0,
+          "end": 120000,
+          "loop": "repeat",
+          "clipRectTrack": {
+            "interpolation": "step",
+            "keys": [
+              {"t": 0, "rect": [24, 24, 272, 132]}
+            ]
+          },
+          "cameraTrack": {
+            "projection": "focal",
+            "interpolation": "linear",
+            "keys": [
+              {"t": 0, "center": [160, 90, -240], "focalLength": 240}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "masked-content",
+      "duration": 120000,
+      "framesPerSecond": 60,
+      "instances": [
+        {
+          "id": "inner-mask",
+          "depth": 0,
+          "kind": "clip",
+          "ref": "rotating-content",
+          "start": 0,
+          "end": 120000,
+          "loop": "repeat",
+          "clipRectTrack": {
+            "interpolation": "linear",
+            "keys": [
+              {"t": 0, "rect": [56, 36, 208, 108]},
+              {"t": 60000, "rect": [72, 44, 176, 92]},
+              {"t": 120000, "rect": [56, 36, 208, 108]}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "rotating-content",
+      "duration": 120000,
+      "framesPerSecond": 60,
+      "instances": [
+        {
+          "id": "projective-quad",
+          "depth": 0,
+          "kind": "mesh",
+          "ref": "checker",
+          "mesh": "tilted-quad",
+          "start": 0,
+          "end": 120000,
+          "blend": "normal",
+          "transformTrack": {
+            "kind": "trs",
+            "interpolation": "trs",
+            "keys": [
+              {"t": 0, "translation": [112, 42, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1], "pivot": [48, 48, 0]},
+              {"t": 60000, "translation": [112, 42, 0], "rotation": [0, 0, 1, 0]},
+              {"t": 120000, "translation": [112, 42, 0], "rotation": [0, 0, 0, -1]}
+            ]
+          },
+          "colorTrack": {
+            "interpolation": "linear",
+            "keys": [
+              {"t": 0, "mul": [1, 1, 1, 1], "add": [0, 0, 0, 0], "hsl": [0, 0, 0]},
+              {"t": 60000, "hsl": [0.5, 0.15, 0.05]},
+              {"t": 120000, "hsl": [1, 0, 0]}
+            ]
+          }
+        },
+        {
+          "id": "additive-highlight",
+          "depth": 1,
+          "kind": "texture",
+          "ref": "checker",
+          "start": 0,
+          "end": 120000,
+          "blend": "add",
+          "uvRect": [0, 0, 0.5, 0.5],
+          "transformTrack": {
+            "kind": "affine2",
+            "interpolation": "linear",
+            "keys": [
+              {"t": 0, "value": [32, 0, 0, 32, 40, 74]},
+              {"t": 120000, "value": [32, 0, 0, 32, 248, 74]}
+            ]
+          },
+          "colorTrack": {
+            "interpolation": "step",
+            "keys": [
+              {"t": 0, "mul": [0.7, 0.7, 0.7, 0.6]}
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "rootClip": "root"
+}
