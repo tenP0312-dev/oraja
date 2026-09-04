@@ -140,8 +140,11 @@ is stored per player in the normal player configuration.
 The current development source also provides an optional neutral Skin Scene v1
 resource for JSON and Lua skins. A scene can mix nested timelines, 2D/3D
 affine and focal-camera transforms, textured meshes with perspective-correct
-UVs, pivoted animation, affine/HSL color, named blend modes, frame overrides,
-and projective nested rectangle masks at an ordinary destination position.
+UVs, pivoted animation, affine/HSL color, seven named blend modes, frame
+overrides, and projective nested hard rectangle masks at an ordinary
+destination position. Scene resources treat `timer: 0` as state-relative,
+retain batching until render or mask state changes, reload image-only edits,
+and keep their generated quad upright for either canvas origin.
 Skins without a scene remain on the legacy SpriteBatch path. The public format,
 safety limits, and self-authored sample are documented in
 [the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).

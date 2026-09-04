@@ -1,10 +1,22 @@
+# Unreleased
+
+- Fixed Skin Scene resources with `timer: 0` so they start with the state just
+  like resources that omit `timer`.
+- Kept consecutive commands batched while their texture, blend, camera, and
+  hard rectangle mask stack remain unchanged.
+- Reloaded a scene texture after an image-only edit, and kept the generated
+  default quad upright for both top-left and bottom-left canvases.
+- Clarified that Skin Scene v1 provides seven blend modes and nested hard
+  rectangle masks; it does not provide alpha/color masks.
+
 # Arena oraja 0.4.14.77
 
 - Added an optional neutral Skin Scene v1 resource for JSON and Lua skins.
 - Added compile-time schema and safety validation, deterministic clocks and
   timeline interpolation, nested 2D/3D transforms, focal-camera projection,
-  perspective-correct textured meshes, color transforms, and named blends.
-- Added nested alpha/color masks, bounded texture references, disposal and
+  perspective-correct textured meshes, color transforms, and seven named blend
+  modes.
+- Added nested hard rectangle masks, bounded texture references, disposal and
   rendering metrics, malformed/non-finite input handling, and a self-authored
   projective-grid sample.
 - Kept skins without a scene on the existing SpriteBatch path.

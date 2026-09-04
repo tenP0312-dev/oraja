@@ -28,11 +28,19 @@
     </head>
 
     <body style="background-color:#f4f4f4;">
+        <h1>Unreleased</h1>
+        <h2>Correct and efficient Skin Scene reloads</h2>
+        <ul>
+        <li>Scene resources with <code>timer: 0</code> now start with the state just like resources that omit <code>timer</code>.</li>
+        <li>Consecutive commands stay batched while their texture, blend, camera, and hard rectangle mask stack remain unchanged.</li>
+        <li>Image-only edits reload scene textures, and the generated default quad stays upright for both canvas origins.</li>
+        <li>Skin Scene v1 exposes seven blend modes and nested hard rectangle masks; it does not expose alpha/color masks.</li>
+        </ul>
         <h1>Arena oraja 0.4.14.77</h1>
         <h2>Render validated Skin Scene v1 resources</h2>
         <ul>
         <li>JSON and Lua skins may opt in to a neutral Skin Scene v1 resource with deterministic timelines and nested 2D/3D transforms.</li>
-        <li>Scene meshes support focal-camera projection, perspective-correct textured UVs, color transforms, named blend modes, and projective nested masks.</li>
+        <li>Scene meshes support focal-camera projection, perspective-correct textured UVs, color transforms, seven named blend modes, and projective nested hard rectangle masks.</li>
         <li>Scene documents are validated before use; malformed and non-finite input fails safely, retained resources are bounded and disposed, and rendering metrics are exposed.</li>
         <li>Skins without a scene keep the existing SpriteBatch path.</li>
         <li>Launcher 0.2.29, plugin 0.0.72, protocol v8, and the complete 0.4.14.76 behavior remain unchanged.</li>

@@ -21,7 +21,8 @@ final class ProjectiveBatch {
 	private static final float[] UNIT_POSITIONS = {
 			0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0
 	};
-	private static final float[] UNIT_UV = {0, 0, 1, 0, 1, 1, 0, 1};
+	private static final float[] TOP_LEFT_UNIT_UV = {0, 0, 1, 0, 1, 1, 0, 1};
+	private static final float[] BOTTOM_LEFT_UNIT_UV = {0, 1, 1, 1, 1, 0, 0, 0};
 	private static final short[] UNIT_INDICES = {0, 1, 2, 2, 3, 0};
 	private static final float[] WHITE = {1, 1, 1, 1};
 	private static final float[] CLEAR = {0, 0, 0, 0};
@@ -75,7 +76,8 @@ final class ProjectiveBatch {
 		CompiledScene scene = object.getScene();
 		float[] positions = command.meshIndex < 0 ? UNIT_POSITIONS
 				: scene.meshes[command.meshIndex].positions;
-		float[] uv = command.meshIndex < 0 ? UNIT_UV : scene.meshes[command.meshIndex].uv;
+		float[] uv = command.meshIndex < 0 ? defaultQuadUv(scene.topLeftOrigin)
+				: scene.meshes[command.meshIndex].uv;
 		short[] sourceIndices = command.meshIndex < 0 ? UNIT_INDICES
 				: scene.meshes[command.meshIndex].indices;
 		if (!inFrontOfCamera(positions, command.world, command.projection, command.camera)) {
@@ -105,8 +107,12 @@ final class ProjectiveBatch {
 		maskPositions[3] = x + width; maskPositions[4] = y; maskPositions[5] = 0;
 		maskPositions[6] = x + width; maskPositions[7] = y + height; maskPositions[8] = 0;
 		maskPositions[9] = x; maskPositions[10] = y + height; maskPositions[11] = 0;
-		append(maskPositions, UNIT_UV, UNIT_INDICES, world, WHITE, CLEAR, NO_HSL, FULL_UV);
+		append(maskPositions, TOP_LEFT_UNIT_UV, UNIT_INDICES, world, WHITE, CLEAR, NO_HSL, FULL_UV);
 		flush();
+	}
+
+	static float[] defaultQuadUv(boolean topLeftOrigin) {
+		return topLeftOrigin ? TOP_LEFT_UNIT_UV : BOTTOM_LEFT_UNIT_UV;
 	}
 
 	private void append(float[] positions, float[] uv, short[] sourceIndices,
