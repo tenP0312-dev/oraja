@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JsonSkinSceneDeclarationTest {
 	@Test
@@ -23,5 +24,16 @@ class JsonSkinSceneDeclarationTest {
 		assertEquals("background", skin.scenes[0].id);
 		assertEquals(1.5f, skin.scenes[0].playbackRate);
 		assertEquals(0, skin.scenes[0].timer.getTimerId());
+		assertNull(JSONSkinLoader.resolveSceneTimer(skin.scenes[0].timer));
+	}
+
+	@Test
+	void omittedSceneTimerAlsoUsesStateStart() {
+		Json json = new Json();
+		new JsonSkinSerializer(new SkinLuaAccessor(true), path -> Path.of(path).toFile())
+				.setSerializers(json, new HashSet<>(), Path.of("."));
+		JsonSkin.Skin skin = json.fromJson(JsonSkin.Skin.class,
+				"{scenes:[{id:background,path:scene/background.scene.json}]}");
+		assertNull(JSONSkinLoader.resolveSceneTimer(skin.scenes[0].timer));
 	}
 }

@@ -13,7 +13,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.IntBuffer;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Reference-counted ownership for a compiled scene and its textures. */
@@ -30,24 +34,23 @@ public final class SceneResourceCache {
 		if (!Files.isRegularFile(canonical)) {
 			throw new SceneValidationException("Scene file does not exist: " + canonical);
 		}
-		Key key;
-		try {
-			key = new Key(canonical, Files.getLastModifiedTime(canonical).toMillis());
-		} catch (IOException error) {
-			throw new SceneValidationException("Cannot stat scene: " + canonical, error);
-		}
+		CompiledScene scene = compile(canonical);
+		Key key = new Key(canonical, resourceVersion(canonical, scene));
 		Entry entry = ENTRIES.get(key);
 		if (entry == null) {
-			entry = new Entry(load(canonical));
+			entry = new Entry(load(canonical, scene));
 			ENTRIES.put(key, entry);
 		}
 		entry.references++;
 		return new Handle(key, entry.bundle);
 	}
 
-	private static Bundle load(Path source) throws SceneValidationException {
+	private static CompiledScene compile(Path source) throws SceneValidationException {
 		SceneDocument document = new SceneDocumentLoader().load(source);
-		CompiledScene scene = new SceneCompiler().compile(document, source);
+		return new SceneCompiler().compile(document, source);
+	}
+
+	private static Bundle load(Path source, CompiledScene scene) throws SceneValidationException {
 		Texture[] textures = new Texture[scene.textures.length];
 		try {
 			IntBuffer sizeBuffer = BufferUtils.newIntBuffer(1);
@@ -89,6 +92,30 @@ public final class SceneResourceCache {
 			throw new SceneValidationException("Failed to load scene resources for " + source
 					+ ": " + error.getMessage(), error);
 		}
+	}
+
+	static ResourceVersion resourceVersion(Path source, CompiledScene scene)
+			throws SceneValidationException {
+		try {
+			ResourceStamp sceneStamp = stamp(source);
+			List<ResourceStamp> textureStamps = new ArrayList<>(scene.textures.length);
+			Path sceneRoot = source.getParent().toRealPath();
+			for (CompiledScene.TextureResource texture : scene.textures) {
+				Path texturePath = Path.of(texture.path).toRealPath();
+				if (!texturePath.startsWith(sceneRoot) || !Files.isRegularFile(texturePath)) {
+					throw new SceneValidationException("Scene texture does not exist: " + texturePath);
+				}
+				textureStamps.add(stamp(texturePath));
+			}
+			return new ResourceVersion(sceneStamp, List.copyOf(textureStamps));
+		} catch (IOException error) {
+			throw new SceneValidationException("Cannot stat scene resources for " + source, error);
+		}
+	}
+
+	private static ResourceStamp stamp(Path path) throws IOException {
+		BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+		return new ResourceStamp(path, attributes.size(), attributes.lastModifiedTime());
 	}
 
 	private static Path canonical(Path source) throws SceneValidationException {
@@ -135,7 +162,13 @@ public final class SceneResourceCache {
 		}
 	}
 
-	private record Key(Path source, long modifiedMillis) {
+	private record Key(Path source, ResourceVersion version) {
+	}
+
+	static record ResourceVersion(ResourceStamp scene, List<ResourceStamp> textures) {
+	}
+
+	static record ResourceStamp(Path path, long size, FileTime modified) {
 	}
 
 	private static final class Entry {
