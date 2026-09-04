@@ -33,6 +33,9 @@ public class JsonPlaySkinObjectLoader extends JsonSkinObjectLoader<PlaySkin> {
 		if(obj != null) {
 			return obj;
 		}
+		if (loader.claimsSceneId(dst.id)) {
+			return null;
+		}
 
         try (var perf = PerformanceMetrics.get().Event("Play object: " + dst.id)) {
 		

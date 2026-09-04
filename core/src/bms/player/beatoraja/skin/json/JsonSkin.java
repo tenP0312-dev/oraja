@@ -26,6 +26,11 @@ public class JsonSkin {
 		public Offset[] offset = new Offset[0];
 		public Source[] source = new Source[0];
 		public Font[] font = new Font[0];
+		/**
+		 * Versioned scene resources. The plural name intentionally avoids the
+		 * existing numeric {@link #scene} duration field.
+		 */
+		public SceneResource[] scenes = new SceneResource[0];
 		public Image[] image = new Image[0];
 		public ImageSet[] imageset = new ImageSet[0];
 		public Value[] value = new Value[0];
@@ -101,6 +106,16 @@ public class JsonSkin {
 		public String id;
 		public String path;
 		public int type;
+	}
+
+	public static class SceneResource {
+		public String id;
+		public String path;
+		public TimerProperty timer;
+		/** Optional cycle in milliseconds; zero uses the document duration. */
+		public int cycle;
+		public float playbackRate = 1.0f;
+		public boolean loop = true;
 	}
 
 	public static class Image {

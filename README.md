@@ -10,13 +10,21 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.76**. Its Windows native-audio
+The current client source version is **0.4.14.77**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.77 adds the optional neutral Skin Scene v1 resource to JSON and
+Lua skins. It provides validated scene compilation, deterministic timelines,
+nested transforms and masks, 2D/3D textured meshes with perspective-correct
+UVs, color and blend controls, bounded resource handling, metrics, and a
+self-authored sample. Skins without a scene keep the existing SpriteBatch
+path. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.76 behavior
+remain unchanged.
 
 Version 0.4.14.76 lets the full and compact Arena overlays edit the selected
 mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
@@ -128,6 +136,15 @@ The launcher Skin settings provide a default-on switch for the live Skin
 Select preview. Turning it off skips preview construction, reload, and render
 work while leaving skin selection and all custom options available. The choice
 is stored per player in the normal player configuration.
+
+The current development source also provides an optional neutral Skin Scene v1
+resource for JSON and Lua skins. A scene can mix nested timelines, 2D/3D
+affine and focal-camera transforms, textured meshes with perspective-correct
+UVs, pivoted animation, affine/HSL color, named blend modes, frame overrides,
+and projective nested rectangle masks at an ordinary destination position.
+Skins without a scene remain on the legacy SpriteBatch path. The public format,
+safety limits, and self-authored sample are documented in
+[the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).
 
 At the Music Select root, a concrete key-mode selection now hides a difficulty
 table only when every chart and course entry has a resolved mode and none
@@ -242,6 +259,17 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.77
+
+Adds the optional neutral Skin Scene v1 resource for JSON and Lua skins. Scene
+documents are compiled and validated before use, then render deterministic
+timelines, nested 2D/3D transforms, perspective-correct textured meshes,
+projective nested masks, color transforms, and named blend modes. Invalid or
+non-finite input fails safely, retained resources are bounded and disposed,
+and metrics plus a self-authored sample are included. Skins without a scene
+keep the existing SpriteBatch path. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, and all `0.4.14.76` behavior remain present.
 
 ## Arena oraja 0.4.14.76
 
@@ -773,7 +801,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.76
+  --output-dir /release/build-0.4.14.77
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

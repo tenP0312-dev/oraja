@@ -37,6 +37,9 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 	
 	public SkinObject loadSkinObject(S skin, JsonSkin.Skin sk, JsonSkin.Destination dst, Path p) {
 		SkinObject obj = null;
+		if (loader.claimsSceneId(dst.id)) {
+			return loader.loadSceneObject(dst.id, p);
+		}
 		
 		for (JsonSkin.Image img : sk.image) {
 			if (dst.id.equals(img.id)) {

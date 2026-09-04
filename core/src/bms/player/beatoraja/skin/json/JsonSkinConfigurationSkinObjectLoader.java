@@ -32,6 +32,9 @@ public class JsonSkinConfigurationSkinObjectLoader extends JsonSkinObjectLoader<
 	@Override
 	public SkinObject loadSkinObject(SkinConfigurationSkin skin, JsonSkin.Skin sk,
 			JsonSkin.Destination dst, Path path) {
+		if (loader.claimsSceneId(dst.id)) {
+			return super.loadSkinObject(skin, sk, dst, path);
+		}
 		if (!previewPlacementResolved) {
 			previewPlacement = findPreviewPlacement(sk);
 			previewPlacementResolved = true;

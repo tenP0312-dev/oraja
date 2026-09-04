@@ -34,6 +34,9 @@ public class JsonSelectSkinObjectLoader extends JsonSkinObjectLoader<MusicSelect
 		if(obj != null) {
 			return obj;
 		}
+		if (loader.claimsSceneId(dst.id)) {
+			return null;
+		}
 
         try (var perf = PerformanceMetrics.get().Event("Select object: " + dst.id)) {
 		
