@@ -116,6 +116,7 @@ public final class BMSIRArenaOverlay {
     private static final ImInt LANGUAGE = new ImInt(0);
     private static final ImInt HISPEED_EDITOR_MODE = new ImInt(0);
     private static final ImInt COVER_CHANGE_STEP = new ImInt(10);
+    private static final ImFloat HISPEED_VALUE = new ImFloat(1.0f);
     private static final ImFloat HISPEED_CHANGE_STEP = new ImFloat(0.25f);
     private static final int[] HISPEED_EDITOR_MODE_IDS = {0, 5, 7, 10, 14, 9, 25, 50};
     private static final int[] ROOM_PLAY_MODES = {5, 7, 9, 10, 14};
@@ -1113,6 +1114,19 @@ public final class BMSIRArenaOverlay {
 				active.getHispeed(),
 				hispeedChangeStep
         ));
+		HISPEED_VALUE.set(active.getHispeed());
+		ImGui.setNextItemWidth(compact ? 120.0f : 180.0f);
+		if (ImGui.inputFloat(
+				hispeedValueLabel() + "##hispeed-value" + suffix,
+				HISPEED_VALUE
+		)) {
+			applyHispeedValue(config, modeId, HISPEED_VALUE.get(), live);
+			HISPEED_VALUE.set(clampHispeedValue(HISPEED_VALUE.get()));
+		}
+		ImGui.textDisabled(t(
+				"数値入力 0.01～20.00（モード別）",
+				"Numeric input 0.01-20.00 (per mode)"
+		));
         if (ImGui.smallButton("-##speed-base-minus" + suffix)) {
             applyBaseScroll(config, modeId, base - 1, live);
         }
@@ -1226,6 +1240,20 @@ public final class BMSIRArenaOverlay {
 		);
 	}
 
+	static String hispeedValueLabel() {
+		return t("HI-SPEED値", "HI-SPEED value");
+	}
+
+	static float clampHispeedValue(float value) {
+		if (!Float.isFinite(value)) {
+			return PlayConfig.HISPEED_MIN;
+		}
+		return Math.max(
+				PlayConfig.HISPEED_MIN,
+				Math.min(PlayConfig.HISPEED_MAX, value)
+		);
+	}
+
 	static String coverChangeStepLabel() {
 		return t(
 				"カバー変更幅（START+6/7）",
@@ -1285,6 +1313,21 @@ public final class BMSIRArenaOverlay {
 			live.getPlayConfig().validate();
 		}
 		saveSettingsOrWarn();
+	}
+
+	static void applyHispeedValue(
+			PlayerConfig config,
+			int modeId,
+			float value,
+			LaneRenderer live
+	) {
+		float clamped = clampHispeedValue(value);
+		PlayConfig saved = config.getPlayConfig(modeId).getPlayconfig();
+		saved.setHispeed(clamped);
+		saved.validate();
+		if (live != null && live.isBmsirLr2HispeedFixEnabled()) {
+			live.setHispeed(clamped);
+		}
 	}
 
     static String hispeedFixLabel(int fix) {
