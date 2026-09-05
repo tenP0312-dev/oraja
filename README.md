@@ -10,13 +10,20 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.79**. Its Windows native-audio
+The current client source version is **0.4.14.80**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.80 adds optional vertical color gradients to dynamic
+TrueType/OpenType skin text in JSON and Lua skins. Both upper and lower
+`RRGGBBAA` colors are required, and the active destination tint and alpha keep
+working. Existing text without both properties remains on the legacy
+single-color path. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all
+0.4.14.79 behavior remain unchanged.
 
 Version 0.4.14.79 fixes Skin Scene projective shaders on macOS by ensuring the
 GLSL 150 core-profile conversion rewrites every legacy `attribute` and
@@ -164,6 +171,11 @@ Skins without a scene remain on the legacy SpriteBatch path. The public format,
 safety limits, and self-authored sample are documented in
 [the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).
 
+Dynamic TrueType/OpenType skin text can optionally interpolate an upper and
+lower `RRGGBBAA` color while retaining destination tint and alpha animation.
+The two opt-in properties and compatibility behavior are documented in
+[the skin text gradient guide](docs/SKIN_TEXT_GRADIENT.md).
+
 At the Music Select root, a concrete key-mode selection now hides a difficulty
 table only when every chart and course entry has a resolved mode and none
 matches the selection. Mixed tables remain visible for each mode they contain,
@@ -277,6 +289,15 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.80
+
+Adds optional vertical color gradients to dynamic TrueType/OpenType skin text
+in JSON and Lua skins. Both upper and lower `RRGGBBAA` colors are required;
+the active destination tint and alpha multiply the gradient. Existing text
+without both properties keeps the legacy single-color rendering path.
+Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all `0.4.14.79` behavior
+remain present.
 
 ## Arena oraja 0.4.14.79
 
@@ -836,7 +857,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.79
+  --output-dir /release/build-0.4.14.80
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and

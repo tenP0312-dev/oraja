@@ -35,6 +35,9 @@ public class SkinTextFont extends SkinText {
     private FreeTypeFontGenerator generator;
     private FreeTypeFontGenerator.FreeTypeFontParameter parameter;
     private String preparedFonts;
+    private final Color gradientTop = new Color();
+    private final Color gradientBottom = new Color();
+    private final Color gradientShadow = new Color();
 
     public SkinTextFont(String fontpath, int cycle, int size, int shadow) {
         this(fontpath, cycle, size, shadow, StringPropertyFactory.getStringProperty(-1));
@@ -104,12 +107,30 @@ public class SkinTextFont extends SkinText {
             sprite.setType(getFilter() != 0 ? SkinObjectRenderer.TYPE_LINEAR : SkinObjectRenderer.TYPE_NORMAL);
 
             final float x = (getAlign() == 2 ? region.x - region.width : (getAlign() == 1 ? region.x - region.width / 2 : region.x));
-            if(!getShadowOffset().isZero()) {
-                setLayout(new Color(color.r / 2, color.g / 2, color.b / 2, color.a), region);
-                sprite.draw(font, layout, x + getShadowOffset().x + offsetX, region.y - getShadowOffset().y + offsetY + region.getHeight());
+            if (hasGradient()) {
+                sprite.setColor(Color.WHITE);
+                if(!getShadowOffset().isZero()) {
+                    Color shadow = getShadowColor() != null
+                            ? gradientShadow.set(getShadowColor()).mul(1f, 1f, 1f, color.a)
+                            : gradientShadow.set(color.r / 2, color.g / 2, color.b / 2, color.a);
+                    setLayout(shadow, region);
+                    sprite.draw(font, layout, x + getShadowOffset().x + offsetX,
+                            region.y - getShadowOffset().y + offsetY + region.getHeight());
+                }
+                setLayout(Color.WHITE, region);
+                gradientTop.set(getGradientTopColor()).mul(color);
+                gradientBottom.set(getGradientBottomColor()).mul(color);
+                sprite.drawGradient(font, layout, x + offsetX, region.y + offsetY + region.getHeight(),
+                        gradientBottom, gradientTop, region.y + offsetY, region.y + offsetY + region.getHeight());
+            } else {
+                if(!getShadowOffset().isZero()) {
+                    setLayout(new Color(color.r / 2, color.g / 2, color.b / 2, color.a), region);
+                    sprite.draw(font, layout, x + getShadowOffset().x + offsetX,
+                            region.y - getShadowOffset().y + offsetY + region.getHeight());
+                }
+                setLayout(color, region);
+                sprite.draw(font, layout, x + offsetX, region.y + offsetY + region.getHeight());
             }
-            setLayout(color, region);
-            sprite.draw(font, layout, x + offsetX, region.y + offsetY + region.getHeight());
         }
     }
 

@@ -1,3 +1,12 @@
+# Arena oraja 0.4.14.80
+
+- Added optional vertical color gradients to dynamic TrueType/OpenType skin
+  text in JSON and Lua skins.
+- Required both upper and lower `RRGGBBAA` colors to enable the effect, while
+  retaining destination tint and alpha animation.
+- Preserved existing single-color text, Launcher `0.2.29`, plugin `0.0.72`,
+  protocol v8, and all `0.4.14.79` behavior.
+
 # Arena oraja 0.4.14.79
 
 - Fixed Skin Scene projective vertex shaders on macOS so the GLSL 150 core-

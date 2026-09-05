@@ -205,6 +205,8 @@ public class JsonSkin {
 		public float shadowOffsetX = 0;
 		public float shadowOffsetY = 0;
 		public float shadowSmoothness = 0;
+		public String gradientTopColor;
+		public String gradientBottomColor;
 	}
 
 	public static class Slider {
