@@ -164,6 +164,11 @@ Skins without a scene remain on the legacy SpriteBatch path. The public format,
 safety limits, and self-authored sample are documented in
 [the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).
 
+Dynamic TrueType/OpenType skin text can optionally interpolate an upper and
+lower `RRGGBBAA` color while retaining destination tint and alpha animation.
+The two opt-in properties and compatibility behavior are documented in
+[the skin text gradient guide](docs/SKIN_TEXT_GRADIENT.md).
+
 At the Music Select root, a concrete key-mode selection now hides a difficulty
 table only when every chart and course entry has a resolved mode and none
 matches the selection. Mixed tables remain visible for each mode they contain,
