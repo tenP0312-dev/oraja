@@ -21,6 +21,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
@@ -600,6 +601,37 @@ public class Skin {
 			preDraw(shaderVariableSetter);
 			font.draw(sprite, layout, x, y);
 			postDraw();
+		}
+
+		public void drawGradient(BitmapFont font, GlyphLayout layout, float x, float y,
+				Color bottomColor, Color topColor, float bottomY, float topY) {
+			for (TextureRegion region : font.getRegions()) {
+				setFilter(region);
+			}
+			preDraw();
+			com.badlogic.gdx.graphics.g2d.BitmapFontCache cache = font.getCache();
+			cache.setText(layout, x, y);
+			for (int page = 0; page < font.getRegions().size; page++) {
+				applyVerticalGradient(cache.getVertices(page), cache.getVertexCount(page),
+						bottomColor, topColor, bottomY, topY);
+			}
+			cache.draw(sprite);
+			postDraw();
+		}
+
+		static void applyVerticalGradient(float[] vertices, int vertexCount,
+				Color bottomColor, Color topColor, float bottomY, float topY) {
+			float height = topY - bottomY;
+			for (int colorIndex = 2; colorIndex < vertexCount; colorIndex += 5) {
+				float amount = height == 0f
+						? 0f
+						: MathUtils.clamp((vertices[colorIndex - 1] - bottomY) / height, 0f, 1f);
+				vertices[colorIndex] = Color.toFloatBits(
+						MathUtils.lerp(bottomColor.r, topColor.r, amount),
+						MathUtils.lerp(bottomColor.g, topColor.g, amount),
+						MathUtils.lerp(bottomColor.b, topColor.b, amount),
+						MathUtils.lerp(bottomColor.a, topColor.a, amount));
+			}
 		}
 
 		public void draw(Texture image, float x, float y, float w, float h) {

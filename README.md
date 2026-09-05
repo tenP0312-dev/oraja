@@ -58,6 +58,11 @@ Skins without a scene remain on the legacy SpriteBatch path. The public format,
 safety limits, and self-authored sample are documented in
 [the Skin Scene format guide](docs/SKIN_SCENE_FORMAT.md).
 
+Dynamic TrueType/OpenType skin text can optionally interpolate an upper and
+lower `RRGGBBAA` color while retaining destination tint and alpha animation.
+The two opt-in properties and compatibility behavior are documented in
+[the skin text gradient guide](docs/SKIN_TEXT_GRADIENT.md).
+
 The Resource settings now include an opt-in physical-folder filter for Music
 Select next to the configured BMS Paths. Its parent switch is off by default.
 When enabled, one checkbox is shown for each configured BMS Path and only

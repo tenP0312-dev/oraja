@@ -676,6 +676,10 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 				skinText.setShadowColor(parseHexColor(text.shadowColor, Color.WHITE));
 				skinText.setShadowOffset(new Vector2(text.shadowOffsetX, text.shadowOffsetY));
 				skinText.setShadowSmoothness(text.shadowSmoothness);
+				if (text.gradientTopColor != null && text.gradientBottomColor != null) {
+					skinText.setGradientTopColor(parseHexColor(text.gradientTopColor, Color.WHITE));
+					skinText.setGradientBottomColor(parseHexColor(text.gradientBottomColor, Color.WHITE));
+				}
 				return skinText;
 			}
 		}

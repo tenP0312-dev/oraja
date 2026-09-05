@@ -41,6 +41,8 @@ public abstract class SkinText extends SkinObject {
     private Color shadowColor;
     private Vector2 shadowOffset;
     private float shadowSmoothness;
+    private Color gradientTopColor;
+    private Color gradientBottomColor;
     
     private String currentText;
 
@@ -160,5 +162,25 @@ public abstract class SkinText extends SkinObject {
 
     public void setShadowSmoothness(float value) {
         shadowSmoothness = value;
+    }
+
+    public Color getGradientTopColor() {
+        return gradientTopColor;
+    }
+
+    public void setGradientTopColor(Color color) {
+        gradientTopColor = color;
+    }
+
+    public Color getGradientBottomColor() {
+        return gradientBottomColor;
+    }
+
+    public void setGradientBottomColor(Color color) {
+        gradientBottomColor = color;
+    }
+
+    protected boolean hasGradient() {
+        return gradientTopColor != null && gradientBottomColor != null;
     }
 }
