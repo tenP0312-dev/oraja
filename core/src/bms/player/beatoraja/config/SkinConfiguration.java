@@ -557,14 +557,6 @@ public class SkinConfiguration extends MainState {
 			}
 			if (preview != null) {
 				preview.prepare(previewState != null ? previewState : this);
-				if (previewState instanceof SkinPreviewState) {
-					// Loading and preparing a complex skin can take several seconds.
-					// Do not expose that work as elapsed virtual-session time: the
-					// first rendered frame must still be PRELOAD at t=0.
-					SkinPreviewLifecycle.restartPreparedPreviewClock(
-							previewState.timer, previewState);
-					preview.resetSkinPreviewCycle();
-				}
 				logger.info("スキンプレビューを読み込みました : type={} path={} size={}x{}",
 						type, config.getPath(), Math.round(preview.getWidth()), Math.round(preview.getHeight()));
 			} else {
