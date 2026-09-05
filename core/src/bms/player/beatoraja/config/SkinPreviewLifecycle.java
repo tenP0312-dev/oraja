@@ -1,5 +1,6 @@
 package bms.player.beatoraja.config;
 
+import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.TimerManager;
 
 /** Pure timeline calculations shared by the stateful Skin Select previews. */
@@ -101,5 +102,14 @@ final class SkinPreviewLifecycle {
 		} else {
 			timer.setTimerOff(id);
 		}
+	}
+
+	/**
+	 * Starts a freshly prepared preview at its real first frame. Preview states
+	 * are constructed before their skin is loaded, so keeping that construction
+	 * clock would make a heavy skin appear several seconds into its timeline.
+	 */
+	static void restartPreparedPreviewClock(TimerManager timer, MainState state) {
+		timer.setMainState(state);
 	}
 }
