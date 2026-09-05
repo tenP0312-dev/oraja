@@ -1,3 +1,13 @@
+# Arena oraja 0.4.14.79
+
+- Fixed Skin Scene projective vertex shaders on macOS so the GLSL 150 core-
+  profile conversion rewrites every legacy `attribute` and `varying`
+  qualifier, including one at the start of the source.
+- Added a regression test for the converted vertex and fragment shader
+  contracts.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, Windows rendering,
+  and all `0.4.14.78` behavior.
+
 # Arena oraja 0.4.14.78
 
 - Fixed Skin Scene resources with `timer: 0` so they start with the state just

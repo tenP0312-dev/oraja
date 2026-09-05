@@ -10,13 +10,20 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.78**. Its Windows native-audio
+The current client source version is **0.4.14.79**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.79 fixes Skin Scene projective shaders on macOS by ensuring the
+GLSL 150 core-profile conversion rewrites every legacy `attribute` and
+`varying` qualifier, including one at the start of the source. A regression
+test covers the converted vertex and fragment contracts. Launcher 0.2.29,
+plugin 0.0.72, protocol v8, Windows rendering, and all 0.4.14.78 behavior
+remain unchanged.
 
 Version 0.4.14.78 makes Skin Scene resources with `timer: 0` state-relative,
 keeps compatible command leaves batched across unchanged hard rectangle mask
@@ -270,6 +277,14 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.79
+
+Fixes Skin Scene projective shaders on macOS so the GLSL 150 core-profile
+conversion rewrites every legacy `attribute` and `varying` qualifier,
+including one at the start of the source. A regression test covers both
+converted shader stages. Launcher `0.2.29`, plugin `0.0.72`, protocol v8,
+Windows rendering, and all `0.4.14.78` behavior remain present.
 
 ## Arena oraja 0.4.14.78
 
@@ -821,7 +836,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.78
+  --output-dir /release/build-0.4.14.79
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
