@@ -5,7 +5,8 @@ import de.damios.guacamole.gdx.graphics.ShaderCompatibilityHelper;
 
 /** Core-profile compatible shader for focal projective scene vertices. */
 final class SceneShader {
-	private static final String VERTEX = """
+	static final String VERTEX = """
+			// Skin Scene projective vertex shader.
 			attribute vec3 a_position;
 			attribute vec4 a_color;
 			attribute vec2 a_texCoord0;
@@ -35,7 +36,7 @@ final class SceneShader {
 			}
 			""";
 
-	private static final String FRAGMENT = """
+	static final String FRAGMENT = """
 			#ifdef GL_ES
 			precision mediump float;
 			#endif
