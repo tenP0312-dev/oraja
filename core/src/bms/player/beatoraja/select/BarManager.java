@@ -1518,22 +1518,28 @@ public class BarManager {
 					var replaySettings = bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient.effectiveSettings(main, sd);
 					String replayHash = replaySettings == null ? sd.getSha256() : replaySettings.storageChartId(sd.getSha256());
 					for(int i = 0;i < MusicSelector.REPLAY;i++) {
-						((SongBar) bar).setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(replayHash, sd.hasUndefinedLongNote(),config.getLnmode(), i));
+						((SongBar) bar).setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(sd, replayHash,config.getLnmode(), i));
 					}
 				} else if (bar instanceof GradeBar && ((GradeBar)bar).existsAllSongs()) {
 					final GradeBar gb = (GradeBar) bar;
 					String[] hash = new String[gb.getSongDatas().length];
 					boolean ln = false;
 					for (int j = 0; j < gb.getSongDatas().length; j++) {
-						hash[j] = gb.getSongDatas()[j].getSha256();
-						ln |= gb.getSongDatas()[j].hasUndefinedLongNote();
+						hash[j] = BMSIRLongNoteMode.replayHash(gb.getSongDatas()[j], gb.getSongDatas()[j].getSha256());
+						ln |= gb.getSongDatas()[j].hasAnyLongNote();
 					}
 					CourseDataConstraint[] constraint = gb.getCourseData().getConstraint();
-					gb.setScore(main.getPlayDataAccessor().readScoreData(hash, ln, config.getLnmode(), 0, constraint));
-					gb.setMirrorScore(main.getPlayDataAccessor().readScoreData(hash, ln, config.getLnmode(), 1, constraint));
-					gb.setRandomScore(main.getPlayDataAccessor().readScoreData(hash, ln, config.getLnmode(), 2, constraint));
+					gb.setScore(main.getPlayDataAccessor().readScoreData(gb.getSongDatas(), config.getLnmode(), 0, constraint));
+					gb.setMirrorScore(main.getPlayDataAccessor().readScoreData(gb.getSongDatas(), config.getLnmode(), 1, constraint));
+					gb.setRandomScore(main.getPlayDataAccessor().readScoreData(gb.getSongDatas(), config.getLnmode(), 2, constraint));
 					for(int i = 0;i < MusicSelector.REPLAY;i++) {
-						gb.setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(hash, ln ,config.getLnmode(), i, constraint));						
+						boolean authoredUndefined = Arrays.stream(gb.getSongDatas()).anyMatch(song ->
+								song.getBMSModel() == null ? song.hasUndefinedLongNote()
+								: bms.player.beatoraja.BMSIRLongNoteMode.authoredUndefined(song.getBMSModel()));
+						gb.setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(hash, ln, config.getLnmode(), i, constraint)
+								|| main.getPlayDataAccessor().existsReplayData(
+										Arrays.stream(gb.getSongDatas()).map(SongData::getSha256).toArray(String[]::new),
+										authoredUndefined, config.getLnmode(), i, constraint));
 					}
 				}
 

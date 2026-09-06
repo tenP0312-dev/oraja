@@ -136,7 +136,9 @@ public class IRChartData {
 		this.minbpm = song.getMinbpm();
 		this.maxbpm = song.getMaxbpm();
 		this.notes = song.getNotes();
-		this.hasUndefinedLN = song.hasUndefinedLongNote();
+		// Every long-note chart is mode-selectable in the dedicated client,
+		// including catalog-only ranking requests before the play model is loaded.
+		this.hasUndefinedLN = song.hasAnyLongNote();
 		this.hasLN = song.hasLongNote();
 		this.hasCN = song.hasChargeNote();
 		this.hasHCN = song.hasHellChargeNote();

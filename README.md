@@ -18,11 +18,15 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-The current development source restores the ordinary LN/CN/HCN launcher
-selection and carries it through decoding, catalog keys, IR ranking, and score
-submission. Casual/private Arena rooms lock the host's selected mode for every
-participant; rated Arena explicitly remains LN. This protocol-v8 source change
-does not by itself publish a new body or plugin package.
+The current development source forces the ordinary LN/CN/HCN launcher selection
+onto every existing long note, including authored BMS `#LNMODE` / `#LNOBJ` and
+bmson header/per-note types. Casual/private Arena rooms apply their locked mode;
+rated Arena always applies LN. Judgment, rendering and total-note counts use the
+same effective mode. Chart files and source hashes are unchanged. Older replays
+retain their recorded authored-mode behavior; new replays record the forced
+policy. Affected legacy local scores are preserved separately when a new score
+first replaces them. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
+This source change does not publish a new body or plugin package.
 
 The BMS-IR settings also provide a default-off LR2-style fixed-HI-SPEED
 override. Each play mode keeps an independent base scroll value, where 100 is

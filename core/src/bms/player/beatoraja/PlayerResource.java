@@ -234,6 +234,17 @@ public final class PlayerResource {
 	}
 
 	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom) {
+		return loadBMSModel(resource, lnmode, selectedRandom, true);
+	}
+
+	public BMSModel loadBMSModelForReplay(ReplayData replay) {
+		return loadBMSModel(chartResource != null ? chartResource
+				: SongResources.fromPath(Path.of(model.getPath())),
+				replay.mode, replay.rand, replay.bmsirForcedLongNotes);
+	}
+
+	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
+			boolean forceLongNotes) {
 		String lowerName = resource.name().toLowerCase(java.util.Locale.ROOT);
 		ChartDecoder decoder;
 		BMSModel loaded;
@@ -267,7 +278,7 @@ public final class PlayerResource {
 			loaded.setChartInformation(new ChartInformation(
 					Path.of(resource.displayPath()), lnmode, selectedRandom));
 		}
-		return prepareModel(loaded, decoder);
+		return prepareModel(loaded, decoder, forceLongNotes);
 	}
 
 	public BMSModel loadBMSModel(ChartInformation info) {
@@ -280,9 +291,14 @@ public final class PlayerResource {
 	}
 
 	private BMSModel prepareModel(BMSModel model, ChartDecoder decoder) {
+		return prepareModel(model, decoder, true);
+	}
+
+	private BMSModel prepareModel(BMSModel model, ChartDecoder decoder, boolean forceLongNotes) {
 		if (model == null) {
 			return null;
 		}
+		if (forceLongNotes) BMSIRLongNoteMode.apply(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);
 		}

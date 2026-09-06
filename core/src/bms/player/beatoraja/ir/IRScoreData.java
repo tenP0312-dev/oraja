@@ -21,6 +21,8 @@ public class IRScoreData {
 	 * LN TYPE(0: LN, 1: CN, 2: HCN)
 	 */
 	public final int lntype;
+	/** Local score interpretation revision, optional for compatible IR plugins. */
+	public final int bmsirLongNotePolicy;
 	/**
 	 * プレイヤー名。自身のスコアの場合は空白
 	 */
@@ -115,6 +117,7 @@ public class IRScoreData {
 	public IRScoreData(ScoreData score) {
 		this.sha256 = score.getSha256();
 		this.lntype = score.getMode();
+		this.bmsirLongNotePolicy = score.getBmsirLongNotePolicy();
 		this.player = score.getPlayer();
 		this.clear = ClearType.getClearTypeByID(score.getClear());
 		this.date = score.getDate();
@@ -154,6 +157,7 @@ public class IRScoreData {
 		ScoreData score = new ScoreData();
 		score.setSha256(this.sha256);
 		score.setMode(this.lntype);
+		score.setBmsirLongNotePolicy(this.bmsirLongNotePolicy);
 		score.setPlayer(this.player);
 		score.setClear(this.clear.id);
 		score.setDate(this.date);
