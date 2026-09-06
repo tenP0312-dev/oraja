@@ -37,6 +37,9 @@ public final class GrooveGauge {
 		this.gauges = new Gauge[property.values.length];
 		for(int i = 0; i < property.values.length; i++) {
 			this.gauges[i] = new Gauge(model, property.values[i], ClearType.getClearTypeByGauge(i));
+			if (property == GaugeProperty.NANTOKA_MANIA) {
+				this.gauges[i].integerGauge = new NantokaManiaGauge(i, NantokaManiaRules.totalNotes(model));
+			}
 		}
 	}
 
@@ -158,6 +161,7 @@ public final class GrooveGauge {
 	}
 	
 	public static GrooveGauge create(BMSModel model, int type, int grade, GaugeProperty gauge) {
+		if (NantokaManiaRules.isActive(model)) gauge = GaugeProperty.NANTOKA_MANIA;
 		int id = -1;
 		if (grade > 0) {
 			// 段位ゲージ
@@ -182,6 +186,7 @@ public final class GrooveGauge {
 	}
 
 	public static final class Gauge {
+		private NantokaManiaGauge integerGauge;
 		/**
 		 * ゲージの現在値
 		 */
@@ -212,10 +217,18 @@ public final class GrooveGauge {
 		}
 		
 		public float getValue() {
-			return value;
+			return integerGauge == null ? value : integerGauge.percent();
+		}
+
+		public int getDisplayValue() {
+			return integerGauge == null ? (int) value : integerGauge.displayPercent();
 		}
 
 		public void setValue(float value) {
+			if (integerGauge != null) {
+				integerGauge.setPercent(value);
+				return;
+			}
 			if(this.value > 0f) {
 				this.value = MathUtils.clamp(value, element.min, element.max);				
 				if (this.value < element.death) {
@@ -230,6 +243,10 @@ public final class GrooveGauge {
 		 * @param judge
 		 */
 		public void update(int judge, float rate) {
+			if (integerGauge != null) {
+				integerGauge.update(judge, rate);
+				return;
+			}
 			float inc = gauge[judge] * rate;
 			if(inc < 0) {
 				for(float[] gut : element.guts) {
@@ -247,11 +264,11 @@ public final class GrooveGauge {
 		}
 		
 		public boolean isQualified() {
-			return value > 0f && value >= element.border;
+			return getValue() > 0f && getValue() >= element.border;
 		}
 		
 		public boolean isMax() {
-			return value == element.max;
+			return getValue() == element.max;
 		}
 	}
 	

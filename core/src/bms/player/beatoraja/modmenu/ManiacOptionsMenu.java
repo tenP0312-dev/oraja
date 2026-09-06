@@ -41,7 +41,8 @@ public final class ManiacOptionsMenu {
             "SIN CURVE",
             "WAVE",
             "SPIRAL",
-            "SIDEJUMP"
+            "SIDEJUMP",
+            "NANTOKA MANIA MODE"
     };
     private static final String[] LEVEL_1_3 = {"OFF", "LEVEL 1", "LEVEL 2", "LEVEL 3"};
     private static final String[] LEVEL_1_2 = {"OFF", "LEVEL 1", "LEVEL 2"};
@@ -151,6 +152,7 @@ public final class ManiacOptionsMenu {
             case 22 -> draft.setWave(nextPercent(draft.getWave()));
             case 23 -> draft.setSpiral(nextPercent(draft.getSpiral()));
             case 24 -> draft.setSideJump(nextPercent(draft.getSideJump()));
+            case 25 -> draft.setNantokaMania(!draft.isNantokaMania());
             default -> {
             }
         }
@@ -197,7 +199,8 @@ public final class ManiacOptionsMenu {
                 if (selected) {
                     ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(118, 219, 153));
                 }
-                ImGui.textUnformatted((selected ? "> " : "  ") + LABELS[index]);
+                ImGui.textUnformatted((selected ? "> " : "  ") + (index == 25
+                        ? t("ナントカマニアモード", LABELS[index]) : LABELS[index]));
                 ImGui.sameLine(valueColumn);
                 ImGui.textUnformatted("[" + value(index) + "]");
                 if (selected && scrollToSelection) {
@@ -314,6 +317,7 @@ public final class ManiacOptionsMenu {
             case 22 -> percentValue(draft.getWave());
             case 23 -> percentValue(draft.getSpiral());
             case 24 -> percentValue(draft.getSideJump());
+            case 25 -> draft.isNantokaMania() ? "ON" : "OFF";
             default -> "OFF";
         };
     }
@@ -345,6 +349,7 @@ public final class ManiacOptionsMenu {
             case 22 -> t("ノーツを上下に波打たせます。", "Moves notes in a vertical wave.");
             case 23 -> t("ノーツを螺旋状に移動させます。", "Moves notes in a spiral.");
             case 24 -> t("ノーツを左右に跳ねさせます。", "Makes notes jump sideways.");
+            case 25 -> t("5/7/10/14KEYの判定とゲージを専用仕様に固定します。記録は別保存・ローカル専用です。GAMBOLは適用されません。", "Uses fixed judgment and gauge rules for 5/7/10/14KEY. Records are separate and local only. GAMBOL is suspended.");
             default -> "";
         };
     }

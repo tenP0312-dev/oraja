@@ -49,7 +49,10 @@ class KeyInputProccessor {
 		this.scratchTTGraphicSpeed = new float[laneProperty.getScratchKeyAssign().length];
 	}
 
-	public void startJudge(BMSModel model, KeyInputLog[] keylog, long milliMarginTime) {
+	public void startJudge(BMSModel model, KeyInputLog[] keylog, long milliMarginTime, int[] initialHeldKeys) {
+		player.getOptionInformation().bmsirNantokaInitialHeldKeys = player.getJudgeManager()
+				.initializeNantokaInput(keylog == null ? null
+						: initialHeldKeys == null ? new int[0] : initialHeldKeys);
 		judge = new JudgeThread(model.getAllTimeLines(), keylog, milliMarginTime);
 		judge.start();
 		isJudgeStarted = true;
@@ -210,6 +213,10 @@ class KeyInputProccessor {
 							// }
 							input.setKeyState(key.getKeycode(), key.isPressed(), key.getTime() + microMarginTime);
 							index++;
+							if (judge.isNantokaMania() && (index == keylog.length
+									|| keylog[index].getTime() != key.getTime())) {
+								judge.update(key.getTime() + microMarginTime);
+							}
 						}
 					}
 

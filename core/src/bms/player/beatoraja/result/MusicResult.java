@@ -1,5 +1,7 @@
 package bms.player.beatoraja.result;
 
+import bms.player.beatoraja.play.NantokaManiaRules;
+
 import static bms.player.beatoraja.ClearType.*;
 import static bms.player.beatoraja.modmenu.FreqTrainerMenu.*;
 import static bms.player.beatoraja.skin.SkinProperty.*;
@@ -419,7 +421,7 @@ public class MusicResult extends AbstractResult {
 		if (newscore == null) {
 			if (resource.getCourseScoreData() != null) {
 				resource.getCourseScoreData()
-						.setMinbp(resource.getCourseScoreData().getMinbp() + resource.getBMSModel().getTotalNotes());
+						.setMinbp(resource.getCourseScoreData().getMinbp() + NantokaManiaRules.totalNotes(resource.getBMSModel()));
 				resource.getCourseScoreData().setClear(Failed.id);
 			}
 			return;
@@ -435,7 +437,7 @@ public class MusicResult extends AbstractResult {
 				resource.getPlayerConfig().getLnmode());
 		oldscore = oldsc != null ? oldsc : new ScoreData();
 
-		getScoreDataProperty().setTargetScore(oldscore.getExscore(), resource.getTargetScoreData() != null ? resource.getTargetScoreData().getExscore() : 0, resource.getBMSModel().getTotalNotes());
+		getScoreDataProperty().setTargetScore(oldscore.getExscore(), resource.getTargetScoreData() != null ? resource.getTargetScoreData().getExscore() : 0, NantokaManiaRules.totalNotes(resource.getBMSModel()));
 		getScoreDataProperty().update(newscore);
 		// duration average
 		int count = 0;
@@ -580,7 +582,7 @@ public class MusicResult extends AbstractResult {
 	}
 
 	public int getTotalNotes() {
-		return resource.getBMSModel().getTotalNotes();
+		return NantokaManiaRules.totalNotes(resource.getBMSModel());
 	}
 
 	public ScoreData getNewScore() {

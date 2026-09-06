@@ -1515,8 +1515,10 @@ public class BarManager {
 						}
 						bar.setRivalScore(rivalScore);
 					}
+					var replaySettings = bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient.effectiveSettings(main, sd);
+					String replayHash = replaySettings == null ? sd.getSha256() : replaySettings.storageChartId(sd.getSha256());
 					for(int i = 0;i < MusicSelector.REPLAY;i++) {
-						((SongBar) bar).setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(sd.getSha256(), sd.hasUndefinedLongNote(),config.getLnmode(), i));						
+						((SongBar) bar).setExistsReplay(i, main.getPlayDataAccessor().existsReplayData(replayHash, sd.hasUndefinedLongNote(),config.getLnmode(), i));
 					}
 				} else if (bar instanceof GradeBar && ((GradeBar)bar).existsAllSongs()) {
 					final GradeBar gb = (GradeBar) bar;

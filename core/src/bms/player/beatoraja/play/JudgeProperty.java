@@ -7,6 +7,11 @@ package bms.player.beatoraja.play;
  */
 public enum JudgeProperty {
 
+    NANTOKA_MANIA(NantokaManiaRules.windows(false), NantokaManiaRules.windows(true),
+            NantokaManiaRules.windows(false), 0, NantokaManiaRules.windows(true), 0,
+            new boolean[]{true, true, true, false, false, true}, MissCondition.ALWAYS,
+            new boolean[]{true, true, true, true, true, false}, JudgeWindowRule.FIXED),
+
     FIVEKEYS(new long[][]{ {-20000, 20000}, {-50000, 50000}, {-100000, 100000}, {-150000, 150000}, {-150000, 500000} },
             new long[][]{ {-30000, 30000}, {-60000, 60000}, {-110000, 110000}, {-160000, 160000}, {-160000, 500000}},
             new long[][]{ {-120000, 120000}, {-150000, 150000}, {-200000, 200000}, {-250000, 250000}},
@@ -164,6 +169,12 @@ public enum JudgeProperty {
     }
     
     public enum JudgeWindowRule {
+        FIXED(new int[]{100, 100, 100, 100, 100}, new boolean[]{true, true, true, true, true}) {
+            @Override
+            public long[][] create(long[][] org, int judgerank, int[] judgeWindowRate) {
+                return java.util.Arrays.stream(org).map(long[]::clone).toArray(long[][]::new);
+            }
+        },
         NORMAL (new int[]{25, 50, 75, 100, 125}, new boolean[]{false, false, false, false, true}),
         PMS (new int[]{33, 50, 70, 100, 133}, new boolean[]{true, false, false, true, true}),
         LR2 (new int[]{25, 50, 75, 100, 75}, new boolean[]{false, false, false, true, true}) {
