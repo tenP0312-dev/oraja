@@ -1,9 +1,16 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.80`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.81`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
+
+Version `0.4.14.81` adds the local-only NANTOKA MANIA MODE to MANIAC OPTIONS
+for 5/7/10/14KEY solo play. The mode fixes key and scratch judgment windows,
+integer gauge arithmetic, and LN/CN/HCN/BSS handling. Its scores and replays
+use a separate local MANIAC identity. Arena, courses, practice, ordinary IR,
+and MANIAC IR do not enable or accept it. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, and all `0.4.14.80` behavior remain unchanged.
 
 Version `0.4.14.80` adds optional vertical color gradients to dynamic
 TrueType/OpenType skin text in JSON and Lua skins. Both upper and lower
@@ -1574,7 +1581,7 @@ The internal build artifact name identifies the unified BMS-IR Arena oraja
 client and its native platform:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.80-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar
 ```
 
 GitHub distribution uses two OS-specific prereleases in this canonical source
@@ -1603,7 +1610,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.80-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1622,7 +1629,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.80-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \
