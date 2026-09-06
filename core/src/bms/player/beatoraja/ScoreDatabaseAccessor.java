@@ -85,6 +85,7 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 						new Column("random", "INTEGER"),
 						new Column("date", "INTEGER"),
 						new Column("state", "INTEGER"),
+						new Column("bmsirLongNotePolicy", "INTEGER", 1, 0, "0"),
 						new Column("scorehash", "TEXT")
 						));
 		Class.forName("org.sqlite.JDBC");
@@ -153,10 +154,15 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 	 * プレイヤースコアデータを取得する
 	 */
 	public void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode) {
+		getScoreDatas(collector, songs, mode, false);
+	}
+
+	public void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode,
+			boolean forceLongNotes) {
 		StringBuilder str = new StringBuilder(songs.length * 68);
-		getScoreDatas(collector, songs, mode, str, true);
+		getScoreDatas(collector, songs, mode, str, true, forceLongNotes);
 		str.setLength(0);
-		getScoreDatas(collector, songs, 0, str, false);
+		getScoreDatas(collector, songs, 0, str, false, forceLongNotes);
 	}
 
 	/**
@@ -209,16 +215,18 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 
 		for (SongData song : songs) {
 			String hash = hashProvider.apply(song);
-			int requestedMode = song.hasUndefinedLongNote() ? mode : 0;
+			int requestedMode = song.hasAnyLongNote() ? mode : 0;
 			ScoreData score = hash == null ? null : scores.get(hash + ':' + requestedMode);
-			if (score == null && fallbackToModeZero && requestedMode != 0 && hash != null) {
+			if (score == null && fallbackToModeZero && requestedMode != 0 && hash != null
+					&& !BMSIRLongNoteMode.changesAuthoredMode(song)) {
 				score = scores.get(hash + ":0");
 			}
-			collector.collect(song, score);
+			collector.collect(song, BMSIRLongNoteMode.compatibleScore(score, BMSIRLongNoteMode.changesAuthoredMode(song)));
 		}
 	}
 	
-	private void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode, StringBuilder str, boolean hasln) {
+	private void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode,
+			StringBuilder str, boolean hasln, boolean forceLongNotes) {
 		try {
 			int songLength = songs.length;
 			int chunkLength = (songLength + LOAD_CHUNK_SIZE - 1) / LOAD_CHUNK_SIZE;
@@ -229,7 +237,7 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 				final int chunkEnd = Math.min(songLength, (i + 1) * LOAD_CHUNK_SIZE);
 				for (int j = chunkStart; j < chunkEnd; ++j) {
 					SongData song = songs[j];
-					if((hasln && song.hasUndefinedLongNote()) || (!hasln && !song.hasUndefinedLongNote())) {
+					if(hasln == song.hasAnyLongNote()) {
 						if (str.length() > 0) {
 							str.append(',');
 						}
@@ -243,11 +251,12 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 				scores.addAll(subScores);
 			}
 			for(SongData song : songs) {
-				if((hasln && song.hasUndefinedLongNote()) || (!hasln && !song.hasUndefinedLongNote())) {
+				if(hasln == song.hasAnyLongNote()) {
 					boolean b = true;
 					for (ScoreData score : scores) {
 						if(song.getSha256().equals(score.getSha256())) {
-							collector.collect(song, score);
+							collector.collect(song, BMSIRLongNoteMode.compatibleScore(score,
+									forceLongNotes && BMSIRLongNoteMode.changesAuthoredMode(song)));
 							b = false;
 							break;
 						}
@@ -280,10 +289,32 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 	public void setScoreData(ScoreData[] scores) {
 		try (Connection con = qr.getDataSource().getConnection()) {
 			con.setAutoCommit(false);
-			for (ScoreData score : scores) {
-				this.insert(qr, con, "score", score);
+			try {
+				for (ScoreData score : scores) {
+					List<Map<String, Object>> previous = qr.query(con,
+							"SELECT * FROM score WHERE sha256 = ? AND mode = ?",
+							new org.apache.commons.dbutils.handlers.MapListHandler(),
+							score.getSha256(), score.getMode());
+					if (!previous.isEmpty()) {
+						Map<String, Object> row = previous.get(0);
+						int policy = ((Number) row.get("bmsirLongNotePolicy")).intValue();
+						// A legacy import must not replace verified forced-mode results.
+						if (policy > score.getBmsirLongNotePolicy()) continue;
+						if (policy == 0 && score.getBmsirLongNotePolicy() == BMSIRLongNoteMode.SCORE_POLICY) {
+							qr.update(con, "CREATE TABLE IF NOT EXISTS bmsir_legacy_ln_score "
+									+ "(sha256 TEXT, mode INTEGER, snapshot TEXT NOT NULL, PRIMARY KEY(sha256, mode))");
+							qr.update(con, "INSERT OR IGNORE INTO bmsir_legacy_ln_score VALUES (?, ?, ?)",
+									score.getSha256(), score.getMode(),
+									new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(row));
+						}
+					}
+					this.insert(qr, con, "score", score);
+				}
+				con.commit();
+			} catch (Exception error) {
+				con.rollback();
+				throw error;
 			}
-			con.commit();
 		} catch (Exception e) {
 			logger.error("スコア更新時の例外:{}", e.getMessage());
 		}

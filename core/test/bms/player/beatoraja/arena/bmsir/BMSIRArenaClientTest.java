@@ -31,6 +31,37 @@ class BMSIRArenaClientTest {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Test
+    void lockedArenaModeOverridesOrdinarySelectionAndAuthoredHcn() throws Exception {
+        var modeField = BMSIRArenaClient.class.getDeclaredField("currentLnMode");
+        var savedField = BMSIRArenaClient.class.getDeclaredField("savedOptions");
+        var apply = BMSIRArenaClient.class.getDeclaredMethod("applyFixedOptions", PlayerConfig.class, String.class);
+        modeField.setAccessible(true);
+        savedField.setAccessible(true);
+        apply.setAccessible(true);
+        Object oldMode = modeField.get(null), oldSaved = savedField.get(null);
+        try {
+            for (String locked : List.of("LN", "CN", "HCN")) {
+                modeField.set(null, locked);
+                PlayerConfig config = new PlayerConfig();
+                config.setLnmode((BMSIRArenaClient.longnoteModeValue(locked) + 1) % 3);
+                apply.invoke(null, config, "normal");
+                assertEquals(BMSIRArenaClient.longnoteModeValue(locked), config.getLnmode());
+                byte[] chart = "#TITLE Arena LN\n#BPM 120\n#WAV01 test.wav\n#LNMODE 3\n#00151:0101\n"
+                        .getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+                var model = new bms.model.BMSDecoder(config.getLnmode()).decode(chart, false, null);
+                bms.player.beatoraja.BMSIRLongNoteMode.apply(model);
+                assertEquals(config.getLnmode(), model.getLntype());
+                assertEquals(locked.equals("LN") ? 1 : 2, model.getTotalNotes());
+                assertEquals(0, model.getLnmode());
+            }
+        } finally {
+            modeField.set(null, oldMode);
+            savedField.set(null, oldSaved);
+            bms.player.beatoraja.play.BMSPlayerRule.clearArenaRuleProfileOverride();
+        }
+    }
+
+    @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
         assertEquals("0.4.14.81", Version.getArenaClientVersion());
         assertEquals(

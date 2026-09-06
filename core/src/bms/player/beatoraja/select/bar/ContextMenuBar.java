@@ -207,7 +207,7 @@ public class ContextMenuBar extends DirectoryBar {
 
         for (int i = 0; i < MusicSelector.REPLAY; ++i) {
             boolean replayExists = selector.main.getPlayDataAccessor().existsReplayData(
-                song.getSha256(), song.hasUndefinedLongNote(),
+                song, song.getSha256(),
                 selector.main.getPlayerConfig().getLnmode(), i);
             if (!replayExists) { continue; }
             final int replayIndex = i;

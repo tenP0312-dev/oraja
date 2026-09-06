@@ -39,6 +39,8 @@ public final class ReplayData implements Validatable {
 	 * モード
 	 */
 	public int mode;
+	/** Missing in older replays: retain the chart-authored LN interpretation. */
+	public boolean bmsirForcedLongNotes;
 	/**
 	 * キー入力ログ
 	 */
@@ -133,6 +135,7 @@ public final class ReplayData implements Validatable {
 
 	@Override
 	public boolean validate() {
+		if (bmsirForcedLongNotes && (mode < 0 || mode > 2)) return false;
 		if (keyinput != null) {
 			try {
 				InputStream input = new ByteArrayInputStream(keyinput.getBytes());

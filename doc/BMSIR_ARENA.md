@@ -1175,9 +1175,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 ## Dedicated-client long-note policy
 
 - The ordinary launcher selects `LONG NOTE`, `CHARGE NOTE`, or `HELL CHARGE
-  NOTE` (`lntype=0/1/2`). Decoder input, explicit chart long-note types, local
-  catalog metadata, score storage keys, ranking requests, and IR score payloads
-  preserve that selection.
+  NOTE` (`lntype=0/1/2`). The play loader overrides every authored BMS/bmson
+  long-note type with that selection before counting notes, judging or rendering.
+  This supersedes Issue #210's preservation of explicit CN/HCN during play.
+  The parser and catalog retain authored metadata, and chart bytes/hashes remain
+  unchanged. `Long Note Modify Mode` still adds/removes notes and is independent
+  of this mandatory mode interpretation.
 - A casual/private Arena entry snapshots the selected mode as a room rule and
   every participant loads that mode. Rated queue entry explicitly uses LN, so
   an ordinary CN/HCN setting cannot change rated behavior.
@@ -1187,6 +1190,14 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 - The exact source chart remains identified by MD5. CN/HCN possession is not
   rejected merely because an LN catalog count differs; the agreed decoded
   count becomes the live/final validation scale before start.
+- New replays record the forced interpretation; old replays decode the authored
+  types and their saved mode/branch. Explicit-type legacy local scores do not
+  become forced-mode bests. Their first replacement archives the exact old row
+  transactionally; see [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
+- Release this source with the paired BMS-IR plugin change (#41) and an Arena
+  body gate that does not mix old authored-mode bodies with forced-mode bodies.
+  The protocol-v8 ready count cannot distinguish CN from HCN when their counts
+  coincide. Publication/gate activation is a separate reviewed rollout.
 
 ## Match behavior
 
