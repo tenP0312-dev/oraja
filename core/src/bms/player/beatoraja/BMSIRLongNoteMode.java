@@ -14,6 +14,10 @@ public final class BMSIRLongNoteMode {
 
     private BMSIRLongNoteMode() {}
 
+    public static boolean isApplied(BMSModel model) {
+        return model != null && model.getValues().containsKey(AUTHORED_FEATURES);
+    }
+
     public static void apply(BMSModel model) {
         if (model == null) return;
         model.getValues().putIfAbsent(AUTHORED_FEATURES,

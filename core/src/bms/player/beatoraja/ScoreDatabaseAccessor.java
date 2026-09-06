@@ -159,10 +159,15 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 
 	public void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode,
 			boolean forceLongNotes) {
+		getScoreDatas(collector, songs, mode, forceLongNotes, true);
+	}
+
+	public void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode,
+			boolean forceLongNotes, boolean allLongNotesModeDependent) {
 		StringBuilder str = new StringBuilder(songs.length * 68);
-		getScoreDatas(collector, songs, mode, str, true, forceLongNotes);
+		getScoreDatas(collector, songs, mode, str, true, forceLongNotes, allLongNotesModeDependent);
 		str.setLength(0);
-		getScoreDatas(collector, songs, 0, str, false, forceLongNotes);
+		getScoreDatas(collector, songs, 0, str, false, forceLongNotes, allLongNotesModeDependent);
 	}
 
 	/**
@@ -177,6 +182,11 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 			Function<SongData, String> hashProvider,
 			boolean fallbackToModeZero
 	) {
+		getScoreDatasByHash(collector, songs, mode, hashProvider, fallbackToModeZero, true);
+	}
+
+	public void getScoreDatasByHash(ScoreDataCollector collector, SongData[] songs, int mode,
+			Function<SongData, String> hashProvider, boolean fallbackToModeZero, boolean forceLongNotes) {
 		Map<String, ScoreData> scores = new HashMap<>();
 		try {
 			for (int chunkStart = 0; chunkStart < songs.length; chunkStart += LOAD_CHUNK_SIZE) {
@@ -215,18 +225,18 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 
 		for (SongData song : songs) {
 			String hash = hashProvider.apply(song);
-			int requestedMode = song.hasAnyLongNote() ? mode : 0;
+			int requestedMode = (forceLongNotes ? song.hasAnyLongNote() : song.hasUndefinedLongNote()) ? mode : 0;
 			ScoreData score = hash == null ? null : scores.get(hash + ':' + requestedMode);
 			if (score == null && fallbackToModeZero && requestedMode != 0 && hash != null
-					&& !BMSIRLongNoteMode.changesAuthoredMode(song)) {
+					&& (!forceLongNotes || !BMSIRLongNoteMode.changesAuthoredMode(song))) {
 				score = scores.get(hash + ":0");
 			}
-			collector.collect(song, BMSIRLongNoteMode.compatibleScore(score, BMSIRLongNoteMode.changesAuthoredMode(song)));
+			collector.collect(song, BMSIRLongNoteMode.compatibleScore(score, forceLongNotes && BMSIRLongNoteMode.changesAuthoredMode(song)));
 		}
 	}
 	
 	private void getScoreDatas(ScoreDataCollector collector, SongData[] songs, int mode,
-			StringBuilder str, boolean hasln, boolean forceLongNotes) {
+			StringBuilder str, boolean hasln, boolean forceLongNotes, boolean allLongNotesModeDependent) {
 		try {
 			int songLength = songs.length;
 			int chunkLength = (songLength + LOAD_CHUNK_SIZE - 1) / LOAD_CHUNK_SIZE;
@@ -237,7 +247,7 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 				final int chunkEnd = Math.min(songLength, (i + 1) * LOAD_CHUNK_SIZE);
 				for (int j = chunkStart; j < chunkEnd; ++j) {
 					SongData song = songs[j];
-					if(hasln == song.hasAnyLongNote()) {
+					if(hasln == (allLongNotesModeDependent ? song.hasAnyLongNote() : song.hasUndefinedLongNote())) {
 						if (str.length() > 0) {
 							str.append(',');
 						}
@@ -251,7 +261,7 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 				scores.addAll(subScores);
 			}
 			for(SongData song : songs) {
-				if(hasln == song.hasAnyLongNote()) {
+				if(hasln == (allLongNotesModeDependent ? song.hasAnyLongNote() : song.hasUndefinedLongNote())) {
 					boolean b = true;
 					for (ScoreData score : scores) {
 						if(song.getSha256().equals(score.getSha256())) {
