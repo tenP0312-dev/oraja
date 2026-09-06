@@ -1528,7 +1528,7 @@ public class BMSPlayer extends MainState {
 		replay.player = main.getPlayerConfig().getName();
 		replay.sha256 = model.getSHA256();
 		replay.mode = config.getLnmode();
-		replay.bmsirForcedLongNotes = true;
+		replay.bmsirForcedLongNotes = BMSIRLongNoteMode.isApplied(model);
 		replay.date = Calendar.getInstance().getTimeInMillis() / 1000;
 		replay.keylog = main.getInputProcessor().getKeyInputLog();
 		replay.bmsirNantokaInitialHeldKeys = playinfo.bmsirNantokaInitialHeldKeys.clone();

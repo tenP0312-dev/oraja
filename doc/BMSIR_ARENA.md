@@ -1048,26 +1048,24 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Dedicated-client long-note policy
 
-- The ordinary launcher selects `LONG NOTE`, `CHARGE NOTE`, or `HELL CHARGE
-  NOTE` (`lntype=0/1/2`). The play loader overrides every authored BMS/bmson
-  long-note type with that selection before counting notes, judging or rendering.
-  This supersedes Issue #210's preservation of explicit CN/HCN during play.
-  The parser and catalog retain authored metadata, and chart bytes/hashes remain
-  unchanged. `Long Note Modify Mode` still adds/removes notes and is independent
-  of this mandatory mode interpretation.
+- Startup BMS-IR settings include a default-off `Force LN` switch. ON treats
+  all existing long notes as LN, including authored CN/HCN. OFF preserves authored
+  types and uses the saved LN/CN/HCN selection for undefined notes, as in #210.
+  The normal selection remains saved while ON. This corrects #343's mandatory
+  selected-mode override. `Long Note Modify Mode` is a separate add/remove option.
 - A casual/private Arena entry snapshots the selected mode as a room rule and
-  every participant loads that mode. Rated queue entry explicitly uses LN, so
-  an ordinary CN/HCN setting cannot change rated behavior.
+  every participant uses that rule. LN rules force LN; CN/HCN rules disable
+  Force LN and preserve authored types. Rated queue entry explicitly uses LN.
+  Leaving Arena restores both the user's Force LN setting and saved mode.
 - Protocol v8 sends the locked mode and actual decoded total-note count at the
   ready barrier. The server starts only after all humans agree. Older protocol
   clients keep implied LN behavior and cannot join a CN/HCN room.
 - The exact source chart remains identified by MD5. CN/HCN possession is not
   rejected merely because an LN catalog count differs; the agreed decoded
   count becomes the live/final validation scale before start.
-- New replays record the forced interpretation; old replays decode the authored
-  types and their saved mode/branch. Explicit-type legacy local scores do not
-  become forced-mode bests. Their first replacement archives the exact old row
-  transactionally; see [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
+- Replays record whether forcing was applied and retain their saved mode/branch.
+  ON and OFF local bests use separate databases; switching back restores access
+  to each pool without replacing or archiving the other pool. See [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
 - Release this source with the paired BMS-IR plugin change (#41) and an Arena
   body gate that does not mix old authored-mode bodies with forced-mode bodies.
   The protocol-v8 ready count cannot distinguish CN from HCN when their counts
@@ -1270,7 +1268,7 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. Long-note behavior
-uses the ordinary enabled LN-type selector; BMS-IR accepts new CN/HCN results
+uses the Force LN switch and ordinary LN-type selector; BMS-IR accepts new CN/HCN results
 in mode-separated rankings, while rated Arena continues to lock LN.
 
 Endless Dream compatibility is protected as one maintained inventory rather

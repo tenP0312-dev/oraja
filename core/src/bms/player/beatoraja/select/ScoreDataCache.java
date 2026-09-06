@@ -20,7 +20,7 @@ public abstract class ScoreDataCache {
     private ObjectMap<String, ScoreData>[] scorecache;
 
     public ScoreDataCache() {
-        scorecache = new ObjectMap[4];
+        scorecache = new ObjectMap[8];
         for (int i = 0; i < scorecache.length; i++) {
             scorecache[i] = new ObjectMap(2000);
         }
@@ -33,7 +33,7 @@ public abstract class ScoreDataCache {
      * @return スコアデータ。存在しない場合はnull
      */
     public ScoreData readScoreData(SongData song, int lnmode) {
-        final int cacheindex = song.hasAnyLongNote() ? lnmode : 3;
+        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
         if (scorecache[cacheindex].containsKey(song.getSha256())) {
             return scorecache[cacheindex].get(song.getSha256());
         }
@@ -52,7 +52,7 @@ public abstract class ScoreDataCache {
         // キャッシュからの抽出
         Array<SongData> noscore = null;
         for (SongData song : songs) {
-            final int cacheindex = song.hasAnyLongNote() ? lnmode : 3;
+            final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
 
             if (scorecache[cacheindex].containsKey(song.getSha256())) {
                 collector.collect(song, scorecache[cacheindex].get(song.getSha256()));
@@ -71,7 +71,7 @@ public abstract class ScoreDataCache {
         final SongData[] noscores = noscore.toArray(SongData.class);
 
         final ScoreDataCollector cachecollector = (song, score) -> {
-            final int cacheindex = song.hasAnyLongNote() ? lnmode : 3;
+            final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
             scorecache[cacheindex].put(song.getSha256(), score);
         	collector.collect(song, score);
         };
@@ -79,7 +79,7 @@ public abstract class ScoreDataCache {
     }
 
     boolean existsScoreDataCache(SongData song, int lnmode) {
-        final int cacheindex = song.hasAnyLongNote() ? lnmode : 3;
+        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
         return scorecache[cacheindex].containsKey(song.getSha256());
     }
 
@@ -90,10 +90,12 @@ public abstract class ScoreDataCache {
     }
 
     public void update(SongData song, int lnmode) {
-        final int cacheindex = song.hasAnyLongNote() ? lnmode : 3;
+        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
         ScoreData score = readScoreDatasFromSource(song, lnmode);
         scorecache[cacheindex].put(song.getSha256(), score);
     }
+
+    protected boolean isForcedLn() { return false; }
 
     protected abstract ScoreData readScoreDatasFromSource(SongData songs, int lnmode);
 

@@ -25,14 +25,14 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
-The current development source forces the ordinary LN/CN/HCN launcher selection
-onto every existing long note, including authored BMS `#LNMODE` / `#LNOBJ` and
-bmson header/per-note types. Casual/private Arena rooms apply their locked mode;
-rated Arena always applies LN. Judgment, rendering and total-note counts use the
-same effective mode. Chart files and source hashes are unchanged. Older replays
-retain their recorded authored-mode behavior; new replays record the forced
-policy. Affected legacy local scores are preserved separately when a new score
-first replaces them. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
+The BMS-IR startup settings provide a default-off **Force LN** switch.
+When enabled, every existing long note is played as LN, including authored
+BMS/bmson CN and HCN. When disabled, chart definitions and the saved ordinary
+LN/CN/HCN selection apply again. Arena LN rules force LN; CN/HCN rules disable
+the switch and retain ordinary chart interpretation. Leaving Arena restores
+the user's switch and mode. Chart files and source hashes are unchanged.
+Scores for ON and OFF use separate local databases, and replays preserve the
+interpretation recorded when they were played. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
 This source change does not publish a new body or plugin package.
 
 The BMS-IR settings also provide a default-off LR2-style fixed-HI-SPEED

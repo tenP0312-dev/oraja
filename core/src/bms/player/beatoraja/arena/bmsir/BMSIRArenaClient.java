@@ -3994,6 +3994,7 @@ public final class BMSIRArenaClient {
             config.setDoubleoption(0);
         }
         config.setLnmode(longnoteModeValue(currentLnMode));
+        config.setBmsirForceLn(longnoteModeValue(currentLnMode) == 0);
         config.setMineMode(0);
         config.setScrollMode(0);
         config.setLongnoteMode(0);
@@ -4174,6 +4175,7 @@ public final class BMSIRArenaClient {
         private final int random2;
         private final int doubleOption;
         private final int lnMode;
+        private final boolean forceLn;
         private final int mineMode;
         private final int scrollMode;
         private final int longNoteMode;
@@ -4193,7 +4195,8 @@ public final class BMSIRArenaClient {
             random = config.getRandom();
             random2 = config.getRandom2();
             doubleOption = config.getDoubleoption();
-            lnMode = config.getLnmode();
+            lnMode = config.getSelectedLnmode();
+            forceLn = config.isBmsirForceLn();
             mineMode = config.getMineMode();
             scrollMode = config.getScrollMode();
             longNoteMode = config.getLongnoteMode();
@@ -4221,6 +4224,7 @@ public final class BMSIRArenaClient {
             config.setRandom2(random2);
             config.setDoubleoption(doubleOption);
             config.setLnmode(lnMode);
+            config.setBmsirForceLn(forceLn);
             config.setMineMode(mineMode);
             config.setScrollMode(scrollMode);
             config.setLongnoteMode(longNoteMode);
