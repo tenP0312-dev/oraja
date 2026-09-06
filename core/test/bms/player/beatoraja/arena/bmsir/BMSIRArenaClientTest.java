@@ -43,16 +43,26 @@ class BMSIRArenaClientTest {
             for (String locked : List.of("LN", "CN", "HCN")) {
                 modeField.set(null, locked);
                 PlayerConfig config = new PlayerConfig();
-                config.setLnmode((BMSIRArenaClient.longnoteModeValue(locked) + 1) % 3);
+                int selected = (BMSIRArenaClient.longnoteModeValue(locked) + 1) % 3;
+                config.setLnmode(selected);
+                config.setBmsirForceLn(true);
+                savedField.set(null, null);
                 apply.invoke(null, config, "normal");
                 assertEquals(BMSIRArenaClient.longnoteModeValue(locked), config.getLnmode());
                 byte[] chart = "#TITLE Arena LN\n#BPM 120\n#WAV01 test.wav\n#LNMODE 3\n#00151:0101\n"
                         .getBytes(java.nio.charset.StandardCharsets.US_ASCII);
                 var model = new bms.model.BMSDecoder(config.getLnmode()).decode(chart, false, null);
-                bms.player.beatoraja.BMSIRLongNoteMode.apply(model);
+                assertEquals(locked.equals("LN"), config.isBmsirForceLn());
+                if (config.isBmsirForceLn()) bms.player.beatoraja.BMSIRLongNoteMode.apply(model);
                 assertEquals(config.getLnmode(), model.getLntype());
                 assertEquals(locked.equals("LN") ? 1 : 2, model.getTotalNotes());
-                assertEquals(0, model.getLnmode());
+                assertEquals(locked.equals("LN") ? 0 : 3, model.getLnmode());
+                Object snapshot = savedField.get(null);
+                var restore = snapshot.getClass().getDeclaredMethod("restore", PlayerConfig.class);
+                restore.setAccessible(true);
+                restore.invoke(snapshot, config);
+                assertTrue(config.isBmsirForceLn());
+                assertEquals(selected, config.getSelectedLnmode());
             }
         } finally {
             modeField.set(null, oldMode);

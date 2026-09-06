@@ -123,6 +123,7 @@ public final class PlayerConfig {
 	 * LNモード
 	 */
 	private int lnmode = 0;
+	private boolean bmsirForceLn = false;
 
 	/** LR2-style chart difficulty filter (0: ALL, 1: BEGINNER ... 5: INSANE). */
 	private int difficultyFilter = 0;
@@ -460,8 +461,12 @@ public final class PlayerConfig {
 	}
 
 	public int getLnmode() {
-		return lnmode;
+		return bmsirForceLn ? 0 : lnmode;
 	}
+
+	public int getSelectedLnmode() { return lnmode; }
+	public boolean isBmsirForceLn() { return bmsirForceLn; }
+	public void setBmsirForceLn(boolean enabled) { bmsirForceLn = enabled; }
 
 	public void setLnmode(int lnmode) {
 		this.lnmode = lnmode;
