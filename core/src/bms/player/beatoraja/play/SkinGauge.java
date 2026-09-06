@@ -151,6 +151,7 @@ public class SkinGauge extends SkinObject {
 			}
 			isCheckedSevenToNine = true;			
 		}
+		if (NantokaManiaRules.isActive(state.resource.getBMSModel())) parts = 50;
 		
 		value = gauge.getValue();
 		type = state instanceof AbstractResult ? ((AbstractResult) state).getGaugeType() : gauge.getType();

@@ -1,5 +1,7 @@
 package bms.player.beatoraja;
 
+import bms.player.beatoraja.play.NantokaManiaRules;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -297,7 +299,7 @@ public final class PlayDataAccessor {
 		}
 		score.setSha256(hash);
 		if (updateScore) {
-			score.setNotes(model.getTotalNotes());
+			score.setNotes(NantokaManiaRules.totalNotes(model));
 		}
 
 		if (newscore.getClear() > Failed.id) {
@@ -490,7 +492,7 @@ public final class PlayDataAccessor {
 		boolean ln = false;
 		for (BMSModel model : models) {
 			hash += model.getSHA256();
-			totalnotes += model.getTotalNotes();
+			totalnotes += NantokaManiaRules.totalNotes(model);
 			ln |= model.containsUndefinedLongNote();
 		}
 		if (newscore == null) {
@@ -678,8 +680,7 @@ public final class PlayDataAccessor {
 	}
 
 	public boolean existsReplayData(BMSModel model, int lnmode, int index) {
-		boolean ln = model.containsUndefinedLongNote();
-		return Files.exists(Paths.get(this.getReplayDataFilePath(model.getSHA256(), ln, lnmode, index) + ".brd"));
+		return Files.exists(Paths.get(this.getReplayDataFilePath(model, lnmode, index) + ".brd"));
 	}
 
 	public boolean existsReplayData(String hash, boolean ln, int lnmode, int index) {
@@ -870,11 +871,9 @@ public final class PlayDataAccessor {
 		String marked = model.getValues().get(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
 		if (marked != null && !marked.isBlank()) return marked;
 		if (playerConfig == null) return model.getSHA256();
-		BMSIRManiacSettings selected = new BMSIRManiacSettings(
-				playerConfig.getBmsirManiacSettings()
-		);
-		if (model.getMode().player == 2) selected.setDoubleBattle(false);
-		return selected.isActive()
+		BMSIRManiacSettings selected = BMSIRManiacPlayContext.effectiveSettings(
+				playerConfig.getBmsirManiacSettings(), model.getMode());
+		return selected != null
 				? selected.storageChartId(model.getSHA256())
 				: model.getSHA256();
 	}
