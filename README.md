@@ -8,6 +8,13 @@ Arena oraja client. It is based on
 [LR2oraja Endless Dream](https://github.com/Catizard/lr2oraja-endlessdream)
 and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
+The development source fixes HCN body rendering after an early release in
+NANTOKA MANIA MODE: the body switches to the damaged image while the end remains
+pending for reentry and end judgment. Ordinary judgment-mode rendering is
+unchanged. Engine-driven tests cover release/reentry, simultaneous 1P/2P HCNs,
+missed starts, normal end release, and autoplay; physical visual acceptance is
+still an operator check.
+
 ## Current Version
 
 The current client source version is **0.4.14.58**. Its Windows native-audio
