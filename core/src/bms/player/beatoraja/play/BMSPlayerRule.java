@@ -9,6 +9,7 @@ import bms.model.Mode;
  * @author exch
  */
 public enum BMSPlayerRule {
+	NantokaMania(GaugeProperty.NANTOKA_MANIA, JudgeProperty.NANTOKA_MANIA, NoteJudgementBehavior.BEATORAJA),
 	Beatoraja_5(GaugeProperty.FIVEKEYS, JudgeProperty.FIVEKEYS, NoteJudgementBehavior.BEATORAJA, Mode.BEAT_5K, Mode.BEAT_10K),
 	Beatoraja_7(GaugeProperty.SEVENKEYS, JudgeProperty.SEVENKEYS, NoteJudgementBehavior.BEATORAJA, Mode.BEAT_7K, Mode.BEAT_14K),
 	Beatoraja_9(GaugeProperty.PMS, JudgeProperty.PMS, NoteJudgementBehavior.BEATORAJA, Mode.POPN_5K, Mode.POPN_9K),

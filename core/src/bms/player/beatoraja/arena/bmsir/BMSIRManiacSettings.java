@@ -35,6 +35,7 @@ public final class BMSIRManiacSettings {
     }
 
     private int hiddenSudden1P;
+    private boolean nantokaMania;
     private int hiddenSudden2P;
     private int extraMode;
     private int addNotes;
@@ -70,6 +71,7 @@ public final class BMSIRManiacSettings {
             return;
         }
         hiddenSudden1P = source.hiddenSudden1P;
+        nantokaMania = source.nantokaMania;
         hiddenSudden2P = source.hiddenSudden2P;
         extraMode = source.extraMode;
         addNotes = source.addNotes;
@@ -149,6 +151,7 @@ public final class BMSIRManiacSettings {
         if (integer(values, "algorithm") != ALGORITHM_VERSION) return null;
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setHiddenSudden1P(integer(values, "hs1"));
+        settings.setNantokaMania(Boolean.parseBoolean(values.getOrDefault("nantoka_mania", "false")));
         settings.setHiddenSudden2P(integer(values, "hs2"));
         settings.setExtraMode(integer(values, "extra"));
         settings.setAddNotes(integer(values, "notes"));
@@ -201,7 +204,7 @@ public final class BMSIRManiacSettings {
     }
 
     public boolean isActive() {
-        return chartTransformCount() > 0
+        return nantokaMania || chartTransformCount() > 0
                 || hasStandardEffect()
                 || doubleBattle;
     }
@@ -225,6 +228,7 @@ public final class BMSIRManiacSettings {
     }
 
     public RankingClass rankingClass() {
+        if (nantokaMania) return RankingClass.LOCAL_ONLY;
         if (!isActive()) {
             return RankingClass.NORMAL;
         }
@@ -248,6 +252,7 @@ public final class BMSIRManiacSettings {
     /** Arena may opt into SP-to-DP without accidentally enabling other MANIAC effects. */
     public boolean isSpToDpOnly() {
         return spToDpDifficulty > 0
+                && !nantokaMania
                 && extraMode == 0
                 && addNotes == 0
                 && addLongNotes == 0
@@ -309,6 +314,7 @@ public final class BMSIRManiacSettings {
         if (autoScratch) {
             base += ",autoscratch=true";
         }
+        if (nantokaMania) base += ",nantoka_mania=true";
         return base + "," + String.join(",",
                 "seed=" + (generationSeedOverride == null ? "fixed" : generationSeedOverride),
                 "algorithm=" + ALGORITHM_VERSION
@@ -344,6 +350,7 @@ public final class BMSIRManiacSettings {
 
     public String compactOptionText() {
         List<String> values = new ArrayList<>();
+        if (nantokaMania) values.add("NANTOKA MANIA");
         if (doubleBattle) values.add("DB" + randomLinkSuffix()
                 + (autoScratch ? " AUTO SCRATCH" : ""));
         if (spToDpDifficulty > 0) values.add("SP TO DP Lv" + spToDpDifficulty);
@@ -380,6 +387,7 @@ public final class BMSIRManiacSettings {
             return compact;
         }
         // Temporarily collect without the compact threshold.
+        if (nantokaMania) values.add("NANTOKA MANIA");
         if (doubleBattle) values.add("DB" + randomLinkSuffix()
                 + (autoScratch ? " AUTO SCRATCH" : ""));
         if (spToDpDifficulty > 0) values.add("SP TO DP Lv" + spToDpDifficulty);
@@ -444,6 +452,8 @@ public final class BMSIRManiacSettings {
     }
 
     public int getHiddenSudden1P() { return hiddenSudden1P; }
+    public boolean isNantokaMania() { return nantokaMania; }
+    public void setNantokaMania(boolean value) { nantokaMania = value; }
     public void setHiddenSudden1P(int value) { hiddenSudden1P = value; validate(); }
     public int getHiddenSudden2P() { return hiddenSudden2P; }
     public void setHiddenSudden2P(int value) { hiddenSudden2P = value; validate(); }

@@ -148,6 +148,8 @@ public class JudgeManager {
     private MultiBadCollector multiBadCollector;
 
     private NoteJudgementBehavior noteJudgementBehavior;
+    private NantokaManiaJudge nantokaJudge;
+    private record ManiaInput(int key, long time, boolean pressed) { }
 
     public JudgeManager(BMSPlayer main) {
         this.main = main;
@@ -163,9 +165,9 @@ public class JudgeManager {
         judgefast = new long[judgeregion];
         mjudgefast = new long[judgeregion];
         score = new ScoreData(orgmode);
-        score.setNotes(model.getTotalNotes());
+        score.setNotes(NantokaManiaRules.totalNotes(model));
         score.setSha256(model.getSHA256());
-        ghost = new int[model.getTotalNotes()];
+        ghost = new int[NantokaManiaRules.totalNotes(model)];
         for (int i=0; i<ghost.length; i++) {
             ghost[i] = 4;
         }
@@ -175,6 +177,11 @@ public class JudgeManager {
 
         algorithm = JudgeAlgorithm.valueOf(resource.getPlayerConfig().getPlayConfig(orgmode).getPlayconfig().getJudgetype());
         BMSPlayerRule playerRule = BMSPlayerRule.getBMSPlayerRule(orgmode);
+        boolean nantoka = NantokaManiaRules.isActive(model);
+        if (nantoka) {
+            playerRule = BMSPlayerRule.NantokaMania;
+            algorithm = JudgeAlgorithm.Combo;
+        }
         JudgeProperty rule = playerRule.judge;
         score.setJudgeAlgorithm(algorithm);
         score.setRule(playerRule);
@@ -198,10 +205,10 @@ public class JudgeManager {
 
         final int judgerank = model.getJudgerank();
         final PlayerConfig config = resource.getPlayerConfig();
-        final int[] keyJudgeWindowRate = config.isCustomJudge()
+        final int[] keyJudgeWindowRate = config.isCustomJudge() && !nantoka
                 ? new int[]{config.getKeyJudgeWindowRatePerfectGreat(), config.getKeyJudgeWindowRateGreat(), config.getKeyJudgeWindowRateGood()}
                 : new int[]{100, 100, 100};
-        final int[] scratchJudgeWindowRate = config.isCustomJudge()
+        final int[] scratchJudgeWindowRate = config.isCustomJudge() && !nantoka
                 ? new int[]{config.getScratchJudgeWindowRatePerfectGreat(), config.getScratchJudgeWindowRateGreat(), config.getScratchJudgeWindowRateGood()}
                 : new int[]{100, 100, 100};
         for (CourseData.CourseDataConstraint mode : resource.getConstraint()) {
@@ -220,7 +227,7 @@ public class JudgeManager {
         smjudge = rule.getJudge(NoteType.SCRATCH, judgerank, scratchJudgeWindowRate);
         scnendmjudge = rule.getJudge(NoteType.LONGSCRATCH_END, judgerank, scratchJudgeWindowRate);
         BMSIRManiacPlayContext maniac = resource.getManiacPlayContext();
-        if (maniac != null && maniac.settings().getGambol() > 0) {
+        if (maniac != null && !nantoka && maniac.settings().getGambol() > 0) {
             int level = maniac.settings().getGambol();
             BMSIRManiacVisualEffects.applyGambol(nmjudge, level);
             BMSIRManiacVisualEffects.applyGambol(smjudge, level);
@@ -247,6 +254,79 @@ public class JudgeManager {
         Arrays.fill(recentJudges, Long.MIN_VALUE);
         this.recentJudgesIndex = 0;
         multiBadCollector = createMultiBadCollector(playerRule);
+        nantokaJudge = nantoka ? new NantokaManiaJudge(model, autoplay, new NantokaManiaJudge.Listener() {
+            @Override public void judge(int lane, Note note, int result, long at, long difference) {
+                updateMicro(states[lane], note, at, result, -difference, result != 5);
+                if (autoplay && result < 3) auto_presstime[states[lane].laneassign[0]] = main.timer.getNowTime();
+            }
+            @Override public void suppress(int lane, LongNote end) {
+                if (score.getPassnotes() < ghost.length) ghost[score.getPassnotes()] = 6;
+                score.setPassnotes(score.getPassnotes() + 1);
+            }
+            @Override public void recover(int lane) { main.getGauge().update(0); }
+            @Override public void sound(int lane, Note note) { keysound.play(note, getKeyVolume(), 0); }
+            @Override public void mine(int lane, MineNote note) {
+                main.getGauge().addValue((float) -note.getDamage());
+                keysound.play(note, getKeyVolume(), 0);
+            }
+        }) : null;
+    }
+
+    public boolean isNantokaMania() { return nantokaJudge != null; }
+
+    int[] initializeNantokaInput(int[] replayHeldKeys) {
+        if (nantokaJudge == null) return new int[0];
+        BMSPlayerInputProcessor input = main.main.getInputProcessor();
+        int[] held = replayHeldKeys != null ? replayHeldKeys : IntStream.range(0, keyassign.length)
+                .filter(key -> input.getKeyChangedTime(key) == Long.MIN_VALUE
+                        ? input.getKeyState(key) : !input.getKeyState(key)).toArray();
+        held = Arrays.stream(held).filter(key -> key >= 0 && key < keyassign.length
+                && keyassign[key] >= 0).distinct().toArray();
+        for (int key : held) nantokaJudge.initiallyHeld(keyassign[key], key);
+        return held;
+    }
+
+    private void updateNantoka(long mtime) {
+        BMSPlayerInputProcessor input = main.main.getInputProcessor();
+        java.util.List<ManiaInput> changes = new java.util.ArrayList<>();
+        for (int key = 0; key < keyassign.length; key++) {
+            long at = input.getKeyChangedTime(key);
+            if (keyassign[key] >= 0 && at != Long.MIN_VALUE) {
+                changes.add(new ManiaInput(key, at, input.getKeyState(key)));
+            }
+        }
+        changes.sort(java.util.Comparator.comparingLong(ManiaInput::time));
+        for (int i = 0; i < changes.size();) {
+            long at = changes.get(i).time;
+            nantokaJudge.advanceTo(at - 1);
+            do {
+                ManiaInput change = changes.get(i++);
+                int lane = keyassign[change.key];
+                nantokaJudge.input(lane, change.key, change.pressed, at);
+                if (change.pressed) main.getKeyinput().inputKeyOn(lane);
+                input.resetKeyChangedTime(change.key);
+            } while (i < changes.size() && changes.get(i).time == at);
+            nantokaJudge.advanceTo(at);
+        }
+        nantokaJudge.advanceTo(mtime);
+        for (LaneState state : states) {
+            state.processing = nantokaJudge.processing(state.lane);
+            state.passing = nantokaJudge.passing(state.lane);
+            state.inclease = nantokaJudge.holding(state.lane);
+            if (autoplay && state.processing == null) {
+                for (int key : state.laneassign) {
+                    if (auto_presstime[key] != Long.MIN_VALUE
+                            && main.timer.getNowTime() - auto_presstime[key] > auto_minduration) {
+                        auto_presstime[key] = Long.MIN_VALUE;
+                    }
+                }
+            }
+            main.timer.switchTimer(SkinPropertyMapper.holdTimerId(state.player, state.offset),
+                    state.processing != null && state.inclease);
+            main.timer.switchTimer(state.timerActive, state.passing != null && state.inclease);
+            main.timer.switchTimer(state.timerDamage, state.passing != null && !state.inclease);
+        }
+        prevmtime = mtime;
     }
     
     private float getKeyVolume() {
@@ -258,6 +338,10 @@ public class JudgeManager {
     }
 
     public void update(final long mtime) {
+        if (nantokaJudge != null) {
+            updateNantoka(mtime);
+            return;
+        }
         final MainController mc = main.main;
         final TimerManager timer = main.timer;
         final BMSPlayerInputProcessor input = mc.getInputProcessor();
@@ -748,7 +832,7 @@ public class JudgeManager {
             updateRecentDirection(
                     state.player,
                     state.sckey >= 0,
-                    mfast,
+                    nantokaJudge != null ? -mfast : mfast,
                     System.nanoTime()
             );
         }

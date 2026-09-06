@@ -963,6 +963,13 @@ SP TO DP, and Double Battle use isolated BMS-IR leaderboards. Unsupported combin
 ADD MINES, LOUDNESS, or a custom generation seed remain local-only instead of
 falling back to the normal leaderboard.
 
+MANIAC OPTIONS also provides **ナントカマニアモード / NANTOKA MANIA MODE**.
+On supported 5/7/10/14KEY solo charts it uses fixed judgment windows,
+integer gauge rules, and long-note handling based on the supplied specification.
+Its records and replays are isolated and local-only; Arena, courses, and practice
+do not enable it. See [the mode specification](NANTOKA_MANIA.md) for exact rules,
+configuration precedence, compatibility boundaries, and regression coverage.
+
 SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to
 DP 10KEY and 14KEY. It moves the existing note objects without changing their
 timing, keysound, long-note pairing, or playable-note count. A monotonic
