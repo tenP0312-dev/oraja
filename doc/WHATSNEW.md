@@ -1,3 +1,13 @@
+# Arena oraja 0.4.14.81
+
+- Added NANTOKA MANIA MODE to MANIAC OPTIONS for 5/7/10/14KEY solo play.
+- Fixed its key/scratch judgment windows, integer gauge arithmetic, and
+  LN/CN/HCN/BSS handling independently of the ordinary rule profile.
+- Isolated mode-on local scores and replays, and excluded the mode from Arena,
+  courses, practice, ordinary IR, and MANIAC IR.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.80` behavior.
+
 # Arena oraja 0.4.14.80
 
 - Added optional vertical color gradients to dynamic TrueType/OpenType skin

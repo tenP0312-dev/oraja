@@ -109,7 +109,7 @@ class StaticTargetProperty extends TargetProperty {
 
     @Override
     public ScoreData getTarget(MainController main) {
-    	int rivalscore = (int)Math.ceil(main.getPlayerResource().getBMSModel().getTotalNotes() * 2 * rate / 100f);
+        int rivalscore = (int)Math.ceil(NantokaManiaRules.totalNotes(main.getPlayerResource().getBMSModel()) * 2 * rate / 100f);
 		targetScore.setPlayer(getName(main));
 		targetScore.setEpg(rivalscore / 2);
 		targetScore.setEgr(rivalscore % 2);
@@ -317,7 +317,7 @@ class NextRankTargetProperty extends TargetProperty {
         ScoreData now = main.getPlayDataAccessor().readScoreData(main.getPlayerResource().getBMSModel()
                 , main.getPlayerConfig().getLnmode());
         final int nowscore = now != null ? now.getExscore() : 0;
-        final int max = main.getPlayerResource().getBMSModel().getTotalNotes() * 2;
+        final int max = NantokaManiaRules.totalNotes(main.getPlayerResource().getBMSModel()) * 2;
         int targetscore = max;
         for(int i = 15;i < 27;i++) {
             int target = (int)Math.ceil(max * i / 27f);

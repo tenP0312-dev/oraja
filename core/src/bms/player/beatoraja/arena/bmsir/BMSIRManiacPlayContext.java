@@ -70,6 +70,9 @@ public final class BMSIRManiacPlayContext {
     ) {
         if (persisted == null || mode == null) return null;
         BMSIRManiacSettings applied = new BMSIRManiacSettings(persisted);
+        if (!bms.player.beatoraja.play.NantokaManiaRules.supports(mode)) {
+            applied.setNantokaMania(false);
+        }
         if (applied.getSpToDpDifficulty() > 0
                 && mode != Mode.BEAT_5K
                 && mode != Mode.BEAT_7K) {
@@ -113,6 +116,10 @@ public final class BMSIRManiacPlayContext {
     }
 
     private void mark(BMSModel model) {
+        if (settings.isNantokaMania()) {
+            model.getValues().put("bmsir.nantoka.total_notes", Integer.toString(
+                    bms.player.beatoraja.play.NantokaManiaRules.countNotes(model)));
+        }
         model.getValues().put(MODEL_STORAGE_HASH, storageHash);
         model.getValues().put(MODEL_BASE_HASH, baseHash == null ? "" : baseHash);
         model.getValues().put(MODEL_OPTIONS, settings.canonicalOptions());

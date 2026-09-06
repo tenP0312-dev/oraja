@@ -1,5 +1,7 @@
 package bms.player.beatoraja.song;
 
+import bms.player.beatoraja.play.NantokaManiaRules;
+
 import bms.player.beatoraja.DifficultyTableComment;
 
 import java.security.MessageDigest;
@@ -209,7 +211,7 @@ public class SongData implements Validatable, IpfsInformation {
 			}
 		}
 		length = model.getLastTime();
-		notes = model.getTotalNotes();
+		notes = NantokaManiaRules.totalNotes(model);
 
 		timelines = model.getAllTimeLines();
 

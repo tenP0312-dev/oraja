@@ -217,7 +217,8 @@ public class IntegerPropertyFactory {
 		case NUMBER_TOTALEARLY:
 			return (state) -> {
 				int ecount = 0;
-				for (int i = 1; i < 6; i++) {
+				int limit = NantokaManiaRules.isActive(state.resource.getBMSModel()) ? 3 : 6;
+				for (int i = 1; i < limit; i++) {
 					ecount += state.getJudgeCount(i, true);
 				}
 				return ecount;
@@ -225,7 +226,8 @@ public class IntegerPropertyFactory {
 		case NUMBER_TOTALLATE:
 			return (state) -> {
 				int ecount = 0;
-				for (int i = 1; i < 6; i++) {
+				int limit = NantokaManiaRules.isActive(state.resource.getBMSModel()) ? 3 : 6;
+				for (int i = 1; i < limit; i++) {
 					ecount += state.getJudgeCount(i, false);
 				}
 				return ecount;
@@ -334,10 +336,13 @@ public class IntegerPropertyFactory {
 		case NUMBER_GROOVEGAUGE:
 			return (state) -> {
 				if (state instanceof BMSPlayer) {
-					return (int) (((BMSPlayer) state).getGauge().getValue());
+					return ((BMSPlayer) state).getGauge().getGauge().getDisplayValue();
 				}
 				if (state instanceof AbstractResult) {
 					final int gaugeType = ((AbstractResult) state).getGaugeType();
+					if (bms.player.beatoraja.play.NantokaManiaRules.isActive(state.resource.getBMSModel())) {
+						return (int) (state.resource.getGauge()[gaugeType].peek() / 2) * 2;
+					}
 					return (int) state.resource.getGauge()[gaugeType]
 							.get(state.resource.getGauge()[gaugeType].size - 1);
 				}
@@ -1073,7 +1078,8 @@ public class IntegerPropertyFactory {
 			return state.resource.getPlayerConfig().getLnmode();
 		}),
 		notesdisplaytimingautoadjust(75, (state) -> (state.resource.getPlayerConfig().isNotesDisplayTimingAutoAdjust() ? 1 : 0)),
-		gaugeautoshift(78, (state) -> (state.resource.getPlayerConfig().getGaugeAutoShift())),
+		gaugeautoshift(78, (state) -> (NantokaManiaRules.isActive(state.resource.getBMSModel())
+				? PlayerConfig.GAUGEAUTOSHIFT_NONE : state.resource.getPlayerConfig().getGaugeAutoShift())),
 		bottomshiftablegauge(341, (state) -> (state.resource.getPlayerConfig().getBottomShiftableGauge())),
 		bga(72, (state) -> (state.resource.getConfig().getBga())),
 		

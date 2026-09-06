@@ -335,6 +335,7 @@ public class BMSPlayer extends MainState {
 			resource.setFreqOn(true);
 			resource.setFreqString(FreqTrainerMenu.getFreqString());
 		}
+		final Mode judgeTrainerMode = model.getMode();
 		if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY) {
 			if (config.isBpmguide() && (model.getMinBPM() < model.getMaxBPM())) {
 				// BPM変化がなければBPMガイドなし
@@ -342,27 +343,6 @@ public class BMSPlayer extends MainState {
 				score = false;
 			}
 
-			if (config.isCustomJudge() &&
-					(config.getKeyJudgeWindowRatePerfectGreat() > 100 || config.getKeyJudgeWindowRateGreat() > 100 || config.getKeyJudgeWindowRateGood() > 100
-					|| config.getScratchJudgeWindowRatePerfectGreat() > 100 || config.getScratchJudgeWindowRateGreat() > 100 || config.getScratchJudgeWindowRateGood() > 100)) {
-				assist = Math.max(assist, 2);
-				score = false;
-			}
-
-			// Override judge rank
-			if (JudgeTrainer.isActive()) {
-				// This could work since beatoraja would firstly convert the judge rank that is not defined as
-				// the window rate to it and directly mark the model as BMSON type (see BMSPlayerRule::validate)
-				int overridingJudgeWindowRate = JudgeTrainer.getJudgeWindowRate(model.getMode());
-				int originalJudgeWindowRate = model.getJudgerank();
-				logger.info("Overriding original judge window from {} to {}", originalJudgeWindowRate, overridingJudgeWindowRate);
-				if (originalJudgeWindowRate < overridingJudgeWindowRate) {
-					// Like expand judge treatment above if the original judge window is stricter than customized one
-					assist = Math.max(assist, 2);
-					score = false;
-				}
-				model.setJudgerank(overridingJudgeWindowRate);
-			}
 
 			// Constant considered as assist in Endless Dream
 			// This is a community discussion result, see https://github.com/seraxis/lr2oraja-endlessdream/issues/42
@@ -394,6 +374,9 @@ public class BMSPlayer extends MainState {
 				}
 			}
 
+		}
+
+		if (autoplay.mode != BMSPlayerMode.Mode.PRACTICE) {
 			ReplayData maniacReplay = replay != null
 					? replay
 					: resource.getChartOption();
@@ -418,6 +401,31 @@ public class BMSPlayer extends MainState {
 				// Never let a transformed play enter the ordinary chart endpoint.
 				forceNoIRSend = true;
 				playtime = model.getLastNoteTime() + TIME_MARGIN;
+			}
+
+		}
+
+		if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY) {
+			if (!NantokaManiaRules.isActive(model) && config.isCustomJudge() &&
+					(config.getKeyJudgeWindowRatePerfectGreat() > 100 || config.getKeyJudgeWindowRateGreat() > 100 || config.getKeyJudgeWindowRateGood() > 100
+					|| config.getScratchJudgeWindowRatePerfectGreat() > 100 || config.getScratchJudgeWindowRateGreat() > 100 || config.getScratchJudgeWindowRateGood() > 100)) {
+				assist = Math.max(assist, 2);
+				score = false;
+			}
+
+			// Override judge rank
+			if (!NantokaManiaRules.isActive(model) && JudgeTrainer.isActive()) {
+				// This could work since beatoraja would firstly convert the judge rank that is not defined as
+				// the window rate to it and directly mark the model as BMSON type (see BMSPlayerRule::validate)
+				int overridingJudgeWindowRate = JudgeTrainer.getJudgeWindowRate(judgeTrainerMode);
+				int originalJudgeWindowRate = model.getJudgerank();
+				logger.info("Overriding original judge window from {} to {}", originalJudgeWindowRate, overridingJudgeWindowRate);
+				if (originalJudgeWindowRate < overridingJudgeWindowRate) {
+					// Like expand judge treatment above if the original judge window is stricter than customized one
+					assist = Math.max(assist, 2);
+					score = false;
+				}
+				model.setJudgerank(overridingJudgeWindowRate);
 			}
 
 		}
@@ -844,7 +852,7 @@ public class BMSPlayer extends MainState {
 		}
 
 		if (autoplay.mode == BMSPlayerMode.Mode.PRACTICE) {
-			getScoreDataProperty().setTargetScore(0, null, 0, null, model.getTotalNotes());
+			getScoreDataProperty().setTargetScore(0, null, 0, null, NantokaManiaRules.totalNotes(model));
 			practice.create(model, main.getConfig());
 			state = STATE_PRACTICE;
 		} else {
@@ -860,11 +868,11 @@ public class BMSPlayer extends MainState {
                 score.getExscore(), score.decodeGhost(),
                 target != null ? target.getExscore() : 0,
                 target != null ? target.decodeGhost() : null,
-                model.getTotalNotes());
+                NantokaManiaRules.totalNotes(model));
             BMSIRArenaClient.applyArenaInitialTargetScore(
                     this,
                     score,
-                    model.getTotalNotes()
+                    NantokaManiaRules.totalNotes(model)
             );
         }
 		TimingDiagnostics.playStageChanged("LOADING_AUDIO");
@@ -1062,7 +1070,8 @@ public class BMSPlayer extends MainState {
 
 					input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000);
 					input.setKeyLogMarginTime(resource.getMarginTime());
-					keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime());
+					keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime(),
+							replay != null ? replay.bmsirNantokaInitialHeldKeys : null);
 					keysound.startBGPlay(model, starttimeoffset * 1000);
 					logger.info("STATE_PLAYに移行");
 				}
@@ -1100,9 +1109,12 @@ public class BMSPlayer extends MainState {
 				} else if(playtime - TIME_MARGIN < ptime) {
 					timer.switchTimer(TIMER_ENDOFNOTE_1P, true);
 				}
+				// Fixed-mode failure must not fall back to another gauge.
+				final int gaugeAutoShift = NantokaManiaRules.isActive(model)
+						? PlayerConfig.GAUGEAUTOSHIFT_NONE : config.getGaugeAutoShift();
 				// stage failed判定
-				if (config.getGaugeAutoShift() == PlayerConfig.GAUGEAUTOSHIFT_BESTCLEAR || config.getGaugeAutoShift() == PlayerConfig.GAUGEAUTOSHIFT_SELECT_TO_UNDER) {
-					final int len = config.getGaugeAutoShift() == PlayerConfig.GAUGEAUTOSHIFT_BESTCLEAR
+				if (gaugeAutoShift == PlayerConfig.GAUGEAUTOSHIFT_BESTCLEAR || gaugeAutoShift == PlayerConfig.GAUGEAUTOSHIFT_SELECT_TO_UNDER) {
+					final int len = gaugeAutoShift == PlayerConfig.GAUGEAUTOSHIFT_BESTCLEAR
 							? (gauge.getType() >= GrooveGauge.CLASS ? GrooveGauge.EXHARDCLASS + 1 : GrooveGauge.HAZARD + 1)
 							: (gauge.isCourseGauge() ? Math.min(Math.max(config.getGauge(), GrooveGauge.NORMAL) + GrooveGauge.CLASS - GrooveGauge.NORMAL, GrooveGauge.EXHARDCLASS) + 1 : config.getGauge() + 1);
 					int type = gauge.isCourseGauge() ? GrooveGauge.CLASS
@@ -1124,7 +1136,7 @@ public class BMSPlayer extends MainState {
 						}
 						resource.setFailMeasure(failMeasure);
 					}
-					switch(config.getGaugeAutoShift()) {
+					switch(gaugeAutoShift) {
 					case PlayerConfig.GAUGEAUTOSHIFT_NONE:
 						// FAILED移行
 						state = STATE_FAILED;
@@ -1282,7 +1294,7 @@ public class BMSPlayer extends MainState {
 		}
 		int playedNotes = Math.max(0, judge.getPastNotes());
 		int totalNotes = Math.max(0, model != null
-				? model.getTotalNotes()
+				? NantokaManiaRules.totalNotes(model)
 				: resource.getSongdata() != null ? resource.getSongdata().getNotes() : 0);
 		long elapsedSeconds = timer.isTimerOn(TIMER_PLAY)
 				? Math.max(0, timer.getNowTime(TIMER_PLAY) / 1000)
@@ -1511,6 +1523,7 @@ public class BMSPlayer extends MainState {
 		replay.mode = config.getLnmode();
 		replay.date = Calendar.getInstance().getTimeInMillis() / 1000;
 		replay.keylog = main.getInputProcessor().getKeyInputLog();
+		replay.bmsirNantokaInitialHeldKeys = playinfo.bmsirNantokaInitialHeldKeys.clone();
 //		replay.pattern = playinfo.pattern;
 		replay.laneShufflePattern = playinfo.laneShufflePattern;
 		replay.rand = playinfo.rand;
@@ -1691,7 +1704,7 @@ public class BMSPlayer extends MainState {
 		getScoreDataProperty().update(this.judge.getScoreData(), this.judge.getPastNotes());
 		BMSIRArenaClient.updateArenaLiveTargetScore(
 				this,
-				model.getTotalNotes(),
+				NantokaManiaRules.totalNotes(model),
 				this.judge.getPastNotes()
 		);
 

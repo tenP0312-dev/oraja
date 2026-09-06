@@ -49,6 +49,16 @@ public enum GaugeProperty {
             GaugeElementProperty.CLASS_KB,
             GaugeElementProperty.EXCLASS_KB,
             GaugeElementProperty.EXHARDCLASS_KB),
+    NANTOKA_MANIA(
+            GaugeElementProperty.ASSIST_EASY_NANTOKA,
+            GaugeElementProperty.EASY_NANTOKA,
+            GaugeElementProperty.NORMAL_NANTOKA,
+            GaugeElementProperty.HARD_NANTOKA,
+            GaugeElementProperty.EXHARD_NANTOKA,
+            GaugeElementProperty.HAZARD_NANTOKA,
+            GaugeElementProperty.DAN_NANTOKA,
+            GaugeElementProperty.DAN_NANTOKA,
+            GaugeElementProperty.DAN_NANTOKA),
     LR2(
             GaugeElementProperty.ASSIST_EASY_LR2,
             GaugeElementProperty.EASY_LR2,
@@ -73,6 +83,15 @@ public enum GaugeProperty {
      * @author exch
      */
     public enum GaugeElementProperty {
+
+        // Metadata for skins; actual updates use NantokaManiaGauge integers.
+        ASSIST_EASY_NANTOKA(null, 2, 100, 22, 60, 0, new float[6], new float[0][]),
+        EASY_NANTOKA(null, 2, 100, 22, 80, 0, new float[6], new float[0][]),
+        NORMAL_NANTOKA(null, 2, 100, 22, 80, 0, new float[6], new float[0][]),
+        HARD_NANTOKA(null, 0, 100, 100, 0, 2, new float[6], new float[0][]),
+        EXHARD_NANTOKA(null, 0, 100, 100, 0, 2, new float[6], new float[0][]),
+        HAZARD_NANTOKA(null, 0, 100, 100, 0, 0, new float[6], new float[0][]),
+        DAN_NANTOKA(null, 0, 100, 100, 0, 0, new float[6], new float[0][]),
 
         ASSIST_EASY_5(TOTAL ,2 ,100 ,20, 50, 0, new float[]{1.0f, 1.0f, 0.5f, -1.5f, -3.0f, -0.5f}, new float[][]{}),
         EASY_5(TOTAL ,2 ,100 ,20, 75, 0, new float[]{1.0f, 1.0f, 0.5f, -1.5f, -4.5f, -1.0f}, new float[][]{}),

@@ -102,6 +102,7 @@ public final class ReplayData implements Validatable {
 	public int oneBassTarget = -1;
 	public int oneBassTarget2 = -1;
 	public BMSIRManiacSettings bmsirManiacSettings;
+	public int[] bmsirNantokaInitialHeldKeys = new int[0];
 	public String bmsirManiacVirtualChartId;
 	public long bmsirManiacGenerationSeed;
 	public int bmsirManiacAlgorithmVersion;
