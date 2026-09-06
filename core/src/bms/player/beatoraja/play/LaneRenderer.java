@@ -1177,9 +1177,9 @@ public class LaneRenderer {
 			// HCN
 			final JudgeManager judge = main.getJudgeManager();
 			sprite.draw(
-					longImage[judge.getProcessingLongNote(lane) == ln.getPair() ? 6
-							: (judge.getPassingLongNote(lane) == ln && ln.getState() != 0
-									? (judge.getHellChargeJudge(lane) ? 8 : 9) : 7)],
+					longImage[hellChargeBodyImage(ln, judge.getProcessingLongNote(lane),
+							judge.getPassingLongNote(lane), judge.getHellChargeJudge(lane),
+							judge.isNantokaMania())],
 					x, y - height + scale, width, height - scale);
 			sprite.draw(longImage[4], x, y, width, scale);
 			sprite.draw(longImage[5], x, y - height, width, scale);
@@ -1198,6 +1198,14 @@ public class LaneRenderer {
             if (config.isForcedCNEndings()) { sprite.draw(longImage[0], x, y, width, scale); }
 			sprite.draw(longImage[1], x, y - height, width, scale);
 		}
+	}
+
+	static int hellChargeBodyImage(LongNote note, LongNote processing, LongNote passing,
+			boolean holding, boolean nantokaMania) {
+		// Nantoka keeps the end pending after an early release so reentry/end judgment still work.
+		// That pending reference alone does not mean the HCN is physically held.
+		if (processing == note.getPair() && (!nantokaMania || holding)) return 6;
+		return passing == note && note.getState() != 0 ? (holding ? 8 : 9) : 7;
 	}
 
 	public void dispose() {
