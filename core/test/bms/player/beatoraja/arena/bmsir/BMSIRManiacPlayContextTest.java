@@ -13,6 +13,28 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRManiacPlayContextTest {
+    @Test void previewOwnsPlacementWithoutChangingSavedOptionsOrEnablingOnlinePlay() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setDoubleBattle(true);
+        settings.setNantokaMania(true);
+        settings.setSevenToNinePreview(true);
+        BMSModel model = model(Mode.BEAT_7K);
+        BMSIRManiacPlayContext context = BMSIRManiacPlayContext.prepare(settings, model, false);
+        assertNotNull(context);
+        assertEquals(Mode.POPN_9K, model.getMode());
+        assertFalse(context.isDoubleBattleApplied());
+        assertFalse(context.settings().isNantokaMania());
+        assertFalse(BMSIRManiacApiClient.canSubmit(context.settings()));
+        assertFalse(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_7K));
+        assertTrue(settings.isDoubleBattle());
+        assertTrue(settings.isNantokaMania());
+        assertTrue(BMSIRManiacSettings.fromCanonicalOptions(settings.canonicalOptions()).isSevenToNinePreview());
+        assertNull(BMSIRManiacPlayContext.prepare(settings, model(Mode.BEAT_7K), true));
+        BMSIRManiacSettings previewOnly = new BMSIRManiacSettings();
+        previewOnly.setSevenToNinePreview(true);
+        assertNull(BMSIRManiacPlayContext.effectiveSettings(previewOnly, Mode.POPN_9K));
+        assertNull(BMSIRManiacPlayContext.effectiveSettings(previewOnly, Mode.BEAT_14K));
+    }
     @Test
     void doubleBattleTurnsSevenKeysIntoFourteenKeys() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
@@ -99,6 +121,8 @@ class BMSIRManiacPlayContextTest {
         assertNotNull(applied);
         assertFalse(applied.isDoubleBattle());
         assertEquals(30, applied.getTornado());
+        assertTrue(BMSIRManiacPlayContext.prepare(settings, model(Mode.BEAT_14K), false)
+                .isDoubleBattleSuspended());
     }
 
     @Test

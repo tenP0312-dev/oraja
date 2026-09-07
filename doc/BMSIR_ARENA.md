@@ -831,6 +831,14 @@ pre-launch EXTRA setting now read and write this same MANIAC EXTRA MODE at
 levels 0--3. The former beatoraja Extra Note modifier is not applied, so these
 controls no longer create an unrelated ASSIST-only chart. A skin-side change
 is saved immediately and reloads the matching MANIAC score and lamp.
+
+MANIAC OPTIONS also offers a default-off **7K TO 9K** trial mode for solo
+7KEY play/autoplay. It converts scratches and keys to nine buttons, avoids
+the known impossible chord shapes, and moves excess notes to BGM. This
+prototype saves no records or replays and submits to no ranking. Other MANIAC
+effects and lane-placement options are temporarily suspended on converted
+plays. See [the trial specification](SEVEN_TO_NINE_PREVIEW.md) for scope,
+heuristic limits, and the pending physical acceptance checks.
 As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
 start note and remove the end marker before generating notes. Generated notes
 therefore cannot overlap and render inside an old long-note body.
