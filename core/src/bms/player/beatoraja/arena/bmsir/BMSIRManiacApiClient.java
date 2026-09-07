@@ -137,7 +137,7 @@ public final class BMSIRManiacApiClient {
             try {
                 Auth auth = auth(main);
                 ObjectNode response = post(main, RANKING_PATH, identityPayload(identity, auth));
-                ranking.updateScore(scores(response, auth.playerId()), localScore(main, identity));
+                ranking.updateScore(scores(response, auth.playerId()), localScore(main, song, identity));
             } catch (Exception error) {
                 ranking.failAccess();
                 logger.warn("MANIAC ranking request failed: {}", error.getMessage());
@@ -150,7 +150,7 @@ public final class BMSIRManiacApiClient {
 
     public static ScoreData getLocalScore(MainController main, SongData song) {
         Identity identity = identity(main, song);
-        return identity == null ? null : localScore(main, identity);
+        return identity == null ? null : localScore(main, song, identity);
     }
 
     public static LeaderboardEntry[] loadLeaderboard(MainController main, SongData song) {
@@ -173,7 +173,7 @@ public final class BMSIRManiacApiClient {
                     ));
                 }
             }
-            ScoreData local = localScore(main, identity);
+            ScoreData local = localScore(main, song, identity);
             if (local != null) {
                 LeaderboardEntry ownOnline = entries.stream()
                         .filter(entry -> entry.getBMSIRPlayerId() == auth.playerId())
@@ -325,8 +325,9 @@ public final class BMSIRManiacApiClient {
         }
     }
 
-    private static ScoreData localScore(MainController main, Identity identity) {
+    private static ScoreData localScore(MainController main, SongData song, Identity identity) {
         return main.getPlayDataAccessor().readManiacScoreData(
+                song,
                 identity.settings().storageChartId(identity.baseSha256()),
                 main.getPlayerConfig().getLnmode()
         );

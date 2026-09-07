@@ -10,13 +10,19 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.84**. Its Windows native-audio
+The current client source version is **0.4.14.85**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.85 shares ordinary scores for charts without long notes and charts
+already using LN when Force LN is enabled. Only authored CN/HCN charts use the
+separate forced-LN records; switching OFF restores their ordinary scores.
+Existing records are preserved without migration. Plugin 0.0.75, launcher
+0.2.29, and the 7K TO 9K preview remain unchanged.
 
 Version 0.4.14.84 adds the disposable 7K TO 9K preview in MANIAC OPTIONS.
 Choose ON / NO SAVE for solo play or autoplay. It saves no records or replays
@@ -146,8 +152,12 @@ BMS/bmson CN and HCN. When disabled, chart definitions and the saved ordinary
 LN/CN/HCN selection apply again. Arena LN rules force LN; CN/HCN rules disable
 the switch and retain ordinary chart interpretation. Leaving Arena restores
 the user's switch and mode. Chart files and source hashes are unchanged.
-Scores for ON and OFF use separate local databases, and replays preserve the
-interpretation recorded when they were played. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
+Only charts whose authored CN/HCN changes to LN use separate local scores.
+Charts without long notes and charts already using LN share ordinary bests;
+undefined notes keep their existing per-mode records. Turning the switch OFF
+restores original scores. Existing records are neither moved nor inferred from
+MAX values, and replays preserve their recorded interpretation.
+See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
 This source change does not publish a new body or plugin package.
 
 Version 0.4.14.63 moves the 0.4.14.62 opt-in physical-folder filter from
