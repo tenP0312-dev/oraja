@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.83`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.84`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -957,6 +957,14 @@ pre-launch EXTRA setting now read and write this same MANIAC EXTRA MODE at
 levels 0--3. The former beatoraja Extra Note modifier is not applied, so these
 controls no longer create an unrelated ASSIST-only chart. A skin-side change
 is saved immediately and reloads the matching MANIAC score and lamp.
+
+MANIAC OPTIONS also offers a default-off **7K TO 9K** trial mode for solo
+7KEY play/autoplay. It converts scratches and keys to nine buttons, avoids
+the known impossible chord shapes, and moves excess notes to BGM. This
+prototype saves no records or replays and submits to no ranking. Other MANIAC
+effects and lane-placement options are temporarily suspended on converted
+plays. See [the trial specification](SEVEN_TO_NINE_PREVIEW.md) for scope,
+heuristic limits, and the pending physical acceptance checks.
 As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
 start note and remove the end marker before generating notes. Generated notes
 therefore cannot overlap and render inside an old long-note body.
@@ -1593,13 +1601,22 @@ client and its native platform:
 BMS-IR-Arena-oraja-0.4.14.83-macos-aarch64.jar
 ```
 
-GitHub distribution uses two OS-specific prereleases in this canonical source
-repository. Their tags are `test-<version>-windows-x86-64` and
-`test-<version>-macos-aarch64`, both at the same reviewed commit, and each
-contains exactly one body asset named `Arena-oraja.jar`. This keeps the public
-filename stable while preventing native libraries from being mixed across
-platforms. GitHub's automatic source archives therefore contain oraja body
-source; the patch-server repository does not host these body releases.
+The 2026-09-07 operator decision supersedes the earlier oraja-hosted release
+policy. Publish both the body JAR and its corresponding source ZIP in
+`tenP0312-dev/bms-ir-arena-patch-server`. Use OS-specific prerelease tags
+`test-<version>-windows-x86-64` and `test-<version>-macos-aarch64` so each can
+attach the canonical `Arena-oraja.jar` without mixing native libraries. Each
+also attaches `Arena-oraja-source.zip` from the exact reviewed oraja build
+commit, with pinned submodule sources and build/license files. Both platforms
+must record the same body source commit. The patch-server tag is not evidence
+of that commit; record it explicitly in release notes and source provenance.
+The automatic GitHub `Source code (zip)` is patch-server source, not this ZIP.
+Release notes must link directly to both explicit assets and identify the OS.
+See the [canonical distribution policy](https://github.com/tenP0312-dev/bms-ir-arena-patch-server#body-binary-and-source-distribution-policy).
+The release helper stages both assets for patch-server and records their exact
+identities. Its source ZIP contains committed body/build/license files, pinned
+submodule sources and ORAJA_SOURCE_PROVENANCE.json. Existing releases remain
+unchanged; source ZIPs are attachments, not launcher-installed artifacts.
 
 The public page offers two forms for each supported OS:
 

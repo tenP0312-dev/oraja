@@ -187,6 +187,7 @@ public final class PlayDataAccessor {
 	 * @return スコアデータ
 	 */
 	public ScoreData readScoreData(BMSModel model, int lnmode) {
+		if (bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)) return null;
 		String hash = scoreHash(model);
 		boolean ln = model.containsUndefinedLongNote();
 		return BMSIRLongNoteMode.compatibleScore(
@@ -312,6 +313,7 @@ public final class PlayDataAccessor {
 	 *            プレイ回数のみ反映する場合はfalse
 	 */
 	public void writeScoreData(ScoreData newscore, BMSModel model, int lnmode, boolean updateScore) {
+		if (bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)) return;
 		String hash = scoreHash(model);
 		ScoreDatabaseAccessor targetDatabase = scoreDatabase(model);
 		if (newscore == null) {
@@ -737,6 +739,7 @@ public final class PlayDataAccessor {
 	}
 
 	public boolean existsReplayData(BMSModel model, int lnmode, int index) {
+		if (bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)) return false;
 		return Files.exists(Paths.get(replayReadPath(model, lnmode, index) + ".brd"));
 	}
 
@@ -813,6 +816,7 @@ public final class PlayDataAccessor {
 	 *            LNモード
 	 */
 	public void wrireReplayData(ReplayData rd, BMSModel model, int lnmode, int index) {
+		if (bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)) return;
 		File replaydir = new File(this.getReplayDataFolder());
 		if (!replaydir.exists()) {
 			replaydir.mkdirs();

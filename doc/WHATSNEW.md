@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.84
+
+- MANIAC OPTIONSに7K TO 9K試遊版を追加。ON / NO SAVEで7鍵譜面を9鍵へ変換し、配置できないノーツはBGM化します。
+- スコア・ランプ・プレイ回数・履歴・リプレイを保存せず、ランキングへ送信しません。ソロ通常プレイとオートプレイ用です。
+- Added the disposable 7K TO 9K preview. Enable ON / NO SAVE in MANIAC OPTIONS for solo play or autoplay. Unplaced notes become BGM; no records, replays, or ranking submissions are saved.
+
 # Arena oraja 0.4.14.83
 
 - 起動前のBMS-IR固有設定に「強制LN」のON/OFFを追加（初期OFF）。ONでは譜面指定のCN/HCNもLNにします。OFFでは従来の譜面指定・LNモードに戻ります。

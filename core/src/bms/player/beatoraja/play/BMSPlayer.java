@@ -343,6 +343,11 @@ public class BMSPlayer extends MainState {
 			resource.setFreqString(FreqTrainerMenu.getFreqString());
 		}
 		final Mode judgeTrainerMode = model.getMode();
+		final boolean trialConversion = config.getBmsirManiacSettings().isSevenToNinePreview()
+				&& model.getMode() == Mode.BEAT_7K
+				&& (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY)
+				&& resource.getCourseBMSModels() == null && !BMSIRArenaClient.blocksLocalOneBass()
+				&& !Client.connected.get() && ghostBattle.isEmpty() && borrowedChartOption == null;
 		if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY) {
 			if (config.isBpmguide() && (model.getMinBPM() < model.getMaxBPM())) {
 				// BPM変化がなければBPMガイドなし
@@ -362,10 +367,10 @@ public class BMSPlayer extends MainState {
 			if(config.getScrollMode() > 0) {
 				mods.add(new ScrollSpeedModifier(config.getScrollMode() - 1, config.getScrollSection(), config.getScrollRate()));
 			}
-			if(config.getLongnoteMode() > 0) {
+			if(config.getLongnoteMode() > 0 && !trialConversion) {
 				mods.add(new LongNoteModifier(config.getLongnoteMode() - 1, config.getLongnoteRate()));
 			}
-			if(config.getMineMode() > 0) {
+			if(config.getMineMode() > 0 && !trialConversion) {
 				mods.add(new MineNoteModifier(config.getMineMode() - 1));
 			}
             // maybe we skip all that for gbattle
@@ -391,6 +396,12 @@ public class BMSPlayer extends MainState {
 					&& maniacReplay.bmsirManiacSettings != null
 							? maniacReplay.bmsirManiacSettings
 							: config.getBmsirManiacSettings();
+			if (requestedManiac.isSevenToNinePreview()
+					&& (autoplay.mode == BMSPlayerMode.Mode.REPLAY || ghostBattle.isPresent()
+							|| borrowedChartOption != null || Client.connected.get())) {
+				requestedManiac = new BMSIRManiacSettings(requestedManiac);
+				requestedManiac.setSevenToNinePreview(false);
+			}
 			boolean arenaBlocksManiac = BMSIRArenaClient.blocksLocalOneBass()
 					&& !BMSIRManiacPlayContext.allowsDuringArena(
 							requestedManiac,
@@ -437,7 +448,17 @@ public class BMSPlayer extends MainState {
 
 		}
 		logger.info("譜面オプション設定");
-		if (replay != null && replay.pattern != null) {
+		if (BMSIRSevenToNineModifier.isApplied(model)) {
+			// A shuffle after conversion would reintroduce impossible chords.
+			// Snapshot the effective options without modifying player preferences.
+			playinfo.randomoption = 0;
+			playinfo.randomoption2 = 0;
+			playinfo.doubleoption = 0;
+			playinfo.oneBassTarget = -1;
+			playinfo.oneBassTarget2 = -1;
+			resource.setRankingData(null);
+			resource.setRivalScoreData(null);
+		} else if (replay != null && replay.pattern != null) {
 			// リプレイ譜面再現(PatternModifyLog使用。旧verとの互換性維持用)
 			if(replay.sevenToNinePattern > 0 && model.getMode() == Mode.BEAT_7K) {
 				model.setMode(Mode.POPN_9K);
@@ -750,16 +771,23 @@ public class BMSPlayer extends MainState {
 
 		final boolean testPlay = autoplay.mode == BMSPlayerMode.Mode.PLAY
 				&& BMSIRTestPlayFolder.contains(model, main.getConfig().getWorkDirectory());
-		if (testPlay) {
+		final boolean sevenToNinePreview = BMSIRSevenToNineModifier.isApplied(model);
+		if (testPlay || sevenToNinePreview) {
 			score = false;
 			forceNoIRSend = true;
 		}
 
-		if (assist != 0) {
+		if (assist != 0 && !sevenToNinePreview) {
 			ImGuiNotify.warning("Assist options enabled. Next play will be saved as an assist clear");
 		}
 		if (!score) {
-			ImGuiNotify.warning(testPlay
+			ImGuiNotify.warning(sevenToNinePreview
+					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+							"7K TO 9K 試遊版: 記録・リプレイ・ランキングなし（BGM移動 "
+									+ model.getValues().get(BMSIRSevenToNineModifier.MODEL_REMOVED) + "ノーツ）",
+							"7K TO 9K trial: no records, replays or rankings ("
+									+ model.getValues().get(BMSIRSevenToNineModifier.MODEL_REMOVED) + " notes moved to BGM)")
+					: testPlay
 					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
 							"作業フォルダ: スコア保存とIR送信は無効です",
 							"Work folder: score saving and IR submission are disabled")
@@ -864,7 +892,9 @@ public class BMSPlayer extends MainState {
 			state = STATE_PRACTICE;
 		} else {
 			
-			if(resource.getRivalScoreData() == null || resource.getCourseBMSModels() != null) {
+			if (BMSIRSevenToNineModifier.isApplied(model)) {
+				resource.setTargetScoreData(new ScoreData());
+			} else if(resource.getRivalScoreData() == null || resource.getCourseBMSModels() != null) {
 				ScoreData targetScore = TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main);
 				resource.setTargetScoreData(targetScore);
 			} else {
@@ -1296,7 +1326,7 @@ public class BMSPlayer extends MainState {
 	}
 
 	private void sendPlayEndMetrics(boolean quickRetry) {
-		if (playEndMetricsSent || judge == null) {
+		if (playEndMetricsSent || judge == null || BMSIRSevenToNineModifier.isApplied(model)) {
 			return;
 		}
 		int playedNotes = Math.max(0, judge.getPastNotes());

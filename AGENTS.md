@@ -65,6 +65,11 @@ repository.
 
 ## Release Boundaries
 
+- The 2026-09-07 operator decision places both `Arena-oraja.jar` and its
+  matching `Arena-oraja-source.zip` on patch-server's OS-specific Releases.
+  Follow the distribution policy linked from README; keep source development
+  here. The helper's old oraja release targets must be migrated and validated
+  before publication. GitHub's patch-server source archive is not body source.
 - Source merge does not authorize binary publication, production rollout, or
   Discord announcements.
 - Any BMS-IR-built body or plugin made downloadable through the BMS-IR
