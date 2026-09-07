@@ -42,7 +42,8 @@ public final class ManiacOptionsMenu {
             "WAVE",
             "SPIRAL",
             "SIDEJUMP",
-            "NANTOKA MANIA MODE"
+            "NANTOKA MANIA MODE",
+            "7K TO 9K"
     };
     private static final String[] LEVEL_1_3 = {"OFF", "LEVEL 1", "LEVEL 2", "LEVEL 3"};
     private static final String[] LEVEL_1_2 = {"OFF", "LEVEL 1", "LEVEL 2"};
@@ -153,6 +154,7 @@ public final class ManiacOptionsMenu {
             case 23 -> draft.setSpiral(nextPercent(draft.getSpiral()));
             case 24 -> draft.setSideJump(nextPercent(draft.getSideJump()));
             case 25 -> draft.setNantokaMania(!draft.isNantokaMania());
+            case 26 -> draft.setSevenToNinePreview(!draft.isSevenToNinePreview());
             default -> {
             }
         }
@@ -318,12 +320,14 @@ public final class ManiacOptionsMenu {
             case 23 -> percentValue(draft.getSpiral());
             case 24 -> percentValue(draft.getSideJump());
             case 25 -> draft.isNantokaMania() ? "ON" : "OFF";
+            case 26 -> draft.isSevenToNinePreview() ? "ON / NO SAVE" : "OFF";
             default -> "OFF";
         };
     }
 
     private static String description(int index) {
         return switch (index) {
+            case 26 -> t("7KEYと皿を9KEYへ変換する試遊版。無理押しを避け、余剰ノーツはBGMへ移します。記録・リプレイ・ランキングは保存しません。他のマニアック効果と配置変更は一時停止。単曲の通常・オートプレイ専用です。", "Trial 7KEY + scratch to 9KEY conversion. Avoids impossible chords and moves excess notes to BGM. No records, replays, or rankings. Other MANIAC effects and placement options are suspended. Solo play/autoplay only.");
             case 0 -> t("SP 5KEY/7KEYを左右へ決定的に分配します。LEVELが高いほど左右移動と偏りを許容します。", "Deterministically distributes SP 5KEY/7KEY across both sides. Higher levels allow faster side changes and more bias.");
             case 1 -> t("SP譜面を1P・2Pの両側へ複製します。", "Duplicates an SP chart across both sides.");
             case 2 -> t("DOUBLE BATTLEの両側の皿を自動演奏します。", "Autoplays both scratch lanes in Double Battle.");

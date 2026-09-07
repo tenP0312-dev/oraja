@@ -3,6 +3,7 @@ package bms.player.beatoraja.arena.bmsir;
 import bms.model.BMSModel;
 import bms.model.Mode;
 import bms.player.beatoraja.pattern.BMSIRManiacModifier;
+import bms.player.beatoraja.pattern.BMSIRSevenToNineModifier;
 import bms.player.beatoraja.pattern.AutoplayModifier;
 import bms.player.beatoraja.pattern.LaneShuffleModifier.PlayerBattleModifier;
 
@@ -50,7 +51,7 @@ public final class BMSIRManiacPlayContext {
         BMSIRManiacSettings applied = effectiveSettings(persisted, model.getMode());
         if (applied == null) return null;
         boolean nativeDouble = model.getMode().player == 2;
-        boolean dbRequested = persisted.isDoubleBattle();
+        boolean dbRequested = persisted.isDoubleBattle() && !applied.isSevenToNinePreview();
         boolean dbApplied = dbRequested && !nativeDouble && supportsDoubleBattle(model.getMode());
         boolean dbSuspended = dbRequested && !dbApplied;
 
@@ -70,6 +71,16 @@ public final class BMSIRManiacPlayContext {
     ) {
         if (persisted == null || mode == null) return null;
         BMSIRManiacSettings applied = new BMSIRManiacSettings(persisted);
+        if (applied.isSevenToNinePreview()) {
+            if (mode == Mode.BEAT_7K) {
+                // The trial converter owns placement. Keep saved options intact,
+                // but suspend other MANIAC effects for this play only.
+                applied = new BMSIRManiacSettings();
+                applied.setSevenToNinePreview(true);
+                return applied;
+            }
+            applied.setSevenToNinePreview(false);
+        }
         if (!bms.player.beatoraja.play.NantokaManiaRules.supports(mode)) {
             applied.setNantokaMania(false);
         }
@@ -92,6 +103,11 @@ public final class BMSIRManiacPlayContext {
     }
 
     private void apply(BMSModel model) {
+        if (settings.isSevenToNinePreview()) {
+            BMSIRSevenToNineModifier.apply(model);
+            updatePlacement(model);
+            return;
+        }
         BMSIRManiacModifier modifier = new BMSIRManiacModifier(settings);
         modifier.modify(model);
         if (doubleBattleApplied) {

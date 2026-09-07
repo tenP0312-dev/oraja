@@ -41,7 +41,8 @@ public class MusicResult extends AbstractResult {
 	private static final Logger logger = LoggerFactory.getLogger(MusicResult.class);
 
 	static boolean shouldPersistScore(BMSModel model, String workDirectory) {
-		return !BMSIRTestPlayFolder.contains(model, workDirectory);
+		return !bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)
+				&& !BMSIRTestPlayFolder.contains(model, workDirectory);
 	}
 
 	private ResultKeyProperty property;
@@ -84,12 +85,14 @@ public class MusicResult extends AbstractResult {
 		}
 
 		updateScoreDatabase();
-		BMSIROrajaHelperBridge.publishResult(
+		if (!bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(resource.getBMSModel())) {
+			BMSIROrajaHelperBridge.publishResult(
 				resource.getSongdata(),
 				resource.getReplayData(),
 				resource.getBMSModel().getMode(),
 				resource.getScoreData()
-		);
+			);
+		}
 		// リプレイの自動保存
 		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !resource.isFreqOn()) {
 			for (int i = 0; i < REPLAY_SIZE; i++) {
@@ -549,7 +552,7 @@ public class MusicResult extends AbstractResult {
 			main.getPlayDataAccessor().writeScoreData(resource.getScoreData(), resource.getBMSModel(),
 					resource.getPlayerConfig().getLnmode(), resource.isUpdateScore());
 		} else if (!persistScore) {
-			logger.info("作業フォルダのため、スコアとリプレイは保存されません");
+			logger.info("試遊プレイのため、スコアとリプレイは保存されません");
 		} else {
 			logger.info("プレイモードが{}のため、スコア登録はされません", resource.getPlayMode().mode.name());
 		}
