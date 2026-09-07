@@ -147,9 +147,14 @@ public final class PlayerResource {
 	private double failMeasure = Double.NaN;
 
 	public PlayerResource(AudioDriver audio, Config config, PlayerConfig pconfig, BMSLoudnessAnalyzer loudnessAnalyzer) {
+		this(config, pconfig, new BMSResource(audio, config, pconfig), loudnessAnalyzer);
+	}
+
+	// Decode-only clients can supply their resource dependency without initializing graphics.
+	PlayerResource(Config config, PlayerConfig pconfig, BMSResource resource, BMSLoudnessAnalyzer loudnessAnalyzer) {
 		this.config = config;
 		this.pconfig = pconfig;
-		this.bmsresource = new BMSResource(audio, config, pconfig);
+		this.bmsresource = resource;
 		this.orgGaugeOption = pconfig.getGauge();
 		this.loudnessAnalyzer = loudnessAnalyzer;
 	}
@@ -234,6 +239,18 @@ public final class PlayerResource {
 	}
 
 	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom) {
+		boolean force = pconfig.isBmsirForceLn();
+		return loadBMSModel(resource, force ? 0 : lnmode, selectedRandom, force);
+	}
+
+	public BMSModel loadBMSModelForReplay(ReplayData replay) {
+		return loadBMSModel(chartResource != null ? chartResource
+				: SongResources.fromPath(Path.of(model.getPath())),
+				replay.mode, replay.rand, replay.bmsirForcedLongNotes);
+	}
+
+	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
+			boolean forceLongNotes) {
 		String lowerName = resource.name().toLowerCase(java.util.Locale.ROOT);
 		ChartDecoder decoder;
 		BMSModel loaded;
@@ -267,10 +284,11 @@ public final class PlayerResource {
 			loaded.setChartInformation(new ChartInformation(
 					Path.of(resource.displayPath()), lnmode, selectedRandom));
 		}
-		return prepareModel(loaded, decoder);
+		return prepareModel(loaded, decoder, forceLongNotes);
 	}
 
 	public BMSModel loadBMSModel(ChartInformation info) {
+		if (pconfig.isBmsirForceLn()) info = new ChartInformation(info.path, 0, info.selectedRandoms);
 		ChartDecoder decoder = ChartDecoder.getDecoder(info.path);
 		if(decoder == null) {
 			return null;
@@ -280,9 +298,14 @@ public final class PlayerResource {
 	}
 
 	private BMSModel prepareModel(BMSModel model, ChartDecoder decoder) {
+		return prepareModel(model, decoder, pconfig.isBmsirForceLn());
+	}
+
+	private BMSModel prepareModel(BMSModel model, ChartDecoder decoder, boolean forceLongNotes) {
 		if (model == null) {
 			return null;
 		}
+		if (forceLongNotes) BMSIRLongNoteMode.apply(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);
 		}

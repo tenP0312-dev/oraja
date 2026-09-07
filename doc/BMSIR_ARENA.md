@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.81`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.82`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -1174,19 +1174,28 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 ## Dedicated-client long-note policy
 
-- The ordinary launcher selects `LONG NOTE`, `CHARGE NOTE`, or `HELL CHARGE
-  NOTE` (`lntype=0/1/2`). Decoder input, explicit chart long-note types, local
-  catalog metadata, score storage keys, ranking requests, and IR score payloads
-  preserve that selection.
+- Startup BMS-IR settings include a default-off `Force LN` switch. ON treats
+  all existing long notes as LN, including authored CN/HCN. OFF preserves authored
+  types and uses the saved LN/CN/HCN selection for undefined notes, as in #210.
+  The normal selection remains saved while ON. This corrects #343's mandatory
+  selected-mode override. `Long Note Modify Mode` is a separate add/remove option.
 - A casual/private Arena entry snapshots the selected mode as a room rule and
-  every participant loads that mode. Rated queue entry explicitly uses LN, so
-  an ordinary CN/HCN setting cannot change rated behavior.
+  every participant uses that rule. LN rules force LN; CN/HCN rules disable
+  Force LN and preserve authored types. Rated queue entry explicitly uses LN.
+  Leaving Arena restores both the user's Force LN setting and saved mode.
 - Protocol v8 sends the locked mode and actual decoded total-note count at the
   ready barrier. The server starts only after all humans agree. Older protocol
   clients keep implied LN behavior and cannot join a CN/HCN room.
 - The exact source chart remains identified by MD5. CN/HCN possession is not
   rejected merely because an LN catalog count differs; the agreed decoded
   count becomes the live/final validation scale before start.
+- Replays record whether forcing was applied and retain their saved mode/branch.
+  ON and OFF local bests use separate databases; switching back restores access
+  to each pool without replacing or archiving the other pool. See [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
+- Release this source with the paired BMS-IR plugin change (#41) and an Arena
+  body gate that does not mix old authored-mode bodies with forced-mode bodies.
+  The protocol-v8 ready count cannot distinguish CN from HCN when their counts
+  coincide. Publication/gate activation is a separate reviewed rollout.
 
 ## Match behavior
 
@@ -1388,7 +1397,7 @@ ordinary system-sound volume multiplied by the Arena notification volume.
 
 The startup launcher has a `BMS-IR固有設定` tab. One-bass input and the
 first-timing preview default to ON and may be changed there. Long-note behavior
-uses the ordinary enabled LN-type selector; BMS-IR accepts new CN/HCN results
+uses the Force LN switch and ordinary LN-type selector; BMS-IR accepts new CN/HCN results
 in mode-separated rankings, while rated Arena continues to lock LN.
 
 Endless Dream compatibility is protected as one maintained inventory rather
@@ -1581,7 +1590,7 @@ The internal build artifact name identifies the unified BMS-IR Arena oraja
 client and its native platform:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.82-macos-aarch64.jar
 ```
 
 GitHub distribution uses two OS-specific prereleases in this canonical source
@@ -1610,7 +1619,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.82-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1629,7 +1638,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.82-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

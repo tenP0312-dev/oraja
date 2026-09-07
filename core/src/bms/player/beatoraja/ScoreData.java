@@ -126,6 +126,7 @@ public class ScoreData implements Validatable {
 	private BMSPlayerInputDevice.Type deviceType;
 	
 	private int state;
+	private int bmsirLongNotePolicy;
 	
 	private String scorehash = "";
 	/**
@@ -326,6 +327,14 @@ public class ScoreData implements Validatable {
 	}
 	public int getMode() {
 		return mode;
+	}
+
+	public int getBmsirLongNotePolicy() {
+		return bmsirLongNotePolicy;
+	}
+
+	public void setBmsirLongNotePolicy(int policy) {
+		bmsirLongNotePolicy = policy;
 	}
 	public void setMode(int mode) {
 		this.mode = mode;

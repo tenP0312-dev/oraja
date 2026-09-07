@@ -148,15 +148,20 @@ public final class MusicSelector extends MainState {
 
 		scorecache = new ScoreDataCache() {
 			@Override
+			protected boolean isForcedLn() { return config.isBmsirForceLn(); }
+			@Override
 			protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
 				BMSIRManiacSettings settings = BMSIRManiacApiClient.effectiveSettings(main, song);
 				if (settings != null) {
-					return pda.readManiacScoreData(
+					ScoreData stored = pda.readManiacScoreData(
 							settings.storageChartId(song.getSha256()),
 							lnmode
 					);
+					boolean changed = config.isBmsirForceLn() && BMSIRLongNoteMode.changesAuthoredMode(song);
+					if (changed && stored != null && stored.getMode() != lnmode) return null;
+					return BMSIRLongNoteMode.compatibleScore(stored, changed);
 				}
-				return pda.readScoreData(song.getSha256(), song.hasUndefinedLongNote(), lnmode);
+				return pda.readScoreData(song, lnmode);
 			}
 
 			@Override

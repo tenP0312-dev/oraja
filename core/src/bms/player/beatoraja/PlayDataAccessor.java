@@ -59,7 +59,12 @@ public final class PlayDataAccessor {
 	 */
 	private ScoreDatabaseAccessor scoredb;
 	private ScoreDatabaseAccessor maniacScoredb;
+	private ScoreDatabaseAccessor forcedScoredb;
+	private ScoreDatabaseAccessor forcedManiacScoredb;
 	private BMSIRManiacDatabase maniacMetadata;
+	private BMSIRManiacDatabase forcedManiacMetadata;
+	private ScoreLogDatabaseAccessor forcedScorelogdb;
+	private ScoreDataLogDatabaseAccessor forcedScoredatalogdb;
 	private final PlayerConfig playerConfig;
 	/**
 	 * スコアログアクセサ
@@ -86,6 +91,18 @@ public final class PlayDataAccessor {
 			Class.forName("org.sqlite.JDBC");
 			scoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player + File.separatorChar + "score.db");
 			scoredb.createTable();
+			forcedScoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_forced_ln.db");
+			forcedScoredb.createTable();
+			forcedManiacScoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_forced_ln_maniac.db");
+			forcedManiacScoredb.createTable();
+			forcedManiacMetadata = new BMSIRManiacDatabase(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_forced_ln_maniac.db");
+			forcedScorelogdb = new ScoreLogDatabaseAccessor(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_forced_ln_scorelog.db");
+			forcedScoredatalogdb = new ScoreDataLogDatabaseAccessor(playerpath + File.separatorChar + player
+					+ File.separatorChar + "bmsir_forced_ln_scoredatalog.db");
 			maniacScoredb = new ScoreDatabaseAccessor(playerpath + File.separatorChar + player
 					+ File.separatorChar + "bmsir_maniac.db");
 			maniacScoredb.createTable();
@@ -172,7 +189,15 @@ public final class PlayDataAccessor {
 	public ScoreData readScoreData(BMSModel model, int lnmode) {
 		String hash = scoreHash(model);
 		boolean ln = model.containsUndefinedLongNote();
-		return scoreDatabase(model).getScoreData(hash, ln ? lnmode : 0);
+		return BMSIRLongNoteMode.compatibleScore(
+				scoreDatabase(model).getScoreData(hash, ln ? lnmode : 0),
+				(BMSIRLongNoteMode.isApplied(model) && BMSIRLongNoteMode.changesAuthoredMode(model)));
+	}
+
+	public ScoreData readScoreData(SongData song, int lnmode) {
+		return BMSIRLongNoteMode.compatibleScore(
+				selectedScoreDatabase().getScoreData(song.getSha256(), (forceLn() ? song.hasAnyLongNote() : song.hasUndefinedLongNote()) ? lnmode : 0),
+				(forceLn() && BMSIRLongNoteMode.changesAuthoredMode(song)));
 	}
 
 	/**
@@ -187,14 +212,14 @@ public final class PlayDataAccessor {
 	 * @return スコアデータ
 	 */
 	public ScoreData readScoreData(String hash, boolean ln, int lnmode) {
-		return scoredb.getScoreData(hash, ln ? lnmode : 0);
+		return selectedScoreDatabase().getScoreData(hash, ln ? lnmode : 0);
 	}
 
 	public ScoreData readManiacScoreData(String storageHash, int lnmode) {
-		ScoreData score = maniacScoredb.getScoreData(storageHash, lnmode);
+		ScoreData score = selectedManiacDatabase().getScoreData(storageHash, lnmode);
 		return score != null || lnmode == 0
 				? score
-				: maniacScoredb.getScoreData(storageHash, 0);
+				: selectedManiacDatabase().getScoreData(storageHash, 0);
 	}
 
 	public void readManiacScoreDatas(
@@ -203,12 +228,12 @@ public final class PlayDataAccessor {
 			int lnmode,
 			Function<SongData, String> storageHashProvider
 	) {
-		maniacScoredb.getScoreDatasByHash(
+		selectedManiacDatabase().getScoreDatasByHash(
 				collector,
 				songs,
 				lnmode,
 				storageHashProvider,
-				true
+				true, forceLn()
 		);
 	}
 
@@ -224,8 +249,10 @@ public final class PlayDataAccessor {
 		if (storageHash == null || storageHash.isBlank() || incoming == null || settings == null) {
 			return;
 		}
+		// The remote MANIAC sync does not identify forced-LN policy; retain it in the ordinary pool.
+		if (forceLn()) return;
 		int mode = Math.max(0, incoming.getMode());
-		ScoreData stored = maniacScoredb.getScoreData(storageHash, mode);
+		ScoreData stored = selectedManiacDatabase().getScoreData(storageHash, mode);
 		int playcount = stored == null ? 0 : stored.getPlaycount();
 		int clearcount = stored == null ? 0 : stored.getClearcount();
 		if (stored == null) {
@@ -243,7 +270,7 @@ public final class PlayDataAccessor {
 		stored.setPlaycount(playcount);
 		stored.setClearcount(clearcount);
 		stored.setScorehash(getScoreHash(stored));
-		maniacScoredb.setScoreData(stored);
+		selectedManiacDatabase().setScoreData(stored);
 		if (maniacMetadata != null) {
 			maniacMetadata.recordSynced(
 					storageHash,
@@ -265,11 +292,11 @@ public final class PlayDataAccessor {
 	 * @param lnmode LNモード
 	 */
 	public void readScoreDatas(ScoreDataCollector collector, SongData[] songs, int lnmode) {
-		scoredb.getScoreDatas(collector, songs, lnmode);
+		selectedScoreDatabase().getScoreDatas(collector, songs, lnmode, forceLn(), forceLn());
 	}
 
 	public List<ScoreData> readScoreDatas(String sql) {
-		return scoredb.getScoreDatas(sql);
+		return selectedScoreDatabase().getScoreDatas(sql);
 	}
 
 	/**
@@ -290,7 +317,9 @@ public final class PlayDataAccessor {
 		if (newscore == null) {
 			return;
 		}
-		ScoreData score = targetDatabase.getScoreData(hash, model.containsUndefinedLongNote() ? lnmode : 0);
+		boolean changedLnMode = (BMSIRLongNoteMode.isApplied(model) && BMSIRLongNoteMode.changesAuthoredMode(model));
+		ScoreData score = BMSIRLongNoteMode.compatibleScore(
+				targetDatabase.getScoreData(hash, model.containsUndefinedLongNote() ? lnmode : 0), changedLnMode);
 		int previousEx = score == null ? -1 : score.getExscore();
 
 		if (score == null) {
@@ -298,6 +327,8 @@ public final class PlayDataAccessor {
 			score.setMode(model.containsUndefinedLongNote() ? lnmode : 0);
 		}
 		score.setSha256(hash);
+		if (changedLnMode) score.setBmsirLongNotePolicy(BMSIRLongNoteMode.SCORE_POLICY);
+		newscore.setBmsirLongNotePolicy(score.getBmsirLongNotePolicy());
 		if (updateScore) {
 			score.setNotes(NantokaManiaRules.totalNotes(model));
 		}
@@ -359,13 +390,19 @@ public final class PlayDataAccessor {
 		if (targetDatabase == maniacScoredb && maniacMetadata != null) {
 			maniacMetadata.record(model, newscore, newscore.getExscore() > previousEx, "local");
 		}
-		if (targetDatabase == scoredb && log.getSha256() != null && scorelogdb != null) {
+		if (targetDatabase == forcedManiacScoredb && forcedManiacMetadata != null) {
+			forcedManiacMetadata.record(model, newscore, newscore.getExscore() > previousEx, "local");
+		}
+		ScoreLogDatabaseAccessor playLog = targetDatabase == forcedScoredb ? forcedScorelogdb : scorelogdb;
+		ScoreDataLogDatabaseAccessor dataLog = targetDatabase == forcedScoredb ? forcedScoredatalogdb : scoredatalogdb;
+		boolean ordinary = targetDatabase == scoredb || targetDatabase == forcedScoredb;
+		if (ordinary && log.getSha256() != null && playLog != null) {
 			log.setMode(score.getMode());
 			log.setDate(score.getDate());
-			scorelogdb.setScoreLog(log);
+			playLog.setScoreLog(log);
 		}
 
-		if (targetDatabase == scoredb && scoredatalogdb != null) {
+		if (ordinary && dataLog != null) {
 			StringBuilder newScoresb = new StringBuilder();
 			for(SongTrophy trophy : newTrophies) {
 				newScoresb.append(trophy.character);
@@ -377,7 +414,7 @@ public final class PlayDataAccessor {
 			newscore.setClearcount(score.getClearcount());
 			newscore.setScorehash(getScoreHash(newscore));
 
-			scoredatalogdb.setScoreDataLog(newscore);
+			dataLog.setScoreDataLog(newscore);
 		}
 
 		// 楽曲のプレイ時間算出(秒)
@@ -393,10 +430,16 @@ public final class PlayDataAccessor {
 		logger.info("スコアデータベース更新完了 ");
 	}
 
+	private boolean forceLn() { return playerConfig != null && playerConfig.isBmsirForceLn(); }
+
+	private ScoreDatabaseAccessor selectedScoreDatabase() { return forceLn() ? forcedScoredb : scoredb; }
+	private ScoreDatabaseAccessor selectedManiacDatabase() { return forceLn() ? forcedManiacScoredb : maniacScoredb; }
+
 	private ScoreDatabaseAccessor scoreDatabase(BMSModel model) {
-		return model != null
-				&& model.getValues().containsKey(BMSIRManiacPlayContext.MODEL_STORAGE_HASH)
-				? maniacScoredb : scoredb;
+		boolean maniac = model != null && model.getValues().containsKey(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
+		return BMSIRLongNoteMode.isApplied(model)
+				? (maniac ? forcedManiacScoredb : forcedScoredb)
+				: (maniac ? maniacScoredb : scoredb);
 	}
 
 	private static String scoreHash(BMSModel model) {
@@ -459,7 +502,7 @@ public final class PlayDataAccessor {
 				break;
 			}
 		}
-		return scoredb.getScoreData(hash, (ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000);
+		return selectedScoreDatabase().getScoreData(hash, (ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000);
 	}
 
 	public ScoreData readScoreData(BMSModel[] models, int lnmode, int option,
@@ -470,7 +513,16 @@ public final class PlayDataAccessor {
 			hash[i] = models[i].getSHA256();
 			ln |= models[i].containsUndefinedLongNote();
 		}
-		return readScoreData(hash, ln, lnmode, option, constraint);
+		return BMSIRLongNoteMode.compatibleScore(readScoreData(hash, ln, lnmode, option, constraint),
+				Arrays.stream(models).anyMatch(m -> BMSIRLongNoteMode.isApplied(m) && BMSIRLongNoteMode.changesAuthoredMode(m)));
+	}
+
+	public ScoreData readScoreData(SongData[] songs, int lnmode, int option,
+			CourseData.CourseDataConstraint[] constraint) {
+		return BMSIRLongNoteMode.compatibleScore(readScoreData(
+				Arrays.stream(songs).map(SongData::getSha256).toArray(String[]::new),
+				Arrays.stream(songs).anyMatch(s -> forceLn() ? s.hasAnyLongNote() : s.hasUndefinedLongNote()), lnmode, option, constraint),
+				(forceLn() && Arrays.stream(songs).anyMatch(BMSIRLongNoteMode::changesAuthoredMode)));
 	}
 
 	public ScoreData readScoreData(String[] hashes, boolean ln, int lnmode, int option,
@@ -531,7 +583,9 @@ public final class PlayDataAccessor {
 				break;
 			}
 		}
-		ScoreData score = scoredb.getScoreData(hash, (ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000);
+		boolean changedLnMode = Arrays.stream(models).anyMatch(m -> BMSIRLongNoteMode.isApplied(m) && BMSIRLongNoteMode.changesAuthoredMode(m));
+		ScoreData score = BMSIRLongNoteMode.compatibleScore(selectedScoreDatabase().getScoreData(hash,
+				(ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000), changedLnMode);
 
 		if (score == null) {
 			score = new ScoreData();
@@ -539,6 +593,8 @@ public final class PlayDataAccessor {
 		}
 		score.setSha256(hash);
 		score.setNotes(totalnotes);
+		if (changedLnMode) score.setBmsirLongNotePolicy(BMSIRLongNoteMode.SCORE_POLICY);
+		newscore.setBmsirLongNotePolicy(score.getBmsirLongNotePolicy());
 
 		if (newscore.getClear() != Failed.id) {
 			score.setClearcount(score.getClearcount() + 1);
@@ -549,11 +605,12 @@ public final class PlayDataAccessor {
 		score.setPlaycount(score.getPlaycount() + 1);
 		score.setDate(Calendar.getInstance(TimeZone.getDefault()).getTimeInMillis() / 1000L);
 		score.setScorehash(getScoreHash(score));
-		scoredb.setScoreData(score);
-		if (log.getSha256() != null && scorelogdb != null) {
+		selectedScoreDatabase().setScoreData(score);
+		ScoreLogDatabaseAccessor courseLog = forceLn() ? forcedScorelogdb : scorelogdb;
+		if (log.getSha256() != null && courseLog != null) {
 			log.setMode(score.getMode());
 			log.setDate(score.getDate());
-			scorelogdb.setScoreLog(log);
+			courseLog.setScoreLog(log);
 		}
 
 		logger.info("スコアデータベース更新完了 ");
@@ -623,11 +680,11 @@ public final class PlayDataAccessor {
 	}
 
 	public void deleteScoreData(BMSModel model, int lnmode) {
-		scoredb.deleteScoreData(model.getSHA256(), model.containsUndefinedLongNote() ? lnmode : 0);
+		scoreDatabase(model).deleteScoreData(scoreHash(model), model.containsUndefinedLongNote() ? lnmode : 0);
 	}
 
 	public void deleteScoreData(String sha256, boolean undefinedLongNote, int lnmode) {
-		scoredb.deleteScoreData(sha256, undefinedLongNote ? lnmode : 0);
+		selectedScoreDatabase().deleteScoreData(sha256, undefinedLongNote ? lnmode : 0);
 	}
 
 	public void deleteScoreData(
@@ -639,10 +696,10 @@ public final class PlayDataAccessor {
 		boolean undefinedLongNote = false;
 		for (SongData song : songs) {
 			hash.append(song.getSha256());
-			undefinedLongNote |= song.hasUndefinedLongNote();
+			undefinedLongNote |= forceLn() ? song.hasAnyLongNote() : song.hasUndefinedLongNote();
 		}
 		for (int option = 0; option < 3; option++) {
-			scoredb.deleteScoreData(
+			selectedScoreDatabase().deleteScoreData(
 					hash.toString(),
 					courseScoreMode(undefinedLongNote, lnmode, option, constraints)
 			);
@@ -680,7 +737,15 @@ public final class PlayDataAccessor {
 	}
 
 	public boolean existsReplayData(BMSModel model, int lnmode, int index) {
-		return Files.exists(Paths.get(this.getReplayDataFilePath(model, lnmode, index) + ".brd"));
+		return Files.exists(Paths.get(replayReadPath(model, lnmode, index) + ".brd"));
+	}
+
+	public boolean existsReplayData(SongData song, String hash, int lnmode, int index) {
+		boolean authoredUndefined = song.getBMSModel() == null ? song.hasUndefinedLongNote()
+				: BMSIRLongNoteMode.authoredUndefined(song.getBMSModel());
+		return ((forceLn() || BMSIRLongNoteMode.isApplied(song.getBMSModel()))
+				&& existsReplayData(BMSIRLongNoteMode.replayHash(song, hash), song.hasAnyLongNote(), lnmode, index))
+				|| existsReplayData(hash, authoredUndefined, lnmode, index);
 	}
 
 	public boolean existsReplayData(String hash, boolean ln, int lnmode, int index) {
@@ -693,10 +758,13 @@ public final class PlayDataAccessor {
 		boolean ln = false;
 		for (int i = 0; i < models.length; i++) {
 			BMSModel model = models[i];
-			hash[i] = model.getSHA256();
+			hash[i] = BMSIRLongNoteMode.replayHash(model, model.getSHA256());
 			ln |= model.containsUndefinedLongNote();
 		}
-		return Files.exists(Paths.get(this.getReplayDataFilePath(hash, ln, lnmode, index, constraint) + ".brd"));
+		return existsReplayData(hash, ln, lnmode, index, constraint)
+				|| existsReplayData(Arrays.stream(models).map(BMSModel::getSHA256).toArray(String[]::new),
+						Arrays.stream(models).anyMatch(BMSIRLongNoteMode::authoredUndefined),
+						lnmode, index, constraint);
 	}
 
 	public boolean existsReplayData(String[] hash, boolean ln, int lnmode, int index,
@@ -718,7 +786,7 @@ public final class PlayDataAccessor {
 			Json json = new Json();
 			json.setIgnoreUnknownFields(true);
 			try {
-				String path = this.getReplayDataFilePath(model, lnmode, index);
+				String path = replayReadPath(model, lnmode, index);
 				ReplayData result = null;
 				if (Files.exists(Paths.get(path + ".brd"))) {
 					result =  json.fromJson(ReplayData.class, new BufferedInputStream(
@@ -770,10 +838,15 @@ public final class PlayDataAccessor {
 		String[] hashes = new String[models.length];
 		boolean ln = false;
 		for (int i = 0; i < models.length; i++) {
-			hashes[i] = models[i].getSHA256();
+			hashes[i] = BMSIRLongNoteMode.replayHash(models[i], models[i].getSHA256());
 			ln |= models[i].containsUndefinedLongNote();
 		}
-		return this.readReplayData(hashes, ln, lnmode, index, constraint);
+		if (existsReplayData(hashes, ln, lnmode, index, constraint)) {
+			return readReplayData(hashes, ln, lnmode, index, constraint);
+		}
+		return readReplayData(Arrays.stream(models).map(BMSModel::getSHA256).toArray(String[]::new),
+				Arrays.stream(models).anyMatch(BMSIRLongNoteMode::authoredUndefined),
+				lnmode, index, constraint);
 	}
 
 	/**
@@ -818,7 +891,7 @@ public final class PlayDataAccessor {
 		String[] hashes = new String[models.length];
 		boolean ln = false;
 		for (int i = 0; i < models.length; i++) {
-			hashes[i] = models[i].getSHA256();
+			hashes[i] = BMSIRLongNoteMode.replayHash(models[i], models[i].getSHA256());
 			ln |= models[i].containsUndefinedLongNote();
 		}
 		this.wrireReplayData(rd, hashes, ln, lnmode, index, constraint);
@@ -856,7 +929,7 @@ public final class PlayDataAccessor {
 	public void deleteReplayData(BMSModel model, int lnmode, int index) {
 		if (existsReplayData(model, lnmode, index)) {
 			try {
-				Files.deleteIfExists(Paths.get(this.getReplayDataFilePath(model, lnmode, index) + ".brd"));
+				Files.deleteIfExists(Paths.get(replayReadPath(model, lnmode, index) + ".brd"));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -867,7 +940,17 @@ public final class PlayDataAccessor {
 		return getReplayDataFilePath(replayHash(model), model.containsUndefinedLongNote(), lnmode, index);
 	}
 
+	private String replayReadPath(BMSModel model, int lnmode, int index) {
+		String current = getReplayDataFilePath(model, lnmode, index);
+		if (Files.exists(Paths.get(current + ".brd"))) return current;
+		return getReplayDataFilePath(baseReplayHash(model), BMSIRLongNoteMode.authoredUndefined(model), lnmode, index);
+	}
+
 	private String replayHash(BMSModel model) {
+		return BMSIRLongNoteMode.replayHash(model, baseReplayHash(model));
+	}
+
+	private String baseReplayHash(BMSModel model) {
 		String marked = model.getValues().get(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
 		if (marked != null && !marked.isBlank()) return marked;
 		if (playerConfig == null) return model.getSHA256();

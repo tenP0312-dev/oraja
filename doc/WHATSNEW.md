@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.82
+
+- 起動前のBMS-IR固有設定に「強制LN」のON/OFFを追加（初期OFF）。ONでは譜面指定のCN/HCNもLNにします。OFFでは従来の譜面指定・LNモードに戻ります。
+- ON/OFFの自己ベストを分離し、リプレイは記録時の設定で再生します。対応pluginは0.0.75です。
+- Restore the default-off Force LN switch. ON plays authored CN/HCN as LN; OFF restores chart definitions and the saved LN mode. Local bests are separate; replays retain their recorded setting. Paired plugin: 0.0.75.
+
 # Arena oraja 0.4.14.81
 
 - Added NANTOKA MANIA MODE to MANIAC OPTIONS for 5/7/10/14KEY solo play.

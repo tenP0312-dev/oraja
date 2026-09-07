@@ -148,7 +148,7 @@ public final class RivalDataAccessor {
 
 								@Override
 								protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
-									return scoredb.getScoreData(song.getSha256(), song.hasUndefinedLongNote() ? lnmode : 0);
+									return scoredb.getScoreData(song.getSha256(), song.hasAnyLongNote() ? lnmode : 0);
 								}
 
 								protected void readScoreDatasFromSource(ScoreDataCollector collector, SongData[] songs, int lnmode) {
@@ -194,7 +194,7 @@ public final class RivalDataAccessor {
 
 										@Override
 										protected ScoreData readScoreDatasFromSource(SongData song, int lnmode) {
-											return scoredb.getScoreData(song.getSha256(), song.hasUndefinedLongNote() ? lnmode : 0);
+											return scoredb.getScoreData(song.getSha256(), song.hasAnyLongNote() ? lnmode : 0);
 										}
 
 										protected void readScoreDatasFromSource(ScoreDataCollector collector, SongData[] songs, int lnmode) {

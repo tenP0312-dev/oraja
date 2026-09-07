@@ -176,13 +176,13 @@ public class SearchTextField extends Stage {
 			SongData song = songBar.getSongData();
 			selector.main.getPlayDataAccessor().deleteScoreData(
 					song.getSha256(),
-					song.hasUndefinedLongNote(),
+					song.hasAnyLongNote(),
 					lnmode
 			);
 			selector.getScoreDataCache().update(song, lnmode);
 			songBar.setScore(selector.getScoreDataCache().readScoreData(song, lnmode));
 			textField.setMessageText("Score deleted (mode "
-					+ (song.hasUndefinedLongNote() ? lnmode : 0) + ")");
+					+ (song.hasAnyLongNote() ? lnmode : 0) + ")");
 			style.messageFontColor = Color.RED;
 			selector.selectedBarMoved();
 		} else if (selected instanceof GradeBar gradeBar && gradeBar.existsAllSongs()) {

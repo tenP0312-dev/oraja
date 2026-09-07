@@ -388,6 +388,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private ComboBox<Integer> longnotemode;
 	@FXML
+	private CheckBox bmsirForceLn;
+	@FXML
 	private CheckBox forcedcnendings;
 	@FXML
 	private Slider longnoterate;
@@ -1478,6 +1480,9 @@ public class PlayConfigurationView implements Initializable {
 			));
 		}
 		installSidebarPage(bmsirSpecificTab,
+				sidebarSettingCard(sidebarSettingRow(bmsirSpecificTab, "bmsirForceLn", "強制LN", "Force LN",
+						"ONでは譜面のCN／HCN指定もLNとして扱います。OFFでは譜面指定と通常のLNモード設定に従います。Arenaでは対戦ルールが優先されます。ONとOFFの自己ベストは別々に保存します。",
+						"Treat authored CN/HCN as LN when enabled. When disabled, use chart definitions and the normal LN mode. Arena rules take priority. ON/OFF keep separate local bests.")),
 				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaLanguage", "本体UI言語", "Built-in UI language",
 								"Arenaオーバーレイ、フェーズ表示、MANIAC OPTIONSなど、本体組み込み画面の言語を選びます。全画面への反映には再起動が必要です。",
@@ -1906,7 +1911,7 @@ public class PlayConfigurationView implements Initializable {
 						"スクロール速度変化を削除・追加する変換方法を選びます。",
 						"Choose how scroll-speed changes are removed or generated.",
 						sidebarCombo(scrollmode)),
-				sidebarSettingRow("強制LN／ロングノート変換", "Long Note Modify Mode",
+				sidebarSettingRow("ロングノート変換", "Long Note Modify Mode",
 						"通常ノーツとロングノートの変換方法を選びます。OFF、REMOVE、ADD LN/CN/HCN/ALLから選択できます。",
 						"Choose how normal and long notes are converted: OFF, REMOVE, or ADD LN/CN/HCN/ALL.",
 						sidebarCombo(longnotemode)),
@@ -2964,7 +2969,8 @@ public class PlayConfigurationView implements Initializable {
 		guidese.setSelected(player.isGuideSE());
 		windowhold.setSelected(player.isWindowHold());
 		gaugeop.getSelectionModel().select(player.getGauge());
-		lntype.getSelectionModel().select(player.getLnmode());
+		lntype.getSelectionModel().select(player.getSelectedLnmode());
+		bmsirForceLn.setSelected(player.isBmsirForceLn());
 
 		notesdisplaytiming.getValueFactory().setValue(player.getJudgetiming());
 		notesdisplaytimingautoadjust.setSelected(player.isNotesDisplayTimingAutoAdjust());
@@ -3184,6 +3190,7 @@ public class PlayConfigurationView implements Initializable {
 		player.setWindowHold(windowhold.isSelected());
 		player.setGauge(gaugeop.getValue());
 		player.setLnmode(lntype.getValue());
+		player.setBmsirForceLn(bmsirForceLn.isSelected());
 		player.setJudgetiming(getValue(notesdisplaytiming));
 		player.setNotesDisplayTimingAutoAdjust(notesdisplaytimingautoadjust.isSelected());
 

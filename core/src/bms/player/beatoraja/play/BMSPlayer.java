@@ -310,6 +310,13 @@ public class BMSPlayer extends MainState {
 			playinfo.rand = model.getRandom();
 			logger.info("譜面分岐 : {}", Arrays.toString(playinfo.rand));
 		}
+		if (autoplay.mode == BMSPlayerMode.Mode.REPLAY && replay != null) {
+			// Replay policy and selected mode belong to the recorded play, including
+			// legacy authored CN/HCN and the recorded #RANDOM branch.
+			BMSModel recordedModel = resource.loadBMSModelForReplay(replay);
+			if (recordedModel == null) throw new IllegalStateException("Cannot decode replay chart");
+			model = recordedModel;
+		}
 		// 通常プレイの場合は最後のノーツ、オートプレイの場合はBG/BGAを含めた最後のノーツ
 		playtime = (autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY ? model.getLastTime() : model.getLastNoteTime()) + TIME_MARGIN;
 
@@ -1521,6 +1528,7 @@ public class BMSPlayer extends MainState {
 		replay.player = main.getPlayerConfig().getName();
 		replay.sha256 = model.getSHA256();
 		replay.mode = config.getLnmode();
+		replay.bmsirForcedLongNotes = BMSIRLongNoteMode.isApplied(model);
 		replay.date = Calendar.getInstance().getTimeInMillis() / 1000;
 		replay.keylog = main.getInputProcessor().getKeyInputLog();
 		replay.bmsirNantokaInitialHeldKeys = playinfo.bmsirNantokaInitialHeldKeys.clone();

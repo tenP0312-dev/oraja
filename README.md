@@ -10,13 +10,18 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.81**. Its Windows native-audio
+The current client source version is **0.4.14.82**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.82 restores the default-off Force LN startup switch. ON treats
+CN/HCN charts as LN; OFF restores authored types and the saved LN mode.
+Local bests remain separate, and replay playback follows the recorded switch.
+This test package pairs with BMS-IR plugin 0.0.75.
 
 Version 0.4.14.81 adds the local-only NANTOKA MANIA MODE to MANIAC OPTIONS
 for 5/7/10/14KEY solo play. It fixes judgment windows and integer gauge rules,
@@ -131,6 +136,15 @@ submission. Casual/private Arena rooms lock the host's selected mode for every
 participant; rated Arena explicitly remains LN. New BMS-IR body archives use
 portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
 archives and retained multi-chart packages remain reusable after restart.
+The BMS-IR startup settings provide a default-off **Force LN** switch.
+When enabled, every existing long note is played as LN, including authored
+BMS/bmson CN and HCN. When disabled, chart definitions and the saved ordinary
+LN/CN/HCN selection apply again. Arena LN rules force LN; CN/HCN rules disable
+the switch and retain ordinary chart interpretation. Leaving Arena restores
+the user's switch and mode. Chart files and source hashes are unchanged.
+Scores for ON and OFF use separate local databases, and replays preserve the
+interpretation recorded when they were played. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
+This source change does not publish a new body or plugin package.
 
 Version 0.4.14.63 moves the 0.4.14.62 opt-in physical-folder filter from
 BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar now

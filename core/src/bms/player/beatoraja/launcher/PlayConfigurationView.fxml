@@ -646,6 +646,8 @@
 	                    <CheckBox fx:id="bmsirJudgeTimingRestoreEnabled" mnemonicParsing="false" text="%BMSIR_JUDGE_TIMING_RESTORE_ENABLED" />
 	                    <CheckBox fx:id="bmsirInfoNotificationsEnabled" mnemonicParsing="false" text="%BMSIR_INFO_NOTIFICATIONS_ENABLED" />
 	                    <Separator />
+	                    <CheckBox fx:id="bmsirForceLn" mnemonicParsing="false" text="%BMSIR_FORCE_LN" />
+	                    <Label maxWidth="680.0" text="%BMSIR_FORCE_LN_DESCRIPTION" wrapText="true" />
 	                    <Button fx:id="bmsirExportVanillaScoreDb" mnemonicParsing="false" onAction="#exportBmsirVanillaScoreDatabase" text="%BMSIR_EXPORT_VANILLA_SCORE_DB" />
 	                    <Label maxWidth="680.0" style="-fx-text-fill: #555555;" text="%BMSIR_EXPORT_VANILLA_SCORE_DB_DESCRIPTION" wrapText="true" />
                 </VBox>
