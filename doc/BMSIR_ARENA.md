@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.81`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.82`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -1590,7 +1590,7 @@ The internal build artifact name identifies the unified BMS-IR Arena oraja
 client and its native platform:
 
 ```text
-BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar
+BMS-IR-Arena-oraja-0.4.14.82-macos-aarch64.jar
 ```
 
 GitHub distribution uses two OS-specific prereleases in this canonical source
@@ -1619,7 +1619,7 @@ and the exact release filenames:
 ```bash
 python tools/package_arena_release.py \
   --platform macos-aarch64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-macos-aarch64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.82-macos-aarch64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/java-21-home \
@@ -1638,7 +1638,7 @@ identity, required ASIO/WASAPI/JNI exports, and SPDX declarations. Add
 ```bash
 python tools/package_arena_release.py \
   --platform windows-x86-64 \
-  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.81-windows-x86-64.jar \
+  --body-jar dist/BMS-IR-Arena-oraja-0.4.14.82-windows-x86-64.jar \
   --plugin-jar /reviewed/bms_ir_arena_oraja_0.0.72.jar \
   --base-assets /reviewed/clean-beatoraja-assets \
   --java-home /reviewed/windows-java-21-home \

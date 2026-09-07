@@ -10,13 +10,18 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.81**. Its Windows native-audio
+The current client source version is **0.4.14.82**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.82 restores the default-off Force LN startup switch. ON treats
+CN/HCN charts as LN; OFF restores authored types and the saved LN mode.
+Local bests remain separate, and replay playback follows the recorded switch.
+This test package pairs with BMS-IR plugin 0.0.75.
 
 Version 0.4.14.81 adds the local-only NANTOKA MANIA MODE to MANIAC OPTIONS
 for 5/7/10/14KEY solo play. It fixes judgment windows and integer gauge rules,
