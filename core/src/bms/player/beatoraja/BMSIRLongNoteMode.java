@@ -64,6 +64,21 @@ public final class BMSIRLongNoteMode {
                 : (song.getFeature() & DEFINED) != 0;
     }
 
+    /** Only authored CN/HCN changes gameplay when Force LN selects LN.
+     * Undefined notes already have ordinary per-mode score keys. Keep this
+     * separate from the legacy wire-policy and replay-identity predicate above.
+     */
+    public static boolean separatesScore(SongData song) {
+        int features = song.getBMSModel() != null
+                ? authoredFeatures(song.getBMSModel()) : song.getFeature();
+        return (features & (SongData.FEATURE_CHARGENOTE | SongData.FEATURE_HELLCHARGENOTE)) != 0;
+    }
+
+    public static boolean separatesScore(BMSModel model) {
+        return isApplied(model) && (authoredFeatures(model)
+                & (SongData.FEATURE_CHARGENOTE | SongData.FEATURE_HELLCHARGENOTE)) != 0;
+    }
+
     public static ScoreData compatibleScore(ScoreData score, boolean changed) {
         return score != null && changed && score.getBmsirLongNotePolicy() != SCORE_POLICY
                 ? null : score;
@@ -71,6 +86,10 @@ public final class BMSIRLongNoteMode {
 
     public static boolean authoredUndefined(BMSModel model) {
         return (authoredFeatures(model) & SongData.FEATURE_UNDEFINEDLN) != 0;
+    }
+
+    public static boolean authoredUndefined(SongData song) {
+        return song.getBMSModel() != null ? authoredUndefined(song.getBMSModel()) : song.hasUndefinedLongNote();
     }
 
     public static String replayHash(BMSModel model, String baseHash) {

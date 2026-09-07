@@ -1072,8 +1072,12 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   rejected merely because an LN catalog count differs; the agreed decoded
   count becomes the live/final validation scale before start.
 - Replays record whether forcing was applied and retain their saved mode/branch.
-  ON and OFF local bests use separate databases; switching back restores access
-  to each pool without replacing or archiving the other pool. See [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
+  Only charts with authored CN/HCN use separate local bests when Force LN is ON.
+  Charts without long notes and charts already using LN retain ordinary bests;
+  undefined notes retain ordinary per-mode keys. A course is separate if any
+  constituent chart changes. Switching OFF restores the ordinary pool without
+  moving, merging, or reclassifying records. Existing replay identities and wire
+  markers remain compatible. See [compatibility and regression checks](../docs/FORCED_LONG_NOTE_MODE.md).
 - Release this source with the paired BMS-IR plugin change (#41) and an Arena
   body gate that does not mix old authored-mode bodies with forced-mode bodies.
   The protocol-v8 ready count cannot distinguish CN from HCN when their counts

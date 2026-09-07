@@ -175,8 +175,7 @@ public class SearchTextField extends Stage {
 		if (selected instanceof SongBar songBar && songBar.existsSong()) {
 			SongData song = songBar.getSongData();
 			selector.main.getPlayDataAccessor().deleteScoreData(
-					song.getSha256(),
-					song.hasAnyLongNote(),
+					song,
 					lnmode
 			);
 			selector.getScoreDataCache().update(song, lnmode);

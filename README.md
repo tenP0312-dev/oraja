@@ -31,8 +31,12 @@ BMS/bmson CN and HCN. When disabled, chart definitions and the saved ordinary
 LN/CN/HCN selection apply again. Arena LN rules force LN; CN/HCN rules disable
 the switch and retain ordinary chart interpretation. Leaving Arena restores
 the user's switch and mode. Chart files and source hashes are unchanged.
-Scores for ON and OFF use separate local databases, and replays preserve the
-interpretation recorded when they were played. See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
+Only charts whose authored CN/HCN changes to LN use separate local scores.
+Charts without long notes and charts already using LN share ordinary bests;
+undefined notes keep their existing per-mode records. Turning the switch OFF
+restores original scores. Existing records are neither moved nor inferred from
+MAX values, and replays preserve their recorded interpretation.
+See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
 This source change does not publish a new body or plugin package.
 
 The BMS-IR settings also provide a default-off LR2-style fixed-HI-SPEED
