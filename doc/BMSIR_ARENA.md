@@ -1,7 +1,7 @@
 # BMS-IR Arena client
 
 Status: BMS-IR Arena v1 release branch. This source prepares the unified
-`Arena oraja 0.4.14.83`. It replaces the separate Endless Dream and
+`Arena oraja 0.4.14.84`. It replaces the separate Endless Dream and
 beatoraja Arena bodies and lets one installation select LR2 or oraja
 judgement/gauge behavior.
 
@@ -1613,9 +1613,10 @@ of that commit; record it explicitly in release notes and source provenance.
 The automatic GitHub `Source code (zip)` is patch-server source, not this ZIP.
 Release notes must link directly to both explicit assets and identify the OS.
 See the [canonical distribution policy](https://github.com/tenP0312-dev/bms-ir-arena-patch-server#body-binary-and-source-distribution-policy).
-This is a documentation-only decision: existing releases remain unchanged and
-the helper's old oraja targets/source packaging need implementation and
-validation before the next publication.
+The release helper stages both assets for patch-server and records their exact
+identities. Its source ZIP contains committed body/build/license files, pinned
+submodule sources and ORAJA_SOURCE_PROVENANCE.json. Existing releases remain
+unchanged; source ZIPs are attachments, not launcher-installed artifacts.
 
 The public page offers two forms for each supported OS:
 

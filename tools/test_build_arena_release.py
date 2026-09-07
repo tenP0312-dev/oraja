@@ -6,9 +6,10 @@ import subprocess
 import tempfile
 import threading
 import unittest
+import zipfile
 from unittest.mock import patch
 
-from build_arena_release import ReleaseBuildError, build_release, release_tag
+from build_arena_release import ReleaseBuildError, build_release, release_tag, build_source_archive
 from check_feature_parity import FeatureParityError
 
 
@@ -56,7 +57,12 @@ class ParallelArenaBuildTest(unittest.TestCase):
 
     def test_builds_two_lanes_concurrently_and_writes_state(self) -> None:
         output = self.root / "output"
-        with patch("build_arena_release.validate_release_repository"):
+        def source_archive(root, commit, destination):
+            destination.write_bytes(b"tested source zip")
+            return {}
+        with patch("build_arena_release.validate_release_repository"), patch(
+            "build_arena_release.build_source_archive", side_effect=source_archive
+        ):
             state_path = build_release(
                 windows_worktree=self.windows,
                 macos_worktree=self.macos,
@@ -85,9 +91,38 @@ class ParallelArenaBuildTest(unittest.TestCase):
                 item for item in state["github_releases"]
                 if item["tag"] == release_tag("1.2.3", lane)
             )
-            self.assertEqual("tenP0312-dev/oraja", release["repository"])
+            self.assertEqual("tenP0312-dev/bms-ir-arena-patch-server", release["repository"])
             self.assertEqual("Arena-oraja.jar", release["asset_name"])
             self.assertEqual(asset.stat().st_size, release["asset"]["size"])
+            self.assertEqual(b"tested source zip", (asset.parent / "Arena-oraja-source.zip").read_bytes())
+            self.assertEqual("abcdef1234567890", release["source_commit"])
+
+    def test_source_archive_uses_committed_body_and_pinned_submodule(self) -> None:
+        root = self.windows
+        def git(*args, cwd=root):
+            return subprocess.check_output(["git", *args], cwd=cwd, stderr=subprocess.DEVNULL).decode().strip()
+        for repo in (root, self.macos):
+            git("init", cwd=repo)
+            git("config", "user.email", "test@example.invalid", cwd=repo)
+            git("config", "user.name", "Test", cwd=repo)
+            (repo / "LICENSE").write_text("license")
+            (repo / "core/src/bms/player/beatoraja/MainController.java").write_text("body source")
+            git("add", ".", cwd=repo)
+            git("commit", "-m", "fixture", cwd=repo)
+        git("-c", "protocol.file.allow=always", "submodule", "add", str(self.macos), "dependency")
+        git("commit", "-am", "pin dependency")
+        commit = git("rev-parse", "HEAD")
+        (root / "untracked-secret.txt").write_text("must not ship")
+        (root / "LICENSE").write_text("uncommitted data")
+        target = self.root / "source.zip"
+        build_source_archive(root, commit, target)
+        with zipfile.ZipFile(target) as source:
+            self.assertNotIn("untracked-secret.txt", source.namelist())
+            self.assertEqual(b"license", source.read("LICENSE"))
+            self.assertEqual(b"body source", source.read("dependency/core/src/bms/player/beatoraja/MainController.java"))
+            provenance = json.loads(source.read("ORAJA_SOURCE_PROVENANCE.json"))
+            self.assertEqual(commit, provenance["commit"])
+            self.assertEqual(git("rev-parse", "HEAD", cwd=self.macos), provenance["submodules"]["dependency"])
 
     def test_release_tags_keep_same_named_platform_assets_separate(self) -> None:
         self.assertEqual(

@@ -10,13 +10,17 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.83**. Its Windows native-audio
+The current client source version is **0.4.14.84**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.84 adds the disposable 7K TO 9K preview in MANIAC OPTIONS.
+Choose ON / NO SAVE for solo play or autoplay. It saves no records or replays
+and sends no rankings. See [the preview guide](doc/SEVEN_TO_NINE_PREVIEW.md).
 
 Version 0.4.14.83 restores the default-off Force LN startup switch. ON treats
 CN/HCN charts as LN; OFF restores authored types and the saved LN mode.
@@ -900,10 +904,11 @@ Follow the [canonical distribution policy](https://github.com/tenP0312-dev/bms-i
 GitHub's automatic `Source code (zip)` on patch-server is patch-server source
 and must never be presented as the body source download.
 
-Migration status: this documentation change does not update the build helper,
-which still records oraja release targets, or relocate existing releases.
-Before the next publication, update and validate the helper/spec targets and
-source-ZIP staging; do not publish its old targets unchanged. The versioned
+The build helper now stages both assets for patch-server and records the exact
+body commit, pinned submodule commits and source ZIP identity in build-state.
+The ZIP contains committed body/build/license files and pinned submodule source;
+untracked files and local edits are excluded. Existing releases remain unchanged.
+The versioned
 filenames under `artifacts/` remain internal build identities, not public asset
 names. Do not recreate the
 worktrees, download the JDK, or initialize submodules during every release;

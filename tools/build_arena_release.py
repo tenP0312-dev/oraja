@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import zipfile
 from typing import Callable, Sequence
 
 from check_feature_parity import FeatureParityError, validate_release_repository
@@ -30,8 +32,9 @@ LANES = {
     "windows-x86-64": ("windows", "x86-64"),
     "macos-aarch64": ("macos", "aarch64"),
 }
-RELEASE_REPOSITORY = "tenP0312-dev/oraja"
+RELEASE_REPOSITORY = "tenP0312-dev/bms-ir-arena-patch-server"
 RELEASE_ASSET_NAME = "Arena-oraja.jar"
+SOURCE_ASSET_NAME = "Arena-oraja-source.zip"
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -140,6 +143,44 @@ def release_tag(version: str, lane: str) -> str:
     if lane not in LANES:
         raise ReleaseBuildError(f"unsupported release lane: {lane}")
     return f"test-{version}-{lane}"
+
+
+def build_source_archive(root: Path, commit: str, destination: Path) -> dict[str, str]:
+    """Archive committed files only, recursively including pinned submodules."""
+    revisions: dict[str, str] = {}
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as output:
+        def append(repository: Path, revision: str, prefix: str = "") -> None:
+            archive = subprocess.check_output(
+                ["git", "archive", "--format=zip", revision], cwd=repository
+            )
+            with zipfile.ZipFile(io.BytesIO(archive)) as source:
+                for entry in source.infolist():
+                    if not entry.is_dir():
+                        data = source.read(entry)
+                        entry.filename = prefix + entry.filename
+                        output.writestr(entry, data)
+            tree = subprocess.check_output(
+                ["git", "ls-tree", "-rz", revision], cwd=repository
+            )
+            for record in tree.split(b"\0"):
+                if not record:
+                    continue
+                metadata, name = record.split(b"\t", 1)
+                mode, _, object_id = metadata.decode().split()
+                if mode == "160000":
+                    path = name.decode("utf-8")
+                    revisions[prefix + path] = object_id
+                    append(repository / path, object_id, prefix + path + "/")
+        append(root, commit)
+        required = {"core/src/bms/player/beatoraja/MainController.java", "core/build.gradle.kts", "LICENSE"}
+        if not required.issubset(output.namelist()):
+            raise ReleaseBuildError("source archive is missing body source/build/license files")
+        provenance = zipfile.ZipInfo("ORAJA_SOURCE_PROVENANCE.json", (1980, 1, 1, 0, 0, 0))
+        output.writestr(provenance, json.dumps({
+            "repository": "tenP0312-dev/oraja", "commit": commit,
+            "submodules": revisions,
+        }, sort_keys=True, indent=2) + "\n")
+    return revisions
 
 
 def _run_lane(
@@ -255,6 +296,18 @@ def build_release(
             }
             lanes = [futures[lane].result() for lane in LANES]
         status = "built" if all(lane["returncode"] == 0 for lane in lanes) else "failed"
+        if status == "built":
+            source_zip = staging / SOURCE_ASSET_NAME
+            submodules = build_source_archive(windows_worktree, windows_commit, source_zip)
+            for lane in lanes:
+                target = staging / "github-releases" / str(lane["lane"]) / SOURCE_ASSET_NAME
+                shutil.copy2(source_zip, target)
+                lane["github_release"]["source_asset"] = _artifact_identity(
+                    target, display_path=f"github-releases/{lane['lane']}/{SOURCE_ASSET_NAME}"
+                )
+                lane["github_release"]["source_commit"] = windows_commit
+                lane["github_release"]["submodules"] = submodules
+            source_zip.unlink()
         state = {
             "schema_version": 2,
             "status": status,
