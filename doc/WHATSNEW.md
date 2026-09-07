@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.85
+
+- 強制LNをONにしても、LNなし・元からLNの譜面は従来のスコアとランプを使用します。CN/HCNをLNへ変換する譜面だけ専用成績に切り替わり、OFFに戻すと元の成績を表示します。
+- 未定義LNは従来のモード別成績を使用します。既存記録の移動・削除・MAX値による推測移行は行いません。plugin 0.0.75、launcher 0.2.29、7K TO 9K試遊版を継続します。
+- Force LN now shares ordinary bests for charts without long notes and charts already using LN. Only authored CN/HCN charts use separate forced-LN records; turning it OFF restores ordinary scores. Existing records are preserved without migration.
+
 # Arena oraja 0.4.14.84
 
 - MANIAC OPTIONSに7K TO 9K試遊版を追加。ON / NO SAVEで7鍵譜面を9鍵へ変換し、配置できないノーツはBGM化します。
