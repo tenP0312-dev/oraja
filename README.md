@@ -890,14 +890,22 @@ python3 tools/build_arena_release.py \
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
-artifact hashes. It also stages one `Arena-oraja.jar` under each OS-specific
-`github-releases/` directory and records two prerelease targets in
-`tenP0312-dev/oraja`: `test-<version>-windows-x86-64` and
-`test-<version>-macos-aarch64`. Both tags must target the recorded reviewed
-commit. Keeping the platforms on separate releases permits the same canonical
-asset name on both, and GitHub's automatic source archives are then generated
-from this body repository. The versioned filenames under `artifacts/` remain
-internal build identities and are not public asset names. Do not recreate the
+artifact hashes. It stages one `Arena-oraja.jar` per OS. As of the operator
+decision on 2026-09-07, publish both body binaries and corresponding body source
+ZIPs in `tenP0312-dev/bms-ir-arena-patch-server`, using OS-specific tags
+`test-<version>-windows-x86-64` and `test-<version>-macos-aarch64`. Each must
+attach `Arena-oraja.jar` and `Arena-oraja-source.zip` from the exact reviewed
+oraja build commit. This repository remains the source of truth for code.
+Follow the [canonical distribution policy](https://github.com/tenP0312-dev/bms-ir-arena-patch-server#body-binary-and-source-distribution-policy).
+GitHub's automatic `Source code (zip)` on patch-server is patch-server source
+and must never be presented as the body source download.
+
+Migration status: this documentation change does not update the build helper,
+which still records oraja release targets, or relocate existing releases.
+Before the next publication, update and validate the helper/spec targets and
+source-ZIP staging; do not publish its old targets unchanged. The versioned
+filenames under `artifacts/` remain internal build identities, not public asset
+names. Do not recreate the
 worktrees, download the JDK, or initialize submodules during every release;
 refresh the prepared worktrees to the reviewed commit before invoking the
 helper.
