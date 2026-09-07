@@ -1488,13 +1488,21 @@ client and its native platform:
 BMS-IR-Arena-oraja-0.4.14.58-macos-aarch64.jar
 ```
 
-GitHub distribution uses two OS-specific prereleases in this canonical source
-repository. Their tags are `test-<version>-windows-x86-64` and
-`test-<version>-macos-aarch64`, both at the same reviewed commit, and each
-contains exactly one body asset named `Arena-oraja.jar`. This keeps the public
-filename stable while preventing native libraries from being mixed across
-platforms. GitHub's automatic source archives therefore contain oraja body
-source; the patch-server repository does not host these body releases.
+The 2026-09-07 operator decision supersedes the earlier oraja-hosted release
+policy. Publish both the body JAR and its corresponding source ZIP in
+`tenP0312-dev/bms-ir-arena-patch-server`. Use OS-specific prerelease tags
+`test-<version>-windows-x86-64` and `test-<version>-macos-aarch64` so each can
+attach the canonical `Arena-oraja.jar` without mixing native libraries. Each
+also attaches `Arena-oraja-source.zip` from the exact reviewed oraja build
+commit, with pinned submodule sources and build/license files. Both platforms
+must record the same body source commit. The patch-server tag is not evidence
+of that commit; record it explicitly in release notes and source provenance.
+The automatic GitHub `Source code (zip)` is patch-server source, not this ZIP.
+Release notes must link directly to both explicit assets and identify the OS.
+See the [canonical distribution policy](https://github.com/tenP0312-dev/bms-ir-arena-patch-server#body-binary-and-source-distribution-policy).
+This is a documentation-only decision: existing releases remain unchanged and
+the helper's old oraja targets/source packaging need implementation and
+validation before the next publication.
 
 The public page offers two forms for each supported OS:
 
