@@ -321,8 +321,7 @@ public final class MusicSelectInputProcessor {
                 select.play(OPTION_CHANGE);
             }
             if (property.isPressed(input, CONSTANT, true)) {
-                config.setScrollMode(config.getScrollMode() == 1 ? 0 : 1);
-                select.play(OPTION_CHANGE);
+                select.executeEvent(EventType.constant);
             }
             if (property.isPressed(input, JUDGEAREA, true)) {
                 config.setShowjudgearea(!config.isShowjudgearea());

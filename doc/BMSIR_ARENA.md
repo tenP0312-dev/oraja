@@ -1402,6 +1402,30 @@ platform build.
   `2`; direction flags use the most recent 500 ms. An optional second
   duration argument is clamped to 50--2000 ms.
 
+## CONSTANT and scroll modification
+
+Music Select's SELECT assist-panel CONSTANT key uses the same event as the
+CONSTANT skin control. It toggles note-display-time CONSTANT for the selected
+chart's key mode, matching skin properties 302/400 and the startup configuration
+checkbox. It does not toggle `Scroll Modify Mode`, which separately removes or
+adds chart scroll changes. Both settings default to OFF.
+
+In older bodies, including 0.4.14.74 and 0.4.14.81, the key incorrectly toggled
+scroll removal while the CONSTANT indicator showed the other setting. Existing
+profiles are preserved because intentional scroll modification cannot be
+distinguished from that old key operation. If BPM changes remain removed after
+disabling CONSTANT, set `Scroll Modify Mode` to `OFF` in startup configuration
+and save. CONSTANT itself is configured per key mode. This does not restore
+past ordinary scores excluded by assist play.
+
+日本語: SELECTのCONSTANTキーを、選択中の譜面の鍵盤モードに対応する表示・
+マウス操作・起動時設定と統一しました。74・81などの旧版では、表示と異なる
+ソフラン除去設定を切り替えていました。既存設定は自動消去しません。
+CONSTANTを切ってもソフランが消える場合は、起動時設定の
+`Scroll Modify Mode`を`OFF`にして保存してください。CONSTANTは使用する
+鍵盤モードごとに確認してください。過去のアシストプレイの通常スコアを
+復元する変更ではありません。
+
 ## Build
 
 Use a JDK 17 distribution that includes JavaFX:
