@@ -1,4 +1,4 @@
-# Arena oraja 0.4.14.82
+# Arena oraja 0.4.14.83
 
 - 起動前のBMS-IR固有設定に「強制LN」のON/OFFを追加（初期OFF）。ONでは譜面指定のCN/HCNもLNにします。OFFでは従来の譜面指定・LNモードに戻ります。
 - ON/OFFの自己ベストを分離し、リプレイは記録時の設定で再生します。対応pluginは0.0.75です。
