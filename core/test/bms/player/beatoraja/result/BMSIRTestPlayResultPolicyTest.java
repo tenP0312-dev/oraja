@@ -10,6 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRTestPlayResultPolicyTest {
+    @Test void convertedTrialIsDisposableOutsideWorkFolders() {
+        BMSModel chart = model("/songs/released/chart.bms");
+        chart.getValues().put(bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.MODEL_PREVIEW, "1");
+        assertFalse(MusicResult.shouldPersistScore(chart, ""));
+    }
     @Test
     void singleResultPersistsOnlyOutsideTheConfiguredWorkFolder() {
         assertTrue(MusicResult.shouldPersistScore(
