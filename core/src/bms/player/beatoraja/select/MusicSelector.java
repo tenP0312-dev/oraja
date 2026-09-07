@@ -154,12 +154,11 @@ public final class MusicSelector extends MainState {
 				BMSIRManiacSettings settings = BMSIRManiacApiClient.effectiveSettings(main, song);
 				if (settings != null) {
 					ScoreData stored = pda.readManiacScoreData(
+							song,
 							settings.storageChartId(song.getSha256()),
 							lnmode
 					);
-					boolean changed = config.isBmsirForceLn() && BMSIRLongNoteMode.changesAuthoredMode(song);
-					if (changed && stored != null && stored.getMode() != lnmode) return null;
-					return BMSIRLongNoteMode.compatibleScore(stored, changed);
+					return stored;
 				}
 				return pda.readScoreData(song, lnmode);
 			}

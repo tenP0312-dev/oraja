@@ -192,13 +192,13 @@ public final class PlayDataAccessor {
 		boolean ln = model.containsUndefinedLongNote();
 		return BMSIRLongNoteMode.compatibleScore(
 				scoreDatabase(model).getScoreData(hash, ln ? lnmode : 0),
-				(BMSIRLongNoteMode.isApplied(model) && BMSIRLongNoteMode.changesAuthoredMode(model)));
+				BMSIRLongNoteMode.separatesScore(model));
 	}
 
 	public ScoreData readScoreData(SongData song, int lnmode) {
 		return BMSIRLongNoteMode.compatibleScore(
-				selectedScoreDatabase().getScoreData(song.getSha256(), (forceLn() ? song.hasAnyLongNote() : song.hasUndefinedLongNote()) ? lnmode : 0),
-				(forceLn() && BMSIRLongNoteMode.changesAuthoredMode(song)));
+				scoreDatabase(song, false).getScoreData(song.getSha256(), songScoreMode(song, lnmode)),
+				separatesScore(song));
 	}
 
 	/**
@@ -213,14 +213,25 @@ public final class PlayDataAccessor {
 	 * @return スコアデータ
 	 */
 	public ScoreData readScoreData(String hash, boolean ln, int lnmode) {
-		return selectedScoreDatabase().getScoreData(hash, ln ? lnmode : 0);
+		// Hash-only callers have no chart metadata and address the ordinary pool.
+		return scoredb.getScoreData(hash, ln ? lnmode : 0);
 	}
 
 	public ScoreData readManiacScoreData(String storageHash, int lnmode) {
-		ScoreData score = selectedManiacDatabase().getScoreData(storageHash, lnmode);
+		ScoreData score = maniacScoredb.getScoreData(storageHash, lnmode);
 		return score != null || lnmode == 0
 				? score
-				: selectedManiacDatabase().getScoreData(storageHash, 0);
+				: maniacScoredb.getScoreData(storageHash, 0);
+	}
+
+	public ScoreData readManiacScoreData(SongData song, String storageHash, int lnmode) {
+		ScoreDatabaseAccessor database = scoreDatabase(song, true);
+		int mode = songScoreMode(song, lnmode);
+		ScoreData score = database.getScoreData(storageHash, mode);
+		if (score == null && mode != 0 && !separatesScore(song)) {
+			score = database.getScoreData(storageHash, 0);
+		}
+		return BMSIRLongNoteMode.compatibleScore(score, separatesScore(song));
 	}
 
 	public void readManiacScoreDatas(
@@ -229,13 +240,12 @@ public final class PlayDataAccessor {
 			int lnmode,
 			Function<SongData, String> storageHashProvider
 	) {
-		selectedManiacDatabase().getScoreDatasByHash(
-				collector,
-				songs,
-				lnmode,
-				storageHashProvider,
-				true, forceLn()
-		);
+		for (boolean separate : new boolean[]{false, true}) {
+			SongData[] group = Arrays.stream(songs).filter(s -> separatesScore(s) == separate).toArray(SongData[]::new);
+			if (group.length == 0) continue;
+			(separate ? forcedManiacScoredb : maniacScoredb).getScoreDatasByHash(
+					collector, group, lnmode, storageHashProvider, true, separate);
+		}
 	}
 
 	public void syncManiacScoreData(
@@ -253,7 +263,7 @@ public final class PlayDataAccessor {
 		// The remote MANIAC sync does not identify forced-LN policy; retain it in the ordinary pool.
 		if (forceLn()) return;
 		int mode = Math.max(0, incoming.getMode());
-		ScoreData stored = selectedManiacDatabase().getScoreData(storageHash, mode);
+		ScoreData stored = maniacScoredb.getScoreData(storageHash, mode);
 		int playcount = stored == null ? 0 : stored.getPlaycount();
 		int clearcount = stored == null ? 0 : stored.getClearcount();
 		if (stored == null) {
@@ -271,7 +281,7 @@ public final class PlayDataAccessor {
 		stored.setPlaycount(playcount);
 		stored.setClearcount(clearcount);
 		stored.setScorehash(getScoreHash(stored));
-		selectedManiacDatabase().setScoreData(stored);
+		maniacScoredb.setScoreData(stored);
 		if (maniacMetadata != null) {
 			maniacMetadata.recordSynced(
 					storageHash,
@@ -293,11 +303,15 @@ public final class PlayDataAccessor {
 	 * @param lnmode LNモード
 	 */
 	public void readScoreDatas(ScoreDataCollector collector, SongData[] songs, int lnmode) {
-		selectedScoreDatabase().getScoreDatas(collector, songs, lnmode, forceLn(), forceLn());
+		for (boolean separate : new boolean[]{false, true}) {
+			SongData[] group = Arrays.stream(songs).filter(s -> separatesScore(s) == separate).toArray(SongData[]::new);
+			if (group.length == 0) continue;
+			(separate ? forcedScoredb : scoredb).getScoreDatas(collector, group, lnmode, separate, separate);
+		}
 	}
 
 	public List<ScoreData> readScoreDatas(String sql) {
-		return selectedScoreDatabase().getScoreDatas(sql);
+		return scoredb.getScoreDatas(sql);
 	}
 
 	/**
@@ -319,7 +333,7 @@ public final class PlayDataAccessor {
 		if (newscore == null) {
 			return;
 		}
-		boolean changedLnMode = (BMSIRLongNoteMode.isApplied(model) && BMSIRLongNoteMode.changesAuthoredMode(model));
+		boolean changedLnMode = BMSIRLongNoteMode.separatesScore(model);
 		ScoreData score = BMSIRLongNoteMode.compatibleScore(
 				targetDatabase.getScoreData(hash, model.containsUndefinedLongNote() ? lnmode : 0), changedLnMode);
 		int previousEx = score == null ? -1 : score.getExscore();
@@ -330,7 +344,10 @@ public final class PlayDataAccessor {
 		}
 		score.setSha256(hash);
 		if (changedLnMode) score.setBmsirLongNotePolicy(BMSIRLongNoteMode.SCORE_POLICY);
-		newscore.setBmsirLongNotePolicy(score.getBmsirLongNotePolicy());
+		// Keep the live IR wire marker independent from the shared local PB.
+		newscore.setBmsirLongNotePolicy(BMSIRLongNoteMode.isApplied(model)
+				&& BMSIRLongNoteMode.changesAuthoredMode(model)
+				? BMSIRLongNoteMode.SCORE_POLICY : score.getBmsirLongNotePolicy());
 		if (updateScore) {
 			score.setNotes(NantokaManiaRules.totalNotes(model));
 		}
@@ -434,12 +451,22 @@ public final class PlayDataAccessor {
 
 	private boolean forceLn() { return playerConfig != null && playerConfig.isBmsirForceLn(); }
 
-	private ScoreDatabaseAccessor selectedScoreDatabase() { return forceLn() ? forcedScoredb : scoredb; }
-	private ScoreDatabaseAccessor selectedManiacDatabase() { return forceLn() ? forcedManiacScoredb : maniacScoredb; }
+	private boolean separatesScore(SongData song) {
+		return forceLn() && BMSIRLongNoteMode.separatesScore(song);
+	}
+
+	private int songScoreMode(SongData song, int lnmode) {
+		return (separatesScore(song) || BMSIRLongNoteMode.authoredUndefined(song)) ? lnmode : 0;
+	}
+
+	private ScoreDatabaseAccessor scoreDatabase(SongData song, boolean maniac) {
+		return separatesScore(song) ? (maniac ? forcedManiacScoredb : forcedScoredb)
+				: (maniac ? maniacScoredb : scoredb);
+	}
 
 	private ScoreDatabaseAccessor scoreDatabase(BMSModel model) {
 		boolean maniac = model != null && model.getValues().containsKey(BMSIRManiacPlayContext.MODEL_STORAGE_HASH);
-		return BMSIRLongNoteMode.isApplied(model)
+		return BMSIRLongNoteMode.separatesScore(model)
 				? (maniac ? forcedManiacScoredb : forcedScoredb)
 				: (maniac ? maniacScoredb : scoredb);
 	}
@@ -504,7 +531,7 @@ public final class PlayDataAccessor {
 				break;
 			}
 		}
-		return selectedScoreDatabase().getScoreData(hash, (ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000);
+		return scoredb.getScoreData(hash, (ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000);
 	}
 
 	public ScoreData readScoreData(BMSModel[] models, int lnmode, int option,
@@ -515,16 +542,18 @@ public final class PlayDataAccessor {
 			hash[i] = models[i].getSHA256();
 			ln |= models[i].containsUndefinedLongNote();
 		}
-		return BMSIRLongNoteMode.compatibleScore(readScoreData(hash, ln, lnmode, option, constraint),
-				Arrays.stream(models).anyMatch(m -> BMSIRLongNoteMode.isApplied(m) && BMSIRLongNoteMode.changesAuthoredMode(m)));
+		boolean separate = Arrays.stream(models).anyMatch(BMSIRLongNoteMode::separatesScore);
+		return BMSIRLongNoteMode.compatibleScore((separate ? forcedScoredb : scoredb).getScoreData(
+				String.join("", hash), courseScoreMode(ln, lnmode, option, constraint)), separate);
 	}
 
 	public ScoreData readScoreData(SongData[] songs, int lnmode, int option,
 			CourseData.CourseDataConstraint[] constraint) {
-		return BMSIRLongNoteMode.compatibleScore(readScoreData(
-				Arrays.stream(songs).map(SongData::getSha256).toArray(String[]::new),
-				Arrays.stream(songs).anyMatch(s -> forceLn() ? s.hasAnyLongNote() : s.hasUndefinedLongNote()), lnmode, option, constraint),
-				(forceLn() && Arrays.stream(songs).anyMatch(BMSIRLongNoteMode::changesAuthoredMode)));
+		boolean separate = Arrays.stream(songs).anyMatch(this::separatesScore);
+		boolean ln = separate || Arrays.stream(songs).anyMatch(BMSIRLongNoteMode::authoredUndefined);
+		String hash = String.join("", Arrays.stream(songs).map(SongData::getSha256).toArray(String[]::new));
+		return BMSIRLongNoteMode.compatibleScore((separate ? forcedScoredb : scoredb).getScoreData(
+				hash, courseScoreMode(ln, lnmode, option, constraint)), separate);
 	}
 
 	public ScoreData readScoreData(String[] hashes, boolean ln, int lnmode, int option,
@@ -585,8 +614,9 @@ public final class PlayDataAccessor {
 				break;
 			}
 		}
-		boolean changedLnMode = Arrays.stream(models).anyMatch(m -> BMSIRLongNoteMode.isApplied(m) && BMSIRLongNoteMode.changesAuthoredMode(m));
-		ScoreData score = BMSIRLongNoteMode.compatibleScore(selectedScoreDatabase().getScoreData(hash,
+		boolean changedLnMode = Arrays.stream(models).anyMatch(BMSIRLongNoteMode::separatesScore);
+		ScoreDatabaseAccessor targetDatabase = changedLnMode ? forcedScoredb : scoredb;
+		ScoreData score = BMSIRLongNoteMode.compatibleScore(targetDatabase.getScoreData(hash,
 				(ln ? lnmode : 0) + option * 10 + hispeed * 100 + judge * 1000 + gauge * 10000), changedLnMode);
 
 		if (score == null) {
@@ -596,7 +626,9 @@ public final class PlayDataAccessor {
 		score.setSha256(hash);
 		score.setNotes(totalnotes);
 		if (changedLnMode) score.setBmsirLongNotePolicy(BMSIRLongNoteMode.SCORE_POLICY);
-		newscore.setBmsirLongNotePolicy(score.getBmsirLongNotePolicy());
+		newscore.setBmsirLongNotePolicy(Arrays.stream(models).anyMatch(m ->
+				BMSIRLongNoteMode.isApplied(m) && BMSIRLongNoteMode.changesAuthoredMode(m))
+				? BMSIRLongNoteMode.SCORE_POLICY : score.getBmsirLongNotePolicy());
 
 		if (newscore.getClear() != Failed.id) {
 			score.setClearcount(score.getClearcount() + 1);
@@ -607,8 +639,8 @@ public final class PlayDataAccessor {
 		score.setPlaycount(score.getPlaycount() + 1);
 		score.setDate(Calendar.getInstance(TimeZone.getDefault()).getTimeInMillis() / 1000L);
 		score.setScorehash(getScoreHash(score));
-		selectedScoreDatabase().setScoreData(score);
-		ScoreLogDatabaseAccessor courseLog = forceLn() ? forcedScorelogdb : scorelogdb;
+		targetDatabase.setScoreData(score);
+		ScoreLogDatabaseAccessor courseLog = changedLnMode ? forcedScorelogdb : scorelogdb;
 		if (log.getSha256() != null && courseLog != null) {
 			log.setMode(score.getMode());
 			log.setDate(score.getDate());
@@ -686,7 +718,11 @@ public final class PlayDataAccessor {
 	}
 
 	public void deleteScoreData(String sha256, boolean undefinedLongNote, int lnmode) {
-		selectedScoreDatabase().deleteScoreData(sha256, undefinedLongNote ? lnmode : 0);
+		scoredb.deleteScoreData(sha256, undefinedLongNote ? lnmode : 0);
+	}
+
+	public void deleteScoreData(SongData song, int lnmode) {
+		scoreDatabase(song, false).deleteScoreData(song.getSha256(), songScoreMode(song, lnmode));
 	}
 
 	public void deleteScoreData(
@@ -698,10 +734,10 @@ public final class PlayDataAccessor {
 		boolean undefinedLongNote = false;
 		for (SongData song : songs) {
 			hash.append(song.getSha256());
-			undefinedLongNote |= forceLn() ? song.hasAnyLongNote() : song.hasUndefinedLongNote();
+			undefinedLongNote |= separatesScore(song) || BMSIRLongNoteMode.authoredUndefined(song);
 		}
 		for (int option = 0; option < 3; option++) {
-			selectedScoreDatabase().deleteScoreData(
+			(Arrays.stream(songs).anyMatch(this::separatesScore) ? forcedScoredb : scoredb).deleteScoreData(
 					hash.toString(),
 					courseScoreMode(undefinedLongNote, lnmode, option, constraints)
 			);

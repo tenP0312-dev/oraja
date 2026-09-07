@@ -1,6 +1,7 @@
 package bms.player.beatoraja.select;
 
 import bms.player.beatoraja.ScoreData;
+import bms.player.beatoraja.BMSIRLongNoteMode;
 import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.utils.*;
@@ -33,7 +34,7 @@ public abstract class ScoreDataCache {
      * @return スコアデータ。存在しない場合はnull
      */
     public ScoreData readScoreData(SongData song, int lnmode) {
-        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
+        final int cacheindex = cacheIndex(song, lnmode);
         if (scorecache[cacheindex].containsKey(song.getSha256())) {
             return scorecache[cacheindex].get(song.getSha256());
         }
@@ -52,7 +53,7 @@ public abstract class ScoreDataCache {
         // キャッシュからの抽出
         Array<SongData> noscore = null;
         for (SongData song : songs) {
-            final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
+            final int cacheindex = cacheIndex(song, lnmode);
 
             if (scorecache[cacheindex].containsKey(song.getSha256())) {
                 collector.collect(song, scorecache[cacheindex].get(song.getSha256()));
@@ -71,7 +72,7 @@ public abstract class ScoreDataCache {
         final SongData[] noscores = noscore.toArray(SongData.class);
 
         final ScoreDataCollector cachecollector = (song, score) -> {
-            final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
+            final int cacheindex = cacheIndex(song, lnmode);
             scorecache[cacheindex].put(song.getSha256(), score);
         	collector.collect(song, score);
         };
@@ -79,7 +80,7 @@ public abstract class ScoreDataCache {
     }
 
     boolean existsScoreDataCache(SongData song, int lnmode) {
-        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
+        final int cacheindex = cacheIndex(song, lnmode);
         return scorecache[cacheindex].containsKey(song.getSha256());
     }
 
@@ -90,12 +91,20 @@ public abstract class ScoreDataCache {
     }
 
     public void update(SongData song, int lnmode) {
-        final int cacheindex = (song.hasAnyLongNote() ? lnmode : 3) + (isForcedLn() ? 4 : 0);
+        // Multiple selector modes can address the same ordinary PB. Invalidate
+        // every alias after saving/deleting so an ON/OFF round trip stays fresh.
+        for (ObjectMap<String, ScoreData> cache : scorecache) cache.remove(song.getSha256());
+        final int cacheindex = cacheIndex(song, lnmode);
         ScoreData score = readScoreDatasFromSource(song, lnmode);
         scorecache[cacheindex].put(song.getSha256(), score);
     }
 
     protected boolean isForcedLn() { return false; }
+
+    private int cacheIndex(SongData song, int lnmode) {
+        return (song.hasAnyLongNote() ? lnmode : 3)
+                + (isForcedLn() && BMSIRLongNoteMode.separatesScore(song) ? 4 : 0);
+    }
 
     protected abstract ScoreData readScoreDatasFromSource(SongData songs, int lnmode);
 
