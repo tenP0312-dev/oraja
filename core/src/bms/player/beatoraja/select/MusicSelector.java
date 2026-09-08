@@ -106,6 +106,8 @@ public final class MusicSelector extends MainState {
 	private ScoreDataCache rivalcache;
 	
 	private RankingData currentir;
+	private boolean rankingForceLn;
+	private int rankingLnmode = -1;
 	/**
 	 * ランキング表示位置
 	 */
@@ -394,6 +396,9 @@ public final class MusicSelector extends MainState {
 
 	public void render() {
 		manager.applyPendingPrimaryIrTables();
+		if (rankingForceLn != config.isBmsirForceLn() || rankingLnmode != config.getLnmode()) {
+			selectedBarMoved();
+		}
 		final Bar current = manager.getSelected();
         if(timer.getNowTime() > getSkin().getInput()){
         	timer.switchTimer(TIMER_STARTINPUT, true);
@@ -955,6 +960,8 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void selectedBarMoved() {
+		rankingForceLn = config.isBmsirForceLn();
+		rankingLnmode = config.getLnmode();
 		execute(MusicSelectCommand.RESET_REPLAY);
 		loadSelectedSongImages();
 		scheduleSelectedSongToOrajaHelper(manager.getSelected());
