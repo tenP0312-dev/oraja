@@ -36,16 +36,21 @@ public class IRCourseData {
     }
 
     public IRCourseData(CourseData course, int lntype) {
+        this(course, lntype, false);
+    }
+
+    public IRCourseData(CourseData course, int lntype, boolean forceLn) {
     	this.name = course.getName();
     	this.charts = new IRChartData[course.getSong().length];
     	for(int i = 0;i < this.charts.length;i++) {
-    		charts[i] = new IRChartData(course.getSong()[i]);
+            charts[i] = forceLn ? IRChartData.forRanking(course.getSong()[i], 0, true)
+                    : new IRChartData(course.getSong()[i]);
     	}
     	this.constraint = new CourseDataConstraint[course.getConstraint().length];
     	for(int i = 0;i < this.constraint.length;i++) {
     		constraint[i] =course.getConstraint()[i];
     	}
-    	this.lntype = lntype;
+        this.lntype = forceLn ? 0 : lntype;
 
     	this.trophy = new IRTrophyData[course.getTrophy().length];
     	for(int i = 0; i < trophy.length;i++) {

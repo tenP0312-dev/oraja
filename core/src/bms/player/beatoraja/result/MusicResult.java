@@ -201,13 +201,17 @@ public class MusicResult extends AbstractResult {
 					timer.switchTimer(succeed ? TIMER_IR_CONNECT_SUCCESS : TIMER_IR_CONNECT_FAIL, true);
 					if (!sendManiac) {
 						try {
-							IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, new IRChartData(resource.getSongdata()));
+							IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null,
+									IRChartData.forRanking(resource.getSongdata(), resource.getBMSModel().getLntype(),
+											bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())));
 							if(response.isSucceeded()) {
-								main.getRivalDataAccessor().updateAllRivalsScores(
-										response.getData(),
-										resource.getSongdata(),
-										resource.getPlayerConfig().getLnmode()
-								);
+								if (!bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(resource.getBMSModel())) {
+									main.getRivalDataAccessor().updateAllRivalsScores(
+											response.getData(),
+											resource.getSongdata(),
+											resource.getPlayerConfig().getLnmode()
+									);
+								}
 								ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
 								rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
 								logger.info("IRからのスコア取得成功 : {}", response.getMessage());

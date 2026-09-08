@@ -118,6 +118,15 @@ public class IRChartData {
 	}
 	
 	public IRChartData(SongData song, int lntype) {
+		this(song, lntype, false);
+	}
+
+	/** Ranking metadata follows the selected interpretation before chart decoding. */
+	public static IRChartData forRanking(SongData song, int lnmode, boolean forceLn) {
+		return new IRChartData(song, forceLn ? 0 : lnmode, forceLn);
+	}
+
+	private IRChartData(SongData song, int lntype, boolean forceLn) {
 		this.title = song.getTitle();
 		this.subtitle = song.getSubtitle();
 		this.genre = song.getGenre();
@@ -138,10 +147,11 @@ public class IRChartData {
 		this.notes = song.getNotes();
 		// Catalog ranking requests can select forced LN before decoding. Loaded
 		// models report their actual undefined notes, preserving ordinary OFF metadata.
-		this.hasUndefinedLN = model == null ? song.hasAnyLongNote() : model.containsUndefinedLongNote();
-		this.hasLN = song.hasLongNote();
-		this.hasCN = song.hasChargeNote();
-		this.hasHCN = song.hasHellChargeNote();
+		this.hasUndefinedLN = forceLn ? song.hasAnyLongNote()
+				: model == null ? song.hasAnyLongNote() : model.containsUndefinedLongNote();
+		this.hasLN = forceLn ? song.hasAnyLongNote() : song.hasLongNote();
+		this.hasCN = !forceLn && song.hasChargeNote();
+		this.hasHCN = !forceLn && song.hasHellChargeNote();
 		this.hasMine = song.hasMineNote();
 		this.hasRandom = song.hasRandomSequence();
 		this.hasStop = song.isBpmstop();

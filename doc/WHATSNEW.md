@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.86
+
+- CN/HCN指定譜面の強制LN時に、取得ランキングへ元のCN/HCN情報が残る問題を修正しました。ON/OFFのランキングキャッシュも切り替えます。
+- 送信処理は変更していません。plugin 0.0.75、launcher 0.2.29を継続します。
+- Fixed Force LN ranking requests and ON/OFF caches for authored CN/HCN charts. Score submission is unchanged.
+
 # Arena oraja 0.4.14.85
 
 - 強制LNをONにしても、LNなし・元からLNの譜面は従来のスコアとランプを使用します。CN/HCNをLNへ変換する譜面だけ専用成績に切り替わり、OFFに戻すと元の成績を表示します。

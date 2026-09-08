@@ -118,7 +118,7 @@ public class MainController {
 
 	private RivalDataAccessor rivals = new RivalDataAccessor();
 
-	private RankingDataCache ircache = new RankingDataCache();
+	private RankingDataCache ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
 
 	private SpriteBatch sprite;
 	/**

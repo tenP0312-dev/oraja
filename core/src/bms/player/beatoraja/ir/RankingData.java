@@ -63,20 +63,24 @@ public class RankingData {
 			return;
 		}		
 		state = ACCESS;
+		final int lnmode = mainstate.main.getPlayerConfig().getLnmode();
+		final boolean forceLn = mainstate.main.getPlayerConfig().isBmsirForceLn();
 		Thread irprocess = new Thread(() -> {
 			final IRStatus[] ir = mainstate.main.getIRStatus();
 	        IRResponse<IRScoreData[]> response = null;
 			if(song instanceof SongData songData) {
-				response = ir[0].connection.getPlayData(null, new IRChartData(songData));
-				if (response.isSucceeded()) {
+				response = ir[0].connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
+				// Rival databases have no separate forced-LN chart identity.
+				if (response.isSucceeded() && !(forceLn
+						&& bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
 					mainstate.main.getRivalDataAccessor().updateAllRivalsScores(
 							response.getData(),
 							songData,
-							mainstate.main.getPlayerConfig().getLnmode()
+							lnmode
 					);
 				}
 			} else if(song instanceof CourseData) {
-		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, mainstate.main.getPlayerConfig().getLnmode()));
+		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, lnmode, forceLn));
 	        }
 	        if(response.isSucceeded()) {
 	        	updateScore(response.getData(), mainstate.getScoreDataProperty().getScoreData());
