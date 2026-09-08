@@ -78,9 +78,11 @@ public class LeaderBoardBar extends DirectoryBar {
 			return new Bar[0];
 		}
 		MainController.IRStatus primary = statuses[0];
+		final boolean forceLn = selector.main.getPlayerConfig().isBmsirForceLn();
+		final int lnmode = selector.main.getPlayerConfig().getLnmode();
 		IRResponse<IRScoreData[]> response = primary.connection.getPlayData(
 				null,
-				new IRChartData(songData)
+				IRChartData.forRanking(songData, lnmode, forceLn)
 		);
 		if (!response.isSucceeded()) {
 			ImGuiNotify.error(String.format(
@@ -92,11 +94,9 @@ public class LeaderBoardBar extends DirectoryBar {
 		IRScoreData[] responseScores = response.getData() != null
 				? response.getData()
 				: new IRScoreData[0];
-		selector.main.getRivalDataAccessor().updateAllRivalsScores(
-				responseScores,
-				songData,
-				selector.main.getPlayerConfig().getLnmode()
-		);
+		if (!(forceLn && bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
+			selector.main.getRivalDataAccessor().updateAllRivalsScores(responseScores, songData, lnmode);
+		}
 		ScoreData localScoreData = selector.getScoreDataCache().readScoreData(
 				songData,
 				selector.main.getPlayerConfig().getLnmode()
