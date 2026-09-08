@@ -10,13 +10,17 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
-The current client source version is **0.4.14.85**. Its Windows native-audio
+The current client source version is **0.4.14.86**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
 non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
+
+Version 0.4.14.86 fixes Force LN ranking requests for authored CN/HCN charts
+and separates their ON/OFF ranking caches. Submission behavior is unchanged.
+The plugin remains 0.0.75 and the launcher remains 0.2.29.
 
 Version 0.4.14.85 shares ordinary scores for charts without long notes and charts
 already using LN when Force LN is enabled. Only authored CN/HCN charts use the
