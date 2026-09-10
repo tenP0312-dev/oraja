@@ -43,4 +43,36 @@ class ImGuiInputCaptureTest {
         assertTrue(ImGuiInputCapture.isKeyboardCaptured());
         assertTrue(ImGuiInputCapture.isMouseCaptured());
     }
+
+    @Test
+    void completedButtonOrTextEditReleasesKeyboardDespiteRetainedFocus() {
+        ImGuiInputCapture.updateFromImGui(true, false, true, true, true);
+        assertTrue(ImGuiInputCapture.isKeyboardCaptured());
+        ImGuiInputCapture.updateFromImGui(true, false, true, true, false);
+        assertFalse(ImGuiInputCapture.isKeyboardCaptured());
+        assertTrue(ImGuiInputCapture.isMouseCaptured());
+        ImGuiInputCapture.updateFromImGui(true, true, false, true, true);
+        assertTrue(ImGuiInputCapture.isKeyboardCaptured());
+        ImGuiInputCapture.updateFromImGui(true, false, false, true, false);
+        assertFalse(ImGuiInputCapture.isKeyboardCaptured());
+    }
+
+    @Test
+    void externalEditorRemainsCapturedUntilItCloses() {
+        ImGuiInputCapture.setExternalEditorOpen(true);
+        ImGuiInputCapture.updateFromImGui(true, false, false, true, false);
+        assertTrue(ImGuiInputCapture.isKeyboardCaptured());
+        ImGuiInputCapture.setExternalEditorOpen(false);
+        assertFalse(ImGuiInputCapture.isKeyboardCaptured());
+    }
+
+    @Test
+    void existingMenusKeepTheirKeyboardNavigationCapture() {
+        ImGuiInputCapture.updateFromImGui(true, false, false, false, false, true);
+        assertTrue(ImGuiInputCapture.isKeyboardCaptured());
+        ImGuiInputCapture.updateFromImGui(false, false, false, true, false, true);
+        assertTrue(ImGuiInputCapture.isKeyboardCaptured());
+        ImGuiInputCapture.updateFromImGui(false, false, false, false, false, true);
+        assertFalse(ImGuiInputCapture.isKeyboardCaptured());
+    }
 }

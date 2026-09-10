@@ -239,7 +239,8 @@ public class ImGuiRenderer {
                 io.getWantTextInput(),
                 io.getWantCaptureMouse(),
                 ImGui.isAnyItemFocused(),
-                ImGui.isAnyItemActive()
+                ImGui.isAnyItemActive(),
+                SHOW_MOD_MENU.get() || SHOW_SKIN_WIDGET_MANAGER.get() || SHOW_MANIAC_OPTIONS.get()
         );
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
