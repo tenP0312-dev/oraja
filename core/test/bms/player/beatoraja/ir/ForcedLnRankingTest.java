@@ -13,6 +13,75 @@ import static org.junit.jupiter.api.Assertions.*;
 class ForcedLnRankingTest {
     @TempDir Path directory;
 
+    @Test
+    void forcedCacheNormalizesRawSelectedModeForSongsAndMixedCourses() throws Exception {
+        SongData undefined = catalog(song(0, 2, false));
+        CourseData course = new CourseData();
+        course.setSong(new SongData[]{undefined, catalog(song(2, 0, false))});
+        AtomicBoolean force = new AtomicBoolean();
+        RankingDataCache cache = new RankingDataCache(force::get);
+        RankingData cn = new RankingData();
+        RankingData ln = new RankingData();
+        for (int mode = 1; mode <= 2; mode++) {
+            cache.put(undefined, mode, cn);
+            cache.put(course, mode, cn);
+        }
+        force.set(true);
+        for (int mode = 1; mode <= 2; mode++) {
+            assertNull(cache.get(undefined, mode));
+            assertNull(cache.get(course, mode));
+        }
+        cache.put(undefined, 2, ln);
+        cache.put(course, 1, ln);
+        for (int mode = 0; mode <= 2; mode++) {
+            assertSame(ln, cache.get(undefined, mode));
+            assertSame(ln, cache.get(course, mode));
+        }
+        force.set(false);
+        assertSame(cn, cache.get(undefined, 2));
+        assertSame(cn, cache.get(course, 1));
+        force.set(true);
+        assertSame(ln, cache.get(course, 2));
+    }
+
+    @Test
+    void oneCacheOperationReadsForceSettingOnlyOnce() throws Exception {
+        CourseData course = new CourseData();
+        course.setSong(new SongData[]{catalog(song(2, 0, false)), catalog(song(3, 0, false))});
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        RankingDataCache cache = new RankingDataCache(() -> { reads.incrementAndGet(); return true; });
+        RankingData data = new RankingData();
+        cache.put(course, 2, data);
+        assertEquals(1, reads.get());
+        assertSame(data, cache.get(course, 1));
+        assertEquals(2, reads.get());
+        cache.put(course.getSong()[0], 2, data);
+        assertEquals(3, reads.get());
+        assertSame(data, cache.get(course.getSong()[0], 1));
+        assertEquals(4, reads.get());
+    }
+
+    @Test
+    void requestAndCacheCanRetainTheSameContextAfterSettingsChange() throws Exception {
+        bms.player.beatoraja.PlayerConfig config = new bms.player.beatoraja.PlayerConfig();
+        config.setLnmode(2);
+        config.setBmsirForceLn(true);
+        IRRankingContext context = IRRankingContext.from(config);
+        config.setBmsirForceLn(false);
+        assertEquals(0, context.lnmode());
+        assertTrue(context.forceLn());
+        SongData source = catalog(song(2, 0, false));
+        RankingDataCache cache = new RankingDataCache(config::isBmsirForceLn);
+        RankingData data = new RankingData();
+        cache.put(source, context, data);
+        assertNull(cache.get(source, 2));
+        assertSame(data, cache.get(source, context));
+        IRChartData request = IRChartData.forRanking(source, context.lnmode(), context.forceLn());
+        assertEquals(0, request.lntype);
+        assertFalse(request.hasCN);
+        assertEquals(new IRRankingContext(2, false), IRRankingContext.from(config));
+    }
+
     private SongData song(int authored, int selected, boolean force) throws Exception {
         Path path = directory.resolve("chart-" + authored + ".bms");
         Files.writeString(path, "#TITLE Ranking\n#BPM 120\n#WAV01 test.wav\n"

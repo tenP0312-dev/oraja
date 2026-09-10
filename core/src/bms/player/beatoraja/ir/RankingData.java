@@ -59,12 +59,17 @@ public class RankingData {
 	private long lastUpdateTime;
 	
 	public void load(MainState mainstate, Object song) {
+		load(mainstate, song, IRRankingContext.from(mainstate.main.getPlayerConfig()));
+	}
+
+	public void load(MainState mainstate, Object song, IRRankingContext context) {
 		if(!(song instanceof SongData || song instanceof CourseData)) {
 			return;
 		}		
 		state = ACCESS;
-		final int lnmode = mainstate.main.getPlayerConfig().getLnmode();
-		final boolean forceLn = mainstate.main.getPlayerConfig().isBmsirForceLn();
+		final int lnmode = context.lnmode();
+		final boolean forceLn = context.forceLn();
+		final ScoreData localScore = mainstate.getScoreDataProperty().getScoreData();
 		Thread irprocess = new Thread(() -> {
 			final IRStatus[] ir = mainstate.main.getIRStatus();
 	        IRResponse<IRScoreData[]> response = null;
@@ -83,7 +88,7 @@ public class RankingData {
 		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, lnmode, forceLn));
 	        }
 	        if(response.isSucceeded()) {
-	        	updateScore(response.getData(), mainstate.getScoreDataProperty().getScoreData());
+				updateScore(response.getData(), localScore);
 				logger.trace("IRからのスコア取得成功 : {}", response.getMessage());
 				state = FINISH;
 	        } else {
