@@ -106,8 +106,7 @@ public final class MusicSelector extends MainState {
 	private ScoreDataCache rivalcache;
 	
 	private RankingData currentir;
-	private boolean rankingForceLn;
-	private int rankingLnmode = -1;
+	private IRRankingContext rankingContext;
 	/**
 	 * ランキング表示位置
 	 */
@@ -396,7 +395,7 @@ public final class MusicSelector extends MainState {
 
 	public void render() {
 		manager.applyPendingPrimaryIrTables();
-		if (rankingForceLn != config.isBmsirForceLn() || rankingLnmode != config.getLnmode()) {
+		if (!IRRankingContext.from(config).equals(rankingContext)) {
 			selectedBarMoved();
 		}
 		final Bar current = manager.getSelected();
@@ -440,23 +439,23 @@ public final class MusicSelector extends MainState {
 				} else if (BMSIRManiacApiClient.hasAppliedSettings(main, song)) {
 					irc = null;
 				} else {
-					irc = main.getRankingDataCache().get(song, config.getLnmode());
+					irc = main.getRankingDataCache().get(song, rankingContext);
 					if(irc == null) {
 						irc = new RankingData();
-						main.getRankingDataCache().put(song, config.getLnmode(), irc);
+						main.getRankingDataCache().put(song, rankingContext, irc);
 					}
-					irc.load(this, song);
+					irc.load(this, song, rankingContext);
 				}
 	            currentir = irc;
 			}				
 			if (current instanceof GradeBar && ((GradeBar) current).existsAllSongs() && play == null) {
 				CourseData course = ((GradeBar) current).getCourseData();
-				RankingData irc = main.getRankingDataCache().get(course, config.getLnmode());
+				RankingData irc = main.getRankingDataCache().get(course, rankingContext);
 				if(irc == null) {
 					irc = new RankingData();
-					main.getRankingDataCache().put(course, config.getLnmode(), irc);
+					main.getRankingDataCache().put(course, rankingContext, irc);
 				}
-				irc.load(this, course);
+				irc.load(this, course, rankingContext);
 	            currentir = irc;
 			}				
 		}
@@ -960,8 +959,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void selectedBarMoved() {
-		rankingForceLn = config.isBmsirForceLn();
-		rankingLnmode = config.getLnmode();
+		rankingContext = IRRankingContext.from(config);
 		execute(MusicSelectCommand.RESET_REPLAY);
 		loadSelectedSongImages();
 		scheduleSelectedSongToOrajaHelper(manager.getSelected());
@@ -986,11 +984,11 @@ public final class MusicSelector extends MainState {
 					currentir = null;
 					currentRankingDuration = -1;
 				} else {
-					currentir = main.getRankingDataCache().get(song, config.getLnmode());
+					currentir = main.getRankingDataCache().get(song, rankingContext);
 					currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
 				}
 			} else if(current instanceof GradeBar && ((GradeBar) current).existsAllSongs()) {
-				currentir = main.getRankingDataCache().get(((GradeBar) current).getCourseData(), config.getLnmode());
+				currentir = main.getRankingDataCache().get(((GradeBar) current).getCourseData(), rankingContext);
 				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
 			} else {
 				currentir = null;

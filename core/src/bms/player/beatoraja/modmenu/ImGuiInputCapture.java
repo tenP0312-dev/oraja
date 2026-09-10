@@ -22,10 +22,16 @@ public final class ImGuiInputCapture {
             boolean anyItemFocused,
             boolean anyItemActive
     ) {
-        keyboardCaptured = wantCaptureKeyboard
-                || wantTextInput
-                || anyItemFocused
-                || anyItemActive;
+        updateFromImGui(wantCaptureKeyboard, wantTextInput, wantCaptureMouse,
+                anyItemFocused, anyItemActive, false);
+    }
+
+    public static void updateFromImGui(
+            boolean wantCaptureKeyboard, boolean wantTextInput, boolean wantCaptureMouse,
+            boolean anyItemFocused, boolean anyItemActive, boolean preserveMenuCapture) {
+        // Arena controls can remain focused after a click. Editing/dragging still owns input.
+        keyboardCaptured = wantTextInput || anyItemActive
+                || (preserveMenuCapture && (wantCaptureKeyboard || anyItemFocused));
         mouseCaptured = wantCaptureMouse || anyItemActive;
     }
 
