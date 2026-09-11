@@ -321,7 +321,8 @@ public final class MusicSelectInputProcessor {
                 select.play(OPTION_CHANGE);
             }
             if (property.isPressed(input, CONSTANT, true)) {
-                select.executeEvent(EventType.constant);
+                toggleRegulSpeed(config);
+                select.play(OPTION_CHANGE);
             }
             if (property.isPressed(input, JUDGEAREA, true)) {
                 config.setShowjudgearea(!config.isShowjudgearea());
@@ -542,6 +543,11 @@ public final class MusicSelectInputProcessor {
 		}
 		return false;
 	}
+
+    // The legacy SELECT assist key is LR2 CONSTANT / REGUL SPEED, not event 400.
+    static void toggleRegulSpeed(PlayerConfig config) {
+        config.setScrollMode(config.getScrollMode() == 1 ? 0 : 1);
+    }
 
     void handleF2(BMSPlayerInputProcessor input, long now) {
         switch (f2HoldDetector.update(
