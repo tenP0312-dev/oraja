@@ -843,7 +843,40 @@ As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
 start note and remove the end marker before generating notes. Generated notes
 therefore cannot overlap and render inside an old long-note body.
 
-Any MANIAC option or Double Battle play is written only to
+The MANIAC menu also provides `DAN GAUGE` (default OFF) and `INITIAL GAUGE`
+(default 100%). The initial value descends in 2% steps to 2%, then wraps to
+100%; the row is disabled while DAN GAUGE is OFF. In single-song play, ON
+uses the existing course gauge mapping: ASSIST/EASY/NORMAL select CLASS,
+HARD selects EXCLASS, and EXHARD/HAZARD select EXHARDCLASS. All three course
+gauges start at the chosen value so existing automatic gauge shifts use the
+same starting condition. The active judgment/gauge rule profile still applies.
+
+These gauge settings alone do not transform the chart or split its local/IR
+identity. Single-song scores, BP, combo, play history/counts, and IR submission
+use the existing course per-song rules: ordinary and assisted clear lamps are
+not awarded (`NoPlay` in the submitted attempt), while FC/PERFECT/MAX remain
+eligible under the existing rules. Existing better lamps remain intact. No
+aggregate course record, course identity, or Dan qualification is created.
+Other MANIAC effects retain their existing separate score/IR paths.
+
+Replays use the existing single-song slots and serializer. An additive
+`bmsirCourseGaugeInitialValue` records the applied percentage; zero or an
+absent field means the legacy gauge behavior, regardless of the current
+player's DAN GAUGE switch. Replaying restores the recorded percentage.
+Real courses retain their normal initial value, constraints, carry-over, and
+aggregate records. Arena (including legacy Arena), practice, ghost battles,
+and the 7K TO 9K trial do not apply the single-song override.
+
+Regression checks: settings/legacy JSON round-trip; unchanged ordinary and
+MANIAC chart/ranking keys; all six ordinary gauge selections against the
+existing course implementation; 2% start and gauge depletion; replay file
+round-trip and current-setting independence; per-song special/ordinary/assist
+lamp rules; and real local score/BP persistence plus the IR score payload.
+Physical acceptance remains an operator check: open F2, toggle DAN GAUGE,
+cycle 100% through 2% and back, verify the disabled row, play/replay at a low
+initial value, and confirm a real course retains its carry-over.
+
+Any MANIAC chart/effect option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
 temporarily disable these modes, except that SP TO DP by itself remains
 available in Arena on supported SP charts. Combining it with any other MANIAC

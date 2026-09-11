@@ -51,6 +51,8 @@ public final class ReplayData implements Validatable {
 	 * ゲージの種類
 	 */
 	public int gauge;
+	/** Single-song Dan start percentage; zero preserves legacy replay behavior. */
+	public int bmsirCourseGaugeInitialValue;
 	/**
 	 * 譜面オプションによる変更ログ。旧データとの互換性維持用
 	 */
