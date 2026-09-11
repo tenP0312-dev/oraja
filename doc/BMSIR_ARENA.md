@@ -1543,6 +1543,57 @@ platform build.
   `2`; direction flags use the most recent 500 ms. An optional second
   duration argument is clamped to 50--2000 ms.
 
+## CONSTANT and scroll modification
+
+Music Select's SELECT assist-panel CONSTANT key uses the same event as the
+CONSTANT skin control. It toggles note-display-time CONSTANT for the selected
+chart's key mode, matching skin property/event 400 and the startup configuration
+checkbox. The bundled default skin uses ref/act 400 as well. It does not toggle
+`Scroll Modify Mode`, which separately removes or adds chart scroll changes.
+Both settings default to OFF.
+
+Legacy image-index property 302 (`assist_constant`) instead means LR2-style
+CONSTANT / REGUL SPEED: the indicator is ON only for `scrollMode = 1` (REMOVE),
+which modifies BPM, STOP, and scroll changes at the next play's initialization.
+There is no built-in event 302; this correction does not add one or redirect
+unknown skin actions. To change scroll mode, skins must use existing event 352.
+Image-index property/event
+352 retains the complete OFF/REMOVE/ADD selector. Property/event 400 remains
+oraja's per-key-mode note-display-time CONSTANT, which does not rewrite BPM.
+The two controls do not change each other's settings. Both events are editable
+only in Music Select, not during gameplay; existing assist and score rules are
+unchanged. Legacy skins displaying 302 for REGUL SPEED need no display edit; custom skins
+that used 302 to display oraja CONSTANT must use ref/act 400 instead.
+
+In older bodies, including 0.4.14.74 and 0.4.14.81, the key incorrectly toggled
+scroll removal while the CONSTANT indicator showed the other setting. Existing
+profiles are preserved because intentional scroll modification cannot be
+distinguished from that old key operation. If BPM changes remain removed after
+disabling CONSTANT, choose OFF with a skin exposing scroll-mode event 352,
+or set `Scroll Modify Mode` to `OFF` in startup configuration and save.
+CONSTANT itself is configured per key mode. This does not restore
+past ordinary scores excluded by assist play.
+
+日本語: SELECTのCONSTANTキーを、選択中の譜面の鍵盤モードに対応する表示・
+マウス操作400・起動時設定と統一しました。旧302の表示はLR2相当のCONSTANT／
+REGUL SPEEDのBPM固定状態へ接続します。操作302は新設しません。
+操作352は従来どおりOFF/REMOVE/ADDです。oraja系CONSTANTを302で表示していた
+独自スキンはref/actを400へ変更してください。74・81などの旧版では、表示と異なる
+ソフラン除去設定を切り替えていました。既存設定は自動消去しません。
+CONSTANTを切ってもソフランが消える場合は、操作352に対応したスキンでOFFに
+するか、起動時設定の`Scroll Modify Mode`を`OFF`にして保存してください。CONSTANTは使用する
+鍵盤モードごとに確認してください。過去のアシストプレイの通常スコアを
+復元する変更ではありません。
+
+Regression acceptance: with every combination of `scrollMode` 0/1/2 and
+per-mode CONSTANT OFF/ON, check that 302 follows REMOVE only, 352 retains all
+three states, and 400 follows only the selected key mode. Toggle both controls
+through existing events 352/400 independently, including a saved REMOVE profile;
+confirm that event 302 still has no built-in action. Save/reload and play a chart
+with BPM/STOP changes. Verify that only REGUL SPEED removes those changes.
+Physical custom-skin acceptance and binary distribution are separate from the
+repository tests and source merge.
+
 ## Build
 
 Use a JDK 17 distribution that includes JavaFX:
