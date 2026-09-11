@@ -66,6 +66,7 @@ public class BMSPlayer extends MainState {
 	private BGAProcessor bga;
 
 	private GrooveGauge gauge;
+	private int courseGaugeInitialValue;
 
 	private int playtime;
 
@@ -762,7 +763,17 @@ public class BMSPlayer extends MainState {
 		if(replay != null && main.getInputProcessor().getKeyState(5)) {
 		}
 		// プレイゲージ、初期値設定
-		gauge = GrooveGauge.create(model, replay != null ? replay.gauge : config.getGauge(), resource);
+		courseGaugeInitialValue = CourseGaugePolicy.initialValue(
+				config.getBmsirManiacSettings(), replay,
+				autoplay.mode == BMSPlayerMode.Mode.REPLAY,
+				resource.getCourseBMSModels() != null
+						|| autoplay.mode == BMSPlayerMode.Mode.PRACTICE
+						|| BMSIRArenaClient.blocksLocalOneBass() || Client.connected.get()
+						|| ghostBattle.isPresent() || BMSIRSevenToNineModifier.isApplied(model));
+		int requestedGauge = replay != null ? replay.gauge : config.getGauge();
+		gauge = courseGaugeInitialValue > 0
+				? CourseGaugePolicy.create(model, requestedGauge, courseGaugeInitialValue)
+				: GrooveGauge.create(model, requestedGauge, resource);
 		// ゲージログ初期化
 		gaugelog = new FloatArray[gauge.getGaugeTypeLength()];
 		for(int i = 0; i < gaugelog.length; i++) {
@@ -1520,32 +1531,17 @@ public class BMSPlayer extends MainState {
 	public ScoreData createScoreData() {
 		final PlayerConfig config = resource.getPlayerConfig();
 		ScoreData score = judge.getScoreData();
-		if (resource.getCourseBMSModels() == null
+		boolean courseRecord = resource.getCourseBMSModels() != null || courseGaugeInitialValue > 0;
+		if (!courseRecord
 				&& state != STATE_ABORTED
 				&& (score.getEpg() + score.getLpg() + score.getEgr() + score.getLgr() + score.getEgd() + score.getLgd() + score.getEbd() + score.getLbd() == 0)) {
 			return null;
 		}
 
-		ClearType clear = ClearType.Failed;
-		if (state != STATE_FAILED && gauge.isQualified()) {
-			if (assist > 0) {
-				if(resource.getCourseBMSModels() == null) clear = assist == 1 ? ClearType.LightAssistEasy : ClearType.AssistEasy;
-			} else {
-				if (judge.getPastNotes() == judge.getCombo()) {
-					if (judge.getJudgeCount(2) == 0) {
-						if (judge.getJudgeCount(1) == 0) {
-							clear = ClearType.Max;
-						} else {
-							clear = ClearType.Perfect;
-						}
-					} else {
-						clear = ClearType.FullCombo;
-					}
-				} else if (resource.getCourseBMSModels() == null) {
-					clear = gauge.getClearType();
-				}
-			}
-		}
+		ClearType clear = CourseGaugePolicy.clearType(
+				courseRecord, state == STATE_FAILED, gauge.isQualified(), assist,
+				judge.getPastNotes() == judge.getCombo(),
+				judge.getJudgeCount(2), judge.getJudgeCount(1), gauge.getClearType());
 		score.setClear(clear.id);
 		score.setGauge(gauge.isTypeChanged() ? -1 : gauge.getType());
 		score.setGaugelog(gaugelog);
@@ -1566,6 +1562,7 @@ public class BMSPlayer extends MainState {
 		replay.laneShufflePattern = playinfo.laneShufflePattern;
 		replay.rand = playinfo.rand;
 		replay.gauge = config.getGauge();
+		replay.bmsirCourseGaugeInitialValue = courseGaugeInitialValue;
 		replay.sevenToNinePattern = config.getSevenToNinePattern();
 		replay.randomoption = playinfo.randomoption;
 		replay.randomoptionseed = playinfo.randomoptionseed;

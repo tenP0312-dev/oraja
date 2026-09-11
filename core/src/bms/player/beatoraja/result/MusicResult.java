@@ -470,11 +470,14 @@ public class MusicResult extends AbstractResult {
 		}
 		timingDistribution.statisticValueCalcuate();
 
+		// Course per-song lamps also apply to a single song using MANIAC Dan gauge.
+		resource.getScoreData().setClear(
+				bms.player.beatoraja.play.CourseGaugePolicy.perSongClear(
+						resource.getCourseBMSModels() != null
+								|| resource.getReplayData().bmsirCourseGaugeInitialValue > 0,
+						resource.getScoreData().getClear()));
 		// コースモードの場合はコーススコアに加算・累積する
 		if (resource.getCourseBMSModels() != null) {
-			if (resource.getScoreData().getClear() == Failed.id) {
-				resource.getScoreData().setClear(NoPlay.id);
-			}
 			ScoreData cscore = resource.getCourseScoreData();
 			if (cscore == null) {
 				cscore = new ScoreData();

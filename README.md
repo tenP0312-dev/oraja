@@ -10,6 +10,14 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
+The development source adds `DAN GAUGE` and `INITIAL GAUGE` to MANIAC
+OPTIONS. Single songs can use the existing course gauges starting at 100% down
+to 2% in 2% steps. Per-song score, lamp, BP, and IR rules match course play;
+replays retain the applied start value. The switch defaults to OFF and does
+not change real courses or Arena. See the MANIAC section of
+[`doc/BMSIR_ARENA.md`](doc/BMSIR_ARENA.md) for record and replay compatibility.
+This source change does not publish a new binary.
+
 The current client source version is **0.4.14.86**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
