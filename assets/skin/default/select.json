@@ -178,7 +178,7 @@
 		{"id":"bar", "images":["bar-song","bar-folder","bar-table","bar-grade","bar-nograde","bar-command","bar-search","bar-nosong"]},
 		{"id":"modeset", "ref":11, "images":["allkeys","5keys","7keys","10keys","14keys","9keys","24keys","24keysDP"], "act":11},
 		{"id":"option-exjudge", "ref":301, "images":["option-selector21","option-selector22"]},
-		{"id":"option-constant", "ref":302, "images":["option-selector21","option-selector22"]},
+		{"id":"option-constant", "ref":400, "act":400, "images":["option-selector21","option-selector22"]},
 		{"id":"option-judgearea", "ref":303, "images":["option-selector21","option-selector22"]},
 		{"id":"option-legacy", "ref":304, "images":["option-selector21","option-selector22"]},
 		{"id":"option-marknote", "ref":305, "images":["option-selector21","option-selector22"]},
