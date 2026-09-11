@@ -47,11 +47,11 @@ public class RankingDataCache {
      * @return IRアクセスデータ。存在しない場合はnull
      */
     public RankingData get(SongData song, int lnmode) {
-        final int cacheindex = BMSIRLongNoteMode.authoredUndefined(song) ? lnmode : 3;
-        if (scorecache[cacheindex].containsKey(chartKey(song))) {
-            return scorecache[cacheindex].get(chartKey(song));
-        }
-        return null;
+        return get(song, new IRRankingContext(lnmode, forceLn.getAsBoolean()));
+    }
+
+    public RankingData get(SongData song, IRRankingContext context) {
+        return scorecache[cacheIndex(song, context)].get(chartKey(song, context));
     }
 
     /**
@@ -61,44 +61,50 @@ public class RankingDataCache {
      * @return IRアクセスデータ。存在しない場合はnull
      */
     public RankingData get(CourseData course, int lnmode) {
-        int cacheindex = 3;
-        for(SongData song : course.getSong()) {
-            if(BMSIRLongNoteMode.authoredUndefined(song)) {
-        		cacheindex = lnmode;
-        	}
-        }
-        String hash = createCourseHash(course);
-        if (cscorecache[cacheindex].containsKey(hash)) {
-            return cscorecache[cacheindex].get(hash);
-        }
-        return null;
+        return get(course, new IRRankingContext(lnmode, forceLn.getAsBoolean()));
+    }
+
+    public RankingData get(CourseData course, IRRankingContext context) {
+        return cscorecache[cacheIndex(course, context)].get(createCourseHash(course, context));
     }
 
     public void put(SongData song, int lnmode, RankingData iras) {
-        final int cacheindex = BMSIRLongNoteMode.authoredUndefined(song) ? lnmode : 3;
-        scorecache[cacheindex].put(chartKey(song), iras);
+        put(song, new IRRankingContext(lnmode, forceLn.getAsBoolean()), iras);
+    }
+
+    public void put(SongData song, IRRankingContext context, RankingData iras) {
+        scorecache[cacheIndex(song, context)].put(chartKey(song, context), iras);
     }
     
     public void put(CourseData course, int lnmode, RankingData iras) {
-        int cacheindex = 3;
-        for(SongData song : course.getSong()) {
-            if(BMSIRLongNoteMode.authoredUndefined(song)) {
-        		cacheindex = lnmode;
-        	}
-        }
-        cscorecache[cacheindex].put(createCourseHash(course), iras);
+        put(course, new IRRankingContext(lnmode, forceLn.getAsBoolean()), iras);
     }
-    
-    private String chartKey(SongData song) {
-        return song.getSha256() + (forceLn.getAsBoolean()
+
+    public void put(CourseData course, IRRankingContext context, RankingData iras) {
+        cscorecache[cacheIndex(course, context)].put(createCourseHash(course, context), iras);
+    }
+
+    private int cacheIndex(SongData song, IRRankingContext context) {
+        return BMSIRLongNoteMode.authoredUndefined(song) ? context.lnmode() : 3;
+    }
+
+    private int cacheIndex(CourseData course, IRRankingContext context) {
+        for (SongData song : course.getSong()) {
+            if (BMSIRLongNoteMode.authoredUndefined(song)) return context.lnmode();
+        }
+        return 3;
+    }
+
+    private String chartKey(SongData song, IRRankingContext context) {
+        return song.getSha256() + (context.forceLn()
                 && BMSIRLongNoteMode.separatesScore(song) ? ":forced-ln" : "");
     }
 
-	private String createCourseHash(CourseData course) {
+	private String createCourseHash(CourseData course, IRRankingContext context) {
 		StringBuilder sb = new StringBuilder();
 		for(SongData song : course.getSong()) {
 			if(song.getSha256() != null && song.getSha256().length() == 64) {
-				sb.append(chartKey(song));
+				sb.append(chartKey(song, context));
 			} else {
 				return null;
 			}

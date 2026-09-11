@@ -969,7 +969,40 @@ As in LR2, EXTRA MODE and ADD NOTES first collapse an existing long note to its
 start note and remove the end marker before generating notes. Generated notes
 therefore cannot overlap and render inside an old long-note body.
 
-Any MANIAC option or Double Battle play is written only to
+The MANIAC menu also provides `DAN GAUGE` (default OFF) and `INITIAL GAUGE`
+(default 100%). The initial value descends in 2% steps to 2%, then wraps to
+100%; the row is disabled while DAN GAUGE is OFF. In single-song play, ON
+uses the existing course gauge mapping: ASSIST/EASY/NORMAL select CLASS,
+HARD selects EXCLASS, and EXHARD/HAZARD select EXHARDCLASS. All three course
+gauges start at the chosen value so existing automatic gauge shifts use the
+same starting condition. The active judgment/gauge rule profile still applies.
+
+These gauge settings alone do not transform the chart or split its local/IR
+identity. Single-song scores, BP, combo, play history/counts, and IR submission
+use the existing course per-song rules: ordinary and assisted clear lamps are
+not awarded (`NoPlay` in the submitted attempt), while FC/PERFECT/MAX remain
+eligible under the existing rules. Existing better lamps remain intact. No
+aggregate course record, course identity, or Dan qualification is created.
+Other MANIAC effects retain their existing separate score/IR paths.
+
+Replays use the existing single-song slots and serializer. An additive
+`bmsirCourseGaugeInitialValue` records the applied percentage; zero or an
+absent field means the legacy gauge behavior, regardless of the current
+player's DAN GAUGE switch. Replaying restores the recorded percentage.
+Real courses retain their normal initial value, constraints, carry-over, and
+aggregate records. Arena (including legacy Arena), practice, ghost battles,
+and the 7K TO 9K trial do not apply the single-song override.
+
+Regression checks: settings/legacy JSON round-trip; unchanged ordinary and
+MANIAC chart/ranking keys; all six ordinary gauge selections against the
+existing course implementation; 2% start and gauge depletion; replay file
+round-trip and current-setting independence; per-song special/ordinary/assist
+lamp rules; and real local score/BP persistence plus the IR score payload.
+Physical acceptance remains an operator check: open F2, toggle DAN GAUGE,
+cycle 100% through 2% and back, verify the disabled row, play/replay at a low
+initial value, and confirm a real course retains its carry-over.
+
+Any MANIAC chart/effect option or Double Battle play is written only to
 `bmsir_maniac.db`; ordinary plays remain in `score.db`. Arena and courses
 temporarily disable these modes, except that SP TO DP by itself remains
 available in Arena on supported SP charts. Combining it with any other MANIAC
@@ -1542,6 +1575,50 @@ platform build.
   `play_scratch_fast(side)`, or `play_scratch_slow(side)`. Side is `1` or
   `2`; direction flags use the most recent 500 ms. An optional second
   duration argument is clamped to 50--2000 ms.
+
+## CONSTANT and scroll modification
+
+Music Select's SELECT assist-panel CONSTANT key toggles LR2-style CONSTANT /
+REGUL SPEED, matching upstream beatoraja and LR2oraja ED: REMOVE becomes OFF,
+and OFF/ADD becomes REMOVE. It leaves every key mode's oraja CONSTANT setting
+unchanged. This restores the key behavior changed by issue #352. Both settings
+default to OFF. The bundled skin's ref/act 400 remains a separate oraja CONSTANT
+control; issue #379 changes no skin assets or click events.
+
+Legacy image-index property 302 (`assist_constant`) instead means LR2-style
+CONSTANT / REGUL SPEED: the indicator is ON only for `scrollMode = 1` (REMOVE),
+which modifies BPM, STOP, and scroll changes at the next play's initialization.
+There is no built-in event 302; this correction does not add one or redirect
+unknown skin actions. To change scroll mode, skins must use existing event 352.
+Image-index property/event
+352 retains the complete OFF/REMOVE/ADD selector. Property/event 400 remains
+oraja's per-key-mode note-display-time CONSTANT, which does not rewrite BPM.
+The two controls do not change each other's settings. Both events are editable
+only in Music Select, not during gameplay; existing assist and score rules are
+unchanged. Legacy skins displaying 302 for REGUL SPEED need no display edit; custom skins
+that used 302 to display oraja CONSTANT must use ref/act 400 instead.
+
+The fork's 2176d017 change made display 302 follow the wrong setting, and
+d222f804 subsequently redirected the assist key to oraja CONSTANT. Upstream
+beatoraja and ED retain the original BPM-removal key and display 302 pairing.
+Issue #374 restored display 302; issue #379 restores the key. Existing profiles
+are preserved. A saved REMOVE setting can now be disabled with the assist key,
+event 352, or startup `Scroll Modify Mode`. This does not restore past ordinary
+scores excluded by assist play.
+
+日本語: SELECTアシストのCONSTANTキーを、上流と同じBPM固定
+（REGUL SPEED）のON/OFFに戻しました。表示302が対応し、oraja系の表示時間固定
+（400）や鍵盤モード別設定には影響しません。操作302の新設やスキン変更はありません。
+既存のREMOVE設定もキーで解除できます。操作352と起動設定からの変更も従来どおりです。
+
+Regression acceptance: with every combination of `scrollMode` 0/1/2 and
+per-mode CONSTANT OFF/ON, check that 302 follows REMOVE only, 352 retains all
+three states, and 400 follows only the selected key mode. Toggle both controls
+through the assist key and existing events 352/400 independently, including a saved REMOVE profile;
+confirm that event 302 still has no built-in action. Save/reload and play a chart
+with BPM/STOP changes. Verify that only REGUL SPEED removes those changes.
+Physical custom-skin acceptance and binary distribution are separate from the
+repository tests and source merge.
 
 ## Build
 

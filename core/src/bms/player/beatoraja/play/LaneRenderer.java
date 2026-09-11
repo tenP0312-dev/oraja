@@ -356,12 +356,8 @@ public class LaneRenderer {
 	}
 
 	public void changeHispeed(boolean b) {
-		float f;
-		if (playconfig.getFixhispeed() != PlayConfig.FIX_HISPEED_OFF) {
-			f = basehispeed * hispeedmargin * (b ? 1 : -1);
-		} else {
-			f = hispeedmargin * (b ? 1 : -1);
-		}
+		float f = hispeedStep(bmsirLr2HispeedFixEnabled, playconfig.getFixhispeed(),
+				basehispeed, hispeedmargin) * (b ? 1 : -1);
 		if (playconfig.getHispeed() + f > 0 && playconfig.getHispeed() + f < 20) {
 			playconfig.setHispeed(playconfig.getHispeed() + f);
 			if (!bmsirLr2HispeedFixEnabled) {
@@ -369,6 +365,11 @@ public class LaneRenderer {
 			}
 			updateStartHerePreviewMetrics();
 		}
+	}
+
+	static float hispeedStep(boolean lr2Fixed, int fixMode, float initialHispeed, float margin) {
+		// LR2's configured step is absolute, including after retry changes the starting HS.
+		return !lr2Fixed && fixMode != PlayConfig.FIX_HISPEED_OFF ? initialHispeed * margin : margin;
 	}
 
 	public void addHispeed(float delta) {
