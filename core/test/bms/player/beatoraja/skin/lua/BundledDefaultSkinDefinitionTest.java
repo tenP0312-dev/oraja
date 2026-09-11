@@ -28,6 +28,8 @@ class BundledDefaultSkinDefinitionTest {
 		assertEquals(1920, skin.w);
 		assertEquals(1080, skin.h);
 		assertEquals(9, imageSet(skin, "sortset").images.length);
+		assertEquals(400, imageSet(skin, "option-constant").ref);
+		assertEquals(400, imageSet(skin, "option-constant").act.getEventId());
 		assertEquals(4, imageSet(skin, "bmsir-extra").images.length);
 		assertTrue(hasDestination(skin, "bmsir-restore-off"));
 		assertTrue(hasDestination(skin, "bmsir-restore-on"));

@@ -1013,6 +1013,7 @@ public class SkinProperty {
 	public static final int BUTTON_SKIN_CUSTOMIZE1 = 220;
 	public static final int BUTTON_SKIN_CUSTOMIZE10 = 229;
 	public static final int BUTTON_ASSIST_EXJUDGE = 301;
+	// LR2 CONSTANT / REGUL SPEED (BPM removal); oraja display-time CONSTANT uses 400.
 	public static final int BUTTON_ASSIST_CONSTANT = 302;
 	public static final int BUTTON_ASSIST_JUDGEAREA = 303;
 	public static final int BUTTON_ASSIST_LEGACY = 304;
