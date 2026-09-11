@@ -37,6 +37,9 @@ public final class BMSIRManiacSettings {
     private int hiddenSudden1P;
     private boolean nantokaMania;
     private boolean sevenToNinePreview;
+    // Gauge options share the ordinary/course per-chart record identity.
+    private boolean courseGauge;
+    private int courseGaugeInitialValue = 100;
     private int hiddenSudden2P;
     private int extraMode;
     private int addNotes;
@@ -74,6 +77,8 @@ public final class BMSIRManiacSettings {
         hiddenSudden1P = source.hiddenSudden1P;
         nantokaMania = source.nantokaMania;
         sevenToNinePreview = source.sevenToNinePreview;
+        courseGauge = source.courseGauge;
+        courseGaugeInitialValue = source.courseGaugeInitialValue;
         hiddenSudden2P = source.hiddenSudden2P;
         extraMode = source.extraMode;
         addNotes = source.addNotes;
@@ -104,6 +109,7 @@ public final class BMSIRManiacSettings {
     }
 
     public BMSIRManiacSettings validate() {
+        setCourseGaugeInitialValue(courseGaugeInitialValue);
         hiddenSudden1P = clamp(hiddenSudden1P, 0, 3);
         hiddenSudden2P = clamp(hiddenSudden2P, 0, 3);
         extraMode = clamp(extraMode, 0, 3);
@@ -460,6 +466,12 @@ public final class BMSIRManiacSettings {
     public int getHiddenSudden1P() { return hiddenSudden1P; }
     public boolean isNantokaMania() { return nantokaMania; }
     public boolean isSevenToNinePreview() { return sevenToNinePreview; }
+    public boolean isCourseGauge() { return courseGauge; }
+    public void setCourseGauge(boolean value) { courseGauge = value; }
+    public int getCourseGaugeInitialValue() { return courseGaugeInitialValue; }
+    public void setCourseGaugeInitialValue(int value) {
+        courseGaugeInitialValue = clamp(value, 2, 100) / 2 * 2;
+    }
     public void setSevenToNinePreview(boolean value) { sevenToNinePreview = value; }
     public void setNantokaMania(boolean value) { nantokaMania = value; }
     public void setHiddenSudden1P(int value) { hiddenSudden1P = value; validate(); }

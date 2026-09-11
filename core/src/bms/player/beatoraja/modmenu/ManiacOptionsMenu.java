@@ -43,7 +43,9 @@ public final class ManiacOptionsMenu {
             "SPIRAL",
             "SIDEJUMP",
             "NANTOKA MANIA MODE",
-            "7K TO 9K"
+            "7K TO 9K",
+            "DAN GAUGE",
+            "INITIAL GAUGE"
     };
     private static final String[] LEVEL_1_3 = {"OFF", "LEVEL 1", "LEVEL 2", "LEVEL 3"};
     private static final String[] LEVEL_1_2 = {"OFF", "LEVEL 1", "LEVEL 2"};
@@ -56,6 +58,8 @@ public final class ManiacOptionsMenu {
     private static BMSIRManiacSettings draft;
     private static String originalOptions;
     private static boolean originalWarning;
+    private static boolean originalCourseGauge;
+    private static int originalCourseGaugeInitialValue;
     private static int selectedIndex;
     private static boolean scrollToSelection;
 
@@ -74,6 +78,8 @@ public final class ManiacOptionsMenu {
         draft = new BMSIRManiacSettings(player.getBmsirManiacSettings());
         originalOptions = draft.canonicalOptions();
         originalWarning = draft.isWarnDoubleBattleOnDp();
+        originalCourseGauge = draft.isCourseGauge();
+        originalCourseGaugeInitialValue = draft.getCourseGaugeInitialValue();
         selectedIndex = Math.max(0, Math.min(selectedIndex, LABELS.length - 1));
         scrollToSelection = true;
         return true;
@@ -92,6 +98,8 @@ public final class ManiacOptionsMenu {
         selected.validate();
         boolean scoreSettingsChanged = !selected.canonicalOptions().equals(originalOptions);
         boolean configChanged = scoreSettingsChanged
+                || selected.isCourseGauge() != originalCourseGauge
+                || selected.getCourseGaugeInitialValue() != originalCourseGaugeInitialValue
                 || selected.isWarnDoubleBattleOnDp() != originalWarning;
         originalOptions = null;
         if (!configChanged) {
@@ -155,6 +163,13 @@ public final class ManiacOptionsMenu {
             case 24 -> draft.setSideJump(nextPercent(draft.getSideJump()));
             case 25 -> draft.setNantokaMania(!draft.isNantokaMania());
             case 26 -> draft.setSevenToNinePreview(!draft.isSevenToNinePreview());
+            case 27 -> draft.setCourseGauge(!draft.isCourseGauge());
+            case 28 -> {
+                if (draft.isCourseGauge()) {
+                    int value = draft.getCourseGaugeInitialValue();
+                    draft.setCourseGaugeInitialValue(value <= 2 ? 100 : value - 2);
+                }
+            }
             default -> {
             }
         }
@@ -198,7 +213,10 @@ public final class ManiacOptionsMenu {
             float valueColumn = Math.max(300.0f, listWidth - 260.0f);
             for (int index = 0; index < LABELS.length; index++) {
                 boolean selected = index == selectedIndex;
-                if (selected) {
+                boolean disabled = index == 28 && !draft.isCourseGauge();
+                if (disabled) {
+                    ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(140, 140, 140));
+                } else if (selected) {
                     ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(118, 219, 153));
                 }
                 ImGui.textUnformatted((selected ? "> " : "  ") + (index == 25
@@ -208,7 +226,7 @@ public final class ManiacOptionsMenu {
                 if (selected && scrollToSelection) {
                     ImGui.setScrollHereY(0.5f);
                 }
-                if (selected) {
+                if (selected || disabled) {
                     ImGui.popStyleColor();
                 }
             }
@@ -321,12 +339,16 @@ public final class ManiacOptionsMenu {
             case 24 -> percentValue(draft.getSideJump());
             case 25 -> draft.isNantokaMania() ? "ON" : "OFF";
             case 26 -> draft.isSevenToNinePreview() ? "ON / NO SAVE" : "OFF";
+            case 27 -> draft.isCourseGauge() ? "ON" : "OFF";
+            case 28 -> draft.isCourseGauge() ? draft.getCourseGaugeInitialValue() + "%" : "OFF";
             default -> "OFF";
         };
     }
 
     private static String description(int index) {
         return switch (index) {
+            case 27 -> t("単曲を段位ゲージで演奏します。記録・IRは段位の各曲と同じ扱いです。コース・Arenaでは適用しません。", "Uses a Dan gauge for single songs, with the same per-song records and IR handling as courses. Suspended in courses and Arena.");
+            case 28 -> t("段位ゲージの開始値を100%から2%刻みで設定します。2%の次は100%に戻ります。段位OFF時は無効です。", "Sets the Dan gauge start value from 100% down to 2% in 2% steps, then wraps to 100%. Disabled while Dan gauge is OFF.");
             case 26 -> t("7KEYと皿を9KEYへ変換する試遊版。無理押しを避け、余剰ノーツはBGMへ移します。記録・リプレイ・ランキングは保存しません。他のマニアック効果と配置変更は一時停止。単曲の通常・オートプレイ専用です。", "Trial 7KEY + scratch to 9KEY conversion. Avoids impossible chords and moves excess notes to BGM. No records, replays, or rankings. Other MANIAC effects and placement options are suspended. Solo play/autoplay only.");
             case 0 -> t("SP 5KEY/7KEYを左右へ決定的に分配します。LEVELが高いほど左右移動と偏りを許容します。", "Deterministically distributes SP 5KEY/7KEY across both sides. Higher levels allow faster side changes and more bias.");
             case 1 -> t("SP譜面を1P・2Pの両側へ複製します。", "Duplicates an SP chart across both sides.");
