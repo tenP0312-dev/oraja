@@ -1449,12 +1449,12 @@ platform build.
 
 ## CONSTANT and scroll modification
 
-Music Select's SELECT assist-panel CONSTANT key uses the same event as the
-CONSTANT skin control. It toggles note-display-time CONSTANT for the selected
-chart's key mode, matching skin property/event 400 and the startup configuration
-checkbox. The bundled default skin uses ref/act 400 as well. It does not toggle
-`Scroll Modify Mode`, which separately removes or adds chart scroll changes.
-Both settings default to OFF.
+Music Select's SELECT assist-panel CONSTANT key toggles LR2-style CONSTANT /
+REGUL SPEED, matching upstream beatoraja and LR2oraja ED: REMOVE becomes OFF,
+and OFF/ADD becomes REMOVE. It leaves every key mode's oraja CONSTANT setting
+unchanged. This restores the key behavior changed by issue #352. Both settings
+default to OFF. The bundled skin's ref/act 400 remains a separate oraja CONSTANT
+control; issue #379 changes no skin assets or click events.
 
 Legacy image-index property 302 (`assist_constant`) instead means LR2-style
 CONSTANT / REGUL SPEED: the indicator is ON only for `scrollMode = 1` (REMOVE),
@@ -1469,30 +1469,23 @@ only in Music Select, not during gameplay; existing assist and score rules are
 unchanged. Legacy skins displaying 302 for REGUL SPEED need no display edit; custom skins
 that used 302 to display oraja CONSTANT must use ref/act 400 instead.
 
-In older bodies, including 0.4.14.74 and 0.4.14.81, the key incorrectly toggled
-scroll removal while the CONSTANT indicator showed the other setting. Existing
-profiles are preserved because intentional scroll modification cannot be
-distinguished from that old key operation. If BPM changes remain removed after
-disabling CONSTANT, choose OFF with a skin exposing scroll-mode event 352,
-or set `Scroll Modify Mode` to `OFF` in startup configuration and save.
-CONSTANT itself is configured per key mode. This does not restore
-past ordinary scores excluded by assist play.
+The fork's 2176d017 change made display 302 follow the wrong setting, and
+d222f804 subsequently redirected the assist key to oraja CONSTANT. Upstream
+beatoraja and ED retain the original BPM-removal key and display 302 pairing.
+Issue #374 restored display 302; issue #379 restores the key. Existing profiles
+are preserved. A saved REMOVE setting can now be disabled with the assist key,
+event 352, or startup `Scroll Modify Mode`. This does not restore past ordinary
+scores excluded by assist play.
 
-日本語: SELECTのCONSTANTキーを、選択中の譜面の鍵盤モードに対応する表示・
-マウス操作400・起動時設定と統一しました。旧302の表示はLR2相当のCONSTANT／
-REGUL SPEEDのBPM固定状態へ接続します。操作302は新設しません。
-操作352は従来どおりOFF/REMOVE/ADDです。oraja系CONSTANTを302で表示していた
-独自スキンはref/actを400へ変更してください。74・81などの旧版では、表示と異なる
-ソフラン除去設定を切り替えていました。既存設定は自動消去しません。
-CONSTANTを切ってもソフランが消える場合は、操作352に対応したスキンでOFFに
-するか、起動時設定の`Scroll Modify Mode`を`OFF`にして保存してください。CONSTANTは使用する
-鍵盤モードごとに確認してください。過去のアシストプレイの通常スコアを
-復元する変更ではありません。
+日本語: SELECTアシストのCONSTANTキーを、上流と同じBPM固定
+（REGUL SPEED）のON/OFFに戻しました。表示302が対応し、oraja系の表示時間固定
+（400）や鍵盤モード別設定には影響しません。操作302の新設やスキン変更はありません。
+既存のREMOVE設定もキーで解除できます。操作352と起動設定からの変更も従来どおりです。
 
 Regression acceptance: with every combination of `scrollMode` 0/1/2 and
 per-mode CONSTANT OFF/ON, check that 302 follows REMOVE only, 352 retains all
 three states, and 400 follows only the selected key mode. Toggle both controls
-through existing events 352/400 independently, including a saved REMOVE profile;
+through the assist key and existing events 352/400 independently, including a saved REMOVE profile;
 confirm that event 302 still has no built-in action. Save/reload and play a chart
 with BPM/STOP changes. Verify that only REGUL SPEED removes those changes.
 Physical custom-skin acceptance and binary distribution are separate from the
