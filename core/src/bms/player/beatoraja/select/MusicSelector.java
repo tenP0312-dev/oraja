@@ -399,6 +399,7 @@ public final class MusicSelector extends MainState {
 			selectedBarMoved();
 		}
 		final Bar current = manager.getSelected();
+		boolean batchEditing = BMSIRArenaClient.isMyDifficultyTableBatchEditing();
         if(timer.getNowTime() > getSkin().getInput()){
         	timer.switchTimer(TIMER_STARTINPUT, true);
         }
@@ -408,11 +409,13 @@ public final class MusicSelector extends MainState {
 		// draw song information
 		resource.setSongdata(current instanceof SongBar ? ((SongBar) current).getSongData() : null);
 		resource.setCourseData(current instanceof GradeBar ? ((GradeBar) current).getCourseData() : null);
-		scheduleSelectedSongToOrajaHelper(current);
-		sendSelectedSongToOrajaHelper(current);
+		if (!batchEditing) {
+			scheduleSelectedSongToOrajaHelper(current);
+			sendSelectedSongToOrajaHelper(current);
+		}
 
 		// preview music
-		if (current instanceof SongBar && resource.getConfig().getSongPreview() != SongPreview.NONE) {
+		if (!batchEditing && current instanceof SongBar && resource.getConfig().getSongPreview() != SongPreview.NONE) {
 			final SongData song = resource.getSongdata();
 			if (song != preview.getSongData() && timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + previewDuration
 					&& play == null) {
@@ -421,7 +424,7 @@ public final class MusicSelector extends MainState {
 		}
 
 		// read bms information
-		if (timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + notesGraphDuration && !showNoteGraph && play == null) {
+		if (!batchEditing && timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + notesGraphDuration && !showNoteGraph && play == null) {
 			if (current instanceof SongBar && ((SongBar) current).existsSong()) {
 				SongData song = resource.getSongdata();
 				new Thread(() -> loadPreviewModel(song), "music-select-chart-info").start();
@@ -429,7 +432,10 @@ public final class MusicSelector extends MainState {
 			showNoteGraph = true;
 		}
 		// get ir ranking
-		if (currentRankingDuration != -1 && timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + currentRankingDuration) {
+		if (batchEditing) {
+			currentir = null;
+			currentRankingDuration = -1;
+		} else if (currentRankingDuration != -1 && timer.getNowTime() > timer.getTimer(TIMER_SONGBAR_CHANGE) + currentRankingDuration) {
 			currentRankingDuration = -1;
 			if (current instanceof SongBar && ((SongBar) current).existsSong() && play == null) {
 				SongData song = ((SongBar) current).getSongData();
@@ -543,6 +549,7 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void shutdown() {
+		BMSIRArenaClient.abandonMyDifficultyTableBatchEdit();
 		ImGuiRenderer.closeManiacOptions();
 		preview.stop();
 		if (search != null) {
@@ -553,6 +560,15 @@ public final class MusicSelector extends MainState {
 	}
 	
 	public void select(Bar current) {
+		if (BMSIRArenaClient.isMyDifficultyTableBatchEditing()
+				&& current instanceof SongBar songBar
+				&& songBar.existsSong()) {
+			if (!BMSIRArenaClient.isMyDifficultyTableBusy()) {
+				BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
+				play(OPTION_CHANGE);
+			}
+			return;
+		}
 		if (BMSIRArenaClient.isSelectionBlocked() && !BMSIRArenaClient.isNominationOpen()) {
 			ImGuiNotify.info(
 					BMSIRArenaI18n.text(
@@ -961,17 +977,27 @@ public final class MusicSelector extends MainState {
 	public void selectedBarMoved() {
 		rankingContext = IRRankingContext.from(config);
 		execute(MusicSelectCommand.RESET_REPLAY);
-		loadSelectedSongImages();
-		scheduleSelectedSongToOrajaHelper(manager.getSelected());
+		boolean batchEditing = BMSIRArenaClient.isMyDifficultyTableBatchEditing();
+		if (batchEditing) {
+			preview.start(null);
+			resource.getBMSResource().setBanner(null);
+			resource.getBMSResource().setStagefile(null);
+		} else {
+			loadSelectedSongImages();
+			scheduleSelectedSongToOrajaHelper(manager.getSelected());
+		}
 
 		timer.setTimerOn(TIMER_SONGBAR_CHANGE);
-		if(preview.getSongData() != null && (!(manager.getSelected() instanceof SongBar) ||
+		if(!batchEditing && preview.getSongData() != null && (!(manager.getSelected() instanceof SongBar) ||
 				((SongBar) manager.getSelected()).getSongData().getFolder().equals(preview.getSongData().getFolder()) == false))
 		preview.start(null);
 		showNoteGraph = false;
 
 		final Bar current = manager.getSelected();
-		if(main.getIRStatus().length > 0) {
+		if (batchEditing) {
+			currentir = null;
+			currentRankingDuration = -1;
+		} else if(main.getIRStatus().length > 0) {
 			if(current instanceof SongBar && ((SongBar) current).existsSong()) {
 				SongData song = ((SongBar) current).getSongData();
 				if (BMSIRManiacApiClient.hasOnlineRanking(main, song)) {
@@ -1044,6 +1070,16 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void selectSong(BMSPlayerMode mode) {
+		Bar selected = manager.getSelected();
+		if (BMSIRArenaClient.isMyDifficultyTableBatchEditing() && !(selected instanceof FunctionBar)) {
+			if (!BMSIRArenaClient.isMyDifficultyTableBusy()
+					&& selected instanceof SongBar songBar
+					&& songBar.existsSong()) {
+				BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
+				play(OPTION_CHANGE);
+			}
+			return;
+		}
 		if (BMSIRArenaClient.isNominationOpen()) {
 			BMSIRArenaClient.requestCurrentChartNomination();
 			return;
@@ -1058,7 +1094,6 @@ public final class MusicSelector extends MainState {
 			);
 			return;
 		}
-		Bar selected = manager.getSelected();
 		if (selected instanceof SongBar songBar && songBar.existsSong()) {
 			BMSIRManiacSettings maniac = config.getBmsirManiacSettings();
 			Mode chartMode = Stream.of(Mode.values())

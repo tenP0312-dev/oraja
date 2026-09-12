@@ -46,6 +46,11 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirHideMissingTableSongs(true);
         player.setBmsirPhysicalFolderFilterEnabled(true);
         player.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-a", "songs-b"});
+        player.setBmsirMyTableBatchOverlayFontScale(1.7f);
+        player.setBmsirMyTableBatchOverlayXRatio(0.12f);
+        player.setBmsirMyTableBatchOverlayYRatio(0.23f);
+        player.setBmsirMyTableBatchOverlayWidthRatio(0.34f);
+        player.setBmsirMyTableBatchOverlayHeightRatio(0.45f);
         player.setBmsirArenaOverlayHotkeyFunction(9);
         player.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_ALT
@@ -106,7 +111,7 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"overlayHotkeyKeys\": ["));
         assertTrue(serialized.contains("\"targetMode\": \"leader\""));
         assertTrue(serialized.contains("\"graphOrder\": \"entry\""));
-        assertTrue(serialized.contains("\"schemaVersion\": 21"));
+        assertTrue(serialized.contains("\"schemaVersion\": 22"));
         assertTrue(serialized.contains("\"startButtonAction\": \"difficulty\""));
         assertTrue(serialized.contains("\"selectButtonAction\": \"key_mode\""));
         assertTrue(serialized.contains("\"selectDifficultyDisplay\": \"lr2\""));
@@ -117,6 +122,11 @@ class BMSIRArenaConfigStoreTest {
         assertTrue(serialized.contains("\"physicalFolderFilterEnabled\": true"));
         assertTrue(serialized.contains("\"visiblePhysicalFolderPaths\": ["));
         assertTrue(serialized.contains("\"songs-a\""));
+        assertTrue(serialized.contains("\"myTableBatchOverlayFontScale\": 1.7"));
+        assertTrue(serialized.contains("\"myTableBatchOverlayXRatio\": 0.12"));
+        assertTrue(serialized.contains("\"myTableBatchOverlayYRatio\": 0.23"));
+        assertTrue(serialized.contains("\"myTableBatchOverlayWidthRatio\": 0.34"));
+        assertTrue(serialized.contains("\"myTableBatchOverlayHeightRatio\": 0.45"));
         assertTrue(serialized.contains("\"lastVisibleOverlayMode\": 1"));
         assertTrue(serialized.contains("\"coverControlMode\": \"extended\""));
         assertTrue(serialized.contains("\"coverChangeStep\": 12"));
@@ -172,6 +182,11 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirHideMissingTableSongs(true);
         arenaBody.setBmsirPhysicalFolderFilterEnabled(true);
         arenaBody.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-b"});
+        arenaBody.setBmsirMyTableBatchOverlayFontScale(1.8f);
+        arenaBody.setBmsirMyTableBatchOverlayXRatio(0.13f);
+        arenaBody.setBmsirMyTableBatchOverlayYRatio(0.24f);
+        arenaBody.setBmsirMyTableBatchOverlayWidthRatio(0.35f);
+        arenaBody.setBmsirMyTableBatchOverlayHeightRatio(0.46f);
         arenaBody.setBmsirArenaOverlayHotkeyFunction(8);
         arenaBody.setBmsirArenaOverlayHotkeyModifiers(
                 KeyBoardInputProcesseor.MASK_CTRL
@@ -247,6 +262,11 @@ class BMSIRArenaConfigStoreTest {
                 new String[]{"songs-b"},
                 restored.getBmsirVisiblePhysicalFolderPaths()
         );
+        assertEquals(1.8f, restored.getBmsirMyTableBatchOverlayFontScale());
+        assertEquals(0.13f, restored.getBmsirMyTableBatchOverlayXRatio());
+        assertEquals(0.24f, restored.getBmsirMyTableBatchOverlayYRatio());
+        assertEquals(0.35f, restored.getBmsirMyTableBatchOverlayWidthRatio());
+        assertEquals(0.46f, restored.getBmsirMyTableBatchOverlayHeightRatio());
         assertEquals(8, restored.getBmsirArenaOverlayHotkeyFunction());
         assertEquals(
                 KeyBoardInputProcesseor.MASK_CTRL,

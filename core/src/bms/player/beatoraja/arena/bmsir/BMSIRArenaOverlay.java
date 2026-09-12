@@ -515,6 +515,7 @@ public final class BMSIRArenaOverlay {
                     ImGui.endDisabled();
                 } else {
                     ImGui.textDisabled(t("削除を保留しますか？", "Stage removal?"));
+                    ImGui.beginDisabled(busy);
                     if (ImGui.button(t("削除を保留", "Stage removal"))) {
                         BMSIRMyTableClient.stageRemoval(selectedSong);
                         confirmMyTableEntryRemoval = false;
@@ -523,6 +524,7 @@ public final class BMSIRArenaOverlay {
                     if (ImGui.button(t("キャンセル", "Cancel") + "##my-table-remove")) {
                         confirmMyTableEntryRemoval = false;
                     }
+                    ImGui.endDisabled();
                 }
             }
         }

@@ -26,7 +26,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -42,6 +44,7 @@ final class BMSIRMyTableClient {
     private static final int MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
     private static final AtomicLong SESSION = new AtomicLong();
     private static final BMSIRMyTableDraft DRAFT = new BMSIRMyTableDraft();
+    private static volatile BatchCache batchCache = BatchCache.empty();
 
     private static volatile MainController main;
     private static volatile JsonNode snapshot = emptySnapshot();
@@ -64,6 +67,7 @@ final class BMSIRMyTableClient {
         appliedSequence = 0L;
         requestRunning = false;
         DRAFT.clear();
+        batchCache = BatchCache.empty();
         statusMessage = text("マイ難易度表を読み込んでいます", "Loading My Difficulty Table");
         errorMessage = "";
         requestSnapshot(session);
@@ -78,6 +82,7 @@ final class BMSIRMyTableClient {
         appliedSequence = 0L;
         requestRunning = false;
         DRAFT.clear();
+        batchCache = BatchCache.empty();
         statusMessage = "";
         errorMessage = "";
     }
@@ -235,7 +240,256 @@ final class BMSIRMyTableClient {
         reportStageResult(result, authoritative == null
                 ? text("譜面の追加を保留しました", "Chart addition staged")
                 : text("譜面の変更を保留しました", "Chart changes staged"));
+        refreshBatchCache();
         return result;
+    }
+
+    /** Stages a controller-only level change without discarding the entry comment. */
+    static synchronized BMSIRMyTableDraft.StageResult stageEntryLevel(
+            SongData song,
+            String level
+    ) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.EntryChange pending = DRAFT.entryFor(song, authoritative);
+        String comment = pending != null && !pending.removal()
+                ? pending.comment()
+                : authoritative == null ? "" : authoritative.path("comment").asText("");
+        return stageEntry(song, level, comment);
+    }
+
+
+    static synchronized void toggleBatchEntry(SongData song, String targetLevel) {
+        JsonNode authoritative = entryFor(snapshot, song);
+        BMSIRMyTableDraft.EntryChange pending = DRAFT.entryFor(song, authoritative);
+        String authoritativeLevel = authoritative == null ? "" : authoritative.path("level").asText("");
+        if (pending != null && !pending.removal() && targetLevel.equals(pending.level())) {
+            String retainedComment = pending.comment();
+            if (authoritative == null) {
+                stageRemoval(song);
+            } else {
+                stageEntry(song, authoritativeLevel, retainedComment);
+            }
+        } else if (authoritative != null && targetLevel.equals(authoritativeLevel)
+                && (pending == null || pending.removal())) {
+            if (pending != null) {
+                stageEntryLevel(song, targetLevel);
+            } else {
+                stageRemoval(song);
+            }
+        } else {
+            stageEntryLevel(song, targetLevel);
+        }
+    }
+
+    static synchronized boolean beginBatchCache(String targetLevel) {
+        if (targetLevel == null || targetLevel.isBlank()
+                || !tableLevels(snapshot).contains(targetLevel)) {
+            return false;
+        }
+        batchCache = BatchCache.from(snapshot, DRAFT.entries(), targetLevel);
+        return true;
+    }
+
+    static void endBatchCache() {
+        batchCache = BatchCache.empty();
+    }
+
+    static int batchLamp(
+            SongData song,
+            String targetLevel,
+            int noPlayLamp,
+            int failedLamp,
+            int easyLamp,
+            int hardLamp,
+            int exHardLamp
+    ) {
+        return batchLamp(
+                batchCache,
+                song,
+                targetLevel,
+                noPlayLamp,
+                failedLamp,
+                easyLamp,
+                hardLamp,
+                exHardLamp
+        );
+    }
+
+    static int batchLamp(
+            BatchCache cache,
+            SongData song,
+            String targetLevel,
+            int noPlayLamp,
+            int failedLamp,
+            int easyLamp,
+            int hardLamp,
+            int exHardLamp
+    ) {
+        BatchCache.Entry entry = cache == null ? null : cache.entryFor(song);
+        if (entry == null) {
+            return noPlayLamp;
+        }
+        String authoritativeLevel = entry.authoritativeLevel();
+        BMSIRMyTableDraft.EntryChange pending = entry.pending();
+        if (pending != null) {
+            if (pending.removal()) {
+                return targetLevel.equals(authoritativeLevel) ? failedLamp : noPlayLamp;
+            }
+            if (targetLevel.equals(pending.level())) {
+                return authoritativeLevel.isBlank() || !targetLevel.equals(authoritativeLevel)
+                        ? exHardLamp : hardLamp;
+            }
+            return easyLamp;
+        }
+        if (authoritativeLevel.isBlank()) {
+            return noPlayLamp;
+        }
+        return targetLevel.equals(authoritativeLevel) ? hardLamp : easyLamp;
+    }
+
+    static BatchSummary batchSummary() {
+        return batchCache.summary();
+    }
+
+    static List<BatchLevelSummary> batchSummaries() {
+        return batchSummaries(snapshot, DRAFT.entries());
+    }
+
+    static List<BatchLevelSummary> batchSummaries(
+            JsonNode ownerSnapshot,
+            List<BMSIRMyTableDraft.EntryChange> pendingChanges
+    ) {
+        LinkedHashMap<String, int[]> counts = new LinkedHashMap<>();
+        for (String level : tableLevels(ownerSnapshot)) {
+            counts.put(level, new int[3]);
+        }
+        BatchCache authoritative = BatchCache.from(ownerSnapshot, List.of(), "");
+        for (BMSIRMyTableDraft.EntryChange pending : pendingChanges) {
+            BatchCache.Entry existing = BatchCache.first(
+                    authoritative.entries(),
+                    pending.key(),
+                    pending.md5(),
+                    pending.sha256(),
+                    pending.entryHash()
+            );
+            String authoritativeLevel = existing == null ? "" : existing.authoritativeLevel();
+            String summaryLevel = pending.removal() ? authoritativeLevel : pending.level();
+            if (summaryLevel.isBlank()) {
+                continue;
+            }
+            int[] summary = counts.computeIfAbsent(summaryLevel, ignored -> new int[3]);
+            if (pending.removal()) {
+                summary[2]++;
+            } else if (authoritativeLevel.isBlank()) {
+                summary[0]++;
+            } else {
+                summary[1]++;
+            }
+        }
+        return counts.entrySet().stream()
+                .map(entry -> new BatchLevelSummary(
+                        entry.getKey(),
+                        new BatchSummary(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2])
+                ))
+                .filter(entry -> entry.summary().additions() != 0
+                        || entry.summary().changes() != 0
+                        || entry.summary().deletions() != 0)
+                .toList();
+    }
+
+    static record BatchLevelSummary(String level, BatchSummary summary) {
+    }
+
+    private static void refreshBatchCache() {
+        String targetLevel = batchCache.targetLevel();
+        if (!targetLevel.isBlank()) {
+            batchCache = BatchCache.from(snapshot, DRAFT.entries(), targetLevel);
+        }
+    }
+
+    static record BatchSummary(int additions, int changes, int deletions) {
+    }
+
+    static record BatchCache(String targetLevel, Map<String, Entry> entries, BatchSummary summary) {
+        record Entry(String authoritativeLevel, BMSIRMyTableDraft.EntryChange pending) {
+        }
+
+        static BatchCache empty() {
+            return new BatchCache("", Map.of(), new BatchSummary(0, 0, 0));
+        }
+
+        static BatchCache from(
+                JsonNode ownerSnapshot,
+                List<BMSIRMyTableDraft.EntryChange> pendingChanges,
+                String targetLevel
+        ) {
+            Map<String, Entry> indexed = new HashMap<>();
+            int additions = 0;
+            int changes = 0;
+            int deletions = 0;
+            JsonNode entries = ownerSnapshot.path("table").path("entries");
+            if (entries.isArray()) {
+                for (JsonNode item : entries) {
+                    Entry entry = new Entry(item.path("level").asText(""), null);
+                    index(indexed, entry,
+                            item.path("entry_hash").asText(""),
+                            item.path("md5").asText(""),
+                            item.path("bms_ir_hash").asText(""),
+                            item.path("sha256").asText(""));
+                }
+            }
+            for (BMSIRMyTableDraft.EntryChange pending : pendingChanges) {
+                Entry existing = first(indexed, pending.key(), pending.md5(), pending.sha256(), pending.entryHash());
+                String authoritativeLevel = existing == null ? "" : existing.authoritativeLevel();
+                if (pending.removal()) {
+                    if (targetLevel.equals(authoritativeLevel)) {
+                        deletions++;
+                    }
+                } else if (targetLevel.equals(pending.level())) {
+                    if (authoritativeLevel.isBlank()) {
+                        additions++;
+                    } else {
+                        changes++;
+                    }
+                }
+                Entry updated = new Entry(authoritativeLevel, pending);
+                index(indexed, updated,
+                        pending.key(), pending.md5(), pending.sha256(), pending.entryHash());
+            }
+            return new BatchCache(targetLevel, Map.copyOf(indexed), new BatchSummary(additions, changes, deletions));
+        }
+
+        Entry entryFor(SongData song) {
+            if (song == null) {
+                return null;
+            }
+            Entry md5 = entries.get(normalizedHash(song.getMd5(), 32));
+            return md5 != null ? md5 : entries.get(normalizedHash(song.getSha256(), 64));
+        }
+
+        static Entry first(Map<String, Entry> indexed, String... keys) {
+            for (String key : keys) {
+                Entry entry = indexed.get(normalizedKey(key));
+                if (entry != null) {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        private static void index(Map<String, Entry> indexed, Entry entry, String... keys) {
+            for (String key : keys) {
+                String normalized = normalizedKey(key);
+                if (!normalized.isBlank()) {
+                    indexed.put(normalized, entry);
+                }
+            }
+        }
+
+        private static String normalizedKey(String raw) {
+            String md5 = normalizedHash(raw, 32);
+            return md5.isBlank() ? normalizedHash(raw, 64) : md5;
+        }
     }
 
     static synchronized BMSIRMyTableDraft.StageResult stageRemoval(SongData song) {
@@ -249,6 +503,7 @@ final class BMSIRMyTableClient {
         reportStageResult(result, authoritative == null
                 ? text("保留中の追加を取り消しました", "Pending addition cancelled")
                 : text("譜面の削除を保留しました", "Chart removal staged"));
+        refreshBatchCache();
         return result;
     }
 
@@ -292,6 +547,7 @@ final class BMSIRMyTableClient {
         if (DRAFT.undoEntry(key)) {
             statusMessage = text("保留中の変更を取り消しました", "Pending change removed");
             errorMessage = "";
+            refreshBatchCache();
         }
     }
 
@@ -304,6 +560,7 @@ final class BMSIRMyTableClient {
 
     static synchronized void discardDraft() {
         DRAFT.clear();
+        refreshBatchCache();
         statusMessage = text("保留中の変更をすべて破棄しました", "All pending changes discarded");
         errorMessage = "";
     }
@@ -392,6 +649,27 @@ final class BMSIRMyTableClient {
         }
         return null;
     }
+
+    static List<String> tableLevels(JsonNode ownerSnapshot) {
+        LinkedHashSet<String> levels = new LinkedHashSet<>();
+        JsonNode table = ownerSnapshot == null ? null : ownerSnapshot.path("table");
+        if (table == null || !table.isObject()) {
+            return List.of();
+        }
+        JsonNode entries = table.path("entries");
+        if (!entries.isArray()) {
+            return List.of();
+        }
+        for (JsonNode entry : entries) {
+            String level = limited(entry.path("level").asText("-"), 32).trim();
+            if (level.isEmpty()) {
+                level = "-";
+            }
+            levels.add(level);
+        }
+        return List.copyOf(levels);
+    }
+
 
     static ObjectNode tablePayload(
             String action,
@@ -574,6 +852,7 @@ final class BMSIRMyTableClient {
                 acceptSnapshot(body, expectedSession);
                 if (clearDraftOnSuccess) {
                     DRAFT.clear();
+                    refreshBatchCache();
                 }
                 statusMessage = successMessage;
             } catch (Exception error) {
@@ -611,6 +890,7 @@ final class BMSIRMyTableClient {
             pendingTable = data;
             pendingSequence++;
         }
+        refreshBatchCache();
         if (Gdx.app != null) {
             Gdx.app.postRunnable(BMSIRMyTableClient::applyPendingIfSafe);
         }

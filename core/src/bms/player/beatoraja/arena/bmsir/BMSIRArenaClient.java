@@ -2,6 +2,7 @@ package bms.player.beatoraja.arena.bmsir;
 
 import bms.model.Mode;
 import bms.player.beatoraja.BMSPlayerMode;
+import bms.player.beatoraja.ClearType;
 import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.MainState.MainStateType;
@@ -26,6 +27,7 @@ import bms.player.beatoraja.play.LaneRenderer;
 import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
+import bms.player.beatoraja.select.bar.MyDifficultyTableBatchConfirmBar;
 import bms.player.beatoraja.select.bar.SongBar;
 import bms.player.beatoraja.select.bar.TableBar;
 import bms.player.beatoraja.song.SongData;
@@ -134,7 +136,13 @@ public final class BMSIRArenaClient {
     private static volatile JsonNode liveView = JSON.createObjectNode();
     private static volatile JsonNode resultView = JSON.createObjectNode();
     private static volatile JsonNode manualView = BMSIRArenaManual.load(JSON);
+    private static volatile String myTableBatchLevel = "";
+    private static volatile String myTableBatchDisplayName = "";
+    private static volatile List<MyDifficultyTableBatchLevelSummary> myTableBatchLevelSummaryCache = List.of();
     private static volatile JsonNode nominationView = JSON.createObjectNode();
+    private static volatile boolean myTableBatchConfirmationOpen;
+    private static volatile boolean myTableBatchApplyPending;
+    private static volatile boolean myTableApplyNotificationPending;
     private static volatile JsonNode rulesView = JSON.createObjectNode();
     private static volatile JsonNode queueView = JSON.createObjectNode();
     private static volatile JsonNode waitingPlayersView = JSON.createObjectNode();
@@ -163,6 +171,322 @@ public final class BMSIRArenaClient {
 
     private static String t(String japanese, String english) {
         return BMSIRArenaI18n.text(japanese, english);
+    }
+
+    /** Snapshot used by the controller-only My Difficulty Table menu. */
+    public record MyDifficultyTableEditorState(
+            boolean ready,
+            boolean entryExists,
+            boolean removalStaged,
+            boolean levelEditable,
+            boolean selectionRequired,
+            boolean busy,
+            int pendingChangeCount,
+            String symbol,
+            List<String> levels,
+            String statusMessage,
+            String errorMessage
+    ) {
+    }
+
+    /** Pending My Difficulty Table changes, grouped for the batch-edit indicator. */
+    public record MyDifficultyTableBatchSummary(int additions, int changes, int deletions) {
+    }
+
+    /** Per-level pending change summary for the batch-edit confirmation screen. */
+    public record MyDifficultyTableBatchLevelSummary(
+            String displayName, MyDifficultyTableBatchSummary summary
+    ) {
+    }
+
+    public static MyDifficultyTableEditorState myDifficultyTableEditorState(SongData song) {
+        JsonNode snapshot = BMSIRMyTableClient.snapshotView();
+        JsonNode table = snapshot.path("table");
+        boolean ready = table.isObject()
+                && BMSIRMyTableClient.selectedTableId(snapshot) > 0L;
+        JsonNode entry = ready ? BMSIRMyTableClient.entryFor(snapshot, song) : null;
+        BMSIRMyTableDraft.EntryChange pending = ready
+                ? BMSIRMyTableClient.draftEntryFor(song)
+                : null;
+        return new MyDifficultyTableEditorState(
+                ready,
+                entry != null || (pending != null && !pending.removal()),
+                pending != null && pending.removal(),
+                table.path("level_editable").asBoolean(true),
+                BMSIRMyTableClient.selectionRequired(snapshot),
+                BMSIRMyTableClient.isBusy(),
+                BMSIRMyTableClient.draftCount(),
+                table.path("symbol").asText(""),
+                List.copyOf(BMSIRMyTableClient.tableLevels(snapshot)),
+                BMSIRMyTableClient.statusMessage(),
+                BMSIRMyTableClient.errorMessage()
+        );
+    }
+
+    public static void stageMyDifficultyTableLevel(SongData song, String level) {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
+        BMSIRMyTableClient.stageEntryLevel(song, level);
+    }
+
+
+    public static void stageMyDifficultyTableRemoval(SongData song) {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
+        BMSIRMyTableClient.stageRemoval(song);
+    }
+
+    public static boolean isMyDifficultyTableBusy() {
+        return BMSIRMyTableClient.isBusy();
+    }
+
+    private static boolean rejectMyDifficultyTableEditWhileBusy() {
+        if (!BMSIRMyTableClient.isBusy()) {
+            return false;
+        }
+        ImGuiNotify.info(t(
+                "通信完了までお待ちください",
+                "Wait for the current request to finish"
+        ));
+        return true;
+    }
+
+    public static boolean applyMyDifficultyTableChanges() {
+        if (BMSIRMyTableClient.draftCount() == 0 || BMSIRMyTableClient.isBusy()) {
+            BMSIRMyTableClient.applyChanges();
+            String error = BMSIRMyTableClient.errorMessage();
+            ImGuiNotify.error(error.isBlank()
+                    ? t("反映を開始できませんでした", "Could not start applying changes")
+                    : error);
+            return false;
+        }
+        BMSIRMyTableClient.applyChanges();
+        myTableApplyNotificationPending = true;
+        return true;
+    }
+
+    /** Shows the result of a level-editor save after its asynchronous request finishes. */
+    public static boolean finishMyDifficultyTableApplyNotification() {
+        if (!myTableApplyNotificationPending || BMSIRMyTableClient.isBusy()) {
+            return false;
+        }
+        myTableApplyNotificationPending = false;
+        String error = BMSIRMyTableClient.errorMessage();
+        if (BMSIRMyTableClient.draftCount() == 0 && error.isBlank()) {
+            ImGuiNotify.info(t("マイ難易度表への変更を反映しました", "My Difficulty Table changes applied"));
+            MainController controller = main;
+            if (controller != null && controller.getCurrentState() instanceof MusicSelector selector) {
+                selector.getBarManager().updateBar();
+            }
+            return true;
+        }
+        ImGuiNotify.error(error.isBlank()
+                ? t("マイ難易度表への変更を反映できませんでした", "Could not apply My Difficulty Table changes")
+                : error);
+        return false;
+    }
+
+    /** Starts applying batch edits; completion is handled from the Music Select thread. */
+    public static boolean applyMyDifficultyTableBatchChanges() {
+        if (BMSIRMyTableClient.draftCount() == 0 || BMSIRMyTableClient.isBusy()) {
+            BMSIRMyTableClient.applyChanges();
+            String error = BMSIRMyTableClient.errorMessage();
+            ImGuiNotify.error(error.isBlank()
+                    ? t("反映を開始できませんでした", "Could not start applying changes")
+                    : error);
+            return false;
+        }
+        BMSIRMyTableClient.applyChanges();
+        myTableBatchApplyPending = true;
+        return true;
+    }
+
+    /** Completes a pending batch apply after the asynchronous table request finishes. */
+    public static boolean finishMyDifficultyTableBatchApply() {
+        if (!myTableBatchApplyPending || BMSIRMyTableClient.isBusy()) {
+            return false;
+        }
+        myTableBatchApplyPending = false;
+        String error = BMSIRMyTableClient.errorMessage();
+        if (BMSIRMyTableClient.draftCount() == 0 && error.isBlank()) {
+            ImGuiNotify.info(t("マイ難易度表への変更を反映しました", "My Difficulty Table changes applied"));
+            MainController controller = main;
+            boolean closeConfirmation = myTableBatchConfirmationOpen;
+            clearMyDifficultyTableBatchEdit();
+            if (controller != null && controller.getCurrentState() instanceof MusicSelector selector) {
+                if (closeConfirmation
+                        && selector.getBarManager().getDirectory().size > 0
+                        && selector.getBarManager().getDirectory().last()
+                        instanceof MyDifficultyTableBatchConfirmBar) {
+                    selector.getBarManager().close();
+                } else {
+                    selector.getBarManager().updateBar();
+                }
+            }
+            return true;
+        }
+        ImGuiNotify.error(error.isBlank()
+                ? t("マイ難易度表への変更を反映できませんでした", "Could not apply My Difficulty Table changes")
+                : error);
+        return false;
+    }
+
+    public static void discardMyDifficultyTableChanges() {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return;
+        }
+        BMSIRMyTableClient.discardDraft();
+    }
+
+    public static void reloadMyDifficultyTable() {
+        BMSIRMyTableClient.requestSnapshot();
+    }
+
+    public static boolean isMyDifficultyTableUrl(String url) {
+        return BMSIRMyTableClient.TABLE_URL.equals(url);
+    }
+
+    public static boolean startMyDifficultyTableBatchEdit(String level) {
+        MyDifficultyTableEditorState state = myDifficultyTableEditorState(null);
+        if (!canStartMyDifficultyTableBatchEdit(state, level)) {
+            return false;
+        }
+        if (!BMSIRMyTableClient.beginBatchCache(level)) {
+            return false;
+        }
+        myTableBatchLevel = level;
+        myTableBatchDisplayName = state.symbol().isBlank()
+                ? t("レベル", "Level ") + level
+                : state.symbol() + level;
+        refreshMyDifficultyTableBatchLevelSummaryCache();
+        MainController controller = main;
+        if (controller != null && controller.getCurrentState() instanceof MusicSelector selector) {
+            selector.getBarManager().suspendBackgroundContentLoading();
+        }
+        return true;
+    }
+
+    static boolean canStartMyDifficultyTableBatchEdit(
+            MyDifficultyTableEditorState state,
+            String level
+    ) {
+        return state != null
+                && state.ready()
+                && !state.selectionRequired()
+                && state.levelEditable()
+                && !state.busy()
+                && level != null
+                && !level.isBlank()
+                && state.levels().contains(level);
+    }
+
+    public static boolean isMyDifficultyTableBatchEditing() {
+        return !myTableBatchLevel.isBlank();
+    }
+
+    public static String myDifficultyTableBatchLevel() {
+        return myTableBatchLevel;
+    }
+
+    /** Label for the skin-independent controller batch-editing indicator. */
+    public static String myDifficultyTableBatchDisplayName() {
+        return myTableBatchDisplayName;
+    }
+
+    public static MyDifficultyTableBatchSummary myDifficultyTableBatchSummary() {
+        BMSIRMyTableClient.BatchSummary summary = BMSIRMyTableClient.batchSummary();
+        return new MyDifficultyTableBatchSummary(
+                summary.additions(), summary.changes(), summary.deletions()
+        );
+    }
+
+    public static List<MyDifficultyTableBatchLevelSummary> myDifficultyTableBatchLevelSummaries() {
+        return myTableBatchLevelSummaryCache;
+    }
+
+    private static void refreshMyDifficultyTableBatchLevelSummaryCache() {
+        String symbol = myDifficultyTableEditorState(null).symbol();
+        myTableBatchLevelSummaryCache = BMSIRMyTableClient.batchSummaries().stream()
+                .map(summary -> new MyDifficultyTableBatchLevelSummary(
+                        symbol.isBlank()
+                                ? t("レベル", "Level ") + summary.level()
+                                : symbol + summary.level(),
+                        new MyDifficultyTableBatchSummary(
+                                summary.summary().additions(),
+                                summary.summary().changes(),
+                                summary.summary().deletions()
+                        )
+                ))
+                .toList();
+    }
+
+    public static void openMyDifficultyTableBatchConfirmation() {
+        myTableBatchConfirmationOpen = true;
+        refreshMyDifficultyTableBatchLevelSummaryCache();
+    }
+
+    public static void closeMyDifficultyTableBatchConfirmation() {
+        myTableBatchConfirmationOpen = false;
+    }
+
+    public static boolean isMyDifficultyTableBatchConfirmationOpen() {
+        return myTableBatchConfirmationOpen;
+    }
+
+    public static void endMyDifficultyTableBatchEdit() {
+        MainController controller = main;
+        clearMyDifficultyTableBatchEdit();
+        if (controller != null && controller.getCurrentState() instanceof MusicSelector selector) {
+            selector.getBarManager().updateBar();
+        }
+    }
+    /** Discards every staged change when the controller batch editor is cancelled. */
+    public static boolean cancelMyDifficultyTableBatchEdit() {
+        if (rejectMyDifficultyTableEditWhileBusy()) {
+            return false;
+        }
+        BMSIRMyTableClient.discardDraft();
+        endMyDifficultyTableBatchEdit();
+        return true;
+    }
+
+
+    /** Ends batch editing while leaving Music Select, without restarting background loading. */
+    public static void abandonMyDifficultyTableBatchEdit() {
+        clearMyDifficultyTableBatchEdit();
+    }
+
+    private static void clearMyDifficultyTableBatchEdit() {
+        myTableBatchLevel = "";
+        myTableBatchDisplayName = "";
+        myTableBatchLevelSummaryCache = List.of();
+        BMSIRMyTableClient.endBatchCache();
+        myTableBatchConfirmationOpen = false;
+        myTableBatchApplyPending = false;
+        myTableApplyNotificationPending = false;
+    }
+
+    public static void toggleMyDifficultyTableBatchEntry(SongData song) {
+        String targetLevel = myTableBatchLevel;
+        if (targetLevel.isBlank() || song == null || rejectMyDifficultyTableEditWhileBusy()
+                || !myDifficultyTableEditorState(song).levelEditable()) {
+            return;
+        }
+        BMSIRMyTableClient.toggleBatchEntry(song, targetLevel);
+        refreshMyDifficultyTableBatchLevelSummaryCache();
+    }
+
+    /** Returns a temporary selection lamp while batch-editing, or -1 when inactive. */
+    public static int myDifficultyTableBatchLamp(SongData song) {
+        String targetLevel = myTableBatchLevel;
+        if (targetLevel.isBlank()) {
+            return -1;
+        }
+        return BMSIRMyTableClient.batchLamp(song, targetLevel,
+                ClearType.NoPlay.id, ClearType.Failed.id, ClearType.Easy.id,
+                ClearType.Hard.id, ClearType.ExHard.id);
     }
 
     static String clientVersion() {
@@ -365,6 +689,7 @@ public final class BMSIRArenaClient {
 
     public static synchronized void shutdown() {
         BMSIRMyTableClient.shutdown();
+        clearMyDifficultyTableBatchEdit();
         BMSIRArenaLog.event(
                 "shutdown",
                 "match_id", currentMatchId,

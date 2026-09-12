@@ -281,6 +281,12 @@ public final class PlayerConfig {
 	private boolean bmsirPhysicalFolderFilterEnabled = false;
 	/** Configured BMS roots that remain visible while the physical-folder filter is ON. */
 	private String[] bmsirVisiblePhysicalFolderPaths = new String[0];
+	/** Persisted layout of the controller batch My Difficulty Table overlay. */
+	private float bmsirMyTableBatchOverlayFontScale = 1.300f;
+	private float bmsirMyTableBatchOverlayXRatio = 0.346f;
+	private float bmsirMyTableBatchOverlayYRatio = 0.094f;
+	private float bmsirMyTableBatchOverlayWidthRatio = 0.249f;
+	private float bmsirMyTableBatchOverlayHeightRatio = 0.120f;
 
 	private IRConfig[] irconfig;
 
@@ -818,6 +824,51 @@ public final class PlayerConfig {
 	public void setBmsirVisiblePhysicalFolderPaths(String[] paths) {
 		bmsirVisiblePhysicalFolderPaths = BMSIRPhysicalFolderFilter
 				.normalizeSelections(paths);
+	}
+
+	public float getBmsirMyTableBatchOverlayFontScale() {
+		bmsirMyTableBatchOverlayFontScale = MathUtils.clamp(bmsirMyTableBatchOverlayFontScale, 0.8f, 3.0f);
+		return bmsirMyTableBatchOverlayFontScale;
+	}
+
+	public void setBmsirMyTableBatchOverlayFontScale(float scale) {
+		bmsirMyTableBatchOverlayFontScale = MathUtils.clamp(scale, 0.8f, 3.0f);
+	}
+
+	public float getBmsirMyTableBatchOverlayXRatio() {
+		bmsirMyTableBatchOverlayXRatio = MathUtils.clamp(bmsirMyTableBatchOverlayXRatio, 0.0f, 1.0f);
+		return bmsirMyTableBatchOverlayXRatio;
+	}
+
+	public void setBmsirMyTableBatchOverlayXRatio(float ratio) {
+		bmsirMyTableBatchOverlayXRatio = MathUtils.clamp(ratio, 0.0f, 1.0f);
+	}
+
+	public float getBmsirMyTableBatchOverlayYRatio() {
+		bmsirMyTableBatchOverlayYRatio = MathUtils.clamp(bmsirMyTableBatchOverlayYRatio, 0.0f, 1.0f);
+		return bmsirMyTableBatchOverlayYRatio;
+	}
+
+	public void setBmsirMyTableBatchOverlayYRatio(float ratio) {
+		bmsirMyTableBatchOverlayYRatio = MathUtils.clamp(ratio, 0.0f, 1.0f);
+	}
+
+	public float getBmsirMyTableBatchOverlayWidthRatio() {
+		bmsirMyTableBatchOverlayWidthRatio = MathUtils.clamp(bmsirMyTableBatchOverlayWidthRatio, 0.05f, 1.0f);
+		return bmsirMyTableBatchOverlayWidthRatio;
+	}
+
+	public void setBmsirMyTableBatchOverlayWidthRatio(float ratio) {
+		bmsirMyTableBatchOverlayWidthRatio = MathUtils.clamp(ratio, 0.05f, 1.0f);
+	}
+
+	public float getBmsirMyTableBatchOverlayHeightRatio() {
+		bmsirMyTableBatchOverlayHeightRatio = MathUtils.clamp(bmsirMyTableBatchOverlayHeightRatio, 0.05f, 1.0f);
+		return bmsirMyTableBatchOverlayHeightRatio;
+	}
+
+	public void setBmsirMyTableBatchOverlayHeightRatio(float ratio) {
+		bmsirMyTableBatchOverlayHeightRatio = MathUtils.clamp(ratio, 0.05f, 1.0f);
 	}
 
 	/**

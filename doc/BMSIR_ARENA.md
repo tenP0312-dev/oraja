@@ -236,6 +236,32 @@ restart or stale folder objects. Empty tables appear after their first saved
 chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
 Web editor.
 
+The current development source also exposes the same revision-bound draft in
+Music Select's controller-navigable context menus. A chart's context menu can
+stage an addition, an existing-level change, or a removal without opening the
+mouse-oriented editor. The My Difficulty Table root menu can start a batch for
+one registered level. During that mode, selecting a chart does not start play;
+button 1/3/5/7, Enter, or a left click toggles its effective pending state.
+HARD means the effective entry is in the target level, EASY means another
+level, EX-HARD means an addition or move to the target is pending, FAILED means
+removal from the target is pending, and NO PLAY means no effective entry.
+
+Holding START+SELECT opens a confirmation screen with add/change/remove counts
+for every affected level, including a level staged earlier in the native table
+editor. Applying remains one asynchronous atomic request. Further controller
+edits are blocked until it finishes; success closes the confirmation and
+returns to the previous selection, while failure keeps both the draft and the
+confirmation available for retry. A master-managed table with
+`level_editable=false` cannot start controller level editing.
+
+The skin-independent batch indicator can be moved and resized while Alt is
+held, and its text scale can be adjusted there. Position and size are saved as
+per-player screen ratios in the backup-safe BMS-IR sidecar. `Restore defaults`
+uses the built-in ratios rather than the player's last saved values. Batch mode
+stops preview audio, banner/stage loading, chart-info parsing, ranking requests,
+and other nonessential song-list loading. The final control feel and placement
+must still be checked in a physical client before source integration.
+
 The selected-table snapshot may include an optional `aggregate_folder` label.
 When present, the client keeps every authoritative level folder and appends one
 display-only folder containing the same complete chart set. It does not add
@@ -781,7 +807,8 @@ difficulty-table LEVEL display switch upgrades it to schema 17, and the
 physical-root visibility filter upgrades it to schema 18. The overlay
 HI-SPEED editor mode and per-mode numeric change margins upgrade it to schema
 21; older sidecars keep current-chart editing and the existing player-config
-margins until their next save.
+margins until their next save. Schema 22 adds the per-player controller batch
+overlay position, size, and text scale while retaining every earlier default.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.

@@ -134,7 +134,7 @@ public final class BMSIRArenaConfigStore {
 
     /** Explicit allow-list. Do not replace with PlayerConfig serialization. */
     static final class Settings {
-        private int schemaVersion = 21;
+        private int schemaVersion = 22;
         private Boolean oneBassEnabled;
         private Boolean startHerePreviewEnabled;
         private Boolean danLocalSyncEnabled;
@@ -147,6 +147,11 @@ public final class BMSIRArenaConfigStore {
         private Boolean hideMissingTableSongs;
         private Boolean physicalFolderFilterEnabled;
         private String[] visiblePhysicalFolderPaths;
+        private Float myTableBatchOverlayFontScale;
+        private Float myTableBatchOverlayXRatio;
+        private Float myTableBatchOverlayYRatio;
+        private Float myTableBatchOverlayWidthRatio;
+        private Float myTableBatchOverlayHeightRatio;
         private boolean enabled = false;
         private String server = "wss://www.bms-ir.org/new/arena/ws/client";
         private boolean unrestrictedRating = false;
@@ -220,6 +225,11 @@ public final class BMSIRArenaConfigStore {
             settings.visiblePhysicalFolderPaths =
                     player.getBmsirVisiblePhysicalFolderPaths();
             settings.enabled = player.isBmsirArenaEnabled();
+            settings.myTableBatchOverlayFontScale = player.getBmsirMyTableBatchOverlayFontScale();
+            settings.myTableBatchOverlayXRatio = player.getBmsirMyTableBatchOverlayXRatio();
+            settings.myTableBatchOverlayYRatio = player.getBmsirMyTableBatchOverlayYRatio();
+            settings.myTableBatchOverlayWidthRatio = player.getBmsirMyTableBatchOverlayWidthRatio();
+            settings.myTableBatchOverlayHeightRatio = player.getBmsirMyTableBatchOverlayHeightRatio();
             settings.server = player.getBmsirArenaServer();
             settings.unrestrictedRating = player.isBmsirArenaUnrestrictedRating();
             settings.allowCpu = player.isBmsirArenaAllowCpu();
@@ -328,6 +338,21 @@ public final class BMSIRArenaConfigStore {
                 );
             }
             player.setBmsirArenaEnabled(enabled);
+            if (myTableBatchOverlayFontScale != null) {
+                player.setBmsirMyTableBatchOverlayFontScale(myTableBatchOverlayFontScale);
+            }
+            if (myTableBatchOverlayXRatio != null) {
+                player.setBmsirMyTableBatchOverlayXRatio(myTableBatchOverlayXRatio);
+            }
+            if (myTableBatchOverlayYRatio != null) {
+                player.setBmsirMyTableBatchOverlayYRatio(myTableBatchOverlayYRatio);
+            }
+            if (myTableBatchOverlayWidthRatio != null) {
+                player.setBmsirMyTableBatchOverlayWidthRatio(myTableBatchOverlayWidthRatio);
+            }
+            if (myTableBatchOverlayHeightRatio != null) {
+                player.setBmsirMyTableBatchOverlayHeightRatio(myTableBatchOverlayHeightRatio);
+            }
             player.setBmsirArenaServer(server);
             player.setBmsirArenaUnrestrictedRating(unrestrictedRating);
             player.setBmsirArenaAllowCpu(allowCpu);

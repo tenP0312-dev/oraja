@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -150,6 +151,82 @@ class BMSIRMyTableClientTest {
         snapshot.putNull("table");
         snapshot.put("revision", "none");
         assertNull(BMSIRMyTableClient.tableData(snapshot));
+    }
+
+    @Test
+    void listsOnlyExistingLevelsWithoutDuplicatesForControllerEditing() {
+        ObjectNode snapshot = snapshot();
+        ArrayNode entries = (ArrayNode) snapshot.path("table").path("entries");
+        entries.addObject().put("level", "1");
+        entries.addObject().put("level", " 2.5 ");
+        entries.addObject().put("level", "");
+
+        assertIterableEquals(
+                java.util.List.of("1", "2", "2.5", "-"),
+                BMSIRMyTableClient.tableLevels(snapshot)
+        );
+    }
+
+    @Test
+    void batchLampUsesTheEffectivePendingLevelAfterSwitchingTargets() {
+        ObjectNode snapshot = snapshot();
+        SongData song = new SongData();
+        song.setMd5(MD5);
+        BMSIRMyTableDraft.EntryChange moved = new BMSIRMyTableDraft.EntryChange(
+                MD5,
+                "upsert_entry",
+                "BMS Chart",
+                MD5,
+                "",
+                "",
+                "2",
+                "first\nsecond"
+        );
+        BMSIRMyTableClient.BatchCache cache = BMSIRMyTableClient.BatchCache.from(
+                snapshot,
+                java.util.List.of(moved),
+                "2"
+        );
+
+        assertEquals(2, BMSIRMyTableClient.batchLamp(
+                cache, song, "1", 0, 1, 2, 3, 4
+        ));
+        assertEquals(4, BMSIRMyTableClient.batchLamp(
+                cache, song, "2", 0, 1, 2, 3, 4
+        ));
+        assertEquals(new BMSIRMyTableClient.BatchSummary(0, 1, 0), cache.summary());
+    }
+
+    @Test
+    void summarizesAllPendingLevelsInOnePassIncludingANewLevel() {
+        ObjectNode snapshot = snapshot();
+        BMSIRMyTableDraft.EntryChange moved = new BMSIRMyTableDraft.EntryChange(
+                MD5, "upsert_entry", "BMS Chart", MD5, "", "", "2", "first\nsecond"
+        );
+        BMSIRMyTableDraft.EntryChange removed = new BMSIRMyTableDraft.EntryChange(
+                BMSON_KEY, "remove_entry", "bmson Chart", "", "", BMSON_KEY, "2", ""
+        );
+        String addedMd5 = "d".repeat(32);
+        BMSIRMyTableDraft.EntryChange added = new BMSIRMyTableDraft.EntryChange(
+                addedMd5, "upsert_entry", "New Chart", addedMd5, "", "", "3", ""
+        );
+
+        assertEquals(
+                java.util.List.of(
+                        new BMSIRMyTableClient.BatchLevelSummary(
+                                "2",
+                                new BMSIRMyTableClient.BatchSummary(0, 1, 1)
+                        ),
+                        new BMSIRMyTableClient.BatchLevelSummary(
+                                "3",
+                                new BMSIRMyTableClient.BatchSummary(1, 0, 0)
+                        )
+                ),
+                BMSIRMyTableClient.batchSummaries(
+                        snapshot,
+                        java.util.List.of(moved, removed, added)
+                )
+        );
     }
 
     private static ObjectNode snapshot() {
