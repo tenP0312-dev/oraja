@@ -271,6 +271,20 @@ public final class BMSIRManiacSettings {
                 && generationSeedOverride == null;
     }
 
+    /**
+     * Courses may opt into NANTOKA MANIA's fixed judgment/gauge rules without
+     * accidentally enabling any chart-transforming or identity-changing effect.
+     * The chart itself, its per-song identity, and course structure stay intact.
+     */
+    public boolean isNantokaManiaOnly() {
+        return nantokaMania
+                && !sevenToNinePreview
+                && chartTransformCount() == 0
+                && !hasStandardEffect()
+                && !doubleBattle
+                && generationSeedOverride == null;
+    }
+
     public String virtualChartId(String baseSha256) {
         if (rankingClass() == RankingClass.NORMAL
                 || rankingClass() == RankingClass.MANIAC_STANDARD

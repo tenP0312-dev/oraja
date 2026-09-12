@@ -32,6 +32,32 @@ class NantokaManiaSettingsTest {
         assertEquals(seed, settings.generationSeed("a".repeat(64)));
     }
 
+    @Test void nantokaManiaOnlyAllowsCourseButAnyOtherEffectBlocksIt() {
+        var settings = new BMSIRManiacSettings();
+        settings.setNantokaMania(true);
+        assertTrue(settings.isNantokaManiaOnly());
+        assertTrue(BMSIRManiacPlayContext.allowsDuringCourse(settings, Mode.BEAT_7K));
+        assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(settings, Mode.POPN_9K));
+        assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(null, Mode.BEAT_7K));
+
+        settings.setTornado(20);
+        assertFalse(settings.isNantokaManiaOnly());
+        assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(settings, Mode.BEAT_7K));
+        settings.setTornado(0);
+
+        settings.setDoubleBattle(true);
+        assertFalse(settings.isNantokaManiaOnly());
+        settings.setDoubleBattle(false);
+
+        settings.setExtraMode(1);
+        assertFalse(settings.isNantokaManiaOnly());
+        settings.setExtraMode(0);
+
+        assertTrue(settings.isNantokaManiaOnly());
+        settings.setNantokaMania(false);
+        assertFalse(settings.isNantokaManiaOnly());
+    }
+
     @Test void unsupportedKeysDoNotApplyAndOwnerSyncCannotImportAsNormal() {
         var settings = new BMSIRManiacSettings(); settings.setNantokaMania(true);
         assertNull(BMSIRManiacPlayContext.effectiveSettings(settings, Mode.POPN_9K));
