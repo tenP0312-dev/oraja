@@ -29,6 +29,7 @@ class BMSIRManiacDatabaseTest {
         config.setPlayername("player1");
         java.nio.file.Files.createDirectories(temporaryDirectory.resolve("player1"));
         PlayerConfig player = new PlayerConfig();
+        player.setBmsirForceLn(false);
         player.setId("player1");
         PlayDataAccessor accessor = new PlayDataAccessor(config, player);
         BMSModel model = model();
@@ -62,6 +63,7 @@ class BMSIRManiacDatabaseTest {
         config.setPlayername("player1");
         java.nio.file.Files.createDirectories(temporaryDirectory.resolve("player1"));
         PlayerConfig player = new PlayerConfig();
+        player.setBmsirForceLn(false);
         player.setId("player1");
         PlayDataAccessor accessor = new PlayDataAccessor(config, player);
         BMSIRManiacSettings settings = new BMSIRManiacSettings();

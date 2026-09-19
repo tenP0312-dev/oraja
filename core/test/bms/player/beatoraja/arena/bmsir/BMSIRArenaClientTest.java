@@ -273,6 +273,7 @@ class BMSIRArenaClientTest {
     @Test
     void arenaLongnoteModesRoundTripWithoutMixingScoreScales() {
         PlayerConfig config = new PlayerConfig();
+        config.setBmsirForceLn(false);
         config.setLnmode(2);
         config.validate();
         assertEquals(2, config.getLnmode());

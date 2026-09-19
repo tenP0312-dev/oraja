@@ -1481,8 +1481,8 @@ public class PlayConfigurationView implements Initializable {
 		}
 		installSidebarPage(bmsirSpecificTab,
 				sidebarSettingCard(sidebarSettingRow(bmsirSpecificTab, "bmsirForceLn", "強制LN", "Force LN",
-						"ONでは譜面のCN／HCN指定もLNとして扱います。OFFでは譜面指定と通常のLNモード設定に従います。Arenaでは対戦ルールが優先されます。ONとOFFの自己ベストは別々に保存します。",
-						"Treat authored CN/HCN as LN when enabled. When disabled, use chart definitions and the normal LN mode. Arena rules take priority. ON/OFF keep separate local bests.")),
+						"初期設定はONで、譜面のCN／HCN指定もLNとして扱います。OFFにすると譜面指定と通常のLNモード設定に従いますが、CN／HCNで作成した成績は共有ランキングの対象外です。Arenaでは対戦ルールが優先されます。ONとOFFの自己ベストは別々に保存します。",
+						"ON by default: authored CN/HCN are treated as LN. Turn it off to follow chart definitions and the normal LN mode; CN/HCN results are then excluded from the shared ranking. Arena rules take priority. ON/OFF keep separate local bests.")),
 				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirArenaLanguage", "本体UI言語", "Built-in UI language",
 								"Arenaオーバーレイ、フェーズ表示、MANIAC OPTIONSなど、本体組み込み画面の言語を選びます。全画面への反映には再起動が必要です。",
