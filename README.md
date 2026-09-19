@@ -10,6 +10,14 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
+Version 0.4.14.88 turns the Force LN switch ON by default. Every long note,
+including authored CN/HCN, plays as LN unless the player opts out in the
+launcher's BMS-IR settings; configs saved while the default was OFF are
+switched ON once, and a later opt-out is kept. Arena rule handling, separate
+forced/normal local bests, replays and the IR contract are unchanged.
+This optional test retains all 0.4.14.87 features, plugin 0.0.75 and launcher
+0.2.29. Physical acceptance is tracked in issue #386.
+
 Version 0.4.14.87 adds `DAN GAUGE` and `INITIAL GAUGE` to MANIAC
 OPTIONS. Single songs can use the existing course gauges starting at 100% down
 to 2% in 2% steps. Per-song score, lamp, BP, and IR rules match course play;
@@ -23,7 +31,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.87**. Its Windows native-audio
+The current client source version is **0.4.14.88**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
