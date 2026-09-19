@@ -13,17 +13,47 @@ class BMSIRForceLnToggleTest {
     @TempDir Path directory;
 
     @Test
-    void settingDefaultsOffAndRoundTripsWithoutLosingSelectedMode() {
+    void settingDefaultsOnAndRoundTripsWithoutLosingSelectedMode() {
         Json json = new Json();
         PlayerConfig config = json.fromJson(PlayerConfig.class, "{\"lnmode\":2}");
-        assertFalse(config.isBmsirForceLn());
-        config.setBmsirForceLn(true);
+        assertTrue(config.isBmsirForceLn());
         assertEquals(0, config.getLnmode());
+        assertEquals(2, config.getSelectedLnmode());
+        config.setBmsirForceLn(false);
+        assertEquals(2, config.getLnmode());
         PlayerConfig restored = json.fromJson(PlayerConfig.class, json.toJson(config));
-        assertTrue(restored.isBmsirForceLn());
+        assertFalse(restored.isBmsirForceLn());
         assertEquals(2, restored.getSelectedLnmode());
-        restored.setBmsirForceLn(false);
-        assertEquals(2, restored.getLnmode());
+        restored.setBmsirForceLn(true);
+        assertEquals(0, restored.getLnmode());
+    }
+
+    @Test
+    void onDefaultIsAppliedOnceToConfigsSavedUnderTheOffDefault() {
+        Json json = new Json();
+        json.setUsePrototypes(false);
+        // Saved by a build whose default was OFF (#345): the player never chose OFF.
+        PlayerConfig legacy = json.fromJson(PlayerConfig.class, "{\"lnmode\":1,\"bmsirForceLn\":false}");
+        assertFalse(legacy.isBmsirForceLn());
+        assertNull(legacy.getBmsirForceLnDefaultApplied());
+        PlayerConfig validated = PlayerConfig.validatePlayerConfig("player1", legacy);
+        assertTrue(validated.isBmsirForceLn());
+        assertEquals(1, validated.getSelectedLnmode());
+        assertEquals(Boolean.TRUE, validated.getBmsirForceLnDefaultApplied());
+
+        // An explicit opt-out made after the ON default survives later loads.
+        validated.setBmsirForceLn(false);
+        PlayerConfig optedOut = json.fromJson(PlayerConfig.class, json.toJson(validated));
+        assertEquals(Boolean.TRUE, optedOut.getBmsirForceLnDefaultApplied());
+        PlayerConfig.validatePlayerConfig("player1", optedOut);
+        assertFalse(optedOut.isBmsirForceLn());
+        assertEquals(1, optedOut.getLnmode());
+
+        // Configs older than the toggle (no key at all) simply take the ON default.
+        PlayerConfig untouched = PlayerConfig.validatePlayerConfig("player1",
+                json.fromJson(PlayerConfig.class, "{\"lnmode\":2}"));
+        assertTrue(untouched.isBmsirForceLn());
+        assertEquals(Boolean.TRUE, untouched.getBmsirForceLnDefaultApplied());
     }
 
     @Test
@@ -56,6 +86,7 @@ class BMSIRForceLnToggleTest {
         config.setPlayername("player");
         Files.createDirectories(directory.resolve("player"));
         PlayerConfig player = new PlayerConfig();
+        player.setBmsirForceLn(false);
         player.setLnmode(2);
         PlayerResource resource = new PlayerResource(config, player, null, null);
         PlayDataAccessor data = new PlayDataAccessor(config, player);
@@ -103,6 +134,7 @@ class BMSIRForceLnToggleTest {
                 {"x":3,"y":240,"l":240,"t":3},{"x":4,"y":240,"l":0}]}]}
                 """);
         PlayerConfig player = new PlayerConfig();
+        player.setBmsirForceLn(false);
         player.setLnmode(2);
         PlayerResource resource = new PlayerResource(new Config(), player, null, null);
         BMSModel raw = resource.loadBMSModel(chart, 2);
