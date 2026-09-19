@@ -172,6 +172,7 @@ class BMSIRSelectiveLnScoreTest {
         config.setPlayername(name);
         Path root = Files.createDirectories(directory.resolve(name));
         PlayerConfig player = new PlayerConfig();
+        player.setBmsirForceLn(false);
         player.setLnmode(selected);
         return new Fixture(root, player, new PlayerResource(config, player, null, null), new PlayDataAccessor(config, player));
     }

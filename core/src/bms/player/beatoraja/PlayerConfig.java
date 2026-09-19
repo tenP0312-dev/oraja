@@ -123,7 +123,18 @@ public final class PlayerConfig {
 	 * LNモード
 	 */
 	private int lnmode = 0;
-	private boolean bmsirForceLn = false;
+	/**
+	 * Treat every long note as LN, including authored CN/HCN. Defaults to ON so
+	 * the shared ranking is a single LN ranking; players opt out explicitly.
+	 */
+	private boolean bmsirForceLn = true;
+	/**
+	 * Null until the ON default has been applied once. Configs saved while the
+	 * default was OFF (#345) carry {@code bmsirForceLn=false} without the player
+	 * having chosen it, so the first load under the new default switches them ON
+	 * once; later changes made in the launcher are kept.
+	 */
+	private Boolean bmsirForceLnDefaultApplied;
 
 	/** LR2-style chart difficulty filter (0: ALL, 1: BEGINNER ... 5: INSANE). */
 	private int difficultyFilter = 0;
@@ -467,6 +478,22 @@ public final class PlayerConfig {
 	public int getSelectedLnmode() { return lnmode; }
 	public boolean isBmsirForceLn() { return bmsirForceLn; }
 	public void setBmsirForceLn(boolean enabled) { bmsirForceLn = enabled; }
+	public Boolean getBmsirForceLnDefaultApplied() { return bmsirForceLnDefaultApplied; }
+	public void setBmsirForceLnDefaultApplied(Boolean applied) { bmsirForceLnDefaultApplied = applied; }
+
+	/**
+	 * Apply the forced-LN ON default exactly once per saved config.
+	 * @return true when this call switched the setting on
+	 */
+	public boolean applyBmsirForceLnDefaultOnce() {
+		if (Boolean.TRUE.equals(bmsirForceLnDefaultApplied)) {
+			return false;
+		}
+		final boolean changed = !bmsirForceLn;
+		bmsirForceLn = true;
+		bmsirForceLnDefaultApplied = Boolean.TRUE;
+		return changed;
+	}
 
 	public void setLnmode(int lnmode) {
 		this.lnmode = lnmode;
@@ -2004,6 +2031,9 @@ public final class PlayerConfig {
 
 	public static PlayerConfig validatePlayerConfig(String playerid, PlayerConfig player) {
 		player.setId(playerid);
+		if (player.applyBmsirForceLnDefaultOnce()) {
+			logger.info("強制LNの初期設定ONを適用しました - Player : {}", playerid);
+		}
 		player.validate();
 		return player;
 	}
