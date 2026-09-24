@@ -90,6 +90,7 @@ public class CourseResult extends AbstractResult {
 		final ScoreData newscore = getNewScore();
 
 		ranking = resource.getRankingData() != null && resource.getCourseBMSModels() != null ? resource.getRankingData() : new RankingData();
+		if (resource.getCourseData() != null && ranking.hasCachedScores()) ranking.restoreCachedScores(ranking.getScoresSnapshot());
 		rankingOffset = 0;
 		final IRStatus[] ir = main.getIRStatus();
 		if (ir.length > 0 && resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY) {
@@ -120,7 +121,7 @@ public class CourseResult extends AbstractResult {
     			}
     			
     			if(send) {
-    				irSendStatus.add(new IRSendStatus(irc.connection, resource.getCourseData(), lnmode, newscore));
+					irSendStatus.add(new IRSendStatus(this, irc, resource.getCourseData(), lnmode, newscore));
     			}
         	}
 
@@ -146,9 +147,11 @@ public class CourseResult extends AbstractResult {
 						removeIrSendStatus.add(irc);
 					}
 				}
+				boolean rankingRefreshNeeded = irSendStatus.stream().anyMatch(score -> score.rankingRefreshRequested);
 				irSendStatus.removeAll(removeIrSendStatus);
 
-				if (irsend > 0) {
+				if (irsend > 0 && rankingRefreshNeeded && ir[0].config.isImportrival()
+						&& irSendStatus.stream().anyMatch(score -> score.status == ir[0])) {
 					timer.switchTimer(succeed ? TIMER_IR_CONNECT_SUCCESS : TIMER_IR_CONNECT_FAIL, true);
 					try {
 						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getCoursePlayData(null,
@@ -156,6 +159,19 @@ public class CourseResult extends AbstractResult {
 										bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())));
 						if (response.isSucceeded()) {
 							ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
+							main.getRankingDataCache().updateCourseAfterSuccessfulSubmit(
+									resource.getCourseData(),
+									new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
+									response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
+							for (IRSendStatus sent : irSendStatus) {
+								if (!sent.rankingRefreshRequested || sent.status == null || sent.status != ir[0]) continue;
+								main.getPersistentRankingDataStore().save(
+										main.getPlayerPath(), main.getPlayerConfig().getId(), sent.status,
+										new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
+										RankingData.cacheIdentity(resource.getCourseData(),
+												new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()))),
+									response.getData());
+							}
 							rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
 							logger.info("IRからのスコア取得成功 : {}", response.getMessage());
 						} else {
@@ -347,13 +363,28 @@ public class CourseResult extends AbstractResult {
 
 	static class IRSendStatus {
 		public final IRConnection ir;
+		public final IRStatus status;
 		public final CourseData course;
 		public final int lnmode;
 		public final ScoreData score;
 		public int retry = 0;
+		public boolean rankingRefreshRequested = false;
+		private final CourseResult owner;
 		
 		public IRSendStatus(IRConnection ir, CourseData course, int lnmode, ScoreData score) {
+			this.owner = null;
 			this.ir = ir;
+			this.status = null;
+			this.course = course;
+			this.lnmode = lnmode;
+			this.score = score;
+		}
+
+
+		public IRSendStatus(CourseResult owner, IRStatus status, CourseData course, int lnmode, ScoreData score) {
+			this.owner = owner;
+			this.ir = status.connection;
+			this.status = status;
 			this.course = course;
 			this.lnmode = lnmode;
 			this.score = score;
@@ -365,6 +396,13 @@ public class CourseResult extends AbstractResult {
             if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", course.getName());
                 retry = -255;
+                if (status != null) {
+					if (owner != null) {
+						IRRankingContext context = IRRankingContext.from(owner.main.getPlayerConfig());
+						owner.main.getRankingDataCache().reloadCourseAfterSuccessfulSubmit(course, context);
+					}
+					rankingRefreshRequested = true;
+                }
                 return true;
             } else {
 				logger.warn("IRスコア送信失敗 : {}", send1.getMessage());
