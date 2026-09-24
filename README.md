@@ -10,6 +10,14 @@ and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
 ## Current Version
 
+Version 0.4.14.89 keeps Force LN behavior from 0.4.14.88 and adds a persistent
+cache for successfully loaded IR rankings. Song and course ranking data is
+restored after restart without a cursor-triggered request. A successful score
+submission refreshes the matching ranking; failed sends keep the previous data.
+The cache is scoped by IR account, chart/course, and LN interpretation. This
+optional test retains plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
+tracked in issue #390.
+
 Version 0.4.14.88 turns the Force LN switch ON by default. Every long note,
 including authored CN/HCN, plays as LN unless the player opts out in the
 launcher's BMS-IR settings; configs saved while the default was OFF are
@@ -31,7 +39,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.88**. Its Windows native-audio
+The current client source version is **0.4.14.89**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
