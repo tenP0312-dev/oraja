@@ -42,6 +42,23 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Resolve body version
+        id: body-version
+        shell: python
+        run: |
+          import os
+          import re
+          from pathlib import Path
+
+          version_source = Path("core/src/bms/player/beatoraja/Version.java").read_text()
+          gradle_source = Path("core/build.gradle.kts").read_text()
+          java_version = re.search(r'ARENA_CLIENT_VERSION\s*=\s*"([0-9.]+)"', version_source)
+          gradle_version = re.search(r'archiveVersion\.set\("([0-9.]+)"\)', gradle_source)
+          if not java_version or not gradle_version or java_version.group(1) != gradle_version.group(1):
+              raise SystemExit("Arena client and Gradle archive versions do not match")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"version={java_version.group(1)}\n")
+
       - uses: actions/setup-java@v5
         with:
           distribution: liberica
@@ -62,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: arena-oraja-${{ matrix.platform }}
-          path: dist/BMS-IR-Arena-oraja-0.4.14.88-${{ matrix.platform }}.jar
+          path: dist/BMS-IR-Arena-oraja-${{ steps.body-version.outputs.version }}-${{ matrix.platform }}.jar
           retention-days: 3
           if-no-files-found: error
 
