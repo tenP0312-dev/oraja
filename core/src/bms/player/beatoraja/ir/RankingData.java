@@ -1,6 +1,7 @@
 package bms.player.beatoraja.ir;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,46 +58,80 @@ public class RankingData {
 	 * 最終更新時間
 	 */
 	private long lastUpdateTime;
+	private final AtomicBoolean accessInFlight = new AtomicBoolean();
 	
 	public void load(MainState mainstate, Object song) {
 		load(mainstate, song, IRRankingContext.from(mainstate.main.getPlayerConfig()));
 	}
 
 	public void load(MainState mainstate, Object song, IRRankingContext context) {
+		load(mainstate, song, context, false);
+	}
+
+	public void load(MainState mainstate, Object song, IRRankingContext context, boolean forceRefresh) {
 		if(!(song instanceof SongData || song instanceof CourseData)) {
 			return;
 		}		
-		state = ACCESS;
+		if ((!forceRefresh && state == FINISH) || !accessInFlight.compareAndSet(false, true)) {
+			return;
+		}
+		if (!hasCachedScores()) state = ACCESS;
 		final int lnmode = context.lnmode();
 		final boolean forceLn = context.forceLn();
 		final ScoreData localScore = mainstate.getScoreDataProperty().getScoreData();
 		Thread irprocess = new Thread(() -> {
-			final IRStatus[] ir = mainstate.main.getIRStatus();
-	        IRResponse<IRScoreData[]> response = null;
-			if(song instanceof SongData songData) {
-				response = ir[0].connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
-				// Rival databases have no separate forced-LN chart identity.
-				if (response.isSucceeded() && !(forceLn
-						&& bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
-					mainstate.main.getRivalDataAccessor().updateAllRivalsScores(
-							response.getData(),
-							songData,
-							lnmode
-					);
+			try {
+				IRStatus[] ir = mainstate.main.getIRStatus();
+				if (ir == null || ir.length == 0 || ir[0] == null || ir[0].connection == null) {
+					failAccess();
+					return;
 				}
-			} else if(song instanceof CourseData) {
-		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, lnmode, forceLn));
-	        }
-	        if(response.isSucceeded()) {
-				updateScore(response.getData(), localScore);
-				logger.trace("IRからのスコア取得成功 : {}", response.getMessage());
-				state = FINISH;
-	        } else {
-				logger.warn("IRからのスコア取得失敗 : {}", response.getMessage());
-				state = FAIL;
-	        }
-	        lastUpdateTime = System.currentTimeMillis();
+				IRStatus primary = ir[0];
+				if (primary.config == null || !primary.config.isImportrival()) {
+					logger.trace("IRランキング取得を設定により省略しました");
+					return;
+				}
+				IRResponse<IRScoreData[]> response = null;
+				if(song instanceof SongData songData) {
+					response = primary.connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
+					// Rival databases have no separate forced-LN chart identity.
+					if (response != null && response.isSucceeded() && !(forceLn
+							&& bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
+						mainstate.main.getRivalDataAccessor().updateAllRivalsScores(
+								response.getData(), songData, lnmode);
+					}
+				} else if(song instanceof CourseData course) {
+					response = primary.connection.getCoursePlayData(null, new IRCourseData(course, lnmode, forceLn));
+				}
+				if(response != null && response.isSucceeded() && response.getData() != null) {
+					IRScoreData[] received = response.getData().clone();
+					updateScore(received.clone(), localScore);
+					if (received.length > 0) {
+						for (IRStatus connected : ir) {
+							if (connected.config == null || !connected.config.isImportrival()) continue;
+							mainstate.main.getPersistentRankingDataStore().save(
+										mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(),
+									connected, context, cacheIdentity(song, context), received);
+						}
+					}
+					logger.trace("IRからのスコア取得成功 : {}", response.getMessage());
+				} else {
+					logger.warn("IRからのスコア取得失敗 : {}", response == null ? "response unavailable" : response.getMessage());
+					if (scores == null && !forceRefresh) state = FAIL;
+				}
+				lastUpdateTime = System.currentTimeMillis();
+			} catch (Exception error) {
+				logger.warn("IRランキング取得後の処理に失敗しました", error);
+				if (scores == null && !forceRefresh) state = FAIL;
+			} finally {
+				if (hasCachedScores() && state == ACCESS) state = FINISH;
+				if (forceRefresh && hasCachedScores() && state == FAIL) state = FINISH;
+				lastUpdateTime = System.currentTimeMillis();
+				accessInFlight.set(false);
+			}
 		});
+		irprocess.setName("ir-ranking-load");
+		irprocess.setDaemon(true);
 		irprocess.start();
 
 	}
@@ -138,6 +173,51 @@ public class RankingData {
         
 		state = FINISH;
         lastUpdateTime = System.currentTimeMillis();
+	}
+
+	public IRScoreData[] getScoresSnapshot() {
+		return scores == null ? null : scores.clone();
+	}
+
+	public void restoreCachedScores(IRScoreData[] cachedScores) {
+		if (cachedScores != null) {
+			updateScore(cachedScores.clone(), null);
+			prevrank = irrank;
+			localrank = 0;
+		}
+	}
+
+	public void requestReload() {
+		if (!accessInFlight.get()) state = NONE;
+	}
+
+	public void requestReloadAfterSubmit() {
+		if (!accessInFlight.get() && hasCachedScores()) state = FINISH;
+	}
+
+	public boolean hasCachedScores() {
+		return scores != null;
+	}
+
+	public static String cacheIdentity(Object target, IRRankingContext context) {
+		if (target instanceof SongData song) {
+			String sha = song.getSha256();
+			if (sha == null || sha.length() != 64) return "";
+			return "song:" + sha.toLowerCase() + ":" + (context.forceLn()
+					&& BMSIRLongNoteMode.separatesScore(song) ? "forced-ln" : "ordinary");
+		}
+		if (target instanceof CourseData course) {
+			StringBuilder identity = new StringBuilder("course:");
+			for (SongData song : course.getSong()) {
+				if (song == null || song.getSha256() == null || song.getSha256().length() != 64) return "";
+				identity.append(song.getSha256().toLowerCase()).append(':');
+			}
+			if (course.getConstraint() != null) {
+				Arrays.stream(course.getConstraint()).forEach(constraint -> identity.append(constraint.name).append(':'));
+			}
+			return identity.append("name:").append(course.getName() == null ? "" : course.getName()).toString();
+		}
+		return "";
 	}
 	
 	/**

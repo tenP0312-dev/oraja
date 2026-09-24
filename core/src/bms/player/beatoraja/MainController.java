@@ -119,6 +119,7 @@ public class MainController {
 	private RivalDataAccessor rivals = new RivalDataAccessor();
 
 	private RankingDataCache ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
+	private final PersistentRankingDataStore persistentRankingDataStore = new PersistentRankingDataStore();
 
 	private SpriteBatch sprite;
 	/**
@@ -246,6 +247,7 @@ public class MainController {
 	private StartupTask.Result finishIrInitialization() {
 		ir = startupIrStatuses.toArray(IRStatus.class);
 		startupIrStatuses = null;
+		ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
 		return StartupTask.Result.ok(ir.length + "件");
 	}
 
@@ -574,6 +576,14 @@ public class MainController {
 		return ircache;
 	}
 
+	public PersistentRankingDataStore getPersistentRankingDataStore() {
+		return persistentRankingDataStore;
+	}
+
+	public String getPlayerPath() {
+		return config == null ? Config.PLAYERPATH_DEFAULT : config.getPlayerpath();
+	}
+
 	public SpriteBatch getSpriteBatch() {
 		return sprite;
 	}
@@ -666,7 +676,7 @@ public class MainController {
 		ImGuiNotify.setInfoEnabled(pc.isBmsirInfoNotificationsEnabled());
 
 		playdata = new PlayDataAccessor(config, player);
-
+		ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
 		initializeIRConfig();
 		// Dispose MusicSelector to unallocate loaded skin
 		selector.dispose();
@@ -1884,13 +1894,25 @@ public class MainController {
 
 	public static class IRSendStatus {
 		public final IRConnection ir;
+		public final IRStatus status;
 		public final SongData song;
 		public final ScoreData score;
 		public int retry = 0;
 		public long lastTry = 0;
 		public boolean isSent = false;
+		public boolean rankingRefreshRequested = false;
+		private final MainController owner;
 		public IRSendStatus(IRConnection ir, SongData song, ScoreData score) {
+			this.owner = null;
 			this.ir = ir;
+			this.status = null;
+			this.song = song;
+			this.score = score;
+		}
+		public IRSendStatus(MainController owner, IRStatus status, SongData song, ScoreData score) {
+			this.owner = owner;
+			this.ir = status.connection;
+			this.status = status;
 			this.song = song;
 			this.score = score;
 		}
@@ -1903,6 +1925,13 @@ public class MainController {
 			if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", song.getTitle());
 				isSent = true;
+				if (status != null) {
+					if (owner != null) {
+						IRRankingContext context = IRRankingContext.from(owner.getPlayerConfig());
+						owner.getRankingDataCache().reloadSongAfterSuccessfulSubmit(song, context);
+					}
+					rankingRefreshRequested = true;
+				}
 				return true;
 			} else {
 				logger.warn("IRスコア送信失敗 : {}", send1.getMessage());
