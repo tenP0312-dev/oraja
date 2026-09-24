@@ -84,6 +84,40 @@ public class RankingDataCache {
         cscorecache[cacheIndex(course, context)].put(createCourseHash(course, context), iras);
     }
 
+    public void updateCourseAfterSuccessfulSubmit(CourseData course, IRRankingContext context,
+            IRScoreData[] scores, bms.player.beatoraja.ScoreData localScore) {
+        RankingData ranking = get(course, context);
+        if (ranking != null) ranking.updateScore(scores, localScore);
+    }
+
+    public void updateSongAfterSuccessfulSubmit(SongData song, IRRankingContext context,
+            IRScoreData[] scores, bms.player.beatoraja.ScoreData localScore) {
+        RankingData ranking = get(song, context);
+        if (ranking != null) ranking.updateScore(scores, localScore);
+    }
+
+    public void reloadSongAfterSuccessfulSubmit(SongData song, IRRankingContext context) {
+        RankingData ranking = get(song, context);
+        if (ranking != null) ranking.requestReloadAfterSubmit();
+    }
+
+    public void reloadSongAfterSuccessfulSubmit(SongData song, IRRankingContext context,
+            bms.player.beatoraja.MainState mainState) {
+        RankingData ranking = get(song, context);
+        if (ranking != null) ranking.load(mainState, song, context, true);
+    }
+
+    public void reloadCourseAfterSuccessfulSubmit(CourseData course, IRRankingContext context) {
+        RankingData ranking = get(course, context);
+        if (ranking != null) ranking.requestReloadAfterSubmit();
+    }
+
+    public void reloadCourseAfterSuccessfulSubmit(CourseData course, IRRankingContext context,
+            bms.player.beatoraja.MainState mainState) {
+        RankingData ranking = get(course, context);
+        if (ranking != null) ranking.load(mainState, course, context, true);
+    }
+
     private int cacheIndex(SongData song, IRRankingContext context) {
         return BMSIRLongNoteMode.authoredUndefined(song) ? context.lnmode() : 3;
     }

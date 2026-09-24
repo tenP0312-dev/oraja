@@ -444,7 +444,18 @@ public final class MusicSelector extends MainState {
 						irc = new RankingData();
 						main.getRankingDataCache().put(song, rankingContext, irc);
 					}
-					irc.load(this, song, rankingContext);
+					if (irc.getState() != RankingData.FINISH) {
+						boolean restored = false;
+						if (irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
+							for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
+								bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
+										main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
+										rankingContext, RankingData.cacheIdentity(song, rankingContext));
+								if (stored != null) { irc.restoreCachedScores(stored); restored = true; break; }
+							}
+						}
+						if (!restored && irc.getState() != RankingData.FINISH) irc.load(this, song, rankingContext);
+					}
 				}
 	            currentir = irc;
 			}				
@@ -455,7 +466,18 @@ public final class MusicSelector extends MainState {
 					irc = new RankingData();
 					main.getRankingDataCache().put(course, rankingContext, irc);
 				}
-				irc.load(this, course, rankingContext);
+				if (irc.getState() != RankingData.FINISH) {
+					boolean restored = false;
+					if (irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
+						for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
+							bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
+									main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
+									rankingContext, RankingData.cacheIdentity(course, rankingContext));
+							if (stored != null) { irc.restoreCachedScores(stored); restored = true; break; }
+						}
+					}
+					if (!restored && irc.getState() != RankingData.FINISH) irc.load(this, course, rankingContext);
+				}
 	            currentir = irc;
 			}				
 		}
