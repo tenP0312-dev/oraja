@@ -2,6 +2,9 @@ package bms.player.beatoraja;
 
 import bms.model.BMSModel;
 import bms.player.beatoraja.song.SongData;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * コースデータ
@@ -28,6 +31,8 @@ public class CourseData implements Validatable {
      * トロフィー条件
      */
     private TrophyData[] trophy = TrophyData.EMPTY;
+    /** Optional BMS-IR-only qualification settings from user-table course data. */
+    private Map<String, Object> bmsir_qualification;
     /**
      * 公開するかどうか
      */
@@ -81,6 +86,14 @@ public class CourseData implements Validatable {
         this.trophy = trophy;
     }
 
+    public Map<String, Object> getBmsirQualification() {
+        return bmsir_qualification;
+    }
+
+    public void setBmsirQualification(Map<String, Object> qualification) {
+        this.bmsir_qualification = qualification;
+    }
+
     public boolean isClassCourse() {
         for(CourseDataConstraint con : constraint) {
             if(con == CourseDataConstraint.CLASS || con == CourseDataConstraint.MIRROR || con == CourseDataConstraint.RANDOM) {
@@ -118,6 +131,21 @@ public class CourseData implements Validatable {
         
         if(constraint == null) {
         	constraint = CourseDataConstraint.EMPTY;
+        }
+        Object rawQualificationConstraints = bmsir_qualification == null
+                ? null : bmsir_qualification.get("play_constraints");
+        if (rawQualificationConstraints instanceof List<?> extraConstraints) {
+            ArrayList<CourseDataConstraint> merged = new ArrayList<>();
+            for (CourseDataConstraint existing : constraint) {
+                if (existing != null) merged.add(existing);
+            }
+            for (Object value : extraConstraints) {
+                if (value instanceof String name) {
+                    CourseDataConstraint extra = CourseDataConstraint.getValue(name);
+                    if (extra != null && !merged.contains(extra)) merged.add(extra);
+                }
+            }
+            constraint = merged.toArray(CourseDataConstraint[]::new);
         }
         CourseDataConstraint[] cdc = new CourseDataConstraint[5];
         for(int i = 0;i < constraint.length;i++) {

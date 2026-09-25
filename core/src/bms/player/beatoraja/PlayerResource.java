@@ -7,6 +7,7 @@ import bms.player.beatoraja.audio.AudioDriver;
 import bms.player.beatoraja.audio.BMSLoudnessAnalyzer;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.ir.RankingData;
+import bms.player.beatoraja.ir.IRCourseData;
 import bms.player.beatoraja.play.BMSPlayerRule;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.play.bga.BGAProcessor;
@@ -111,6 +112,7 @@ public final class PlayerResource {
 	private Array<FloatArray[]> coursegauge = new Array<FloatArray[]>();
 
 	private Array<ReplayData> courseReplay = new Array<ReplayData>();
+	private final List<IRCourseData.StageResult> bmsirCourseStages = new ArrayList<>();
 	/**
 	 * コーススコア
 	 */
@@ -168,6 +170,7 @@ public final class PlayerResource {
 		tscore = null;
 		gauge = null;
 		courseReplay.clear();
+		bmsirCourseStages.clear();
 		coursegauge.clear();
 		combo = 0;
 		maxcombo = 0;
@@ -575,6 +578,16 @@ public final class PlayerResource {
 
 	public void addCourseReplay(ReplayData rd) {
 		courseReplay.add(rd);
+	}
+
+	public void setBmsirCourseStage(int index, IRCourseData.StageResult result) {
+		if (index < 0 || result == null) return;
+		while (bmsirCourseStages.size() <= index) bmsirCourseStages.add(null);
+		bmsirCourseStages.set(index, result);
+	}
+
+	public IRCourseData.StageResult[] getBmsirCourseStages() {
+		return bmsirCourseStages.toArray(IRCourseData.StageResult[]::new);
 	}
 
 	public Array<FloatArray[]> getCourseGauge() {

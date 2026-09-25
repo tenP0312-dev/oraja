@@ -36,6 +36,8 @@ public class CourseResult extends AbstractResult {
 	private List<IRSendStatus> irSendStatus = new ArrayList<IRSendStatus>();
 
 	private ResultKeyProperty property;
+	private BMSIRCourseQualification.Result bmsirQualification =
+			new BMSIRCourseQualification.Result(BMSIRCourseQualification.Status.NONE, "");
 
 	public CourseResult(MainController main) {
 		super(main);
@@ -69,6 +71,13 @@ public class CourseResult extends AbstractResult {
 		}
 
 		updateScoreDatabase();
+		if (resource.getCourseData() != null) {
+			bmsirQualification = BMSIRCourseQualification.evaluate(
+					resource.getCourseData().getBmsirQualification(),
+					resource.getCourseData(),
+					resource.getCourseScoreData(),
+					resource.getBmsirCourseStages());
+		}
 
 		// リプレイの自動保存
 		if(resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY){
@@ -187,7 +196,9 @@ public class CourseResult extends AbstractResult {
 			irprocess.start();
 		}
 
-		play(newscore.getClear() != Failed.id ? (getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR)
+		boolean qualifiedClear = newscore != null && newscore.getClear() != Failed.id
+				&& (!bmsirQualification.hasRules() || bmsirQualification.passed());
+		play(qualifiedClear ? (getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR)
 				: (getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL), resource.getConfig().getAudioConfig().isLoopCourseResultSound());
 	}
 
@@ -361,6 +372,10 @@ public class CourseResult extends AbstractResult {
 		return resource.getCourseScoreData();
 	}
 
+	public BMSIRCourseQualification.Result getBmsirQualification() {
+		return bmsirQualification;
+	}
+
 	static class IRSendStatus {
 		public final IRConnection ir;
 		public final IRStatus status;
@@ -390,9 +405,13 @@ public class CourseResult extends AbstractResult {
 			this.score = score;
 		}
 		
-		public boolean send() {
+        public boolean send() {
 			logger.info("IRへスコア送信中 : {}", course.getName());
-            IRResponse<Object> send1 = ir.sendCoursePlayData(new IRCourseData(course, lnmode), new bms.player.beatoraja.ir.IRScoreData(score));
+            IRCourseData.StageResult[] stages = owner != null
+                    ? owner.resource.getBmsirCourseStages() : null;
+            IRResponse<Object> send1 = ir.sendCoursePlayData(
+                    new IRCourseData(course, lnmode, false, stages),
+                    new bms.player.beatoraja.ir.IRScoreData(score));
             if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", course.getName());
                 retry = -255;
