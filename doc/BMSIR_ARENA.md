@@ -1651,3 +1651,29 @@ internal test channel, follow the server repository's
 `docs/PRODUCTION_VPS_OPERATIONS.md`: activate the exact ordinary-score
 body/plugin allowlists and Arena client-version/build gates, perform required
 guarded reloads, and verify both paths before promoting the signed channel.
+
+## BMS-IR User-Course Qualification
+
+User-authored bmstable courses may include the optional `bmsir_qualification`
+object exported by BMS-IR. Existing courses without it keep the standard
+course-result behavior. The object defines optional whole-course and ordered
+per-stage checks, a regular `pass` tier, and an optional stricter `gold` tier.
+Every configured check must pass.
+
+Arena oraja captures only the current result of each stage, in course order.
+The course result uses that evidence to make the existing clear/fail result
+properties reflect qualification, and exposes the `coursequalification` text
+property (`合格`, `上位合格`, `不合格`, or `判定不可`) for skins. It does not
+rewrite the submitted clear, EX, BP, or judgment values.
+
+The BMS-IR plugin sends ordered stage evidence as course-evidence v2 when the
+host provides it; older host/plugin combinations retain v1 and continue normal
+score upload. The server verifies course identity, stage order, aggregate
+totals, stage conditions, and clear/assist eligibility. It stores every attempt
+but projects only pass/gold results into rule-bearing course rankings. Missing,
+invalid, or mismatched evidence cannot qualify.
+
+Automated tests cover the pure evaluator, stage-result capture and wire format.
+Real-client result-screen and course-play acceptance remains an operator-run
+manual check. Source merge does not authorize a plugin/body release or server
+deployment.

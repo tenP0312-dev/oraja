@@ -495,6 +495,32 @@ public class MusicResult extends AbstractResult {
 						resource.getCourseBMSModels() != null
 								|| resource.getReplayData().bmsirCourseGaugeInitialValue > 0,
 						resource.getScoreData().getClear()));
+		if (resource.getCourseBMSModels() != null && resource.getCourseData() != null) {
+			int stageIndex = resource.getCourseIndex();
+			SongData[] courseSongs = resource.getCourseData().getSong();
+			if (stageIndex >= 0 && stageIndex < courseSongs.length && courseSongs[stageIndex] != null) {
+				SongData courseSong = courseSongs[stageIndex];
+				String chartHash = courseSong.getSha256() != null && !courseSong.getSha256().isBlank()
+						? resource.getBMSModel().getSHA256()
+						: resource.getBMSModel().getMD5();
+				resource.setBmsirCourseStage(stageIndex, new IRCourseData.StageResult(
+						chartHash,
+						newscore.getNotes(),
+						newscore.getExscore(),
+						newscore.getMinbp(),
+						newscore.getClear(),
+						newscore.getClear(),
+						resource.getAssist(),
+						newscore.getEpg() + newscore.getLpg(),
+						newscore.getEgr() + newscore.getLgr(),
+						newscore.getEgd() + newscore.getLgd(),
+						newscore.getEbd() + newscore.getLbd(),
+						newscore.getEpr() + newscore.getLpr() + newscore.getEms() + newscore.getLms(),
+						newscore.getCombo(),
+						newscore.getOption(),
+						resource.getBMSModel().getLntype()));
+			}
+		}
 		// コースモードの場合はコーススコアに加算・累積する
 		if (resource.getCourseBMSModels() != null) {
 			ScoreData cscore = resource.getCourseScoreData();

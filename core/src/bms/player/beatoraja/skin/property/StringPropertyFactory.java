@@ -244,6 +244,16 @@ public class StringPropertyFactory {
 		coursetitle8(157, createCoursetitle(7)),
 		coursetitle9(158, createCoursetitle(8)),
 		coursetitle10(159, createCoursetitle(9)),
+		coursequalification(160, (state) -> {
+			if (!(state instanceof CourseResult courseResult)) return "";
+			return switch (courseResult.getBmsirQualification().status()) {
+				case NONE -> "";
+				case PASS -> "合格";
+				case GOLD -> "上位合格";
+				case FAIL -> "不合格";
+				case UNKNOWN -> "判定不可";
+			};
+		}),
 		targetnamep10(200, createTargetname(-10)),
 		targetnamep9(201, createTargetname(-9)),
 		targetnamep8(202, createTargetname(-8)),

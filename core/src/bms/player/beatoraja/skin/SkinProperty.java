@@ -238,6 +238,7 @@ public class SkinProperty {
 	public static final int STRING_COURSE8_TITLE = 157;
 	public static final int STRING_COURSE9_TITLE = 158;
 	public static final int STRING_COURSE10_TITLE = 159;
+	public static final int STRING_COURSE_QUALIFICATION = 160;
 	public static final int STRING_DIRECTORY = 1000;
 	public static final int STRING_TABLE_NAME = 1001;
 	public static final int STRING_TABLE_LEVEL = 1002;

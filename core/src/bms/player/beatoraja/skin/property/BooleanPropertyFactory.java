@@ -581,12 +581,22 @@ public class BooleanPropertyFactory {
 		result_clear(OPTION_RESULT_CLEAR,new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> {
 			final ScoreData score = state.resource.getScoreData();
 			final ScoreData cscore = state.resource.getCourseScoreData();
-			return score.getClear() != Failed.id && (cscore == null || cscore.getClear() != Failed.id);
+			boolean clear = score.getClear() != Failed.id && (cscore == null || cscore.getClear() != Failed.id);
+			if (state instanceof CourseResult courseResult
+					&& courseResult.getBmsirQualification().hasRules()) {
+				clear &= courseResult.getBmsirQualification().passed();
+			}
+			return clear;
 		})),
 		result_fail(OPTION_RESULT_FAIL,new DrawProperty(DrawProperty.TYPE_NO_STATIC, (state) -> {
 			final ScoreData score = state.resource.getScoreData();
 			final ScoreData cscore = state.resource.getCourseScoreData();
-			return score.getClear() == Failed.id || (cscore != null && cscore.getClear() == Failed.id);
+			boolean fail = score.getClear() == Failed.id || (cscore != null && cscore.getClear() == Failed.id);
+			if (state instanceof CourseResult courseResult
+					&& courseResult.getBmsirQualification().hasRules()) {
+				fail |= !courseResult.getBmsirQualification().passed();
+			}
+			return fail;
 		})),
 		result_1pwin(OPTION_1PWIN,new DrawProperty(DrawProperty.TYPE_NO_STATIC, 
 				(state) -> (state.getScoreDataProperty().getNowEXScore() > state.getScoreDataProperty().getRivalScore()))),
