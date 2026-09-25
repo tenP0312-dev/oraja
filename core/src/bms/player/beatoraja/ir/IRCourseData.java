@@ -22,10 +22,13 @@ public class IRCourseData {
      * コースの制限
      */
     public final CourseDataConstraint[] constraint;
-	/**
-	 * トロフィーデータ
-	 */
-	public final IRTrophyData[] trophy;
+    /**
+     * トロフィーデータ
+     */
+    public final IRTrophyData[] trophy;
+
+    /** Ordered current-play stage facts used only by the BMS-IR evidence extension. */
+    public final StageResult[] bmsirStages;
 	/**
 	 * LN TYPE(-1 : 未指定, 0: LN, 1: CN, 2: HCN)
 	 */
@@ -40,6 +43,10 @@ public class IRCourseData {
     }
 
     public IRCourseData(CourseData course, int lntype, boolean forceLn) {
+		this(course, lntype, forceLn, null);
+	}
+
+	public IRCourseData(CourseData course, int lntype, boolean forceLn, StageResult[] bmsirStages) {
     	this.name = course.getName();
     	this.charts = new IRChartData[course.getSong().length];
     	for(int i = 0;i < this.charts.length;i++) {
@@ -51,6 +58,7 @@ public class IRCourseData {
     		constraint[i] =course.getConstraint()[i];
     	}
         this.lntype = forceLn ? 0 : lntype;
+		this.bmsirStages = bmsirStages == null ? null : bmsirStages.clone();
 
     	this.trophy = new IRTrophyData[course.getTrophy().length];
     	for(int i = 0; i < trophy.length;i++) {
@@ -81,6 +89,44 @@ public class IRCourseData {
     		name = trophy.getName();
     		scorerate = trophy.getScorerate();
 			smissrate = trophy.getMissrate();
+		}
+	}
+
+	public static final class StageResult {
+		public final String chartHash;
+		public final int totalNotes;
+		public final int exscore;
+		public final int minbp;
+		public final int clear;
+		public final int clearType;
+		public final int assist;
+		public final int pg;
+		public final int gr;
+		public final int gd;
+		public final int bd;
+		public final int pr;
+		public final int maxcombo;
+		public final int option;
+		public final int lntype;
+
+		public StageResult(String chartHash, int totalNotes, int exscore, int minbp,
+				int clear, int clearType, int assist, int pg, int gr, int gd, int bd, int pr,
+				int maxcombo, int option, int lntype) {
+			this.chartHash = chartHash;
+			this.totalNotes = totalNotes;
+			this.exscore = exscore;
+			this.minbp = minbp;
+			this.clear = clear;
+			this.clearType = clearType;
+			this.assist = assist;
+			this.pg = pg;
+			this.gr = gr;
+			this.gd = gd;
+			this.bd = bd;
+			this.pr = pr;
+			this.maxcombo = maxcombo;
+			this.option = option;
+			this.lntype = lntype;
 		}
 	}
 }
