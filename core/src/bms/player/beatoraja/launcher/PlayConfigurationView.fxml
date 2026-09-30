@@ -115,7 +115,9 @@
         </Tab>
         <Tab fx:id="audioTab" closable="false" text="%TAB_AUDIO">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-                <fx:include fx:id="audio" source="AudioConfigurationView.fxml" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                <ScrollPane fitToWidth="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <fx:include fx:id="audio" source="AudioConfigurationView.fxml" />
+                </ScrollPane>
             </AnchorPane>
         </Tab>
         <Tab fx:id="inputTab" closable="false" text="%TAB_INPUT">
