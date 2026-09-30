@@ -18,6 +18,125 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BMSIRManiacModifierTest {
     @Test
+    void legacyAddNotesKeepsTheOriginalSeededPlacement() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(100);
+        settings.setAddNotesPlacementVersion(1);
+        settings.setGenerationSeedOverride(5489L);
+        BMSModel model = model();
+        TimeLine first = line(0, 0);
+        first.setNote(0, new NormalNote(1));
+        TimeLine second = line(0.01, 10_000);
+        second.setNote(1, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{first, second});
+        new BMSIRManiacModifier(settings).modify(model);
+        assertEquals(2, first.getTotalNotes());
+        assertEquals(2, second.getTotalNotes());
+        assertEquals(-1, first.getNote(1).getWav());
+        assertEquals(-1, second.getNote(6).getWav());
+    }
+    @Test
+    void addNotesAvoidsBothNeighboringRowsIncludingPreviouslyAddedNotes() {
+        for (int seed = 0; seed < 100; seed++) {
+            BMSIRManiacSettings settings = new BMSIRManiacSettings();
+            settings.setAddNotes(100);
+            settings.setGenerationSeedOverride((long) seed);
+            BMSModel model = model();
+            TimeLine previous = line(0, 0);
+            previous.setNote(0, new NormalNote(1));
+            TimeLine backgroundOnly = line(0.01, 10_000);
+            backgroundOnly.addBackGroundNote(new NormalNote(2));
+            TimeLine current = line(0.02, 20_000);
+            current.setNote(1, new NormalNote(3));
+            TimeLine next = line(0.03, 30_000);
+            next.setNote(2, new NormalNote(4));
+            model.setAllTimeLine(new TimeLine[]{previous, backgroundOnly, current, next});
+
+            new BMSIRManiacModifier(settings).modify(model);
+
+            int added = 0;
+            for (int lane = 0; lane < 8; lane++) {
+                if (current.getNote(lane) == null || lane == 1) continue;
+                added++;
+                assertNull(previous.getNote(lane), "seed=" + seed);
+                assertNull(next.getNote(lane), "seed=" + seed);
+            }
+            assertEquals(1, added);
+            assertEquals(0, backgroundOnly.getTotalNotes());
+        }
+    }
+
+    @Test
+    void addNotesStillAddsWhenEveryEmptyLaneWouldRepeat() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(100);
+        BMSModel model = model();
+        TimeLine previous = line(0, 0);
+        for (int lane = 0; lane < 8; lane++) previous.setNote(lane, new NormalNote(1));
+        TimeLine current = line(0.01, 10_000);
+        current.setNote(0, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{previous, current});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        assertEquals(8, previous.getTotalNotes());
+        assertEquals(2, current.getTotalNotes());
+    }
+
+    @Test
+    void addNotesAvoidsJacksForChordsOnBothDpSides() {
+        for (int seed = 0; seed < 100; seed++) {
+            BMSIRManiacSettings settings = new BMSIRManiacSettings();
+            settings.setAddNotes(100);
+            settings.setGenerationSeedOverride((long) seed);
+            BMSModel model = model();
+            model.setMode(Mode.BEAT_14K);
+            TimeLine[] rows = new TimeLine[3];
+            for (int row = 0; row < 3; row++) {
+                rows[row] = new TimeLine(row / 100.0, row * 10_000L, Mode.BEAT_14K.key);
+                rows[row].setBPM(120);
+                for (int side : new int[]{0, 8}) {
+                    if (row == 1) {
+                        rows[row].setNote(side + 2, new NormalNote(1));
+                        rows[row].setNote(side + 3, new NormalNote(1));
+                    } else {
+                        rows[row].setNote(side + row / 2, new NormalNote(1));
+                    }
+                }
+            }
+            model.setAllTimeLine(rows);
+            new BMSIRManiacModifier(settings).modify(model);
+            for (int side : new int[]{0, 8}) {
+                int added = 0;
+                for (int lane = side; lane < side + 8; lane++) {
+                    if (lane == side + 2 || lane == side + 3 || rows[1].getNote(lane) == null) continue;
+                    added++;
+                    assertNull(rows[0].getNote(lane));
+                    assertNull(rows[2].getNote(lane));
+                }
+                assertEquals(2, added);
+            }
+        }
+    }
+
+    @Test
+    void addNotesReservesTheOnlyLaneWithoutAFutureNote() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setAddNotes(100);
+        BMSModel model = model();
+        TimeLine first = line(0, 0);
+        first.setNote(0, new NormalNote(1));
+        TimeLine next = line(0.01, 10_000);
+        for (int lane = 1; lane < 7; lane++) next.setNote(lane, new NormalNote(2));
+        model.setAllTimeLine(new TimeLine[]{first, next});
+
+        new BMSIRManiacModifier(settings).modify(model);
+
+        assertInstanceOf(NormalNote.class, first.getNote(7));
+        assertEquals(2, first.getTotalNotes());
+    }
+
+    @Test
     void sameChartAndSettingsProduceSamePlacement() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setAddNotes(50);

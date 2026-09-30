@@ -51,7 +51,8 @@ public final class BMSIRManiacModifier extends PatternModifier {
             applyExtraMode(model, settings.getExtraMode());
         }
         if (settings.getAddNotes() > 0) {
-            applyAddNotes(model, settings.getAddNotes(), random);
+            applyAddNotes(model, settings.getAddNotes(), random,
+                    settings.getAddNotesPlacementVersion() > 1);
         }
         if (settings.getAddLongNotes() > 0) {
             applyAddLongNotes(model, settings.getAddLongNotes(), random);
@@ -395,22 +396,57 @@ public final class BMSIRManiacModifier extends PatternModifier {
         return result;
     }
 
-    private static void applyAddNotes(BMSModel model, int percent, LR2Random random) {
+    private static void applyAddNotes(BMSModel model, int percent, LR2Random random,
+                                      boolean avoidJacks) {
         int[][] sides = playerLanes(model.getMode(), false);
-        for (TimeLine timeline : model.getAllTimeLines()) {
-            for (int[] side : sides) {
+        TimeLine[] timelines = model.getAllTimeLines();
+        // Look ahead to the next playable row on each side, ignoring BGM/BPM-only rows.
+        int[][] nextRows = new int[sides.length][timelines.length];
+        for (int player = 0; player < sides.length; player++) {
+            int next = -1;
+            for (int row = timelines.length - 1; row >= 0; row--) {
+                nextRows[player][row] = next;
+                for (int lane : sides[player]) {
+                    if (isPlayableStart(timelines[row].getNote(lane))) {
+                        next = row;
+                        break;
+                    }
+                }
+            }
+        }
+        TimeLine[] previous = new TimeLine[sides.length];
+        for (int row = 0; row < timelines.length; row++) {
+            TimeLine timeline = timelines[row];
+            for (int player = 0; player < sides.length; player++) {
+                int[] side = sides[player];
+                TimeLine next = nextRows[player][row] < 0 ? null
+                        : timelines[nextRows[player][row]];
                 boolean[] occupied = occupiedAt(timeline, model.getMode().key);
                 int original = 0;
                 for (int lane : side) if (isPlayableStart(timeline.getNote(lane))) original++;
                 for (int index = 0; index < original; index++) {
                     if (random.inclusive(100) > percent) continue;
                     List<Integer> empty = new ArrayList<>();
-                    for (int lane : side) if (!occupied[lane]) empty.add(lane);
+                    int leastConflicts = Integer.MAX_VALUE;
+                    for (int lane : side) {
+                        if (occupied[lane]) continue;
+                        int conflicts = avoidJacks
+                                ? (previous[player] != null
+                                    && isPlayableStart(previous[player].getNote(lane)) ? 1 : 0)
+                                  + (next != null && isPlayableStart(next.getNote(lane)) ? 1 : 0)
+                                : 0;
+                        if (conflicts < leastConflicts) {
+                            empty.clear();
+                            leastConflicts = conflicts;
+                        }
+                        if (conflicts == leastConflicts) empty.add(lane);
+                    }
                     if (empty.isEmpty()) break;
                     int lane = empty.get(random.inclusive(empty.size() - 1));
                     timeline.setNote(lane, new NormalNote(-1));
                     occupied[lane] = true;
                 }
+                if (original > 0) previous[player] = timeline;
             }
         }
     }
