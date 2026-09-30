@@ -183,7 +183,7 @@ public final class PersistentRankingDataStore {
         if (target instanceof CourseData course) {
             SongData[] songs = course.getSong();
             if (songs == null || songs.length == 0) return "";
-            StringBuilder identity = new StringBuilder("course:");
+            StringBuilder identity = new StringBuilder("course:v2:");
             for (SongData song : songs) {
                 if (song == null || song.getSha256() == null || song.getSha256().length() != 64) return "";
                 identity.append(song.getSha256().toLowerCase()).append(':');
