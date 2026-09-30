@@ -16,6 +16,7 @@ import java.util.*;
 public class SongManagerMenu {
     // I cannot think of a better solution than hold a ref of MusicSelector
     private static MusicSelector selector;
+    private static bms.player.beatoraja.PlayerConfig sortPlayer;
     /**
      * Current song's reverse lookup result
      */
@@ -42,6 +43,7 @@ public class SongManagerMenu {
 
             ImGui.text(t("最終プレイ: ", "Last played: ") + lastPlayRecordTime);
             if (ImGui.checkbox(t("最終プレイ順に並べる", "Sort by last played"), LAST_PLAYED_SORT)) {
+                saveLastPlayedSort();
                 selector.getBarManager().updateBar();
             }
 
@@ -67,6 +69,12 @@ public class SongManagerMenu {
 
     public static void injectMusicSelector(MusicSelector musicSelector) {
         selector = musicSelector;
+        restoreLastPlayedSort(selector.main.getPlayerConfig());
+    }
+
+    public static void restoreLastPlayedSort(bms.player.beatoraja.PlayerConfig player) {
+        sortPlayer = player;
+        LAST_PLAYED_SORT.set(player.getModMenuSettings().songManagerSortLastPlayed);
     }
 
     /**
@@ -108,10 +116,21 @@ public class SongManagerMenu {
     }
 
     public static boolean isLastPlayedSortEnabled() {
-        return LAST_PLAYED_SORT.get();
+        return LAST_PLAYED_SORT.get() && (sortPlayer == null || sortPlayer
+                .getModMenuSettings().isEnabled(ModMenuItem.SONG_MANAGER));
     }
 
     public static void forceDisableLastPlayedSort() {
+        if (!LAST_PLAYED_SORT.get()) return;
         LAST_PLAYED_SORT.set(false);
+        saveLastPlayedSort();
+    }
+
+    private static void saveLastPlayedSort() {
+        if (selector == null) return;
+        selector.main.getPlayerConfig().getModMenuSettings().songManagerSortLastPlayed = LAST_PLAYED_SORT.get();
+        if (!bms.player.beatoraja.arena.bmsir.BMSIRArenaClient.savePlayerConfig()) {
+            ImGuiNotify.warning(t("楽曲管理設定を保存できませんでした", "Could not save Song Manager settings"));
+        }
     }
 }

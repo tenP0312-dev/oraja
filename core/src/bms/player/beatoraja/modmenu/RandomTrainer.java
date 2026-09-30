@@ -84,7 +84,7 @@ public class RandomTrainer {
     public static void removeLaneToRandom(char lane) {lanesToRandom.remove(lanesToRandom.indexOf(lane));}
 
     public static boolean isActive() {
-        return active;
+        return active && ImGuiRenderer.show(ModMenuItem.RANDOM_TRAINER);
     }
 
     public static void setActive(boolean active) {

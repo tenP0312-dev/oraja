@@ -17,6 +17,15 @@ still an operator check.
 
 ## Current Version
 
+The startup settings include a per-player **Mod Menu items** page, also
+reachable inside the Insert menu. Its default-on filter can hide and disable
+each of the 14 built-in entries. Turning the filter off restores the complete
+menu while retaining individual choices. Disabled trainers stop, disabled
+windows close, and saved MANIAC choices are suspended for subsequent ordinary
+plays until re-enabled. Song Manager's last-played sort is saved and restored
+before the first song-list build. See [the Mod Menu settings guide](docs/MOD_MENU_SETTINGS.md).
+This source change does not publish a new binary.
+
 The development source adds `DAN GAUGE` and `INITIAL GAUGE` to MANIAC
 OPTIONS. Single songs can use the existing course gauges starting at 100% down
 to 2% in 2% steps. Per-song score, lamp, BP, and IR rules match course play;

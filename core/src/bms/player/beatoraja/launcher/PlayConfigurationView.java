@@ -497,6 +497,10 @@ public class PlayConfigurationView implements Initializable {
 
 	private Config config;
 	private PlayerConfig player;
+	private Tab modMenuTab;
+	private final CheckBox modMenuFilter = new CheckBox();
+	private final Map<bms.player.beatoraja.modmenu.ModMenuItem, CheckBox> modMenuItems = new LinkedHashMap<>();
+	private boolean loadingModMenuSettings;
 
 	private MainLoader loader;
 
@@ -731,10 +735,54 @@ public class PlayConfigurationView implements Initializable {
 		discordController.init(this);
 		obsController.init(this);
 		screenshotFormat.getItems().setAll(ScreenShotFormat.values());
+		initializeModMenuSettings();
 		initializeConfigurationShell(arg1);
 
 		checkNewVersion();
 		logger.info("初期化時間(ms) : " + (System.currentTimeMillis() - t));
+	}
+
+	private void initializeModMenuSettings() {
+		modMenuFilter.setText(uiText("項目フィルターを有効にする", "Enable item filter"));
+		Label description = new Label(uiText(
+				"OFFの項目はInsertのMod Menuから消え、関連機能も停止します。フィルターOFFでは全項目を使えます。個別の選択は保持されます。",
+				"Disabled items disappear from the Insert Mod Menu and their features stop. Turning the filter off makes every item available and retains your individual choices."));
+		description.setWrapText(true);
+		VBox choices = new VBox(10);
+		for (var item : bms.player.beatoraja.modmenu.ModMenuItem.values()) {
+			CheckBox check = new CheckBox(uiText(item.displayName, item.englishName));
+			check.setId("modmenu_" + item.id);
+			check.disableProperty().bind(modMenuFilter.selectedProperty().not());
+			modMenuItems.put(item, check);
+			choices.getChildren().add(check);
+			check.selectedProperty().addListener((observable, oldValue, selected) -> {
+				if (!loadingModMenuSettings && player != null) {
+					player.getModMenuSettings().itemEnabled.put(item.id, selected);
+					saveModMenuSettings();
+				}
+			});
+		}
+		modMenuFilter.selectedProperty().addListener((observable, oldValue, selected) -> {
+			if (!loadingModMenuSettings && player != null) {
+				player.getModMenuSettings().filterEnabled = selected;
+				saveModMenuSettings();
+			}
+		});
+		VBox page = new VBox(16, modMenuFilter, description, choices);
+		page.setPadding(new Insets(16));
+		ScrollPane scroll = new ScrollPane(page);
+		scroll.setFitToWidth(true);
+		modMenuTab = new Tab(uiText("Mod Menuの有効/無効", "Mod Menu items"), scroll);
+		modMenuTab.setClosable(false);
+		configurationTabs.getTabs().add(configurationTabs.getTabs().indexOf(bmsirSpecificTab) + 1, modMenuTab);
+	}
+
+	private void saveModMenuSettings() {
+		if (!PlayerConfig.writeChecked(config.getPlayerpath(), player, PlayerConfig.getConfigJson(player))) {
+			Alert alert = new Alert(Alert.AlertType.ERROR);
+			alert.setContentText(uiText("Mod Menu設定を保存できませんでした", "Could not save Mod Menu settings"));
+			alert.showAndWait();
+		}
 	}
 
 	private void initializeConfigurationShell(ResourceBundle bundle) {
@@ -1005,6 +1053,7 @@ public class PlayConfigurationView implements Initializable {
 	}
 
 	private void initializeContextHelp() {
+		registerTabHelp(modMenuTab, "Mod Menuの有効/無効", "項目ごとの表示と機能を選びます。変更はプレイヤーごとに保存されます。", "Mod Menu items", "Choose visible items and enabled features. Changes are saved per player.", HelpGraphic.BMSIR);
 		registerTabHelp(videoTab,
 				"画面",
 				"表示先と描画負荷、BGAの見せ方を決めます。まず「画面モード」「解像度」「垂直同期」だけ確認すれば十分です。",
@@ -2875,6 +2924,10 @@ public class PlayConfigurationView implements Initializable {
             logger.warn("Player config failed to load: " + e.getLocalizedMessage());
 			player = PlayerConfig.validatePlayerConfig("player1", new PlayerConfig());
         }
+        loadingModMenuSettings = true;
+        modMenuFilter.setSelected(player.getModMenuSettings().filterEnabled);
+        modMenuItems.forEach((item, check) -> check.setSelected(player.getModMenuSettings().isSelected(item)));
+        loadingModMenuSettings = false;
         playername.setText(player.getName());
 		bmsirOneBassEnabled.setSelected(player.isBmsirOneBassEnabled());
 		bmsirStartHerePreviewEnabled.setSelected(

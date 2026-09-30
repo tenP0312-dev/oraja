@@ -142,6 +142,7 @@ public final class MusicSelector extends MainState {
 
 	private void initialize(boolean songUpdated) {
 		this.config = resource.getPlayerConfig();
+		SongManagerMenu.restoreLastPlayedSort(config);
 
 		songdb = main.getSongDatabase();
 
@@ -1082,7 +1083,7 @@ public final class MusicSelector extends MainState {
 		}
 		Bar selected = manager.getSelected();
 		if (selected instanceof SongBar songBar && songBar.existsSong()) {
-			BMSIRManiacSettings maniac = config.getBmsirManiacSettings();
+			BMSIRManiacSettings maniac = config.getEffectiveBmsirManiacSettings();
 			Mode chartMode = Stream.of(Mode.values())
 					.filter(candidate -> candidate.id == songBar.getSongData().getMode())
 					.findFirst()

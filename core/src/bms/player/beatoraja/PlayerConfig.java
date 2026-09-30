@@ -11,6 +11,8 @@ import java.text.ParseException;
 import bms.player.beatoraja.system.RobustFile;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaConfigStore;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
+import bms.player.beatoraja.modmenu.ModMenuItem;
+import bms.player.beatoraja.modmenu.ModMenuSettings;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaHotkey;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.arena.bmsir.BMSIRPhysicalFolderFilter;
@@ -387,6 +389,7 @@ public final class PlayerConfig {
 	private int bmsirArenaOptionSeconds = 10;
 	private int bmsirArenaIntermissionSeconds = 0;
 	private BMSIRManiacSettings bmsirManiacSettings = new BMSIRManiacSettings();
+	private ModMenuSettings modMenuSettings = new ModMenuSettings();
 	private boolean bmsirArenaDetailedLogEnabled = false;
 	private String bmsirArenaLanguage = "ja";
 	
@@ -1458,6 +1461,19 @@ public final class PlayerConfig {
 		this.bmsirArenaIntermissionSeconds = Math.max(0, Math.min(60, bmsirArenaIntermissionSeconds));
 	}
 
+	public ModMenuSettings getModMenuSettings() {
+		if (modMenuSettings == null) {
+			modMenuSettings = new ModMenuSettings();
+		}
+		return modMenuSettings;
+	}
+
+	/** Saved MANIAC choices survive filtering; play and score consumers use this view. */
+	public BMSIRManiacSettings getEffectiveBmsirManiacSettings() {
+		return getModMenuSettings().isEnabled(ModMenuItem.MANIAC_OPTIONS)
+				? getBmsirManiacSettings() : new BMSIRManiacSettings();
+	}
+
 	public BMSIRManiacSettings getBmsirManiacSettings() {
 		if (bmsirManiacSettings == null) {
 			bmsirManiacSettings = new BMSIRManiacSettings();
@@ -1480,6 +1496,11 @@ public final class PlayerConfig {
 			return settings.isAutoScratch() ? 3 : 2;
 		}
 		return doubleoption == 1 ? 1 : 0;
+	}
+
+	public int getEffectiveBmsirDoubleOption() {
+		return getModMenuSettings().isEnabled(ModMenuItem.MANIAC_OPTIONS)
+				? getBmsirDoubleOption() : (doubleoption == 1 ? 1 : 0);
 	}
 
 	public void setBmsirDoubleOption(int value) {
@@ -1781,6 +1802,7 @@ public final class PlayerConfig {
     }
 
 	public void validate() {
+		getModMenuSettings().normalize();
 		setBmsirStartButtonAction(bmsirStartButtonAction);
 		setBmsirSelectButtonAction(bmsirSelectButtonAction);
 		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);
@@ -2100,13 +2122,18 @@ public final class PlayerConfig {
     }
 
 	public static void write(String playerpath, PlayerConfig player, String configJson) {
+        writeChecked(playerpath, player, configJson);
+    }
+
+    public static boolean writeChecked(String playerpath, PlayerConfig player, String configJson) {
         try {
             Path path = Paths.get(playerpath + "/" + player.getId() + "/" + configpath);
             RobustFile.write(path, configJson.getBytes(StandardCharsets.UTF_8));
-			BMSIRArenaConfigStore.write(playerpath, player);
+			return BMSIRArenaConfigStore.write(playerpath, player);
         }
         catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 

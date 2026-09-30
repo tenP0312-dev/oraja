@@ -19,6 +19,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 // ArenaPresentationControllerTest; see the lock note on BMSIRArenaI18nTest.
 @ResourceLock("bmsir-arena-i18n-language")
 class BMSIRArenaOverlayTest {
+    @Test
+    void modMenuFilterBlocksRestorationAndPreservesLastVisibleMode() {
+        PlayerConfig player = new PlayerConfig();
+        player.setBmsirArenaOverlayMode(1);
+        player.getModMenuSettings().itemEnabled.put("bmsir_arena_overlay", false);
+        BMSIRArenaOverlay.setVisible(player, false);
+        assertEquals(2, player.getBmsirArenaOverlayMode());
+        assertEquals(1, player.getBmsirArenaLastVisibleOverlayMode());
+        BMSIRArenaOverlay.setVisible(player, true);
+        BMSIRArenaOverlay.restoreVisibility(player);
+        assertEquals(2, player.getBmsirArenaOverlayMode());
+        player.getModMenuSettings().itemEnabled.put("bmsir_arena_overlay", true);
+        assertEquals(2, player.getBmsirArenaOverlayMode());
+        BMSIRArenaOverlay.restoreVisibility(player);
+        assertEquals(1, player.getBmsirArenaOverlayMode());
+        player.getModMenuSettings().itemEnabled.put("bmsir_arena_overlay", false);
+        player.getModMenuSettings().filterEnabled = false;
+        BMSIRArenaOverlay.setVisible(player, true);
+        assertEquals(1, player.getBmsirArenaOverlayMode());
+    }
 	@Test
 	void hispeedEditorCanFollowTheChartOrPinEverySupportedMode() {
 		assertEquals(Mode.BEAT_14K.id, BMSIRArenaOverlay.resolveHispeedEditorMode(
