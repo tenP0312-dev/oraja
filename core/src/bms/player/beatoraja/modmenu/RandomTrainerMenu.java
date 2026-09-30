@@ -15,6 +15,10 @@ import java.util.Collections;
 import static bms.player.beatoraja.modmenu.ImGuiRenderer.*;
 
 public class RandomTrainerMenu {
+    static void disable() {
+        RANDOM_TRAINER_ENABLED.set(false);
+        RandomTrainer.setActive(false);
+    }
 
     private static String t(String japanese, String english) {
         return BMSIRArenaI18n.text(japanese, english);
@@ -52,7 +56,7 @@ public class RandomTrainerMenu {
             dragAndDropKeyDisplay(LANE_ORDER, t("1P RANDOM配置", "1P Random Select"), "RT_LANE_MEMBER_1P", true);
             PlayerConfig player = BMSIRArenaClient.playerConfig();
             boolean show2P = player != null
-                    && player.getBmsirManiacSettings().isDoubleBattle();
+                    && player.getEffectiveBmsirManiacSettings().isDoubleBattle();
             if (show2P) {
                 dragAndDropKeyDisplay(LANE_ORDER_2P, t("2P RANDOM配置", "2P Random Select"), "RT_LANE_MEMBER_2P", false);
             }

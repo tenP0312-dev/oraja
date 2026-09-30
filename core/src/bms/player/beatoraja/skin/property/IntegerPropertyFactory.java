@@ -1141,7 +1141,7 @@ public class IntegerPropertyFactory {
 				}
 				return replay.doubleoption;
 			}
-			return state.resource.getPlayerConfig().getBmsirDoubleOption();
+			return state.resource.getPlayerConfig().getEffectiveBmsirDoubleOption();
 		}),
 
 		hsfix(55, (state) -> {
@@ -1286,7 +1286,7 @@ public class IntegerPropertyFactory {
 		}),
 		guidese(343, (state) -> (state.resource.getPlayerConfig().isGuideSE() ? 1 : 0)),
 
-		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getBmsirExtraMode())),
+		extranotedepth(350, (state) -> (state.resource.getPlayerConfig().getEffectiveBmsirManiacSettings().getExtraMode())),
 		minemode(351, (state) -> (state.resource.getPlayerConfig().getMineMode())),
 		scrollmode(352, (state) -> (state.resource.getPlayerConfig().getScrollMode())),
 		longnotemode(353, (state) -> (state.resource.getPlayerConfig().getLongnoteMode())),

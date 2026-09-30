@@ -11,7 +11,7 @@ public class JudgeTrainer {
     private static int judgeRank = 0;
 
     public static boolean isActive() {
-        return active;
+        return active && ImGuiRenderer.show(ModMenuItem.JUDGE_TRAINER);
     }
 
     public static void setActive(boolean active) {
@@ -38,4 +38,3 @@ public class JudgeTrainer {
         return rule.judge.windowrule.judgerank[3 - judgeRank];
     }
 }
-

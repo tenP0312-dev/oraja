@@ -174,7 +174,9 @@ public final class BMSIRArenaOverlay {
 
     public static void render() {
         BMSIRMyTableClient.applyPendingIfSafe();
-        if (!BMSIRArenaClient.shouldShowOverlay()) {
+        if (!BMSIRArenaClient.shouldShowOverlay()
+                || !bms.player.beatoraja.modmenu.ImGuiRenderer.show(
+                        bms.player.beatoraja.modmenu.ModMenuItem.BMSIR_ARENA_OVERLAY)) {
             ArenaPresentationController.update(
                     ArenaPresentationState.idle(),
                     null,
@@ -774,13 +776,18 @@ public final class BMSIRArenaOverlay {
     }
 
     public static void setVisible(boolean visible) {
-        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        setVisible(BMSIRArenaClient.playerConfig(), visible);
+    }
+
+    static void setVisible(PlayerConfig config, boolean visible) {
         if (config == null) {
             return;
         }
+        visible = visible && config.getModMenuSettings().isEnabled(
+                bms.player.beatoraja.modmenu.ModMenuItem.BMSIR_ARENA_OVERLAY);
         int current = config.getBmsirArenaOverlayMode();
         if (visible) {
-            restoreVisibility();
+            restoreVisibility(config);
         } else if (current != 2) {
             config.setBmsirArenaOverlayMode(2);
         }
@@ -792,8 +799,12 @@ public final class BMSIRArenaOverlay {
     }
 
     public static void restoreVisibility() {
-        PlayerConfig config = BMSIRArenaClient.playerConfig();
-        if (config != null) {
+        restoreVisibility(BMSIRArenaClient.playerConfig());
+    }
+
+    static void restoreVisibility(PlayerConfig config) {
+        if (config != null && config.getModMenuSettings().isEnabled(
+                bms.player.beatoraja.modmenu.ModMenuItem.BMSIR_ARENA_OVERLAY)) {
             config.setBmsirArenaOverlayMode(restoredVisibleMode(
                     config.getBmsirArenaLastVisibleOverlayMode()
             ));

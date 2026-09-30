@@ -995,7 +995,7 @@ public final class PlayDataAccessor {
 		if (marked != null && !marked.isBlank()) return marked;
 		if (playerConfig == null) return model.getSHA256();
 		BMSIRManiacSettings selected = BMSIRManiacPlayContext.effectiveSettings(
-				playerConfig.getBmsirManiacSettings(), model.getMode());
+				playerConfig.getEffectiveBmsirManiacSettings(), model.getMode());
 		return selected != null
 				? selected.storageChartId(model.getSHA256())
 				: model.getSHA256();
