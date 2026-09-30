@@ -67,6 +67,70 @@ public class AudioConfig implements Validatable {
 	 */
 	private boolean normalizeVolume = false;
 
+	private EqualizerMode equalizerMode = EqualizerMode.OFF;
+	private double[] switchEqualizerGains = new double[4];
+	private double[] lr2EqualizerGains = new double[7];
+	private double equalizerPreamp = 0;
+
+	public EqualizerMode getEqualizerMode() {
+		return equalizerMode != null ? equalizerMode : EqualizerMode.OFF;
+	}
+
+	public void setEqualizerMode(EqualizerMode mode) {
+		equalizerMode = mode != null ? mode : EqualizerMode.OFF;
+	}
+
+	public double[] getSwitchEqualizerGains() {
+		return sanitizeEqualizerGains(switchEqualizerGains, 4);
+	}
+
+	public void setSwitchEqualizerGains(double[] gains) {
+		switchEqualizerGains = sanitizeEqualizerGains(gains, 4);
+	}
+
+	public double[] getLr2EqualizerGains() {
+		return sanitizeEqualizerGains(lr2EqualizerGains, 7);
+	}
+
+	public void setLr2EqualizerGains(double[] gains) {
+		lr2EqualizerGains = sanitizeEqualizerGains(gains, 7);
+	}
+
+	public double getEqualizerPreamp() {
+		return Double.isFinite(equalizerPreamp) ? Math.max(-24, Math.min(0, equalizerPreamp)) : 0;
+	}
+
+	public void setEqualizerPreamp(double preamp) {
+		equalizerPreamp = Double.isFinite(preamp) ? Math.max(-24, Math.min(0, preamp)) : 0;
+	}
+
+	private static double[] sanitizeEqualizerGains(double[] gains, int count) {
+		double[] result = new double[count];
+		if (gains != null) {
+			for (int i = 0; i < Math.min(count, gains.length); i++) {
+				result[i] = Double.isFinite(gains[i]) ? Math.max(-12, Math.min(12, gains[i])) : 0;
+			}
+		}
+		return result;
+	}
+
+	public enum EqualizerMode {
+		OFF(new double[0], 1),
+		SWITCH(new double[] {100, 400, 1600, 6000}, 1),
+		LR2(new double[] {63, 160, 400, 1000, 2500, 6300, 16000}, 1.5);
+
+		private final double[] frequencies;
+		private final double q;
+
+		EqualizerMode(double[] frequencies, double q) {
+			this.frequencies = frequencies;
+			this.q = q;
+		}
+
+		public double[] getFrequencies() { return frequencies.clone(); }
+		public double getQ() { return q; }
+	}
+
 	/**
 	 * リザルト画面のサウンドをループ再生するか
 	 */
@@ -218,6 +282,10 @@ public class AudioConfig implements Validatable {
 		systemvolume = MathUtils.clamp(systemvolume, 0f, 1f);
 		keyvolume = MathUtils.clamp(keyvolume, 0f, 1f);
 		bgvolume = MathUtils.clamp(bgvolume, 0f, 1f);
+		setEqualizerMode(equalizerMode);
+		setSwitchEqualizerGains(switchEqualizerGains);
+		setLr2EqualizerGains(lr2EqualizerGains);
+		setEqualizerPreamp(equalizerPreamp);
 		return true;
 	}
 	
