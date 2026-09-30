@@ -133,6 +133,7 @@ public class ImGuiRenderer {
     }
 
     public static void render() {
+        enforceModMenuStates();
         // Relative from top left corner, so 44% from the left, 2% from the top
         float relativeX = windowWidth * 0.44f;
         float relativeY = windowHeight * 0.02f;
@@ -140,26 +141,29 @@ public class ImGuiRenderer {
 
         if (SHOW_MOD_MENU.get()) {
             ImGui.begin("Arena oraja", ImGuiWindowFlags.AlwaysAutoResize);
+            ModMenuSettingsMenu.render();
+            enforceModMenuStates();
 
-            ImGui.checkbox(t("再生速度変更", "Show Rate Modifier Window"), SHOW_FREQ_PLUS);
-            ImGui.checkbox(t("RANDOM配置指定", "Show Random Trainer Window"), SHOW_RANDOM_TRAINER);
-            ImGui.checkbox(t("判定トレーナー", "Show Judge Trainer Window"), SHOW_JUDGE_TRAINER);
-            if (ImGui.checkbox(t("スキン設定", "Show Skin Configuration Window"), SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
-            ImGui.checkbox(t("スキンウィジェット管理", "Show Skin Widget Manager Window"), SHOW_SKIN_WIDGET_MANAGER);
-            ImGui.checkbox(t("楽曲管理", "Show Song Manager Window"), SHOW_SONG_MANAGER);
-            ImGui.checkbox(t("ダウンロード状況", "Show Download Tasks Window"), SHOW_DOWNLOAD_MENU);
-            if (ImGui.checkbox(t("パフォーマンスモニター", "Show Performance Monitor Window"), SHOW_PERFORMANCE_MONITOR) &&
+            if (show(ModMenuItem.RATE_MODIFIER)) ImGui.checkbox(t("再生速度変更", "Show Rate Modifier Window"), SHOW_FREQ_PLUS);
+            if (show(ModMenuItem.RANDOM_TRAINER)) ImGui.checkbox(t("RANDOM配置指定", "Show Random Trainer Window"), SHOW_RANDOM_TRAINER);
+            if (show(ModMenuItem.JUDGE_TRAINER)) ImGui.checkbox(t("判定トレーナー", "Show Judge Trainer Window"), SHOW_JUDGE_TRAINER);
+            if (show(ModMenuItem.SKIN_CONFIGURATION) && ImGui.checkbox(t("スキン設定", "Show Skin Configuration Window"), SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
+            if (show(ModMenuItem.SKIN_WIDGET_MANAGER)) ImGui.checkbox(t("スキンウィジェット管理", "Show Skin Widget Manager Window"), SHOW_SKIN_WIDGET_MANAGER);
+            if (show(ModMenuItem.SONG_MANAGER)) ImGui.checkbox(t("楽曲管理", "Show Song Manager Window"), SHOW_SONG_MANAGER);
+            if (show(ModMenuItem.DOWNLOAD_TASKS)) ImGui.checkbox(t("ダウンロード状況", "Show Download Tasks Window"), SHOW_DOWNLOAD_MENU);
+            if (show(ModMenuItem.PERFORMANCE_MONITOR) && ImGui.checkbox(t("パフォーマンスモニター", "Show Performance Monitor Window"), SHOW_PERFORMANCE_MONITOR) &&
                 SHOW_PERFORMANCE_MONITOR.get()) {
                 PerformanceMonitor.reloadEventTree();
             }
-            ImGui.checkbox(t("その他設定", "Show Misc Setting Window"), SHOW_MISC_SETTING);
-            ImGui.checkbox(t("従来Arenaメニュー", "Show Legacy Arena Menu"), SHOW_ARENA_MENU);
-            ImGui.checkbox(t("従来Arenaグラフ", "Show Legacy Arena Graph"), SHOW_GRAPH_MENU);
+            if (show(ModMenuItem.MISC_SETTINGS)) ImGui.checkbox(t("その他設定", "Show Misc Setting Window"), SHOW_MISC_SETTING);
+            if (show(ModMenuItem.LEGACY_ARENA_MENU)) ImGui.checkbox(t("従来Arenaメニュー", "Show Legacy Arena Menu"), SHOW_ARENA_MENU);
+            if (show(ModMenuItem.LEGACY_ARENA_GRAPH)) ImGui.checkbox(t("従来Arenaグラフ", "Show Legacy Arena Graph"), SHOW_GRAPH_MENU);
+            if (show(ModMenuItem.MANIAC_OPTIONS) && ImGui.button("MANIAC OPTIONS")) showManiacOptions();
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
                     !BMSIRArenaOverlay.isHidden()
             );
-            if (ImGui.checkbox(
+            if (show(ModMenuItem.BMSIR_ARENA_OVERLAY) && ImGui.checkbox(
                     t("BMS-IR Arenaオーバーレイ", "Show BMS-IR Arena Overlay"),
                     showBmsirArenaOverlay
             )) {
@@ -207,7 +211,7 @@ public class ImGuiRenderer {
             }
 
 
-            if (ImGui.treeNode(t("Arena oraja デバッグ情報", "Arena oraja Debug Information"))) {
+            if (show(ModMenuItem.ARENA_DEBUG) && ImGui.treeNode(t("Arena oraja デバッグ情報", "Arena oraja Debug Information"))) {
                 float axis;
 
                 ImGui.text("Commit hash: " + Version.getGitCommitHash());
@@ -269,7 +273,7 @@ public class ImGuiRenderer {
     }
 
     public static void showManiacOptions() {
-        if (!SHOW_MANIAC_OPTIONS.get() && ManiacOptionsMenu.open()) {
+        if (show(ModMenuItem.MANIAC_OPTIONS) && !SHOW_MANIAC_OPTIONS.get() && ManiacOptionsMenu.open()) {
             SHOW_MANIAC_OPTIONS.set(true);
         }
     }
@@ -301,6 +305,52 @@ public class ImGuiRenderer {
     public static void cycleManiacOption() {
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.cycleSelection();
+        }
+    }
+
+    public static boolean show(ModMenuItem item) {
+        var player = BMSIRArenaClient.playerConfig();
+        return player == null || player.getModMenuSettings().isEnabled(item);
+    }
+
+    static void applyModMenuItemState(ModMenuItem item, boolean enabled) {
+        if (enabled) return;
+        switch (item) {
+            case RATE_MODIFIER -> {
+                SHOW_FREQ_PLUS.set(false);
+                FreqTrainerMenu.FREQ_TRAINER_ENABLED.set(false);
+            }
+            case RANDOM_TRAINER -> {
+                SHOW_RANDOM_TRAINER.set(false);
+                RandomTrainerMenu.disable();
+            }
+            case JUDGE_TRAINER -> {
+                SHOW_JUDGE_TRAINER.set(false);
+                JudgeTrainerMenu.disable();
+            }
+            case SKIN_CONFIGURATION -> SHOW_SKIN_MENU.set(false);
+            case SKIN_WIDGET_MANAGER -> SHOW_SKIN_WIDGET_MANAGER.set(false);
+            case SONG_MANAGER -> SHOW_SONG_MANAGER.set(false);
+            case DOWNLOAD_TASKS -> SHOW_DOWNLOAD_MENU.set(false);
+            case PERFORMANCE_MONITOR -> SHOW_PERFORMANCE_MONITOR.set(false);
+            case MISC_SETTINGS -> SHOW_MISC_SETTING.set(false);
+            case LEGACY_ARENA_MENU -> {
+                SHOW_ARENA_MENU.set(false);
+                ArenaMenu.isFocused = false;
+            }
+            case LEGACY_ARENA_GRAPH -> SHOW_GRAPH_MENU.set(false);
+            case BMSIR_ARENA_OVERLAY -> BMSIRArenaOverlay.setVisible(false);
+            case MANIAC_OPTIONS -> {
+                SHOW_MANIAC_OPTIONS.set(false);
+                ManiacOptionsMenu.discard();
+            }
+            case ARENA_DEBUG -> { }
+        }
+    }
+
+    public static void enforceModMenuStates() {
+        for (ModMenuItem item : ModMenuItem.values()) {
+            applyModMenuItemState(item, show(item));
         }
     }
 

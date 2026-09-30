@@ -60,7 +60,7 @@ public final class BMSIRManiacApiClient {
                 .findFirst()
                 .orElse(null);
         return BMSIRManiacPlayContext.effectiveSettings(
-                main.getPlayerConfig().getBmsirManiacSettings(),
+                main.getPlayerConfig().getEffectiveBmsirManiacSettings(),
                 mode
         );
     }

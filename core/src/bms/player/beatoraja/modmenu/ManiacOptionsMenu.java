@@ -70,6 +70,11 @@ public final class ManiacOptionsMenu {
         return BMSIRArenaI18n.text(japanese, english);
     }
 
+    static void discard() {
+        draft = null;
+        originalOptions = null;
+    }
+
     static boolean open() {
         PlayerConfig player = BMSIRArenaClient.playerConfig();
         if (player == null) {

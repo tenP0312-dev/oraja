@@ -613,6 +613,10 @@ public final class MusicSelectInputProcessor {
     }
 
     private boolean handleManiacChord(BMSPlayerInputProcessor input, long now) {
+        if (!ImGuiRenderer.show(bms.player.beatoraja.modmenu.ModMenuItem.MANIAC_OPTIONS)) {
+            maniacChordDetector.update(false, now);
+            return false;
+        }
         boolean chordPressed = input.getKeyState(MANIAC_KEY_2)
                 && input.getKeyState(MANIAC_KEY_4)
                 && input.getKeyState(MANIAC_KEY_6);
