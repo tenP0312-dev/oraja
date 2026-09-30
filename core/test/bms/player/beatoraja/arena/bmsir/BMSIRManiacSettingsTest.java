@@ -11,6 +11,30 @@ import org.junit.jupiter.api.Test;
 
 public class BMSIRManiacSettingsTest {
     @Test
+    public void addNotesVersionsKeepOldIdentitiesAndRoundTripNewPlacement() {
+        BMSIRManiacSettings current = new BMSIRManiacSettings();
+        current.setAddNotes(100);
+        BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(current.canonicalOptions());
+        assertNotNull(restored);
+        assertEquals(current.canonicalOptions(), restored.canonicalOptions());
+        assertEquals("add-notes-100-p2", restored.rankingKey());
+        assertEquals("bmsir-maniac-v1-a295fc44e65abc8f3d4cb90bb896a7f17a250bf631c6645a52046c2922fbeefd",
+                restored.virtualChartId("a".repeat(64)));
+        BMSIRManiacSettings legacy = BMSIRManiacSettings.fromCanonicalOptions(
+                current.canonicalOptions().replace(",notes_version=2", ""));
+        assertNotNull(legacy);
+        assertEquals(1, legacy.getAddNotesPlacementVersion());
+        assertEquals("add-notes-100", legacy.rankingKey());
+        assertNotEquals(current.virtualChartId("chart"), legacy.virtualChartId("chart"));
+        assertNotEquals(current.storageChartId("chart"), legacy.storageChartId("chart"));
+        assertNotEquals(current.generationSeed("chart"), legacy.generationSeed("chart"));
+        assertNull(BMSIRManiacSettings.fromCanonicalOptions(
+                current.canonicalOptions().replace("notes_version=2", "notes_version=3")));
+        assertNull(BMSIRManiacSettings.fromCanonicalOptions(
+                current.canonicalOptions().replace("notes=100", "notes=0")));
+        assertEquals(1, new bms.player.beatoraja.ReplayData().bmsirAddNotesPlacementVersion);
+    }
+    @Test
     public void canonicalOptionsRoundTripForIrSync() {
         BMSIRManiacSettings source = new BMSIRManiacSettings();
         source.setExtraMode(2);

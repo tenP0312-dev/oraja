@@ -17,6 +17,7 @@ import java.util.Map;
  */
 public final class BMSIRManiacSettings {
     public static final int ALGORITHM_VERSION = 1;
+    public static final int ADD_NOTES_PLACEMENT_VERSION = 2;
     public static final int SP_TO_DP_PLACEMENT_VERSION = 2;
 
     public static final String RANDOM_LINK_OFF = "off";
@@ -43,6 +44,7 @@ public final class BMSIRManiacSettings {
     private int hiddenSudden2P;
     private int extraMode;
     private int addNotes;
+    private transient int addNotesPlacementVersion = ADD_NOTES_PLACEMENT_VERSION;
     private int addLongNotes;
     private int addMines;
     private int acceleration;
@@ -82,6 +84,7 @@ public final class BMSIRManiacSettings {
         hiddenSudden2P = source.hiddenSudden2P;
         extraMode = source.extraMode;
         addNotes = source.addNotes;
+        addNotesPlacementVersion = source.addNotesPlacementVersion;
         addLongNotes = source.addLongNotes;
         addMines = source.addMines;
         acceleration = source.acceleration;
@@ -164,6 +167,16 @@ public final class BMSIRManiacSettings {
         settings.setHiddenSudden2P(integer(values, "hs2"));
         settings.setExtraMode(integer(values, "extra"));
         settings.setAddNotes(integer(values, "notes"));
+        if (settings.addNotes > 0) {
+            int version = integer(values, "notes_version");
+            if (values.containsKey("notes_version")
+                    && !Integer.toString(ADD_NOTES_PLACEMENT_VERSION).equals(values.get("notes_version"))) {
+                return null;
+            }
+            settings.addNotesPlacementVersion = version == 0 ? 1 : version;
+        } else if (values.containsKey("notes_version")) {
+            return null;
+        }
         settings.setAddLongNotes(integer(values, "long"));
         settings.setAddMines(integer(values, "mines"));
         settings.setAcceleration(integer(values, "accel"));
@@ -315,6 +328,9 @@ public final class BMSIRManiacSettings {
                 "db=" + doubleBattle,
                 "link=" + randomLink
         );
+        if (addNotes > 0 && addNotesPlacementVersion > 1) {
+            base += ",notes_version=" + addNotesPlacementVersion;
+        }
         if (spToDpDifficulty > 0) {
             base += ",sp2dp=" + spToDpDifficulty;
             if (spToDpPlacementVersion > 1) {
@@ -346,7 +362,8 @@ public final class BMSIRManiacSettings {
             case NORMAL -> "normal";
             case MANIAC_STANDARD -> "maniac-standard";
             case EXTRA -> "extra-" + extraMode;
-            case ADD_NOTES -> "add-notes-" + addNotes;
+            case ADD_NOTES -> "add-notes-" + addNotes
+                    + (addNotesPlacementVersion > 1 ? "-p" + addNotesPlacementVersion : "");
             case ADD_LONGNOTES -> "add-longnotes-" + addLongNotes;
             case SP_TO_DP -> "sp-to-dp-" + spToDpDifficulty
                     + (spToDpPlacementVersion > 1
@@ -491,6 +508,13 @@ public final class BMSIRManiacSettings {
         validate();
     }
     public int getAddNotes() { return addNotes; }
+    public int getAddNotesPlacementVersion() { return addNotesPlacementVersion; }
+    public void setAddNotesPlacementVersion(int value) {
+        if (value != 1 && value != ADD_NOTES_PLACEMENT_VERSION) {
+            throw new IllegalArgumentException("Unsupported ADDNOTES placement version");
+        }
+        addNotesPlacementVersion = value;
+    }
     public void setAddNotes(int value) { addNotes = value; validate(); }
     public int getAddLongNotes() { return addLongNotes; }
     public void setAddLongNotes(int value) { addLongNotes = value; validate(); }

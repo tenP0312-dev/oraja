@@ -397,6 +397,10 @@ public class BMSPlayer extends MainState {
 					&& maniacReplay.bmsirManiacSettings != null
 							? maniacReplay.bmsirManiacSettings
 							: config.getEffectiveBmsirManiacSettings();
+			if (maniacReplay != null && maniacReplay.bmsirManiacSettings != null) {
+				requestedManiac = new BMSIRManiacSettings(requestedManiac);
+				requestedManiac.setAddNotesPlacementVersion(maniacReplay.bmsirAddNotesPlacementVersion);
+			}
 			if (requestedManiac.isSevenToNinePreview()
 					&& (autoplay.mode == BMSPlayerMode.Mode.REPLAY || ghostBattle.isPresent()
 							|| borrowedChartOption != null || Client.connected.get())) {
@@ -1574,6 +1578,7 @@ public class BMSPlayer extends MainState {
 		BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
 		if (maniacContext != null) {
 			replay.bmsirManiacSettings = maniacContext.settings();
+			replay.bmsirAddNotesPlacementVersion = replay.bmsirManiacSettings.getAddNotesPlacementVersion();
 			replay.bmsirManiacVirtualChartId = maniacContext.virtualHash();
 			replay.bmsirManiacGenerationSeed = maniacContext.generationSeed();
 			replay.bmsirManiacAlgorithmVersion =

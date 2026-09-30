@@ -817,11 +817,30 @@ a draft until `Apply and return`, Escape, or a new short F2 press commits them,
 saves once, reloads the effective score set, and returns to Music Select. EXTRA
 MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
 effects follow the algorithms and inclusive-random boundaries recovered from
-OpenLR2 Beta3 v100201. Ranked chart generation uses a BMS-IR-fixed MT19937
+OpenLR2 Beta3 v100201, except ADD NOTES placement v2. ADD NOTES v2 selects
+empty lanes with the fewest overlaps with the previous completed playable row
+and the next original playable row on the same side. Zero-overlap lanes take
+priority; when those run out, additions continue using the least conflicting
+lanes. BGM/BPM-only rows do not interrupt this check. Existing notes, per-side
+addition counts (including scratch), probability boundaries, and deterministic
+selection remain intact. This is a regression fix based on IR issue #478;
+exact LR2 placement parity has not been verified by physical-client comparison.
+Ranked chart generation uses a BMS-IR-fixed MT19937
 seed so the generated base chart is identical for every player. Normal
 RANDOM, MIRROR, S-RANDOM, Random Trainer, and borrowed leaderboard placement
 are applied afterward in the same way as an ordinary chart and do not split
 the ranking. Replays retain the actual option seed and placement hash.
+ADD NOTES v2 adds `notes_version=2` to canonical options and `-p2` to its
+ranking mode key. Its local scores, virtual chart, fixed seed, leaderboard,
+and ghosts are isolated from marker-free v1. Legacy canonical options and
+replays retain the original random placement. New replays save the additive
+`bmsirAddNotesPlacementVersion` marker (missing means v1); every unrelated
+MANIAC mode retains its existing identity. Server support is paired with
+BMS-Mania/IR#1309. Source completion does not authorize deployment or release.
+Automated acceptance covers sparse rows, future notes, previous additions,
+DP chords, dense fallback, repeatability, and replay serialization. Operator
+acceptance remains: compare v2 ADD NOTES at 10/50/100% on sparse and dense
+SP/DP charts, play back both old and new replays, and confirm each leaderboard.
 Background folder refreshes keep the last committed `songdata.db` snapshot
 available to Music Select, so a refresh cannot temporarily replace the current
 folder with an empty list.

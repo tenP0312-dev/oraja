@@ -275,6 +275,7 @@ public class LeaderBoardBar extends DirectoryBar {
 		chartOption.doubleoption = target.getOption() / 100;
 		chartOption.setRandomOptionSeeds(target.getSeed());
 		chartOption.bmsirManiacSettings = new BMSIRManiacSettings(ghost.settings());
+		chartOption.bmsirAddNotesPlacementVersion = ghost.settings().getAddNotesPlacementVersion();
 		chartOption.bmsirManiacVirtualChartId = ghost.settings().virtualChartId(songData.getSha256());
 		chartOption.bmsirManiacGenerationSeed = ghost.settings().generationSeed(songData.getSha256());
 		chartOption.bmsirManiacAlgorithmVersion = BMSIRManiacSettings.ALGORITHM_VERSION;
