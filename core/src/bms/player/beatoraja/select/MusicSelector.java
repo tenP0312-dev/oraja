@@ -107,6 +107,7 @@ public final class MusicSelector extends MainState {
 	
 	private RankingData currentir;
 	private IRRankingContext rankingContext;
+	private boolean rankingRefreshPending;
 	/**
 	 * ランキング表示位置
 	 */
@@ -433,6 +434,10 @@ public final class MusicSelector extends MainState {
 			showNoteGraph = true;
 		}
 		// get ir ranking
+		if (!batchEditing && currentRankingDuration == -1 && currentir != null && !currentir.isAccessInFlight()) {
+			currentRankingDuration = timer.getNowTime() - timer.getTimer(TIMER_SONGBAR_CHANGE)
+					+ currentir.reloadDelay(rankingContext, false, System.currentTimeMillis());
+		}
 		if (batchEditing) {
 			currentir = null;
 			currentRankingDuration = -1;
@@ -451,20 +456,25 @@ public final class MusicSelector extends MainState {
 						irc = new RankingData();
 						main.getRankingDataCache().put(song, rankingContext, irc);
 					}
-					if (irc.getState() != RankingData.FINISH) {
+					irc.discardIncompatibleScores(rankingContext);
+					if (!irc.isAccessInFlight()) {
 						boolean restored = false;
-						if (irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
+						if (!rankingRefreshPending && irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
 							for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
 								bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
 										main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
 										rankingContext, RankingData.cacheIdentity(song, rankingContext));
-								if (stored != null) { irc.restoreCachedScores(stored); restored = true; break; }
+								if (stored != null && (!rankingContext.forceLn() || java.util.Arrays.stream(stored)
+										.allMatch(score -> score != null && score.lntype == 0))) {
+									irc.restoreCachedScores(stored); restored = true; break;
+								}
 							}
 						}
-						if (!restored && irc.getState() != RankingData.FINISH) irc.load(this, song, rankingContext);
+						if (!restored) irc.load(this, song, rankingContext, true);
 					}
 				}
 	            currentir = irc;
+				rankingRefreshPending = false;
 			}				
 			if (current instanceof GradeBar && ((GradeBar) current).existsAllSongs() && play == null) {
 				CourseData course = ((GradeBar) current).getCourseData();
@@ -473,19 +483,24 @@ public final class MusicSelector extends MainState {
 					irc = new RankingData();
 					main.getRankingDataCache().put(course, rankingContext, irc);
 				}
-				if (irc.getState() != RankingData.FINISH) {
+				irc.discardIncompatibleScores(rankingContext);
+				if (!irc.isAccessInFlight()) {
 					boolean restored = false;
-					if (irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
+					if (!rankingRefreshPending && irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
 						for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
 							bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
 									main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
 									rankingContext, RankingData.cacheIdentity(course, rankingContext));
-							if (stored != null) { irc.restoreCachedScores(stored); restored = true; break; }
+								if (stored != null && (!rankingContext.forceLn() || java.util.Arrays.stream(stored)
+										.allMatch(score -> score != null && score.lntype == 0))) {
+									irc.restoreCachedScores(stored); restored = true; break;
+								}
 						}
 					}
-					if (!restored && irc.getState() != RankingData.FINISH) irc.load(this, course, rankingContext);
+					if (!restored) irc.load(this, course, rankingContext, true);
 				}
 	            currentir = irc;
+				rankingRefreshPending = false;
 			}				
 		}
 		final int irstate = currentir != null ? currentir.getState() : -1;
@@ -998,7 +1013,9 @@ public final class MusicSelector extends MainState {
 	}
 
 	public void selectedBarMoved() {
-		rankingContext = IRRankingContext.from(config);
+		IRRankingContext nextContext = IRRankingContext.from(config);
+		rankingRefreshPending |= rankingContext != null && !nextContext.equals(rankingContext);
+		rankingContext = nextContext;
 		execute(MusicSelectCommand.RESET_REPLAY);
 		boolean batchEditing = BMSIRArenaClient.isMyDifficultyTableBatchEditing();
 		if (batchEditing) {
@@ -1034,11 +1051,15 @@ public final class MusicSelector extends MainState {
 					currentRankingDuration = -1;
 				} else {
 					currentir = main.getRankingDataCache().get(song, rankingContext);
-					currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+					currentRankingDuration = currentir == null ? rankingDuration
+							: currentir.reloadDelay(rankingContext, rankingRefreshPending, System.currentTimeMillis());
+					if (currentir != null) currentir.discardIncompatibleScores(rankingContext);
 				}
 			} else if(current instanceof GradeBar && ((GradeBar) current).existsAllSongs()) {
 				currentir = main.getRankingDataCache().get(((GradeBar) current).getCourseData(), rankingContext);
-				currentRankingDuration = (currentir != null ? Math.max(rankingReloadDuration - (System.currentTimeMillis() - currentir.getLastUpdateTime()) ,0) : 0) + rankingDuration;
+				currentRankingDuration = currentir == null ? rankingDuration
+						: currentir.reloadDelay(rankingContext, rankingRefreshPending, System.currentTimeMillis());
+				if (currentir != null) currentir.discardIncompatibleScores(rankingContext);
 			} else {
 				currentir = null;
 				currentRankingDuration = -1;			
