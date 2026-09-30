@@ -8,6 +8,11 @@ Arena oraja client. It is based on
 [LR2oraja Endless Dream](https://github.com/Catizard/lr2oraja-endlessdream)
 and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
+音声設定には独自DSPのSwitch方式4バンド／LR2風7バンドEQがあります。
+PortAudio／ASIO対応で、初期OFF、方式ごとのゲイン保存、プリアンプ調整が可能です。
+OpenALでは未対応と表示し、設定値を保持します。変更は本体の再起動後に適用します。
+詳細と実機確認項目は [出力EQ](docs/OUTPUT_EQUALIZER.md) を参照してください。
+
 The development source fixes HCN body rendering after an early release in
 NANTOKA MANIA MODE: the body switches to the damaged image while the end remains
 pending for reentry and end judgment. Ordinary judgment-mode rendering is

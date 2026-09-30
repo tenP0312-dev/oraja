@@ -1160,6 +1160,12 @@ public class PlayConfigurationView implements Initializable {
 	private void initializeSidebarAudio() {
 		installSidebarPage(audioTab,
 				sidebarSettingCard(
+						sidebarWorkspaceRow(audioTab, "イコライザー", "Equalizer",
+								"Switch方式4バンド／LR2風7バンド。PortAudio／ASIOで本体の再起動後に適用します。",
+								"Switch 4-band / LR2-style 7-band EQ. Applies on PortAudio / ASIO after restarting the game.",
+								sidebarMovable(audioTab, "equalizerPanel"))
+				),
+				sidebarSettingCard(
 						sidebarSettingRow(audioTab, "audio", "音声出力", "Audio output",
 								"OpenAL、PortAudio、ASIOなど、使用する出力方式を選びます。",
 								"Choose OpenAL, PortAudio, ASIO, or another available output path."),
