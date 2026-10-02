@@ -15,6 +15,14 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.91 includes all five pending client changes: controller-operated
+My Difficulty Table editing (#310), bounded Scene compilation reuse (#348),
+NANTOKA MANIA-only course judgment and Dan gauges (#383), versioned ADDNOTES
+jack avoidance (#402), and ranking revalidation after LN context changes (#403).
+Batch editing also blocks accidental course launches. NANTOKA courses do not
+save ordinary results or submit to IR. This optional test preserves all 0.4.14.90
+features, plugin 0.0.77 and launcher 0.2.29. Operator acceptance is tracked in #406.
+
 Version 0.4.14.90 adds course qualification on result screens, persistent
 per-player Mod Menu item settings, and optional Switch-style four-band and
 LR2-style seven-band output equalizers. It preserves the 0.4.14.89 release
@@ -59,7 +67,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.90**. Its Windows native-audio
+The current client source version is **0.4.14.91**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -357,6 +365,17 @@ section contains the BMS-IR cross-game master and 36 game-specific tables;
 the game list is collapsed until opened or matched by a search. The BMS-IR
 section contains all 33 supported table families, including the 13 presets
 that were previously missing from the client list.
+
+My Difficulty Table entries can now be staged from controller-navigable Music
+Select menus. A per-chart menu uses the table's existing levels, while a batch
+mode lets the player mark several charts for one level with button 1/3/5/7,
+Enter, or a left click. The batch overlay shows the effective pending state in
+the song lamps and opens a level-by-level confirmation after holding
+START+SELECT. Requests remain atomic and revision-bound; master-managed levels
+stay read-only, an in-flight save blocks further edits, and a failed save keeps
+the draft for retry. The overlay position, size, and text scale are saved per
+player and can be restored to their factory defaults. Physical-client control
+feel remains a final manual acceptance item before merge or distribution.
 
 Play-skin previews now expose the synthetic session as ordinary play, include
 a silent representative BGA, and drive gauge-increase and gauge-max timers.

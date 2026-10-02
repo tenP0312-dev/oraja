@@ -362,6 +362,32 @@ restart or stale folder objects. Empty tables appear after their first saved
 chart. Pasted bulk import, ordering, and My Dan/course editing remain on the
 Web editor.
 
+The current development source also exposes the same revision-bound draft in
+Music Select's controller-navigable context menus. A chart's context menu can
+stage an addition, an existing-level change, or a removal without opening the
+mouse-oriented editor. The My Difficulty Table root menu can start a batch for
+one registered level. During that mode, selecting a chart does not start play;
+button 1/3/5/7, Enter, or a left click toggles its effective pending state.
+HARD means the effective entry is in the target level, EASY means another
+level, EX-HARD means an addition or move to the target is pending, FAILED means
+removal from the target is pending, and NO PLAY means no effective entry.
+
+Holding START+SELECT opens a confirmation screen with add/change/remove counts
+for every affected level, including a level staged earlier in the native table
+editor. Applying remains one asynchronous atomic request. Further controller
+edits are blocked until it finishes; success closes the confirmation and
+returns to the previous selection, while failure keeps both the draft and the
+confirmation available for retry. A master-managed table with
+`level_editable=false` cannot start controller level editing.
+
+The skin-independent batch indicator can be moved and resized while Alt is
+held, and its text scale can be adjusted there. Position and size are saved as
+per-player screen ratios in the backup-safe BMS-IR sidecar. `Restore defaults`
+uses the built-in ratios rather than the player's last saved values. Batch mode
+stops preview audio, banner/stage loading, chart-info parsing, ranking requests,
+and other nonessential song-list loading. The final control feel and placement
+must still be checked in a physical client before source integration.
+
 The selected-table snapshot may include an optional `aggregate_folder` label.
 When present, the client keeps every authoritative level folder and appends one
 display-only folder containing the same complete chart set. It does not add
@@ -907,7 +933,8 @@ difficulty-table LEVEL display switch upgrades it to schema 17, and the
 physical-root visibility filter upgrades it to schema 18. The overlay
 HI-SPEED editor mode and per-mode numeric change margins upgrade it to schema
 21; older sidecars keep current-chart editing and the existing player-config
-margins until their next save.
+margins until their next save. Schema 22 adds the per-player controller batch
+overlay position, size, and text scale while retaining every earlier default.
 Later saves by a non-BMS-IR body cannot erase them. The sidecar uses the same
 backup-safe write mechanism as player config and never contains IR user IDs,
 passwords, or unrelated player settings.
@@ -943,11 +970,30 @@ a draft until `Apply and return`, Escape, or a new short F2 press commits them,
 saves once, reloads the effective score set, and returns to Music Select. EXTRA
 MODE, ADD NOTES, ADD LONGNOTES, ADD MINES, LOUDNESS, GAMBOL, and the visual
 effects follow the algorithms and inclusive-random boundaries recovered from
-OpenLR2 Beta3 v100201. Ranked chart generation uses a BMS-IR-fixed MT19937
+OpenLR2 Beta3 v100201, except ADD NOTES placement v2. ADD NOTES v2 selects
+empty lanes with the fewest overlaps with the previous completed playable row
+and the next original playable row on the same side. Zero-overlap lanes take
+priority; when those run out, additions continue using the least conflicting
+lanes. BGM/BPM-only rows do not interrupt this check. Existing notes, per-side
+addition counts (including scratch), probability boundaries, and deterministic
+selection remain intact. This is a regression fix based on IR issue #478;
+exact LR2 placement parity has not been verified by physical-client comparison.
+Ranked chart generation uses a BMS-IR-fixed MT19937
 seed so the generated base chart is identical for every player. Normal
 RANDOM, MIRROR, S-RANDOM, Random Trainer, and borrowed leaderboard placement
 are applied afterward in the same way as an ordinary chart and do not split
 the ranking. Replays retain the actual option seed and placement hash.
+ADD NOTES v2 adds `notes_version=2` to canonical options and `-p2` to its
+ranking mode key. Its local scores, virtual chart, fixed seed, leaderboard,
+and ghosts are isolated from marker-free v1. Legacy canonical options and
+replays retain the original random placement. New replays save the additive
+`bmsirAddNotesPlacementVersion` marker (missing means v1); every unrelated
+MANIAC mode retains its existing identity. Server support is paired with
+BMS-Mania/IR#1309. Source completion does not authorize deployment or release.
+Automated acceptance covers sparse rows, future notes, previous additions,
+DP chords, dense fallback, repeatability, and replay serialization. Operator
+acceptance remains: compare v2 ADD NOTES at 10/50/100% on sparse and dense
+SP/DP charts, play back both old and new replays, and confirm each leaderboard.
 Background folder refreshes keep the last committed `songdata.db` snapshot
 available to Music Select, so a refresh cannot temporarily replace the current
 folder with an empty list.

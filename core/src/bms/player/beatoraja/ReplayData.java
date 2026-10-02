@@ -106,6 +106,7 @@ public final class ReplayData implements Validatable {
 	public int oneBassTarget = -1;
 	public int oneBassTarget2 = -1;
 	public BMSIRManiacSettings bmsirManiacSettings;
+	public int bmsirAddNotesPlacementVersion = 1;
 	public int[] bmsirNantokaInitialHeldKeys = new int[0];
 	public String bmsirManiacVirtualChartId;
 	public long bmsirManiacGenerationSeed;
@@ -164,6 +165,11 @@ public final class ReplayData implements Validatable {
 		keylog = keylog != null ? Validatable.removeInvalidElements(keylog) : KeyInputLog.EMPTYARRAY;
 		pattern = pattern != null ? Validatable.removeInvalidElements(pattern) : null;
 		if (bmsirManiacSettings != null) {
+			if (bmsirAddNotesPlacementVersion != 1
+					&& bmsirAddNotesPlacementVersion != BMSIRManiacSettings.ADD_NOTES_PLACEMENT_VERSION) {
+				return false;
+			}
+			bmsirManiacSettings.setAddNotesPlacementVersion(bmsirAddNotesPlacementVersion);
 			bmsirManiacSettings.validate();
 			if (bmsirManiacAlgorithmVersion
 					!= bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings.ALGORITHM_VERSION) {

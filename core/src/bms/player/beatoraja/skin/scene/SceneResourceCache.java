@@ -25,6 +25,7 @@ public final class SceneResourceCache {
 	private static final Logger logger = LoggerFactory.getLogger(SceneResourceCache.class);
 	private static final long TEXTURE_MEMORY_WARNING_BYTES = 256L * 1024 * 1024;
 	private static final Map<Key, Entry> ENTRIES = new HashMap<>();
+	private static final SceneCompilationCache COMPILED = new SceneCompilationCache(32, 16L * 1024 * 1024);
 
 	private SceneResourceCache() {
 	}
@@ -34,7 +35,7 @@ public final class SceneResourceCache {
 		if (!Files.isRegularFile(canonical)) {
 			throw new SceneValidationException("Scene file does not exist: " + canonical);
 		}
-		CompiledScene scene = compile(canonical);
+		CompiledScene scene = COMPILED.get(canonical);
 		Key key = new Key(canonical, resourceVersion(canonical, scene));
 		Entry entry = ENTRIES.get(key);
 		if (entry == null) {
@@ -43,11 +44,6 @@ public final class SceneResourceCache {
 		}
 		entry.references++;
 		return new Handle(key, entry.bundle);
-	}
-
-	private static CompiledScene compile(Path source) throws SceneValidationException {
-		SceneDocument document = new SceneDocumentLoader().load(source);
-		return new SceneCompiler().compile(document, source);
 	}
 
 	private static Bundle load(Path source, CompiledScene scene) throws SceneValidationException {

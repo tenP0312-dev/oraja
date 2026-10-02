@@ -73,13 +73,13 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.14.90", Version.getArenaClientVersion());
+        assertEquals("0.4.14.91", Version.getArenaClientVersion());
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
         assertEquals(8, BMSIRArenaClient.protocolVersion());
-        assertEquals("Arena oraja 0.4.14.90", Version.getArenaDisplayName());
+        assertEquals("Arena oraja 0.4.14.91", Version.getArenaDisplayName());
     }
 
     @Test
@@ -88,6 +88,30 @@ class BMSIRArenaClientTest {
         assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, false));
         assertTrue(BMSIRArenaClient.blocksLocalOneBass(false, true));
         assertTrue(BMSIRArenaClient.blocksLocalOneBass(true, true));
+    }
+
+    @Test
+    void controllerBatchEditingRequiresAnEditableReadyLevel() {
+        BMSIRArenaClient.MyDifficultyTableEditorState editable =
+                new BMSIRArenaClient.MyDifficultyTableEditorState(
+                        true, false, false, true, false, false,
+                        0, "★", List.of("1", "2"), "", ""
+                );
+        BMSIRArenaClient.MyDifficultyTableEditorState masterManaged =
+                new BMSIRArenaClient.MyDifficultyTableEditorState(
+                        true, false, false, false, false, false,
+                        0, "★", List.of("1", "2"), "", ""
+                );
+        BMSIRArenaClient.MyDifficultyTableEditorState busy =
+                new BMSIRArenaClient.MyDifficultyTableEditorState(
+                        true, false, false, true, false, true,
+                        0, "★", List.of("1", "2"), "", ""
+                );
+
+        assertTrue(BMSIRArenaClient.canStartMyDifficultyTableBatchEdit(editable, "1"));
+        assertFalse(BMSIRArenaClient.canStartMyDifficultyTableBatchEdit(editable, "3"));
+        assertFalse(BMSIRArenaClient.canStartMyDifficultyTableBatchEdit(masterManaged, "1"));
+        assertFalse(BMSIRArenaClient.canStartMyDifficultyTableBatchEdit(busy, "1"));
     }
 
     @Test
@@ -130,6 +154,18 @@ class BMSIRArenaClientTest {
         assertFalse(config.isBmsirCoverHispeedAutoAdjustEnabled());
         assertFalse(config.isBmsirJudgeTimingRestoreEnabled());
         assertTrue(config.isBmsirInfoNotificationsEnabled());
+        assertEquals(1.3f, config.getBmsirMyTableBatchOverlayFontScale());
+        assertEquals(0.346f, config.getBmsirMyTableBatchOverlayXRatio());
+        assertEquals(0.094f, config.getBmsirMyTableBatchOverlayYRatio());
+        assertEquals(0.249f, config.getBmsirMyTableBatchOverlayWidthRatio());
+        assertEquals(0.12f, config.getBmsirMyTableBatchOverlayHeightRatio());
+
+        config.setBmsirMyTableBatchOverlayFontScale(9.0f);
+        config.setBmsirMyTableBatchOverlayXRatio(-1.0f);
+        config.setBmsirMyTableBatchOverlayHeightRatio(0.0f);
+        assertEquals(3.0f, config.getBmsirMyTableBatchOverlayFontScale());
+        assertEquals(0.0f, config.getBmsirMyTableBatchOverlayXRatio());
+        assertEquals(0.05f, config.getBmsirMyTableBatchOverlayHeightRatio());
 
         config.setBmsirCoverChangeStep(2000);
         assertEquals(1000, config.getBmsirCoverChangeStep());

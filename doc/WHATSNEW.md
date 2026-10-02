@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.91
+
+- NANTOKA MANIAの段位判定・専用ゲージ、コントローラー対応My Table編集、Sceneコンパイル再利用、ADDNOTES v2、強制LN切替後のランキング再取得を追加。
+- Added NANTOKA course rules, controller My Table editing, Scene compilation reuse, ADDNOTES v2, and LN-context ranking revalidation.
+- NANTOKA段位は通常成績に保存・IR送信しません。任意test、plugin 0.0.77／launcher 0.2.29を継続します。
+
 # Arena oraja 0.4.14.90
 
 - 段位コース合否のリザルト表示、Mod Menuの項目別設定保存、任意の4/7バンド出力EQを追加しました。
