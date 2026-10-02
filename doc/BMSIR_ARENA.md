@@ -934,8 +934,12 @@ falling back to the normal leaderboard.
 MANIAC OPTIONS also provides **ナントカマニアモード / NANTOKA MANIA MODE**.
 On supported 5/7/10/14KEY solo charts it uses fixed judgment windows,
 integer gauge rules, and long-note handling based on the supplied specification.
-Its records and replays are isolated and local-only; Arena, courses, and practice
-do not enable it. See [the mode specification](NANTOKA_MANIA.md) for exact rules,
+Its v2 judgment follows the supplied 2026-10-02 IIDX 33 analysis: DP scratch
+windows, the separate +250ms candidate cap and 15-frame miss condition, consumed
+HCN endpoints, and separate 8/10-frame gauge/display cycles. V1 replays retain
+their original engine, while new records use a separate local identity.
+Arena and practice do not enable it; courses allow NANTOKA alone without saving
+results or submitting to IR. See [the mode specification](NANTOKA_MANIA.md) for exact rules,
 configuration precedence, compatibility boundaries, and regression coverage.
 
 SP TO DP LEVEL 1--3 independently converts only SP 5KEY and 7KEY charts to

@@ -226,6 +226,14 @@ public class JudgeManager {
         nreleasemargin = rule.longnoteMargin;
         smjudge = rule.getJudge(NoteType.SCRATCH, judgerank, scratchJudgeWindowRate);
         scnendmjudge = rule.getJudge(NoteType.LONGSCRATCH_END, judgerank, scratchJudgeWindowRate);
+        if (nantoka) {
+            boolean legacy = NantokaManiaRules.legacy(model);
+            nmjudge = legacy ? LegacyNantokaManiaRules.windows(false) : NantokaManiaRules.windows(false);
+            cnendmjudge = nmjudge;
+            smjudge = legacy ? LegacyNantokaManiaRules.windows(true)
+                    : NantokaManiaRules.windows(true, model.getMode().player == 2);
+            scnendmjudge = smjudge;
+        }
         BMSIRManiacPlayContext maniac = resource.getManiacPlayContext();
         if (maniac != null && !nantoka && maniac.settings().getGambol() > 0) {
             int level = maniac.settings().getGambol();
@@ -264,6 +272,21 @@ public class JudgeManager {
                 score.setPassnotes(score.getPassnotes() + 1);
             }
             @Override public void recover(int lane) { main.getGauge().update(0); }
+            @Override public void bodyTick(int lane, LongNote note, long at) {
+                updateMicro(states[lane], note, at, 5, 0, false, false, false);
+            }
+            @Override public void refresh(int lane, boolean poor) {
+                if (judgenow.length == 0) return;
+                int index = lane / (states.length / judgenow.length);
+                if (poor) {
+                    judgenow[index] = 6;
+                    judgecombo[index] = getCourseCombo();
+                    judgefast[index] = 0;
+                    mjudgefast[index] = 0;
+                }
+                main.timer.setTimerOn(JUDGE_TIMER[index]);
+                main.timer.setTimerOn(COMBO_TIMER[index]);
+            }
             @Override public void sound(int lane, Note note) { keysound.play(note, getKeyVolume(), 0); }
             @Override public void mine(int lane, MineNote note) {
                 main.getGauge().addValue((float) -note.getDamage());
@@ -812,6 +835,11 @@ public class JudgeManager {
     }
 
     private void updateMicro(LaneState state, Note n, long mtime, int judge, long mfast, boolean judgeVanish, boolean multiBad) {
+        updateMicro(state, n, mtime, judge, mfast, judgeVanish, multiBad, true);
+    }
+
+    private void updateMicro(LaneState state, Note n, long mtime, int judge, long mfast,
+                             boolean judgeVanish, boolean multiBad, boolean showJudge) {
         if (judgeVanish) {
             if (score.getPassnotes() < ghost.length) {
                 ghost[score.getPassnotes()] = judge;
@@ -848,14 +876,14 @@ public class JudgeManager {
             coursecombo = 0;
         }
 
-        if (judge != 4)
+        if (showJudge && judge != 4)
             this.judge[state.player][state.offset] = judge == 0 ? 1 : judge * 2 + (mfast > 0 ? 0 : 1);
-        if (judge <= ((PlaySkin) main.getSkin()).getJudgetimer()) {
+        if (showJudge && judge <= ((PlaySkin) main.getSkin()).getJudgetimer()) {
             main.timer.setTimerOn(SkinPropertyMapper.bombTimerId(state.player, state.offset));
         }
 
         final int lanelength = states.length;
-        if (judgenow.length > 0) {
+        if (showJudge && judgenow.length > 0) {
             final int judgeindex = state.lane / (lanelength / judgenow.length);
             main.timer.setTimerOn(JUDGE_TIMER[judgeindex]);
             if (judgenow.length >= 3) {

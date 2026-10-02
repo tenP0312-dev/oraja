@@ -3,17 +3,9 @@ package bms.player.beatoraja.play;
 import bms.model.*;
 import java.util.*;
 
-/** Deterministic gameplay engine without rendering dependencies. */
-public final class NantokaManiaJudge {
-    public interface Listener {
-        void judge(int lane, Note note, int judge, long time, long difference);
-        void suppress(int lane, LongNote end);
-        void recover(int lane);
-        void sound(int lane, Note note);
-        void mine(int lane, MineNote note);
-        default void bodyTick(int lane, LongNote note, long at) { judge(lane, note, 5, at, 0); }
-        default void refresh(int lane, boolean poor) { }
-    }
+/** Frozen v1 gameplay for existing local records and replays. */
+final class LegacyNantokaManiaJudge {
+
 
     private record Due(long time, int kind, int lane, Note note) { }
     private static final int ARRIVAL = 0, EXPIRY = 1;
@@ -25,29 +17,22 @@ public final class NantokaManiaJudge {
         LongNote body;
         int direction = -1;
         int cursor;
-        int hcnState;
         Track(Note[] notes, boolean scratch) { this.notes = notes; this.scratch = scratch; }
     }
 
     private final Track[] tracks;
     private final int lnType;
     private final boolean autoplay;
-    private final Listener listener;
-    private final boolean doublePlay;
-    private final LegacyNantokaManiaJudge legacy;
+    private final NantokaManiaJudge.Listener listener;
     private final PriorityQueue<Due> due = new PriorityQueue<>(Comparator
             .comparingLong(Due::time).thenComparingInt(Due::kind).thenComparingInt(Due::lane));
     private long time = Long.MIN_VALUE;
     private long tick = 1;
-    private long displayTick = 1;
 
-    public NantokaManiaJudge(BMSModel model, boolean autoplay, Listener listener) {
+    public LegacyNantokaManiaJudge(BMSModel model, boolean autoplay, NantokaManiaJudge.Listener listener) {
         this.lnType = model.getLntype();
         this.autoplay = autoplay;
         this.listener = listener;
-        this.doublePlay = model.getMode().player == 2;
-        this.legacy = NantokaManiaRules.legacy(model)
-                ? new LegacyNantokaManiaJudge(model, autoplay, listener) : null;
         Lane[] lanes = model.getLanes();
         tracks = new Track[lanes.length];
         for (int lane = 0; lane < lanes.length; lane++) {
@@ -57,7 +42,7 @@ public final class NantokaManiaJudge {
             for (Note note : tracks[lane].notes) {
                 due.add(new Due(note.getMicroTime(), ARRIVAL, lane, note));
                 if (note instanceof NormalNote || note instanceof LongNote) {
-                    due.add(new Due(NantokaManiaRules.expiry(note.getMicroTime()),
+                    due.add(new Due(note.getMicroTime() + LegacyNantokaManiaRules.lateLimit(scratch) + 1,
                             EXPIRY, lane, note));
                 }
             }
@@ -75,55 +60,27 @@ public final class NantokaManiaJudge {
     }
 
     public void advanceTo(long until) {
-        if (legacy != null) { legacy.advanceTo(until); return; }
         if (until < time) return;
-        long processedTime = Long.MIN_VALUE;
         while (true) {
             long nextTick = tick * 400_000L / 3;
-            long nextDisplay = displayTick * 500_000L / 3;
             long nextDue = due.isEmpty() ? Long.MAX_VALUE : due.peek().time;
-            long next = Math.min(Math.min(nextTick, nextDue), nextDisplay);
-            if (next > until) break;
-            if (processedTime != Long.MIN_VALUE && processedTime != next) {
-                for (Track track : tracks) updateHcnState(track);
-            }
-            processedTime = next;
-            if (nextDue <= nextTick && nextDue <= nextDisplay) {
+            if (Math.min(nextTick, nextDue) > until) break;
+            if (nextDue <= nextTick) {
                 Due event = due.remove();
                 time = event.time;
                 if (event.kind == ARRIVAL) arrive(event); else expire(event);
-            } else if (nextTick <= nextDisplay) {
+            } else {
                 time = nextTick;
                 tick++;
                 for (int lane = 0; lane < tracks.length; lane++) {
                     Track track = tracks[lane];
-                    LongNote body = track.body;
-                    boolean laneHeld = track.end != null && hell(track.end);
-                    if (body == null && laneHeld) body = track.end.getPair();
-                    if (body == null) continue;
-                    if (track.hcnState == 1) listener.bodyTick(lane, body, time);
-                    else if ((track.hcnState == 2 || laneHeld) && (autoplay || !track.held.isEmpty())) {
-                        listener.recover(lane);
-                    }
-                }
-            } else {
-                time = nextDisplay;
-                displayTick++;
-                for (int lane = 0; lane < tracks.length; lane++) {
-                    Track track = tracks[lane];
-                    if (track.body != null && track.hcnState == 1) listener.refresh(lane, true);
-                    else if (track.end != null && (autoplay || !track.held.isEmpty())) listener.refresh(lane, false);
+                    if (track.body == null) continue;
+                    if (autoplay || !track.held.isEmpty()) listener.recover(lane);
+                    else listener.judge(lane, track.body, 5, time, 0);
                 }
             }
         }
         time = until;
-        for (Track track : tracks) updateHcnState(track);
-    }
-
-    private void updateHcnState(Track track) {
-        if (track.body != null && track.hcnState != 0) {
-            track.hcnState = autoplay || !track.held.isEmpty() ? 2 : 1;
-        }
     }
 
     private void arrive(Due event) {
@@ -135,7 +92,7 @@ public final class NantokaManiaJudge {
         }
         if (note instanceof LongNote ln) {
             if (ln.isEnd()) {
-                if (track.body == ln.getPair()) { track.body = null; track.hcnState = 0; }
+                if (track.body == ln.getPair()) track.body = null;
                 if (ln.getState() == 0 && (autoplay || legacy(ln) && track.end == ln
                         && !track.held.isEmpty())) {
                     emit(event.lane, ln, 0, event.time, 0);
@@ -161,7 +118,7 @@ public final class NantokaManiaJudge {
                 if (track.end == ln) track.end = null;
                 if (track.body == ln.getPair()) track.body = null;
             } else if (hell(ln)) {
-                track.hcnState = 1;
+                if (ln.getPair().getState() == 0) track.end = ln.getPair();
             } else {
                 suppress(event.lane, ln.getPair());
             }
@@ -169,19 +126,10 @@ public final class NantokaManiaJudge {
     }
 
     /** Restore keys held before the song began without creating a tap judgment. */
-    public void initiallyHeld(int lane, int direction) {
-        if (legacy != null) legacy.initiallyHeld(lane, direction);
-        else tracks[lane].held.set(direction);
-    }
+    public void initiallyHeld(int lane, int direction) { tracks[lane].held.set(direction); }
 
     /** Called in timestamp order; same-time key changes precede advanceTo(time). */
     public void input(int lane, int direction, boolean pressed, long at) {
-        if (legacy != null) { legacy.input(lane, direction, pressed, at); return; }
-        // Misses and chart-end events precede same-time input; the HCN tick follows it.
-        while (!due.isEmpty() && due.peek().time <= at) {
-            Due event = due.remove();
-            if (event.kind == ARRIVAL) arrive(event); else expire(event);
-        }
         // A polled device can deliver a timestamp just before the last update.
         // Retain its actual timing instead of moving it across a judge boundary.
         Track track = tracks[lane];
@@ -199,31 +147,29 @@ public final class NantokaManiaJudge {
                 return;
             }
             if (track.body != null && track.body.getState() != 0
-                    && track.hcnState != 0) {
-                // Restore HCN recovery only; consumed endpoints never reappear.
+                    && track.body.getPair().getState() == 0) {
+                track.end = track.body.getPair();
+                track.direction = direction;
                 return;
             }
             Note candidate = null;
             int candidateJudge = 6;
             while (track.cursor < track.notes.length
-                    && track.notes[track.cursor].getMicroTime() + 250_000 < at) {
+                    && track.notes[track.cursor].getMicroTime() + LegacyNantokaManiaRules.lateLimit(track.scratch) < at) {
                 track.cursor++;
             }
             for (int i = track.cursor; i < track.notes.length; i++) {
                 Note note = track.notes[i];
                 if (note.getMicroTime() - at >= 350_000) break;
-                if (note instanceof MineNote
+                if (note.getState() != 0 || note instanceof MineNote
                         || note instanceof LongNote ln && ln.isEnd()) continue;
-                if (!NantokaManiaRules.inputCandidate(at - note.getMicroTime())) continue;
-                int judge = note.getState() != 0 ? 5
-                        : NantokaManiaRules.judge(at - note.getMicroTime(), track.scratch, doublePlay);
+                int judge = LegacyNantokaManiaRules.judge(at - note.getMicroTime(), track.scratch);
                 if (judge == 6) continue;
-                if (candidate == null || candidate.getState() != 0 && note.getState() == 0
-                        || candidate.getState() == 0 && note.getState() == 0
-                        && Math.abs(at - note.getMicroTime()) < Math.abs(at - candidate.getMicroTime())) {
+                if (candidate == null || candidateJudge >= 3 && judge <= 2) {
                     candidate = note;
                     candidateJudge = judge;
                 }
+                if (candidateJudge <= 2) break;
             }
             if (candidate != null) {
                 if (candidate instanceof LongNote ln && candidateJudge < 4) {
@@ -251,6 +197,9 @@ public final class NantokaManiaJudge {
                 if (nearest != null) listener.sound(lane, nearest);
             }
         } else if (end != null && end.getState() == 0 && track.held.isEmpty()) {
+            if (track.scratch) return; // BSS requires a reverse, never just a stop.
+            long difference = at - end.getMicroTime();
+            if (hell(end) && difference <= LegacyNantokaManiaRules.earlyGreat(false)) return;
             finish(lane, end, at);
         }
     }
@@ -258,14 +207,10 @@ public final class NantokaManiaJudge {
     private void start(int lane, LongNote start, int judge, long at, long difference, int direction) {
         emit(lane, start, judge, at, difference);
         Track track = tracks[lane];
-        if (hell(start)) {
-            track.body = start;
-            track.hcnState = judge <= 2 ? 2 : 1;
-        }
-        if (judge <= 2) {
+        if (judge <= 2 || hell(start)) {
             track.end = start.getPair();
             track.direction = direction;
-        } else if (!hell(start)) suppress(lane, start.getPair());
+        } else suppress(lane, start.getPair());
     }
 
     private static boolean keysoundNote(Note note) {
@@ -275,15 +220,11 @@ public final class NantokaManiaJudge {
     private void finish(int lane, LongNote end, long at) {
         Track track = tracks[lane];
         long difference = at - end.getMicroTime();
-        int base = NantokaManiaRules.judge(difference, track.scratch, doublePlay);
-        int judge = base <= 2 ? 0 : base == 3 ? 3
-                : difference > NantokaManiaRules.boundary(track.scratch ? (doublePlay ? 19 : 17) : 15) ? 5 : 4;
+        int base = LegacyNantokaManiaRules.judge(difference, track.scratch);
+        int judge = base <= 2 ? 0 : base == 3 ? 3 : 4;
         emit(lane, end, judge, at, difference);
-        if (judge == 5) suppress(lane, end); // Consume the endpoint even for internal code 9.
         track.end = null;
-        if (hell(end)) {
-            if (judge >= 3 && track.body != null) track.hcnState = 1;
-        } else track.body = null;
+        track.body = null;
         track.direction = -1;
     }
 
@@ -299,7 +240,7 @@ public final class NantokaManiaJudge {
         listener.suppress(lane, end);
     }
 
-    public LongNote processing(int lane) { return legacy != null ? legacy.processing(lane) : tracks[lane].end; }
-    public LongNote passing(int lane) { return legacy != null ? legacy.passing(lane) : tracks[lane].body; }
-    public boolean holding(int lane) { return legacy != null ? legacy.holding(lane) : autoplay || !tracks[lane].held.isEmpty(); }
+    public LongNote processing(int lane) { return tracks[lane].end; }
+    public LongNote passing(int lane) { return tracks[lane].body; }
+    public boolean holding(int lane) { return autoplay || !tracks[lane].held.isEmpty(); }
 }

@@ -17,6 +17,7 @@ import java.util.Map;
  */
 public final class BMSIRManiacSettings {
     public static final int ALGORITHM_VERSION = 1;
+    public static final int NANTOKA_JUDGE_VERSION = 2;
     public static final int ADD_NOTES_PLACEMENT_VERSION = 2;
     public static final int SP_TO_DP_PLACEMENT_VERSION = 2;
 
@@ -37,6 +38,7 @@ public final class BMSIRManiacSettings {
 
     private int hiddenSudden1P;
     private boolean nantokaMania;
+    private transient int nantokaJudgeVersion = NANTOKA_JUDGE_VERSION;
     private boolean sevenToNinePreview;
     // Gauge options share the ordinary/course per-chart record identity.
     private boolean courseGauge;
@@ -78,6 +80,7 @@ public final class BMSIRManiacSettings {
         }
         hiddenSudden1P = source.hiddenSudden1P;
         nantokaMania = source.nantokaMania;
+        nantokaJudgeVersion = source.nantokaJudgeVersion;
         sevenToNinePreview = source.sevenToNinePreview;
         courseGauge = source.courseGauge;
         courseGaugeInitialValue = source.courseGaugeInitialValue;
@@ -163,6 +166,11 @@ public final class BMSIRManiacSettings {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setHiddenSudden1P(integer(values, "hs1"));
         settings.setNantokaMania(Boolean.parseBoolean(values.getOrDefault("nantoka_mania", "false")));
+        if (settings.nantokaMania) {
+            String version = values.getOrDefault("nantoka_version", "1");
+            if (!version.equals("1") && !version.equals("2")) return null;
+            settings.setNantokaJudgeVersion(Integer.parseInt(version));
+        }
         settings.setSevenToNinePreview(Boolean.parseBoolean(values.getOrDefault("seven_to_nine_preview", "false")));
         settings.setHiddenSudden2P(integer(values, "hs2"));
         settings.setExtraMode(integer(values, "extra"));
@@ -355,6 +363,7 @@ public final class BMSIRManiacSettings {
             base += ",autoscratch=true";
         }
         if (nantokaMania) base += ",nantoka_mania=true";
+        if (nantokaMania && nantokaJudgeVersion > 1) base += ",nantoka_version=" + nantokaJudgeVersion;
         if (sevenToNinePreview) base += ",seven_to_nine_preview=true";
         return base + "," + String.join(",",
                 "seed=" + (generationSeedOverride == null ? "fixed" : generationSeedOverride),
@@ -496,6 +505,13 @@ public final class BMSIRManiacSettings {
 
     public int getHiddenSudden1P() { return hiddenSudden1P; }
     public boolean isNantokaMania() { return nantokaMania; }
+    public int getNantokaJudgeVersion() { return nantokaJudgeVersion; }
+    public void setNantokaJudgeVersion(int value) {
+        if (value != 1 && value != NANTOKA_JUDGE_VERSION) {
+            throw new IllegalArgumentException("Unsupported NANTOKA judge version");
+        }
+        nantokaJudgeVersion = value;
+    }
     public boolean isSevenToNinePreview() { return sevenToNinePreview; }
     public boolean isCourseGauge() { return courseGauge; }
     public void setCourseGauge(boolean value) { courseGauge = value; }

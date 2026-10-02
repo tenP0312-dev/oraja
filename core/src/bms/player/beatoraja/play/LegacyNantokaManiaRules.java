@@ -7,8 +7,8 @@ import bms.model.NormalNote;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 
 /** Exact microsecond intervals: difference = input time - note time. */
-public final class NantokaManiaRules {
-    private NantokaManiaRules() { }
+final class LegacyNantokaManiaRules {
+    private LegacyNantokaManiaRules() { }
 
     public static boolean isActive(BMSModel model) {
         return model != null && model.getValues().getOrDefault(
@@ -38,24 +38,12 @@ public final class NantokaManiaRules {
         return total;
     }
 
-    public static boolean legacy(BMSModel model) {
-        var settings = bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings.fromCanonicalOptions(
-                model.getValues().get(BMSIRManiacPlayContext.MODEL_OPTIONS));
-        return settings != null && settings.getNantokaJudgeVersion() == 1;
-    }
-
-    // Match the extracted float32 thresholds before projecting onto integer microseconds.
-    static long boundary(int seed) { return (long) Math.floor((seed * 1000f / 60f + .25f) * 1000d); }
+    static long boundary(int seed) { return Math.floorDiv(seed * 1_000_000L, 60) + 250; }
 
     public static long[][] windows(boolean scratch) {
-        return windows(scratch, false);
-    }
-
-    public static long[][] windows(boolean scratch, boolean doublePlay) {
-        int correction = scratch ? (doublePlay ? 4 : 2) : 0;
-        int great = 2 + correction;
-        int good = 7 + correction;
-        int bad = 15 + correction;
+        int great = scratch ? 4 : 2;
+        int good = scratch ? 9 : 7;
+        int bad = scratch ? 17 : 15;
         return new long[][] {
                 interval(-1, 1), interval(-great, great), interval(-good, good),
                 interval(-bad, bad), {-boundary(-bad), 349_999}
@@ -68,12 +56,8 @@ public final class NantokaManiaRules {
     }
 
     public static int judge(long difference, boolean scratch) {
-        return judge(difference, scratch, false);
-    }
-
-    public static int judge(long difference, boolean scratch, boolean doublePlay) {
         long d = -difference;
-        long[][] windows = scratch ? (doublePlay ? DP_SCRATCH : SCRATCH) : KEY;
+        long[][] windows = scratch ? SCRATCH : KEY;
         for (int i = 0; i < windows.length; i++) {
             if (d >= windows[i][0] && d <= windows[i][1]) return i == 4 ? 5 : i;
         }
@@ -84,16 +68,4 @@ public final class NantokaManiaRules {
     public static long earlyGreat(boolean scratch) { return boundary(scratch ? -4 : -2); }
     private static final long[][] KEY = windows(false);
     private static final long[][] SCRATCH = windows(true);
-    private static final long[][] DP_SCRATCH = windows(true, true);
-
-    public static boolean inputCandidate(long difference) {
-        return difference > -350_000 && difference <= 250_000;
-    }
-
-    static long frameTime(long frame) { return Math.floorDiv(frame * 1_000_000L, 60); }
-
-    static long expiry(long noteTime) {
-        // Independent >15-frame miss condition on the deterministic 60Hz grid.
-        return frameTime(Math.floorDiv(noteTime * 60, 1_000_000L) + 16);
-    }
 }
