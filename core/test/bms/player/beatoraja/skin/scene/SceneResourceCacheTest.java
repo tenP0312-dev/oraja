@@ -9,6 +9,8 @@ import java.nio.file.attribute.FileTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SceneResourceCacheTest {
 	@TempDir
@@ -33,8 +35,8 @@ class SceneResourceCacheTest {
 				  "rootClip": "root"
 				}
 				""");
-		CompiledScene scene = new SceneCompiler().compile(
-				new SceneDocumentLoader().load(scenePath), scenePath);
+		SceneCompilationCache cache = new SceneCompilationCache(4, 10000);
+		CompiledScene scene = cache.get(scenePath);
 
 		SceneResourceCache.ResourceVersion first =
 				SceneResourceCache.resourceVersion(scenePath.toRealPath(), scene);
@@ -43,9 +45,13 @@ class SceneResourceCacheTest {
 		Files.setLastModifiedTime(texture,
 				FileTime.fromMillis(Files.getLastModifiedTime(texture).toMillis() + 2000));
 		SceneResourceCache.ResourceVersion second =
-				SceneResourceCache.resourceVersion(scenePath.toRealPath(), scene);
+				SceneResourceCache.resourceVersion(scenePath.toRealPath(), cache.get(scenePath));
 
 		assertEquals(sceneModified, Files.getLastModifiedTime(scenePath));
 		assertNotEquals(first, second);
+		assertSame(scene, cache.get(scenePath));
+		Files.delete(texture);
+		assertThrows(SceneValidationException.class,
+				() -> SceneResourceCache.resourceVersion(scenePath.toRealPath(), cache.get(scenePath)));
 	}
 }

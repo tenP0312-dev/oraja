@@ -102,6 +102,18 @@ public final class BMSIRManiacPlayContext {
                 && (mode == Mode.BEAT_5K || mode == Mode.BEAT_7K);
     }
 
+    /**
+     * Courses may opt into NANTOKA MANIA's fixed judgment/gauge rules alone.
+     * The chart, its identity, and course structure/records stay untouched;
+     * the caller is still responsible for suppressing course pass/fail
+     * recording (NANTOKA MANIA is local-only, see BMSIRManiacSettings.rankingClass()).
+     */
+    public static boolean allowsDuringCourse(BMSIRManiacSettings settings, Mode mode) {
+        return settings != null
+                && settings.isNantokaManiaOnly()
+                && bms.player.beatoraja.play.NantokaManiaRules.supports(mode);
+    }
+
     private void apply(BMSModel model) {
         if (settings.isSevenToNinePreview()) {
             BMSIRSevenToNineModifier.apply(model);
