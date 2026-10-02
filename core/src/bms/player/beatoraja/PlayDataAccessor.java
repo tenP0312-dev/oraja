@@ -983,6 +983,22 @@ public final class PlayDataAccessor {
 	private String replayReadPath(BMSModel model, int lnmode, int index) {
 		String current = getReplayDataFilePath(model, lnmode, index);
 		if (Files.exists(Paths.get(current + ".brd"))) return current;
+		BMSIRManiacSettings selected = BMSIRManiacSettings.fromCanonicalOptions(
+				model.getValues().get(BMSIRManiacPlayContext.MODEL_OPTIONS));
+		if (selected == null && playerConfig != null) {
+			selected = BMSIRManiacPlayContext.effectiveSettings(playerConfig.getEffectiveBmsirManiacSettings(), model.getMode());
+		}
+		if (selected != null && selected.isNantokaMania() && selected.getNantokaJudgeVersion() == 2) {
+			BMSIRManiacSettings previous = new BMSIRManiacSettings(selected);
+			previous.setNantokaJudgeVersion(1);
+			String base = model.getValues().getOrDefault(BMSIRManiacPlayContext.MODEL_BASE_HASH, model.getSHA256());
+			String oldHash = previous.storageChartId(base);
+			String oldPath = getReplayDataFilePath(BMSIRLongNoteMode.replayHash(model, oldHash),
+					model.containsUndefinedLongNote(), lnmode, index);
+			if (Files.exists(Paths.get(oldPath + ".brd"))) return oldPath;
+			oldPath = getReplayDataFilePath(oldHash, BMSIRLongNoteMode.authoredUndefined(model), lnmode, index);
+			if (Files.exists(Paths.get(oldPath + ".brd"))) return oldPath;
+		}
 		return getReplayDataFilePath(baseReplayHash(model), BMSIRLongNoteMode.authoredUndefined(model), lnmode, index);
 	}
 
