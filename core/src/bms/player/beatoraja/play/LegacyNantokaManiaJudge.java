@@ -244,4 +244,3 @@ final class LegacyNantokaManiaJudge {
     public LongNote passing(int lane) { return tracks[lane].body; }
     public boolean holding(int lane) { return autoplay || !tracks[lane].held.isEmpty(); }
 }
-

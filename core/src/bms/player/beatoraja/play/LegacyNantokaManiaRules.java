@@ -69,4 +69,3 @@ final class LegacyNantokaManiaRules {
     private static final long[][] KEY = windows(false);
     private static final long[][] SCRATCH = windows(true);
 }
-
