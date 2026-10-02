@@ -15,6 +15,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.90 adds course qualification on result screens, persistent
+per-player Mod Menu item settings, and optional Switch-style four-band and
+LR2-style seven-band output equalizers. It preserves the 0.4.14.89 release
+lineage and its persistent ranking cache. Plugin 0.0.77 and launcher 0.2.29
+remain supported. This is an optional internal test; operator-run physical
+acceptance is tracked in issue #404.
+
 The startup settings include a per-player **Mod Menu items** page, also
 reachable inside the Insert menu. Its default-on filter can hide and disable
 each of the 14 built-in entries. Turning the filter off restores the complete
@@ -52,7 +59,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.89**. Its Windows native-audio
+The current client source version is **0.4.14.90**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
