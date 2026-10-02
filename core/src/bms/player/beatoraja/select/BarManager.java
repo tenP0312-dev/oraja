@@ -41,6 +41,7 @@ import bms.player.beatoraja.ir.IRChartData;
 import bms.player.beatoraja.ir.IRCourseData;
 import bms.player.beatoraja.ir.IRTableData;
 import bms.player.beatoraja.select.bar.*;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.song.SongResource;
@@ -329,6 +330,14 @@ public class BarManager {
 		clearPlayerScores(currentsongs);
 	}
 
+	/** Stops nonessential song-list loading while controller batch editing is active. */
+	public void suspendBackgroundContentLoading() {
+		if (loader != null) {
+			loader.stopRunning();
+			loader = null;
+		}
+	}
+
 	SongData[] getVisibleSongDatas() {
 		if (currentsongs == null) {
 			return new SongData[0];
@@ -594,11 +603,13 @@ public class BarManager {
 				}
 			}
 
-			if (loader != null) {
-				loader.stopRunning();
+			if (!BMSIRArenaClient.isMyDifficultyTableBatchEditing()) {
+				if (loader != null) {
+					loader.stopRunning();
+				}
+				loader = new BarContentsLoaderThread(select, currentsongs);
+				loader.start();
 			}
-			loader = new BarContentsLoaderThread(select, currentsongs);
-			loader.start();
 			select.getScoreDataProperty().update(currentsongs[selectedindex].getScore(),
 					currentsongs[selectedindex].getRivalScore());
 

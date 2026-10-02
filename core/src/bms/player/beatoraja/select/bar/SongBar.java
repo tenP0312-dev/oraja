@@ -2,6 +2,7 @@ package bms.player.beatoraja.select.bar;
 
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.DifficultyTableComment;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.song.SongData;
 import com.badlogic.gdx.graphics.Pixmap;
 
@@ -276,6 +277,12 @@ public class SongBar extends SelectableBar {
     }
 
     public int getLamp(boolean isPlayer) {
+        if (isPlayer) {
+            int batchLamp = BMSIRArenaClient.myDifficultyTableBatchLamp(getSongData());
+            if (batchLamp >= 0) {
+                return batchLamp;
+            }
+        }
     	final ScoreData score = isPlayer ? getScore() : getRivalScore();
         if (score != null) {
             return score.getClear();

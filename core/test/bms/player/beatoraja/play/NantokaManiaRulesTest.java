@@ -29,6 +29,30 @@ class NantokaManiaRulesTest {
         assertSame(GaugeProperty.GaugeElementProperty.NORMAL_LR2, normal.getGauge().getProperty());
     }
 
+    /** Same override reached through the course/Dan gauge entry point (grade > 0). */
+    @Test void grooveGaugeAdapterAppliesDanNantokaThroughTheCourseGaugeEntryPoint() {
+        var f = new NantokaManiaJudgeTest.Fixture(bms.model.Mode.BEAT_7K);
+        for (int i = 0; i < 100; i++) f.note(0, 1_000_000L + i * 100_000L);
+        f.begin(false);
+        // type<=2 (ASSIST/EASY/NORMAL) with grade=1 maps to id 6 = CLASS.
+        GrooveGauge gauge = GrooveGauge.create(f.model, GrooveGauge.NORMAL, 1, GaugeProperty.LR2);
+        assertSame(GaugeProperty.GaugeElementProperty.DAN_NANTOKA, gauge.getGauge().getProperty());
+        assertEquals(100f, gauge.getValue(), 0.0001f); // DAN gauges start at 5000 units = 100%.
+        gauge.update(0); // PGREAT: DAN gauges recover +8 units regardless of note count.
+        assertEquals(100f, gauge.getValue(), 0.0001f); // already at the 5000-unit cap.
+        gauge.setValue(80f);
+        gauge.update(1); // GREAT also recovers +8 for DAN gauges (grouped with PGREAT).
+        assertEquals(80.16f, gauge.getValue(), 0.0001f);
+        gauge.update(2); // GOOD recovers only +2 for DAN gauges.
+        assertEquals(80.20f, gauge.getValue(), 0.0001f);
+
+        // Without NANTOKA MANIA active, the same entry point keeps the ordinary
+        // course gauge (constraint-selected property, here LR2's CLASS_LR2).
+        f.model.getValues().clear();
+        GrooveGauge ordinary = GrooveGauge.create(f.model, GrooveGauge.NORMAL, 1, GaugeProperty.LR2);
+        assertSame(GaugeProperty.GaugeElementProperty.CLASS_LR2, ordinary.getGauge().getProperty());
+    }
+
     @Test void everyBoundaryKeepsItsSpecifiedOpenAndClosedSide() {
         for (boolean scratch : new boolean[]{false, true}) {
             int[] seeds = scratch ? new int[]{-17,-9,-4,-1,0,1,4,9,17}

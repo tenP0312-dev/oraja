@@ -287,6 +287,9 @@ public class BMSPlayer extends MainState {
 
 		boolean score = true;
 		boolean forceNoIRSend = false;
+		// NANTOKA MANIA MODE applied to a real course: its per-song judge/gauge
+		// math runs, but course pass/fail must never be recorded (see below).
+		boolean nantokaManiaCourse = false;
 
 		// Allow osu score submission
 		if (model.isFromOSU()) {
@@ -397,6 +400,10 @@ public class BMSPlayer extends MainState {
 					&& maniacReplay.bmsirManiacSettings != null
 							? maniacReplay.bmsirManiacSettings
 							: config.getEffectiveBmsirManiacSettings();
+			if (maniacReplay != null && maniacReplay.bmsirManiacSettings != null) {
+				requestedManiac = new BMSIRManiacSettings(requestedManiac);
+				requestedManiac.setAddNotesPlacementVersion(maniacReplay.bmsirAddNotesPlacementVersion);
+			}
 			if (requestedManiac.isSevenToNinePreview()
 					&& (autoplay.mode == BMSPlayerMode.Mode.REPLAY || ghostBattle.isPresent()
 							|| borrowedChartOption != null || Client.connected.get())) {
@@ -408,10 +415,20 @@ public class BMSPlayer extends MainState {
 							requestedManiac,
 							model.getMode()
 					);
+			boolean courseModels = resource.getCourseBMSModels() != null;
+			// NANTOKA MANIA alone (no chart-transforming/standard MANIAC effect)
+			// may run inside a real course/Dan certification: the chart and
+			// course structure stay untouched, only judgment/gauge math changes.
+			boolean allowNantokaDuringCourse = courseModels
+					&& BMSIRManiacPlayContext.allowsDuringCourse(
+							requestedManiac,
+							model.getMode()
+					);
+			nantokaManiaCourse = allowNantokaDuringCourse;
 			maniacContext = BMSIRManiacPlayContext.prepare(
 					requestedManiac,
 					model,
-					resource.getCourseBMSModels() != null
+					(courseModels && !allowNantokaDuringCourse)
 							|| arenaBlocksManiac
 			);
 			resource.setManiacPlayContext(maniacContext);
@@ -783,7 +800,7 @@ public class BMSPlayer extends MainState {
 		final boolean testPlay = autoplay.mode == BMSPlayerMode.Mode.PLAY
 				&& BMSIRTestPlayFolder.contains(model, main.getConfig().getWorkDirectory());
 		final boolean sevenToNinePreview = BMSIRSevenToNineModifier.isApplied(model);
-		if (testPlay || sevenToNinePreview) {
+		if (testPlay || sevenToNinePreview || nantokaManiaCourse) {
 			score = false;
 			forceNoIRSend = true;
 		}
@@ -802,6 +819,10 @@ public class BMSPlayer extends MainState {
 					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
 							"作業フォルダ: スコア保存とIR送信は無効です",
 							"Work folder: score saving and IR submission are disabled")
+					: nantokaManiaCourse
+					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+							"ナントカマニアモード: この段位の合否・記録・IR送信はありません",
+							"NANTOKA MANIA MODE: this Dan attempt's pass/fail, records and IR submission are suspended")
 					: "Score nullifying options enabled. Next play will not be saved");
 		}
 		// No on-screen notice here: forceNoIRSend already follows directly from
@@ -1574,6 +1595,7 @@ public class BMSPlayer extends MainState {
 		BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
 		if (maniacContext != null) {
 			replay.bmsirManiacSettings = maniacContext.settings();
+			replay.bmsirAddNotesPlacementVersion = replay.bmsirManiacSettings.getAddNotesPlacementVersion();
 			replay.bmsirManiacVirtualChartId = maniacContext.virtualHash();
 			replay.bmsirManiacGenerationSeed = maniacContext.generationSeed();
 			replay.bmsirManiacAlgorithmVersion =

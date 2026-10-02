@@ -40,7 +40,7 @@ public class RankingData {
 	/**
 	 * 全スコアデータ
 	 */
-	private IRScoreData[] scores;
+	private volatile IRScoreData[] scores;
 	/**
 	 * 各スコアデータの順位
 	 */
@@ -48,7 +48,7 @@ public class RankingData {
 	/**
 	 * IRアクセス状態
 	 */
-	private int state = NONE;
+	private volatile int state = NONE;
 	public static final int NONE = 0;
 	public static final int ACCESS = 1;
 	public static final int FINISH = 2;
@@ -57,7 +57,8 @@ public class RankingData {
 	/**
 	 * 最終更新時間
 	 */
-	private long lastUpdateTime;
+	private volatile long lastUpdateTime;
+	private volatile boolean lastAccessFailed;
 	private final AtomicBoolean accessInFlight = new AtomicBoolean();
 	
 	public void load(MainState mainstate, Object song) {
@@ -95,7 +96,9 @@ public class RankingData {
 				if(song instanceof SongData songData) {
 					response = primary.connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
 					// Rival databases have no separate forced-LN chart identity.
-					if (response != null && response.isSucceeded() && !(forceLn
+					if (response != null && response.isSucceeded() && response.getData() != null
+							&& (!forceLn || Arrays.stream(response.getData())
+									.allMatch(score -> score != null && score.lntype == 0)) && !(forceLn
 							&& bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
 						mainstate.main.getRivalDataAccessor().updateAllRivalsScores(
 								response.getData(), songData, lnmode);
@@ -105,7 +108,10 @@ public class RankingData {
 				}
 				if(response != null && response.isSucceeded() && response.getData() != null) {
 					IRScoreData[] received = response.getData().clone();
+					if (forceLn) received = Arrays.stream(received)
+							.filter(score -> score != null && score.lntype == 0).toArray(IRScoreData[]::new);
 					updateScore(received.clone(), localScore);
+					lastAccessFailed = false;
 					if (received.length > 0) {
 						for (IRStatus connected : ir) {
 							if (connected.config == null || !connected.config.isImportrival()) continue;
@@ -117,17 +123,21 @@ public class RankingData {
 					logger.trace("IRからのスコア取得成功 : {}", response.getMessage());
 				} else {
 					logger.warn("IRからのスコア取得失敗 : {}", response == null ? "response unavailable" : response.getMessage());
-					if (scores == null && !forceRefresh) state = FAIL;
+					lastAccessFailed = true;
+					if (scores == null) state = FAIL;
 				}
 				lastUpdateTime = System.currentTimeMillis();
 			} catch (Exception error) {
 				logger.warn("IRランキング取得後の処理に失敗しました", error);
-				if (scores == null && !forceRefresh) state = FAIL;
+				lastAccessFailed = true;
+				if (scores == null) state = FAIL;
 			} finally {
-				if (hasCachedScores() && state == ACCESS) state = FINISH;
-				if (forceRefresh && hasCachedScores() && state == FAIL) state = FINISH;
-				lastUpdateTime = System.currentTimeMillis();
-				accessInFlight.set(false);
+				synchronized (RankingData.this) {
+					if (state == ACCESS) state = hasCachedScores() ? FINISH : lastAccessFailed ? FAIL : NONE;
+					if (forceRefresh && hasCachedScores() && state == FAIL) state = FINISH;
+					lastUpdateTime = System.currentTimeMillis();
+					accessInFlight.set(false);
+				}
 			}
 		});
 		irprocess.setName("ir-ranking-load");
@@ -136,7 +146,7 @@ public class RankingData {
 
 	}
 	
-	public void updateScore(IRScoreData[] scores, ScoreData localscore) {
+	public synchronized void updateScore(IRScoreData[] scores, ScoreData localscore) {
 		if(scores == null) {
 			return;
 		}
@@ -171,6 +181,7 @@ public class RankingData {
         	prevrank = Math.max(irrank, localrank);
         }
         
+		lastAccessFailed = false;
 		state = FINISH;
         lastUpdateTime = System.currentTimeMillis();
 	}
@@ -199,6 +210,34 @@ public class RankingData {
 		return scores != null;
 	}
 
+	public boolean isAccessInFlight() {
+		return accessInFlight.get() || state == ACCESS;
+	}
+
+	public boolean isCompatible(IRRankingContext context) {
+		IRScoreData[] snapshot = getScoresSnapshot();
+		return !context.forceLn() || snapshot == null || Arrays.stream(snapshot)
+				.allMatch(score -> score != null && score.lntype == 0);
+	}
+
+	/** Clear only incompatible rows, retaining this entry's single-flight guard. */
+	public synchronized void discardIncompatibleScores(IRRankingContext context) {
+		if (isCompatible(context)) return;
+		scores = null;
+		scorerankings = null;
+		irtotal = irrank = prevrank = localrank = 0;
+		Arrays.fill(lamps, 0);
+		state = accessInFlight.get() ? ACCESS : NONE;
+	}
+
+	/** Selection debounce plus remaining freshness; failures keep last-good rows. */
+	public long reloadDelay(IRRankingContext context, boolean contextChanged, long now) {
+		if (contextChanged || !isCompatible(context) || state == NONE) return 5_000L;
+		long ttl = lastAccessFailed || state == FAIL ? 10_000L
+				: state == FINISH && irtotal == 0 ? 60_000L : 600_000L;
+		return Math.max(ttl - Math.max(now - lastUpdateTime, 0), 0) + 5_000L;
+	}
+
 	public static String cacheIdentity(Object target, IRRankingContext context) {
 		if (target instanceof SongData song) {
 			String sha = song.getSha256();
@@ -207,7 +246,8 @@ public class RankingData {
 					&& BMSIRLongNoteMode.separatesScore(song) ? "forced-ln" : "ordinary");
 		}
 		if (target instanceof CourseData course) {
-			StringBuilder identity = new StringBuilder("course:");
+			// Do not restore rankings fetched before canonical course-hash resolution.
+			StringBuilder identity = new StringBuilder("course:v2:");
 			for (SongData song : course.getSong()) {
 				if (song == null || song.getSha256() == null || song.getSha256().length() != 64) return "";
 				identity.append(song.getSha256().toLowerCase()).append(':');
@@ -297,6 +337,7 @@ public class RankingData {
 
 	/** Marks an externally managed ranking request as failed. */
 	public void failAccess() {
+		lastAccessFailed = true;
 		state = FAIL;
 		lastUpdateTime = System.currentTimeMillis();
 	}

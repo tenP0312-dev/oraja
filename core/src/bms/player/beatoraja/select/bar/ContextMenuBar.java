@@ -20,6 +20,7 @@ import bms.player.beatoraja.ScoreDatabaseAccessor.ScoreDataCollector;
 import bms.model.Mode;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRDanCourseCache;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 
 import static bms.player.beatoraja.select.bar.FunctionBar.*;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_OPEN;
@@ -106,6 +107,7 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(play);
 
         addLeaderboardEntries(options);
+        addMyDifficultyTableEditorEntries(options);
         addAllChartsEntry(options);
 
         showMeta = true;
@@ -134,6 +136,7 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(practice);
 
         addLeaderboardEntries(options);
+        addMyDifficultyTableEditorEntries(options);
         addAllChartsEntry(options);
 
         var related = new FunctionBar((selector, self) -> {
@@ -238,6 +241,19 @@ public class ContextMenuBar extends DirectoryBar {
             selector.execute(MusicSelectCommand.SHOW_ALL_CHARTS);
         }, BMSIRArenaI18n.text("全譜面を表示", "Show All Charts"), STYLE_TABLE);
         options.add(allCharts);
+    }
+
+    private void addMyDifficultyTableEditorEntries(ArrayList<Bar> options) {
+        if (song == null) {
+            return;
+        }
+        options.add(new FunctionBar((selector, self) -> {
+            selector.getBarManager().updateBar(new MyDifficultyTableEditorBar(selector, song));
+            selector.play(FOLDER_OPEN);
+        }, BMSIRArenaI18n.text(
+                "マイ難易度表を編集（レベル）",
+                "Edit My Difficulty Table (level)"
+        ), STYLE_SPECIAL));
     }
 
     private void addLeaderboardEntries(ArrayList<Bar> options) {
@@ -447,6 +463,16 @@ public class ContextMenuBar extends DirectoryBar {
             selector.play(OPTION_CHANGE);
         }, "Copy URL", STYLE_SEARCH, STYLE_TEXT_NEW);
         if (table.getTableData().getUrl() != null) options.add(copyUrl);
+
+        if (BMSIRArenaClient.isMyDifficultyTableUrl(table.getTableData().getUrl())) {
+            options.add(new FunctionBar((selector, self) -> {
+                selector.getBarManager().updateBar(new MyDifficultyTableBatchEditorBar(selector));
+                selector.play(FOLDER_OPEN);
+            }, BMSIRArenaI18n.text(
+                    "マイ難易度表を編集（一括）",
+                    "Edit My Difficulty Table (batch)"
+            ), STYLE_SPECIAL));
+        }
 
         var fillMissingCharts = new FunctionBar((selector, self) -> {
             TableData.TableFolder[] folder = table.getTableData().getFolder();
