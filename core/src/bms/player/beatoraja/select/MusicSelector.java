@@ -552,10 +552,9 @@ public final class MusicSelector extends MainState {
 	}
 	
 	public void select(Bar current) {
-		if (BMSIRArenaClient.isMyDifficultyTableBatchEditing()
-				&& current instanceof SongBar songBar
-				&& songBar.existsSong()) {
-			if (!BMSIRArenaClient.isMyDifficultyTableBusy()) {
+		if (blocksBatchPlaySelection(current, BMSIRArenaClient.isMyDifficultyTableBatchEditing())) {
+			if (current instanceof SongBar songBar && songBar.existsSong()
+					&& !BMSIRArenaClient.isMyDifficultyTableBusy()) {
 				BMSIRArenaClient.toggleMyDifficultyTableBatchEntry(songBar.getSongData());
 				play(OPTION_CHANGE);
 			}
@@ -579,6 +578,10 @@ public final class MusicSelector extends MainState {
 		} else {
 			play = BMSPlayerMode.PLAY;
 		}
+	}
+
+	static boolean blocksBatchPlaySelection(Bar current, boolean batchEditing) {
+		return batchEditing && !(current instanceof DirectoryBar) && !(current instanceof FunctionBar);
 	}
 
 	public void readArenaChart(SongData song, ArenaBar current) {
