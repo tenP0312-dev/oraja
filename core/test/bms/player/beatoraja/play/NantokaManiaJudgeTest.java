@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Frozen v1 replay regression cases; v2 cases live in NantokaManiaIidx33Test. */
 class NantokaManiaJudgeTest {
     record Result(int lane, Note note, int judge, long time) { }
     static final class Fixture implements NantokaManiaJudge.Listener {
@@ -14,6 +15,7 @@ class NantokaManiaJudgeTest {
         final List<Result> results = new ArrayList<>();
         final List<Integer> recoveries = new ArrayList<>();
         final List<LongNote> suppressed = new ArrayList<>();
+        final List<Boolean> refreshes = new ArrayList<>();
         NantokaManiaJudge engine;
         Fixture(Mode mode) { model.setMode(mode); model.setBpm(120); model.setSHA256("test"); }
         Note note(int lane, long time) { return add(lane, time, new NormalNote(1)); }
@@ -27,8 +29,12 @@ class NantokaManiaJudgeTest {
             first.setType(type); last.setType(type); first.setPair(last); return first;
         }
         Fixture begin(boolean autoplay) {
+            return begin(autoplay, 1);
+        }
+        Fixture begin(boolean autoplay, int version) {
             model.setAllTimeLine(lines.values().toArray(TimeLine[]::new));
             BMSIRManiacSettings settings = new BMSIRManiacSettings(); settings.setNantokaMania(true);
+            settings.setNantokaJudgeVersion(version);
             BMSIRManiacPlayContext.prepare(settings, model, false);
             engine = new NantokaManiaJudge(model, autoplay, this); return this;
         }
@@ -42,6 +48,7 @@ class NantokaManiaJudgeTest {
         public void recover(int lane) { recoveries.add(lane); }
         public void sound(int lane, Note note) { }
         public void mine(int lane, MineNote note) { }
+        public void refresh(int lane, boolean poor) { refreshes.add(poor); }
         List<Integer> grades() { return results.stream().map(Result::judge).toList(); }
     }
 

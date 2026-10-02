@@ -6,6 +6,20 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NantokaManiaSettingsTest {
+    @Test void newVersionSeparatesRecordsWhileVersionlessOptionsKeepV1() {
+        var current = new BMSIRManiacSettings(); current.setNantokaMania(true);
+        assertEquals(2, current.getNantokaJudgeVersion());
+        String canonical = current.canonicalOptions();
+        assertTrue(canonical.contains(",nantoka_version=2,"));
+        var previous = BMSIRManiacSettings.fromCanonicalOptions(canonical.replace(",nantoka_version=2", ""));
+        assertNotNull(previous); assertEquals(1, previous.getNantokaJudgeVersion());
+        assertNotEquals(previous.storageChartId("a".repeat(64)), current.storageChartId("a".repeat(64)));
+        assertEquals(canonical, BMSIRManiacSettings.fromCanonicalOptions(canonical).canonicalOptions());
+        assertNull(BMSIRManiacSettings.fromCanonicalOptions(canonical.replace("nantoka_version=2", "nantoka_version=3")));
+        current.setNantokaMania(false); previous.setNantokaMania(false);
+        assertEquals(previous.canonicalOptions(), current.canonicalOptions());
+    }
+
     @Test void offPreservesExistingIdentitiesAndOnRoundTripsSeparately() {
         var settings = new BMSIRManiacSettings();
         settings.setSpToDpDifficulty(2);
