@@ -15,6 +15,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.92 aligns NANTOKA MANIA v2 with the supplied IIDX 33 analysis:
+DP scratch windows, separate candidate/miss limits, consumed HCN endpoints,
+recovery-only reentry, BSS logical-stop judgment, and 8/10-frame cycles.
+New records are separated while existing replays retain the v1 engine.
+This optional test preserves 0.4.14.91, plugin 0.0.77, and launcher 0.2.29.
+Operator acceptance is tracked in #411.
+
 Version 0.4.14.91 includes all five pending client changes: controller-operated
 My Difficulty Table editing (#310), bounded Scene compilation reuse (#348),
 NANTOKA MANIA-only course judgment and Dan gauges (#383), versioned ADDNOTES
@@ -67,7 +74,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.91**. Its Windows native-audio
+The current client source version is **0.4.14.92**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or

@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.92
+
+- NANTOKA MANIA v2を今回のIIDX 33解析へ合わせました。DP皿、入力候補と見逃し、HCN途中離し・再保持、BSS停止、8/10フレーム周期を修正しました。
+- Aligned NANTOKA MANIA v2 with the supplied IIDX 33 analysis: DP scratches, candidate/miss limits, HCN release/reentry, BSS stop, and 8/10-frame cycles.
+- 新旧成績を分離し、旧リプレイはv1で再生します。任意test、plugin 0.0.77／launcher 0.2.29を継続します。
+
 # Arena oraja 0.4.14.91
 
 - NANTOKA MANIAの段位判定・専用ゲージ、コントローラー対応My Table編集、Sceneコンパイル再利用、ADDNOTES v2、強制LN切替後のランキング再取得を追加。
