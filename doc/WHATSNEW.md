@@ -1,3 +1,9 @@
+# Arena oraja 0.4.14.90
+
+- 段位コース合否のリザルト表示、Mod Menuの項目別設定保存、任意の4/7バンド出力EQを追加しました。
+- Added course qualification results, persistent Mod Menu item settings, and optional four/seven-band output EQ.
+- 任意の内部test配布です。plugin 0.0.77、launcher 0.2.29を継続します。
+
 # Arena oraja 0.4.14.86
 
 - CN/HCN指定譜面の強制LN時に、取得ランキングへ元のCN/HCN情報が残る問題を修正しました。ON/OFFのランキングキャッシュも切り替えます。

@@ -344,7 +344,7 @@ public class BMSPlayer extends MainState {
 			resource.setFreqString(FreqTrainerMenu.getFreqString());
 		}
 		final Mode judgeTrainerMode = model.getMode();
-		final boolean trialConversion = config.getBmsirManiacSettings().isSevenToNinePreview()
+		final boolean trialConversion = config.getEffectiveBmsirManiacSettings().isSevenToNinePreview()
 				&& model.getMode() == Mode.BEAT_7K
 				&& (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY)
 				&& resource.getCourseBMSModels() == null && !BMSIRArenaClient.blocksLocalOneBass()
@@ -396,7 +396,7 @@ public class BMSPlayer extends MainState {
 			BMSIRManiacSettings requestedManiac = maniacReplay != null
 					&& maniacReplay.bmsirManiacSettings != null
 							? maniacReplay.bmsirManiacSettings
-							: config.getBmsirManiacSettings();
+							: config.getEffectiveBmsirManiacSettings();
 			if (requestedManiac.isSevenToNinePreview()
 					&& (autoplay.mode == BMSPlayerMode.Mode.REPLAY || ghostBattle.isPresent()
 							|| borrowedChartOption != null || Client.connected.get())) {
@@ -764,7 +764,7 @@ public class BMSPlayer extends MainState {
 		}
 		// プレイゲージ、初期値設定
 		courseGaugeInitialValue = CourseGaugePolicy.initialValue(
-				config.getBmsirManiacSettings(), replay,
+				config.getEffectiveBmsirManiacSettings(), replay,
 				autoplay.mode == BMSPlayerMode.Mode.REPLAY,
 				resource.getCourseBMSModels() != null
 						|| autoplay.mode == BMSPlayerMode.Mode.PRACTICE

@@ -12,6 +12,10 @@ import static bms.player.beatoraja.modmenu.ImGuiRenderer.windowHeight;
 import static bms.player.beatoraja.modmenu.ImGuiRenderer.windowWidth;
 
 public class JudgeTrainerMenu {
+    static void disable() {
+        OVERRIDE_CHART_JUDGE.set(false);
+        JudgeTrainer.setActive(false);
+    }
     private static ImBoolean OVERRIDE_CHART_JUDGE = new ImBoolean(false);
     private static ImInt OVERRIDE_JUDGE_RANK = new ImInt(0);
 

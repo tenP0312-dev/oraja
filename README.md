@@ -8,7 +8,27 @@ Arena oraja client. It is based on
 [LR2oraja Endless Dream](https://github.com/Catizard/lr2oraja-endlessdream)
 and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
+音声設定には独自DSPのSwitch方式4バンド／LR2風7バンドEQがあります。
+PortAudio／ASIO対応で、初期OFF、方式ごとのゲイン保存、プリアンプ調整が可能です。
+OpenALでは未対応と表示し、設定値を保持します。変更は本体の再起動後に適用します。
+詳細と実機確認項目は [出力EQ](docs/OUTPUT_EQUALIZER.md) を参照してください。
+
 ## Current Version
+
+Version 0.4.14.90 adds course qualification on result screens, persistent
+per-player Mod Menu item settings, and optional Switch-style four-band and
+LR2-style seven-band output equalizers. It preserves the 0.4.14.89 release
+lineage and its persistent ranking cache. Plugin 0.0.77 and launcher 0.2.29
+remain supported. This is an optional internal test; operator-run physical
+acceptance is tracked in issue #404.
+
+The startup settings include a per-player **Mod Menu items** page, also
+reachable inside the Insert menu. Its default-on filter can hide and disable
+each of the 14 built-in entries. Turning the filter off restores the complete
+menu while retaining individual choices. Disabled trainers stop, disabled
+windows close, and saved MANIAC choices are suspended for subsequent ordinary
+plays until re-enabled. Song Manager's last-played sort is saved and restored
+before the first song-list build. See [the Mod Menu settings guide](docs/MOD_MENU_SETTINGS.md).
 
 Version 0.4.14.89 keeps Force LN behavior from 0.4.14.88 and adds a persistent
 cache for successfully loaded IR rankings. Song and course ranking data is
@@ -39,7 +59,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.89**. Its Windows native-audio
+The current client source version is **0.4.14.90**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or

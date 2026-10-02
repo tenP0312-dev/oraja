@@ -71,7 +71,7 @@ public class FreqTrainerMenu {
     }
 
     public static boolean isFreqTrainerEnabled() {
-        return FREQ_TRAINER_ENABLED.get();
+        return FREQ_TRAINER_ENABLED.get() && ImGuiRenderer.show(ModMenuItem.RATE_MODIFIER);
     }
 
     public static int getFreq() {

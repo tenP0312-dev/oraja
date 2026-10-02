@@ -72,6 +72,7 @@ public class EventFactory {
 	}
 
 	static int cycleBmsirExtraMode(PlayerConfig config, int direction) {
+		if (!config.getModMenuSettings().isEnabled(bms.player.beatoraja.modmenu.ModMenuItem.MANIAC_OPTIONS)) return 0;
 		int delta = direction >= 0 ? 1 : -1;
 		int value = Math.floorMod(config.getBmsirExtraMode() + delta, 4);
 		config.setBmsirExtraMode(value);
@@ -80,6 +81,11 @@ public class EventFactory {
 
 	static int cycleBmsirDoubleOption(PlayerConfig config, int direction) {
 		int delta = direction >= 0 ? 1 : -1;
+		if (!config.getModMenuSettings().isEnabled(bms.player.beatoraja.modmenu.ModMenuItem.MANIAC_OPTIONS)) {
+			int value = Math.floorMod(config.getEffectiveBmsirDoubleOption() + delta, 2);
+			config.setDoubleoption(value);
+			return value;
+		}
 		int value = Math.floorMod(config.getBmsirDoubleOption() + delta, 4);
 		config.setBmsirDoubleOption(value);
 		return value;

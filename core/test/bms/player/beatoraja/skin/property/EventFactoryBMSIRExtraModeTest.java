@@ -9,6 +9,22 @@ import org.junit.jupiter.api.Test;
 
 class EventFactoryBMSIRExtraModeTest {
     @Test
+    void hiddenManiacControlsCannotReactivateModifiersButOrdinaryFlipStillWorks() {
+        PlayerConfig config = new PlayerConfig();
+        config.setBmsirExtraMode(2);
+        config.getModMenuSettings().itemEnabled.put("maniac_options", false);
+        assertEquals(0, EventFactory.cycleBmsirExtraMode(config, 1));
+        assertEquals(2, config.getBmsirExtraMode());
+        config.setBmsirDoubleOption(3);
+        assertEquals(1, EventFactory.cycleBmsirDoubleOption(config, 1));
+        assertEquals(0, EventFactory.cycleBmsirDoubleOption(config, 1));
+        assertTrue(config.getBmsirManiacSettings().isDoubleBattle());
+        assertTrue(config.getBmsirManiacSettings().isAutoScratch());
+        assertFalse(config.getEffectiveBmsirManiacSettings().isActive());
+        config.getModMenuSettings().filterEnabled = false;
+        assertEquals(3, config.getEffectiveBmsirDoubleOption());
+    }
+    @Test
     void legacySkinControlCyclesTheManiacExtraModeInBothDirections() {
         PlayerConfig config = new PlayerConfig();
 

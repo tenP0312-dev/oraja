@@ -583,6 +583,11 @@ public final class BMSIRArenaClient {
                 );
     }
 
+    public static boolean savePlayerConfig() {
+        return main != null && PlayerConfig.writeChecked(main.getConfig().getPlayerpath(),
+                main.getPlayerConfig(), PlayerConfig.getConfigJson(main.getPlayerConfig()));
+    }
+
 	static LaneRenderer currentLaneRenderer(int modeId) {
 		return main != null
 				&& main.getCurrentState() instanceof BMSPlayer player
