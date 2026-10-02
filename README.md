@@ -15,6 +15,14 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.91 includes all five pending client changes: controller-operated
+My Difficulty Table editing (#310), bounded Scene compilation reuse (#348),
+NANTOKA MANIA-only course judgment and Dan gauges (#383), versioned ADDNOTES
+jack avoidance (#402), and ranking revalidation after LN context changes (#403).
+Batch editing also blocks accidental course launches. NANTOKA courses do not
+save ordinary results or submit to IR. This optional test preserves all 0.4.14.90
+features, plugin 0.0.77 and launcher 0.2.29. Operator acceptance is tracked in #406.
+
 Version 0.4.14.90 adds course qualification on result screens, persistent
 per-player Mod Menu item settings, and optional Switch-style four-band and
 LR2-style seven-band output equalizers. It preserves the 0.4.14.89 release
@@ -59,7 +67,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.90**. Its Windows native-audio
+The current client source version is **0.4.14.91**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
