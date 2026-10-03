@@ -345,10 +345,10 @@ public class BGAProcessor {
                 long metricsStart = async.metrics.start();
                 async.beginTick(-1, Gdx.graphics.getFrameId());
                 boolean movieReady = preloadFirst(firstMovie, 1);
-                preloadFirst(firstLayer, 2);
+                boolean layerReady = preloadFirst(firstLayer, 2);
                 async.endTick();
                 async.metrics.finish(BgaPerformanceMetrics.Metric.PREPARE, metricsStart);
-                complete &= movieReady || System.nanoTime() - moviePreparationStarted >= 500_000_000L;
+                complete &= (movieReady && layerReady) || System.nanoTime() - moviePreparationStarted >= 500_000_000L;
             }
 		} finally {
 			TimingDiagnostics.finish(TimingDiagnostics.Metric.BGA_PREPARE_STEP, stepStarted);

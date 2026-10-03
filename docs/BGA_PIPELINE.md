@@ -133,7 +133,9 @@ version, protocol, release manifest or production setting is changed.
 ## Budgets and measurement boundaries
 
 `bgaNativeMemoryBudgetMb` bounds owned native RGB staging and reserves converter,
-upload Pixmap and estimated RGB texture storage. Admission divides the budget
+upload Pixmap and estimated RGBA texture storage. RGB converter row padding is
+included, and source metadata is opened in RAW mode before the bounded output
+converter is allocated. Admission divides the budget
 among allowed sessions and further scales output to fit. The accounting is
 not a process RSS cap: compressed archive disk files, FFmpeg demux/codec/reference
 frames and GPU driver allocations are outside this owned-buffer bound. The
@@ -193,6 +195,7 @@ LaneRenderer redesign remain later phases.
 Before a five-hour execution limit, update #413 with the pushed branch/SHA,
 completed and remaining work, exact validation results and resumption steps.
 Unfinished or operator-pending PRs stay Draft for administrator handoff. The
-user has prohibited pushing from this environment: export a review patch and
-PR description and save the patch in Issue comments if no remote branch exists.
-This local change does not itself create a GitHub PR.
+original cloud implementation was exported as a three-part, SHA256-verified
+patch because that environment could not push. The administrator continuation
+restores that patch on its recorded base and uses the authorized Issue branch
+and Draft PR workflow. No binary distribution or production change is included.

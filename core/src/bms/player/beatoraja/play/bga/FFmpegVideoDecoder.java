@@ -6,6 +6,7 @@ import bms.player.beatoraja.song.SongResource;
 import bms.player.beatoraja.song.SongResources;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber.ImageMode;
 import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGB24;
 
 /** Worker-owned FFmpeg session. No Gdx, Pixmap, Texture or render callbacks. */
@@ -34,18 +35,29 @@ final class FFmpegVideoDecoder implements BgaPlaybackCoordinator.Decoder {
             grabber.setVideoOption("threads", "1");
             grabber.setPixelFormat(AV_PIX_FMT_RGB24);
             grabber.setAudioChannels(0);
+            // Discover source metadata without allocating a full-source RGB conversion buffer.
+            grabber.setImageMode(ImageMode.RAW);
             grabber.start();
             int[] size = profile.dimensions(grabber.getImageWidth(), grabber.getImageHeight(), displayWidth, displayHeight);
             long perSessionPixels = profile.memoryBytes() / profile.decoders() / (3L * profile.queueLength() + 10);
             double memoryScale = Math.min(1, Math.sqrt(perSessionPixels / ((double) size[0] * size[1])));
             size[0] = Math.max(1, (int) (size[0] * memoryScale));
             size[1] = Math.max(1, (int) (size[1] * memoryScale));
-            // Reserve queue, converter output, upload Pixmap and RGB texture storage.
-            long bytes = (long) size[0] * size[1] * (3L * profile.queueLength() + 10);
+            // JavaCV aligns RGB conversion rows by rounding pixel width up to 64.
+            // Include that padding, upload Pixmap and estimated RGBA texture storage.
+            long sessionLimit = profile.memoryBytes() / profile.decoders();
+            long bytes = ownedBytes(size[0], size[1], profile.queueLength());
+            while (bytes > sessionLimit) {
+                double scale = Math.sqrt(sessionLimit / (double) bytes);
+                size[0] = Math.max(1, (int) (size[0] * scale));
+                size[1] = Math.max(1, (int) (size[1] * scale));
+                bytes = ownedBytes(size[0], size[1], profile.queueLength());
+            }
             if (!budget.reserve(bytes)) throw new IllegalStateException("BGA frame memory budget exhausted");
             reservedBytes = bytes;
             grabber.setImageWidth(size[0]);
             grabber.setImageHeight(size[1]);
+            grabber.setImageMode(ImageMode.COLOR);
             queue = new DecodedFrameQueue(profile.queueLength(), size[0], size[1], metrics, DecodedFrameQueue.NATIVE);
         } catch (Exception | LinkageError error) {
             close();
@@ -53,6 +65,10 @@ final class FFmpegVideoDecoder implements BgaPlaybackCoordinator.Decoder {
         } finally { metrics.finish(BgaPerformanceMetrics.Metric.OPEN, started); }
     }
     public DecodedFrameQueue queue() { return queue; }
+    private static long ownedBytes(int width, int height, int queueLength) {
+        return (long) width * height * (3L * queueLength + 7)
+                + ((width + 63L) / 64 * 64) * height * 3;
+    }
     public void seek(long targetUs, long generation) throws Exception {
         long started = metrics.start();
         try {
@@ -105,8 +121,10 @@ final class FFmpegVideoDecoder implements BgaPlaybackCoordinator.Decoder {
         } finally { metrics.finish(BgaPerformanceMetrics.Metric.CONVERT, started); }
     }
     static void copyRgb(Frame frame, ByteBuffer destination, int width, int height) {
-        if (frame.image == null || !(frame.image[0] instanceof ByteBuffer source)
-                || frame.imageWidth != width || frame.imageHeight != height || frame.imageChannels != 3
+        // This decoder explicitly requests RGB24. JavaCV derives imageChannels from
+        // padded stride / width, so it is not a reliable pixel-format discriminator.
+        if (frame.image == null || frame.image.length == 0 || !(frame.image[0] instanceof ByteBuffer source)
+                || frame.imageWidth != width || frame.imageHeight != height || frame.imageDepth != Frame.DEPTH_UBYTE
                 || frame.imageStride < width * 3) throw new IllegalArgumentException("Unsupported RGB frame layout");
         int savedLimit = source.limit();
         destination.clear();
