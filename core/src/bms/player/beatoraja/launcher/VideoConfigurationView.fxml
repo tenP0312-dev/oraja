@@ -70,6 +70,13 @@
             </items>
         </ComboBox>
 
+        <Label text="%BGA_QUALITY" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="optionLabel"/>
+        <ComboBox fx:id="bgaQuality" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+        <Label text="%BGA_ASYNC_PIPELINE" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="optionLabel"/>
+        <CheckBox fx:id="bgaAsyncPipeline" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+        <Label text="%BGA_PERFORMANCE_STATS" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="optionLabel"/>
+        <CheckBox fx:id="bgaPerformanceStats" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
+
         <stylesheets>
             <URL value="@LauncherStyle.css"/>
         </stylesheets>

@@ -37,7 +37,7 @@ public class BGAProcessor {
 	// TODO イベントレイヤー対応(現状はミスレイヤーのみ)
 
 	private PlayerConfig player;
-	private float progress = 0;
+	private volatile float progress = 0;
 
 	private MovieProcessor[] movies = new MovieProcessor[0]; 
 	
@@ -81,9 +81,16 @@ public class BGAProcessor {
 	private boolean rlayer;
 	private boolean preparationStarted;
 	private long preparationStartedNanos;
+    private final BgaPlaybackCoordinator async;
+    private final boolean videoEnabled;
+    private BgaTimelineSchedule schedule = new BgaTimelineSchedule(new TimeLine[0], new MovieProcessor[0]);
+    private long mainStartMs, layerStartMs, moviePreparationStarted;
+    private BgaTimelineSchedule.Event firstMovie, firstLayer;
 
 	public BGAProcessor(Config config, PlayerConfig player) {
 		this.player = player;
+        videoEnabled = config.getBga() != Config.BGA_OFF && config.getBgaQualityMode() != BgaQualityProfile.Mode.OFF;
+        async = config.isBgaAsyncPipeline() ? new BgaPlaybackCoordinator(config) : null;
 
 		Pixmap blank = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		blank.setColor(Color.BLACK);
@@ -119,6 +126,12 @@ public class BGAProcessor {
 
 	public synchronized void setModel(BMSModel model, SongResource chartResource) {
 		progress = 0;
+
+        if (async != null) {
+            async.reset();
+            MovieProcessor[] old = movies;
+            Gdx.app.postRunnable(() -> { for (MovieProcessor movie : old) if (movie != null) movie.dispose(); });
+        }
 
 		cache.clear();
 		resetCurrentlyPlayingBGA();
@@ -204,11 +217,13 @@ public class BGAProcessor {
 					boolean isMovie = false;
 					for (String mov : mov_extension) {
 						if (f.name().toLowerCase().endsWith(mov)) {
+                            isMovie = true;
+                            if (!videoEnabled) break;
 							try {
 								movieResources.put(f.cacheKey(), f);
 								MovieProcessor mm;
 								try {
-									mm = mpgresource.get(f.cacheKey());
+                                    mm = async != null ? async.movie(f) : mpgresource.get(f.cacheKey());
 								} finally {
 									movieResources.remove(f.cacheKey(), f);
 								}
@@ -230,8 +245,11 @@ public class BGAProcessor {
 				progress += 1f / model.getBgaList().length;
 				id++;
 			}
-		}
+		} else {
+            movies = new MovieProcessor[0];
+        }
 		timelines = tls.toArray(TimeLine.class);
+        schedule = new BgaTimelineSchedule(timelines, movies);
 
 		disposeOld();
 
@@ -246,6 +264,11 @@ public class BGAProcessor {
 	 */
 	public synchronized void setSkinPreviewModel(BMSModel model) {
 		progress = 0;
+        if (async != null) {
+            async.reset();
+            MovieProcessor[] old = movies;
+            Gdx.app.postRunnable(() -> { for (MovieProcessor movie : old) if (movie != null) movie.dispose(); });
+        }
 		cache.clear();
 		resetCurrentlyPlayingBGA();
 
@@ -279,6 +302,19 @@ public class BGAProcessor {
 	 * BGAの初期データをあらかじめキャッシュする
 	 */
 	public void beginPrepare(BMSPlayer player) {
+        if (async != null) {
+            async.reset();
+            async.beginTick(-1, Gdx.graphics.getFrameId());
+            for (var object : player.getSkin().getAllSkinObjects()) {
+                if (object instanceof SkinBGA) {
+                    Rectangle destination = object.getDestination(0, player);
+                    if (destination != null) async.viewport(Math.max(1, (int) destination.width), Math.max(1, (int) destination.height));
+                }
+            }
+            firstMovie = schedule.first(false);
+            firstLayer = schedule.first(true);
+            moviePreparationStarted = System.nanoTime();
+        }
 		pos = 0;
 		if(cache != null) {
 			cache.beginPrepare(timelines);
@@ -289,7 +325,7 @@ public class BGAProcessor {
 			}
 		}
 		resetCurrentlyPlayingBGA();
-		time = 0;
+		time = -1;
 		preparationStarted = true;
 		preparationStartedNanos = TimingDiagnostics.start();
 	}
@@ -305,6 +341,15 @@ public class BGAProcessor {
 					PREPARE_DISPOSALS_PER_FRAME,
 					PREPARE_UPLOADS_PER_FRAME
 			);
+            if (async != null) {
+                long metricsStart = async.metrics.start();
+                async.beginTick(-1, Gdx.graphics.getFrameId());
+                boolean movieReady = preloadFirst(firstMovie, 1);
+                boolean layerReady = preloadFirst(firstLayer, 2);
+                async.endTick();
+                async.metrics.finish(BgaPerformanceMetrics.Metric.PREPARE, metricsStart);
+                complete &= (movieReady && layerReady) || System.nanoTime() - moviePreparationStarted >= 500_000_000L;
+            }
 		} finally {
 			TimingDiagnostics.finish(TimingDiagnostics.Metric.BGA_PREPARE_STEP, stepStarted);
 		}
@@ -326,12 +371,19 @@ public class BGAProcessor {
 		misslayer = null;
 	}
 
-	private Texture getBGAData(long time, int id, boolean cont) {
-		if (progress != 1 || id == -1) {
+	private Texture getBGAData(long time, int id, boolean cont, int role) {
+		if (progress != 1 || id < 0 || id >= movies.length) {
 			return null;
 		}
 
 		if(movies[id] != null) {
+            if (async != null && movies[id] instanceof BgaPlaybackCoordinator.Movie movie) {
+                movie = movie.variant(role);
+                long start = role == 2 ? misslayertime : role == 0 ? mainStartMs : layerStartMs;
+                int priority = role == 1 ? 2 : 1;
+                if (!async.request(movie, time, start, priority, false)) return null;
+                return movie.getFrame(time);
+            }
 			if (!cont) {
 				movies[id].play(time, false);
 			}
@@ -345,6 +397,12 @@ public class BGAProcessor {
 			this.time = -1;
 			return;
 		}
+        if (time < this.time) {
+            pos = 0;
+            resetCurrentlyPlayingBGA();
+            this.time = -1;
+            if (async != null) async.reset();
+        }
 		for (int i = pos; i < timelines.length; i++) {
 			final TimeLine tl = timelines[i];
 			if (tl.getTime() > time) {
@@ -358,6 +416,7 @@ public class BGAProcessor {
 					rbga = false;
 				} else if (bga >= 0) {
 					playingbgaid = bga;
+                    mainStartMs = tl.getTime();
 					rbga = false;
 				}
 				
@@ -367,6 +426,7 @@ public class BGAProcessor {
 					rlayer = false;
 				} else if (layer >= 0) {
 					playinglayerid = layer;
+                    layerStartMs = tl.getTime();
 					rlayer = false;
 				}
 
@@ -387,6 +447,12 @@ public class BGAProcessor {
 
 
 	public void drawBGA(SkinBGA dst, SkinObjectRenderer sprite, Rectangle r) {
+        long started = async != null ? async.metrics.start() : 0;
+        if (async != null && time >= 0) {
+            async.viewport(Math.max(1, (int) r.width), Math.max(1, (int) r.height));
+            async.beginTick(time, Gdx.graphics.getFrameId());
+        }
+        try {
 		sprite.setColor(dst.getColor());
 		sprite.setBlend(dst.getBlend());
 		if (time < 0 || timelines == null) {
@@ -399,7 +465,7 @@ public class BGAProcessor {
 			final Sequence[] seq = misslayer.sequence[0];
 			final int index = seq[(int) ((seq.length - 1) * (time - misslayertime) / getMisslayerduration)].id;
 			if(index != Integer.MIN_VALUE) {
-				Texture miss = getBGAData(time, index, true);
+				Texture miss = getBGAData(time, index, true, 2);
 				if (miss != null) {
 					sprite.setType(SkinObjectRenderer.TYPE_LINEAR);
 					drawBGAFixRatio(dst, sprite, r, miss);
@@ -407,11 +473,11 @@ public class BGAProcessor {
 			}
 		} else {
 			// draw BGA
-			final Texture playingbgatex = getBGAData(time, playingbgaid, rbga);
+			final Texture playingbgatex = getBGAData(time, playingbgaid, rbga, 0);
 			rbga = true;
 			if (playingbgatex != null) {
 				if (movies[playingbgaid] != null) {
-					sprite.setType(SkinObjectRenderer.TYPE_FFMPEG);
+					sprite.setType(async != null ? SkinObjectRenderer.TYPE_LINEAR : SkinObjectRenderer.TYPE_FFMPEG);
 					drawBGAFixRatio(dst, sprite, r, playingbgatex);
 				} else {
 					sprite.setType(SkinObjectRenderer.TYPE_LINEAR);
@@ -421,11 +487,11 @@ public class BGAProcessor {
 				sprite.draw(blanktex, r.x, r.y, r.width, r.height);
 			}
 			// draw layer
-			final Texture playinglayertex = getBGAData(time, playinglayerid, rlayer);
+			final Texture playinglayertex = getBGAData(time, playinglayerid, rlayer, 1);
 			rlayer = true;
 			if (playinglayertex != null) {
 				if (movies[playinglayerid] != null) {
-					sprite.setType(SkinObjectRenderer.TYPE_FFMPEG);
+					sprite.setType(async != null ? SkinObjectRenderer.TYPE_LINEAR : SkinObjectRenderer.TYPE_FFMPEG);
 					drawBGAFixRatio(dst, sprite, r, playinglayertex);
 				} else {
 					sprite.setType(SkinObjectRenderer.TYPE_LAYER);
@@ -433,7 +499,44 @@ public class BGAProcessor {
 				}
 			}
 		}
-	}
+        } finally {
+            if (async != null && time >= 0) {
+                if (time >= 0) preloadUpcoming();
+                async.endTick();
+                async.metrics.finish(BgaPerformanceMetrics.Metric.DRAW, started);
+            }
+        }
+    }
+
+    private boolean preloadFirst(BgaTimelineSchedule.Event event, int priority) {
+        if (event == null || async.profile.fps() == 0) return true;
+        var movie = ((BgaPlaybackCoordinator.Movie) movies[event.id()]).variant(event.layer() ? 1 : 0);
+        if (!async.request(movie, event.timeMs(), event.timeMs(), priority, true)) return true;
+        return movie.failed || movie.getFrame(event.timeMs()) != null;
+    }
+
+    private void preloadUpcoming() {
+        int count = 0;
+        for (int pass = 0; pass < 2; pass++) {
+            boolean layer = pass == 1;
+            if (count >= Math.min(2, async.profile.preloadCount())) break;
+            var event = schedule.nextDistinctMovieAfter(time, layer ? playinglayerid : playingbgaid, layer);
+            if (event != null && event.timeMs() - time <= async.profile.preloadWindowMs()) {
+                var movie = ((BgaPlaybackCoordinator.Movie) movies[event.id()]).variant(layer ? 1 : 0);
+                if (async.request(movie, event.timeMs(), event.timeMs(), layer ? 4 : 3, true)) count++;
+            }
+        }
+        if (count < Math.min(2, async.profile.preloadCount()) && misslayer != null
+                && misslayer.sequence.length > 0) {
+            for (Sequence sequence : misslayer.sequence[0]) {
+                if (sequence.id >= 0 && sequence.id < movies.length
+                        && movies[sequence.id] instanceof BgaPlaybackCoordinator.Movie movie) {
+                    async.request(movie.variant(2), 0, 0, 5, true);
+                    break;
+                }
+            }
+        }
+    }
 	
 	/**
 	 * Modify the aspect ratio and draw BGA
@@ -458,6 +561,7 @@ public class BGAProcessor {
 	}
 
 	public void stop() {
+        if (async != null) async.reset();
 		for (MovieProcessor mpg : movies) {
 			if (mpg != null) {
 				mpg.stop();
@@ -469,6 +573,10 @@ public class BGAProcessor {
 	 * リソースを開放する
 	 */
 	public void dispose() {
+        if (async != null) {
+            async.dispose();
+            for (MovieProcessor movie : movies) if (movie != null) movie.dispose();
+        }
 		if (cache != null) {
 			cache.dispose();
 		}
