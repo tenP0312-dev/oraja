@@ -64,7 +64,14 @@ public final class TimingDiagnostics {
         BGA_RENDER_QUEUE("bga_render_queue_us"),
         BGA_TEXTURE_LOCK("bga_texture_lock_us"),
         BGA_TEXTURE_UPLOAD("bga_texture_upload_us"),
-        BGA_STATIC_RUNTIME_UPLOAD("bga_static_runtime_upload_us");
+        BGA_STATIC_RUNTIME_UPLOAD("bga_static_runtime_upload_us"),
+        BGA_ASYNC_PREPARE("bga_async_prepare_us"),
+        BGA_POLL_FRAME("bga_poll_frame_us"),
+        BGA_DRAW("bga_draw_us"),
+        BGA_RENDER_WAIT("bga_render_wait_us"),
+        BGA_OPEN("bga_open_us"),
+        BGA_SEEK("bga_seek_us"),
+        BGA_CONVERT("bga_convert_us");
 
         final String jsonName;
 
@@ -85,7 +92,15 @@ public final class TimingDiagnostics {
         BGA_STATIC_CACHE_MISS("bga_static_cache_misses"),
         BGA_STATIC_TEXTURE_CREATE("bga_static_texture_creates"),
         BGA_STATIC_TEXTURE_RECREATE("bga_static_texture_recreates"),
-        BGA_STATIC_TEXTURE_UPDATE("bga_static_texture_updates");
+        BGA_STATIC_TEXTURE_UPDATE("bga_static_texture_updates"),
+        BGA_FRAMES_DECODED("bga_frames_decoded"),
+        BGA_FRAMES_UPLOADED("bga_frames_uploaded"),
+        BGA_DROPPED_LATE("bga_dropped_late"),
+        BGA_DROPPED_FULL("bga_dropped_full"),
+        BGA_TEXTURE_REUSED("bga_texture_reused"),
+        BGA_SEEK_REQUESTED("bga_seek_requested"),
+        BGA_SEEK_COALESCED("bga_seek_coalesced"),
+        BGA_UPLOAD_OVER_BUDGET("bga_upload_over_budget");
 
         final String jsonName;
 
