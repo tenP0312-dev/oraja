@@ -203,6 +203,10 @@ def _run_lane(
         f"-Dplatform={platform}",
         f"-Darch={arch}",
     ]
+    # A cross-build cannot execute the target's FFmpeg DLLs on the macOS host.
+    # Keep the full native test suite on the matching macOS lane, as CI does.
+    if platform == "windows" and os.name != "nt":
+        command.extend(["-x", "core:test"])
     env = dict(os.environ)
     env["JAVA_HOME"] = str(java_home)
     env["ORG_GRADLE_JAVA_INSTALLATIONS_PATHS"] = str(java_home)
