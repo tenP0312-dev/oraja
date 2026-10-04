@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Frozen v1 replay regression cases; v2 cases live in NantokaManiaIidx33Test. */
+/** Frozen v1 replay regression cases; v2 cases live in NantokaManiaV2Test. */
 class NantokaManiaJudgeTest {
     record Result(int lane, Note note, int judge, long time) { }
     static final class Fixture implements NantokaManiaJudge.Listener {
