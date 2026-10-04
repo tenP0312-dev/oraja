@@ -19,6 +19,11 @@ import com.badlogic.gdx.utils.Disposable;
  */
 public interface AudioDriver extends Disposable {
 
+	/** Apply a prepared output EQ at the next buffer; false for unsupported drivers. */
+	default boolean updateOutputEqualizer(bms.player.beatoraja.AudioConfig config) {
+		return false;
+	}
+
 	/**
 	 * 指定したパスの音源を鳴らす
 	 * 
