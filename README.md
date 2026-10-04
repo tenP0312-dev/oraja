@@ -15,7 +15,7 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
-Version 0.4.14.92 aligns NANTOKA MANIA v2 with the supplied IIDX 33 analysis:
+Version 0.4.14.92 updates NANTOKA MANIA v2 judgment handling:
 DP scratch windows, separate candidate/miss limits, consumed HCN endpoints,
 recovery-only reentry, BSS logical-stop judgment, and 8/10-frame cycles.
 New records are separated while existing replays retain the v1 engine.
