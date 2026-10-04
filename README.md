@@ -15,6 +15,17 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.93 is an optional internal test candidate for the BGA
+asynchronous pipeline over 0.4.14.92. Video decode/seek uses bounded workers
+and native RGB leases, while GL polls frames and reuses textures. Video
+settings add OFF/PERFORMANCE/BALANCED/QUALITY, asynchronous playback and
+Performance Monitor statistics. BALANCED and asynchronous playback are the
+defaults; disabling asynchronous playback restores the old movie route.
+See [the BGA pipeline guide](docs/BGA_PIPELINE.md). Physical frame-time/audio
+acceptance and total codec/GPU native-memory evaluation remain pending in
+[Issue #413](https://github.com/tenP0312-dev/oraja/issues/413); this internal
+test does not establish complete requirement acceptance.
+
 Version 0.4.14.92 updates NANTOKA MANIA v2 judgment handling:
 DP scratch windows, separate candidate/miss limits, consumed HCN endpoints,
 recovery-only reentry, BSS logical-stop judgment, and 8/10-frame cycles.
@@ -74,7 +85,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.92**. Its Windows native-audio
+The current client source version is **0.4.14.93**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or

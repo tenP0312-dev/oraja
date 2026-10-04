@@ -11,6 +11,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javafx.util.Pair;
 
 public class PerformanceMetrics {
+    /** BGA uses bounded atomic samples rather than the monitor's synchronized Watch queue. */
+    public volatile bms.player.beatoraja.play.bga.BgaPerformanceMetrics bga =
+        new bms.player.beatoraja.play.bga.BgaPerformanceMetrics(false);
     private static PerformanceMetrics self = new PerformanceMetrics();
 
     public static PerformanceMetrics get() { return self; }

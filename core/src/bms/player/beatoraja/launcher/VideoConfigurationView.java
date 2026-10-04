@@ -26,6 +26,9 @@ public class VideoConfigurationView implements Initializable {
 	private ComboBox<String> bgaOp;
 	@FXML
 	private ComboBox<String> bgaExpand;
+    @FXML private ComboBox<bms.player.beatoraja.play.bga.BgaQualityProfile.Mode> bgaQuality;
+    @FXML private CheckBox bgaAsyncPipeline;
+    @FXML private CheckBox bgaPerformanceStats;
 
 	@FXML
 	private CheckBox vSync;
@@ -41,6 +44,7 @@ public class VideoConfigurationView implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 		updateResolutions();
+        bgaQuality.getItems().setAll(bms.player.beatoraja.play.bga.BgaQualityProfile.Mode.values());
 
 		displayMode.getItems().setAll(Config.DisplayMode.values());
 		monitor.getItems().setAll(Arrays.stream(Lwjgl3ApplicationConfiguration.getMonitors()).map(monitor -> String.format("%s [%s, %s]", monitor.name, Integer.toString(monitor.virtualX), Integer.toString(monitor.virtualY))).toList());
@@ -53,6 +57,9 @@ public class VideoConfigurationView implements Initializable {
 		monitor.setValue(config.getMonitorName());
 		bgaOp.getSelectionModel().select(config.getBga());
 		bgaExpand.getSelectionModel().select(config.getBgaExpand());
+        bgaQuality.setValue(config.getBgaQualityMode());
+        bgaAsyncPipeline.setSelected(config.isBgaAsyncPipeline());
+        bgaPerformanceStats.setSelected(config.isBgaShowPerformanceStats());
 		maxFps.getValueFactory().setValue(config.getMaxFramePerSecond());
 	}
 
@@ -67,6 +74,9 @@ public class VideoConfigurationView implements Initializable {
 		config.setMonitorName(monitor.getValue());
 		config.setBga(bgaOp.getSelectionModel().getSelectedIndex());
 		config.setBgaExpand(bgaExpand.getSelectionModel().getSelectedIndex());
+        config.setBgaQualityMode(bgaQuality.getValue());
+        config.setBgaAsyncPipeline(bgaAsyncPipeline.isSelected());
+        config.setBgaShowPerformanceStats(bgaPerformanceStats.isSelected());
 		config.setMaxFramePerSecond(maxFps.getValue());
 	}
 

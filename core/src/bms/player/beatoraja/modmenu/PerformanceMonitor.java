@@ -26,6 +26,11 @@ public class PerformanceMonitor {
     private static IdentityHashMap<String, WatchStats> watchData =
         new IdentityHashMap<String, WatchStats>();
     static long lastStatUpdate = 0;
+    private static bms.player.beatoraja.play.bga.BgaPerformanceMetrics lastBga;
+    private static long lastBgaUpdate;
+    private static final EnumMap<bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Metric,
+            bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Distribution> bgaData =
+            new EnumMap<>(bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Metric.class);
 
 
     public static void show(ImBoolean showPerformanceMonitor) {
@@ -41,6 +46,27 @@ public class PerformanceMonitor {
             if (ImGui.collapsingHeader(t("計測", "Watch"))) {
                 updateWatchData();
                 renderWatchData();
+            }
+
+            var bga = PerformanceMetrics.get().bga;
+            if (bga.isEnabled() && ImGui.collapsingHeader("BGA")) {
+                if (lastBga != bga || now - lastBgaUpdate >= 500_000_000L) {
+                    lastBga = bga;
+                    lastBgaUpdate = now;
+                    for (var metric : bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Metric.values())
+                        bgaData.put(metric, bga.snapshot(metric));
+                }
+                for (var metric : bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Metric.values()) {
+                    var data = bgaData.get(metric);
+                    ImGui.text(String.format("%s n=%d p50/95/99/max %.1f/%.1f/%.1f/%.1f us",
+                            metric, data.count(), data.p50Us(), data.p95Us(), data.p99Us(), data.maxUs()));
+                }
+                ImGui.text(String.format("active=%d preload=%d queue=%d owned bytes=%d",
+                        bga.activeDecoders.get(), bga.preloadedDecoders.get(),
+                        bga.queueDepth.get(), bga.nativeBytes.get()));
+                for (var counter : bms.player.beatoraja.play.bga.BgaPerformanceMetrics.Counter.values()) {
+                    ImGui.text(counter + "=" + bga.count(counter));
+                }
             }
 
             if (ImGui.collapsingHeader(t("イベント", "Events"), ImGuiTreeNodeFlags.DefaultOpen)) {
