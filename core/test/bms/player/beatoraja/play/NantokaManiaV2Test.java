@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
-class NantokaManiaIidx33Test {
+class NantokaManiaV2Test {
     private NantokaManiaJudgeTest.Fixture fixture(Mode mode) {
         return new NantokaManiaJudgeTest.Fixture(mode);
     }
 
-    @Test void extractedFloatBoundariesKeepTheirOpenAndClosedSidesForAllProfiles() {
+    @Test void floatBoundariesKeepTheirOpenAndClosedSidesForAllProfiles() {
         double[][] thresholds = {
                 {-249.75, -116.41666412353516, -33.08333206176758, -16.41666603088379,
                         .25, 16.91666603088379, 33.58333206176758, 116.91666412353516, 250.25},
