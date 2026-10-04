@@ -39,7 +39,7 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 	private boolean stop = false;
 	
 	private final float[] buffer;
-	private final OutputEqualizer equalizer;
+	private final LiveOutputEqualizer equalizer;
 	
 	private final Thread mixer;
 	private long lastWriteCompletedNanos;
@@ -269,7 +269,7 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 				framesPerBuffer
 		);
 
-		equalizer = new OutputEqualizer(audioConfig, getSampleRate(), channels);
+		equalizer = new LiveOutputEqualizer(audioConfig, getSampleRate(), channels);
 		mixer = new Thread(this);
 		buffer = new float[framesPerBuffer * channels];
 		inputs = new MixerInput[audioConfig.getDeviceSimultaneousSources()];
@@ -277,6 +277,12 @@ public class PortAudioDriver extends AbstractAudioDriver<PCM> implements Runnabl
 			inputs[i] = new MixerInput();
 		}
 		mixer.start();
+	}
+
+	@Override
+	public boolean updateOutputEqualizer(AudioConfig config) {
+		equalizer.update(config);
+		return true;
 	}
 
 	static void validateSelectedDevice(DriverType driver, DeviceOption option) {

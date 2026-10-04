@@ -157,6 +157,7 @@ public class ImGuiRenderer {
 
         if (SHOW_MOD_MENU.get()) {
             ImGui.begin("Arena oraja", ImGuiWindowFlags.AlwaysAutoResize);
+            FunctionKeyMenu.renderOpenButton();
             ModMenuSettingsMenu.render();
             enforceModMenuStates();
 
@@ -249,6 +250,7 @@ public class ImGuiRenderer {
         }
         renderMyDifficultyTableBatchIndicator();
         BMSIRArenaOverlay.render();
+        FunctionKeyMenu.render();
         ImGuiNotify.renderNotifications();
     }
 
@@ -442,6 +444,7 @@ public class ImGuiRenderer {
                 ImGui.isAnyItemFocused(),
                 ImGui.isAnyItemActive(),
                 SHOW_MOD_MENU.get() || SHOW_SKIN_WIDGET_MANAGER.get() || SHOW_MANIAC_OPTIONS.get()
+                        || FunctionKeyMenu.isOpen()
         );
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());

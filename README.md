@@ -8,12 +8,23 @@ Arena oraja client. It is based on
 [LR2oraja Endless Dream](https://github.com/Catizard/lr2oraja-endlessdream)
 and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
+選曲画面のF5メニューとArenaオーバーレイ（通常／コンパクト）に
+「ファンクションキーメニューを開く」があります。Fキーとテンキーの機能を
+名前で選べるため、キーへの割り当てなしで操作できます。
+詳細と実機確認項目は [機能一覧メニュー](docs/FUNCTION_KEY_MENU.md) を参照してください。
+
 音声設定には独自DSPのSwitch方式4バンド／LR2風7バンドEQがあります。
 PortAudio／ASIO対応で、初期OFF、方式ごとのゲイン保存、プリアンプ調整が可能です。
 OpenALでは未対応と表示し、設定値を保持します。変更は本体の再起動後に適用します。
 詳細と実機確認項目は [出力EQ](docs/OUTPUT_EQUALIZER.md) を参照してください。
 
 ## Current Version
+
+Version 0.4.14.94 preserves the 0.4.14.93 internal test lineage and adds live
+output EQ adjustment from the F5 menu and a named function-key/numpad menu
+on Music Select. Plugin 0.0.77 and launcher 0.2.29 remain optional.
+Physical BGA, audio, and menu acceptance remains operator-run and pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.94.md).
 
 Version 0.4.14.93 is an optional internal test candidate for the BGA
 asynchronous pipeline over 0.4.14.92. Video decode/seek uses bounded workers
@@ -85,7 +96,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.93**. Its Windows native-audio
+The current client source version is **0.4.14.94**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
