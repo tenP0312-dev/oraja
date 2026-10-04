@@ -44,7 +44,7 @@ public final class NantokaManiaRules {
         return settings != null && settings.getNantokaJudgeVersion() == 1;
     }
 
-    // Match the extracted float32 thresholds before projecting onto integer microseconds.
+    // Calculate float32 thresholds before projecting onto integer microseconds.
     static long boundary(int seed) { return (long) Math.floor((seed * 1000f / 60f + .25f) * 1000d); }
 
     public static long[][] windows(boolean scratch) {

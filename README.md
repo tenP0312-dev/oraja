@@ -26,7 +26,7 @@ acceptance and total codec/GPU native-memory evaluation remain pending in
 [Issue #413](https://github.com/tenP0312-dev/oraja/issues/413); this internal
 test does not establish complete requirement acceptance.
 
-Version 0.4.14.92 aligns NANTOKA MANIA v2 with the supplied IIDX 33 analysis:
+Version 0.4.14.92 updates NANTOKA MANIA v2 judgment handling:
 DP scratch windows, separate candidate/miss limits, consumed HCN endpoints,
 recovery-only reentry, BSS logical-stop judgment, and 8/10-frame cycles.
 New records are separated while existing replays retain the v1 engine.

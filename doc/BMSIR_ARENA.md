@@ -1060,7 +1060,7 @@ falling back to the normal leaderboard.
 MANIAC OPTIONS also provides **ナントカマニアモード / NANTOKA MANIA MODE**.
 On supported 5/7/10/14KEY solo charts it uses fixed judgment windows,
 integer gauge rules, and long-note handling based on the supplied specification.
-Its v2 judgment follows the supplied 2026-10-02 IIDX 33 analysis: DP scratch
+Its v2 judgment uses dedicated DP scratch
 windows, the separate +250ms candidate cap and 15-frame miss condition, consumed
 HCN endpoints, and separate 8/10-frame gauge/display cycles. V1 replays retain
 their original engine, while new records use a separate local identity.
