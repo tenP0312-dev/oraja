@@ -712,7 +712,7 @@ public class MainController {
 		}
 	}
 
-	private void executeBmsirNumpadAction(BMSIRNumpadAction action) {
+	public void executeBmsirNumpadAction(BMSIRNumpadAction action) {
 		switch (action) {
 		case JUDGE_AUTO:
 			if (current instanceof BMSPlayer) {
@@ -783,6 +783,19 @@ public class MainController {
 				PlayerConfig.JUDGETIMING_MIN,
 				Math.min(PlayerConfig.JUDGETIMING_MAX, player.getJudgetiming() + delta)
 		));
+	}
+
+	public void shareScreenshot() {
+		if (screenshot == null || !screenshot.isAlive()) {
+			final MainState screenshotState = current;
+			final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0,
+					Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(), false);
+			screenshot = new Thread(() -> {
+				for (int i = 3; i < pixels.length; i += 4) pixels[i] = (byte) 0xff;
+				new ScreenShotTwitterExporter(player).send(screenshotState, pixels);
+			});
+			screenshot.start();
+		}
 	}
 
 	private void toggleScreenMode() {
@@ -1124,6 +1137,7 @@ public class MainController {
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
 		MiscSettingMenu.setMain(this);
+		FunctionKeyMenu.setMain(this);
 		if (initializeArena) {
 			BMSIRArenaClient.initialize(this);
 		}
@@ -1334,17 +1348,7 @@ public class MainController {
             }
 
             if (input.isActivated(KeyCommand.POST_TWITTER)) {
-                if (screenshot == null || !screenshot.isAlive()) {
-            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, Gdx.graphics.getBackBufferWidth(),Gdx.graphics.getBackBufferHeight(), false);
-                    screenshot = new Thread(() -> {
-                		// 全ピクセルのアルファ値を255にする(=透明色を無くす)
-                		for(int i = 3;i < pixels.length;i+=4) {
-                			pixels[i] = (byte) 0xff;
-                		}
-                    	new ScreenShotTwitterExporter(player).send(current, pixels);
-                    });
-                    screenshot.start();
-                }
+                shareScreenshot();
             }
 
 			if (input.isActivated(KeyCommand.TOGGLE_MOD_MENU)) {
