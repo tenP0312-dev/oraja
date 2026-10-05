@@ -44,6 +44,7 @@ class BMSIRArenaConfigStoreTest {
         player.setBmsirSelectKeyModes(new String[]{"7k", "14k"});
         player.setBmsirTableLevelDisplayEnabled(false);
         player.setBmsirHideMissingTableSongs(true);
+        player.setBmsirKeepIgnoredVisible(false);
         player.setBmsirPhysicalFolderFilterEnabled(true);
         player.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-a", "songs-b"});
         player.setBmsirMyTableBatchOverlayFontScale(1.7f);
@@ -180,6 +181,7 @@ class BMSIRArenaConfigStoreTest {
         arenaBody.setBmsirSelectKeyModes(new String[]{"5k", "7k"});
         arenaBody.setBmsirTableLevelDisplayEnabled(false);
         arenaBody.setBmsirHideMissingTableSongs(true);
+        arenaBody.setBmsirKeepIgnoredVisible(false);
         arenaBody.setBmsirPhysicalFolderFilterEnabled(true);
         arenaBody.setBmsirVisiblePhysicalFolderPaths(new String[]{"songs-b"});
         arenaBody.setBmsirMyTableBatchOverlayFontScale(1.8f);
@@ -257,6 +259,7 @@ class BMSIRArenaConfigStoreTest {
         );
         assertFalse(restored.isBmsirTableLevelDisplayEnabled());
         assertTrue(restored.isBmsirHideMissingTableSongs());
+        assertFalse(restored.isBmsirKeepIgnoredVisible());
         assertTrue(restored.isBmsirPhysicalFolderFilterEnabled());
         assertArrayEquals(
                 new String[]{"songs-b"},

@@ -69,6 +69,7 @@ public class BarManager {
 			"bmsir://my-difficulty-table";
 
 	private Bar[] commands;
+	private Bar ignoredFolder;
 	
 	private TableBar courses;
 
@@ -310,6 +311,7 @@ public class BarManager {
 		}
 
 		commands = l.toArray(Bar.class);
+		ignoredFolder = new CommandBar(select, "IGNORED", "favorite & 12 != 0", true);
 		startupTableDataAccessor = null;
 		startupSearchAccessor = null;
 		startupTables = null;
@@ -389,6 +391,9 @@ public class BarManager {
 			));
 			l.add(courses);
 			l.addAll(favorites);
+			if (ignoredFolder != null) {
+				l.add(ignoredFolder);
+			}
 			appendFolders.keySet().forEach((key) -> {
 			    l.add(appendFolders.get(key));
 			});
@@ -470,7 +475,7 @@ public class BarManager {
 					remove.add(b);
 				} else if (b instanceof SongBar songBar && songBar.getSongData() != null) {
 					final SongData song = songBar.getSongData();
-					if ((!showInvisibleCharts && (song.getFavorite()
+					if ((!showInvisibleCharts && !config.isBmsirKeepIgnoredVisible() && (song.getFavorite()
 							& (SongData.INVISIBLE_SONG | SongData.INVISIBLE_CHART)) != 0)
 							|| !BMSIRSelectKeyMode.isSongModeVisible(
 									visibleModes,
