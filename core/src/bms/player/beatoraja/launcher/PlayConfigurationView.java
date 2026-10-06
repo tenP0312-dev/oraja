@@ -206,6 +206,8 @@ public class PlayConfigurationView implements Initializable {
 	@FXML
 	private CheckBox bmsirHideMissingTableSongs;
 	@FXML
+	private CheckBox bmsirKeepIgnoredVisible;
+	@FXML
 	private ComboBox<String> bmsirArenaLanguage;
 	@FXML
 	private ComboBox<String> bmsirArenaTargetMode;
@@ -1573,7 +1575,10 @@ public class PlayConfigurationView implements Initializable {
 								"When enabled, use the first integer from each table entry for song bars, selected-song LEVEL, and LEVEL sorting. Disable it to use the chart's #PLAYLEVEL."),
 						sidebarSettingRow(bmsirSpecificTab, "bmsirHideMissingTableSongs", "全難易度表で未所持曲を隠す", "Hide missing songs in every table",
 								"難易度表フォルダーでは、ローカルに所持していない曲を一覧から隠します。通常フォルダーや検索には影響しません。",
-								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches.")
+								"Hide unavailable songs inside difficulty tables without affecting ordinary folders or searches."),
+						sidebarSettingRow(bmsirSpecificTab, "bmsirKeepIgnoredVisible", "イグノアした曲を非表示にしない", "Keep ignored songs visible",
+								"ONでは、イグノアした曲・譜面も通常の一覧に表示します。OFFでは一覧から隠し、選曲ルートのIGNOREDフォルダーからだけ確認・解除できます。",
+								"When enabled, ignored songs and charts stay in ordinary lists. When disabled they are hidden and can be reviewed or restored only from the IGNORED folder at the Music Select root.")
 				),
 				sidebarSettingCard(
 						sidebarSettingRow(bmsirSpecificTab, "bmsirLr2HispeedFixEnabled", "LR2仕様のHI-SPEED固定", "LR2-style fixed HI-SPEED",
@@ -2965,6 +2970,9 @@ public class PlayConfigurationView implements Initializable {
 		bmsirTableLevelDisplayEnabled.setSelected(
 				player.isBmsirTableLevelDisplayEnabled()
 		);
+		bmsirKeepIgnoredVisible.setSelected(
+				player.isBmsirKeepIgnoredVisible()
+		);
 		bmsirHideMissingTableSongs.setSelected(
 				player.isBmsirHideMissingTableSongs()
 		);
@@ -3174,6 +3182,9 @@ public class PlayConfigurationView implements Initializable {
 		player.setBmsirSelectKeyModes(selectModes.toArray(String[]::new));
 		player.setBmsirTableLevelDisplayEnabled(
 				bmsirTableLevelDisplayEnabled.isSelected()
+		);
+		player.setBmsirKeepIgnoredVisible(
+				bmsirKeepIgnoredVisible.isSelected()
 		);
 		player.setBmsirHideMissingTableSongs(
 				bmsirHideMissingTableSongs.isSelected()

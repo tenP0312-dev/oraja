@@ -145,6 +145,7 @@ public final class BMSIRArenaConfigStore {
         private String[] selectKeyModes;
         private Boolean tableLevelDisplayEnabled;
         private Boolean hideMissingTableSongs;
+        private Boolean keepIgnoredVisible;
         private Boolean physicalFolderFilterEnabled;
         private String[] visiblePhysicalFolderPaths;
         private Float myTableBatchOverlayFontScale;
@@ -220,6 +221,8 @@ public final class BMSIRArenaConfigStore {
                     player.isBmsirTableLevelDisplayEnabled();
             settings.hideMissingTableSongs =
                     player.isBmsirHideMissingTableSongs();
+            settings.keepIgnoredVisible =
+                    player.isBmsirKeepIgnoredVisible();
             settings.physicalFolderFilterEnabled =
                     player.isBmsirPhysicalFolderFilterEnabled();
             settings.visiblePhysicalFolderPaths =
@@ -326,6 +329,9 @@ public final class BMSIRArenaConfigStore {
             }
             if (hideMissingTableSongs != null) {
                 player.setBmsirHideMissingTableSongs(hideMissingTableSongs);
+            }
+            if (keepIgnoredVisible != null) {
+                player.setBmsirKeepIgnoredVisible(keepIgnoredVisible);
             }
             if (physicalFolderFilterEnabled != null) {
                 player.setBmsirPhysicalFolderFilterEnabled(
