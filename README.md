@@ -20,6 +20,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.95 preserves the 0.4.14.94 internal test lineage and adds
+charts generated from an audio file dropped in Music Select (no score, replay,
+IR, or Arena), named key/play-setting profiles in the Arena overlay, and an
+IGNORED root folder with a keep-visible option. Plugin 0.0.77 and launcher
+0.2.29 remain optional. Physical acceptance remains operator-run and pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.95.md).
+
 Version 0.4.14.94 preserves the 0.4.14.93 internal test lineage and adds live
 output EQ adjustment from the F5 menu and a named function-key/numpad menu
 on Music Select. Plugin 0.0.77 and launcher 0.2.29 remain optional.
@@ -96,7 +103,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.94**. Its Windows native-audio
+The current client source version is **0.4.14.95**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
