@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.DoubleUnaryOperator;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,12 +24,68 @@ class GeneratedChartBuilderTest {
 
     private static final double BPM = 150.0;
     private static final double BEAT = 60.0 / BPM;
-    /** Strong on beats, weak on off-beats, with a loud stretch from 30 s. */
-    private static final DoubleUnaryOperator STRENGTH = time -> {
-        double position = time / BEAT;
-        double onBeat = Math.abs(position - Math.rint(position)) < 0.1 ? 3.0 : 1.0;
-        return onBeat * (time > 30.0 ? 2.0 : 1.0);
-    };
+    private static final double SLOT = BEAT / 4;
+    private static final double FIRST_BEAT = BEAT;
+
+    /**
+     * Synthetic music on the 16th grid: a per-bar pattern of low/mid/high
+     * strengths. {@code bars[b]} picks the pattern of bar b; null bars are silent.
+     */
+    private record Music(double[][][] bars) implements GeneratedChartBuilder.Onsets {
+        @Override
+        public double strength(double timeSec) {
+            double[] bands = bands(timeSec);
+            return bands[0] + bands[1] + bands[2];
+        }
+
+        @Override
+        public double[] bands(double timeSec) {
+            int slot = (int) Math.round((timeSec - FIRST_BEAT) / SLOT);
+            if (slot < 0 || Math.abs(timeSec - FIRST_BEAT - slot * SLOT) > 1e-6) {
+                return new double[3];
+            }
+            int bar = slot / 16;
+            if (bar >= bars.length || bars[bar] == null) {
+                return new double[3];
+            }
+            return bars[bar][slot % 16].clone();
+        }
+
+        double endSec() {
+            return FIRST_BEAT + bars.length * 16 * SLOT - SLOT / 2;
+        }
+    }
+
+    /** kick on 0/8, snare on 4/12, hi-hats on every 8th, plus extra hits from {@code variant} */
+    private static double[][] drumBar(long variant) {
+        double[][] bar = new double[16][3];
+        for (int slot = 0; slot < 16; slot += 2) {
+            bar[slot][2] = 0.6;
+        }
+        bar[0][0] = 3.0;
+        bar[8][0] = 3.0;
+        bar[4][1] = 2.5;
+        bar[12][1] = 2.5;
+        Random random = new Random(variant);
+        for (int hit = 0; hit < 3; hit++) {
+            bar[1 + 2 * random.nextInt(8)][1] += 1.0 + random.nextDouble();
+        }
+        return bar;
+    }
+
+    /** bars with independent random hits, so no bar repeats another */
+    private static Music varied(int bars) {
+        Random random = new Random(1000 + bars);
+        double[][][] pattern = new double[bars][16][3];
+        for (int bar = 0; bar < bars; bar++) {
+            for (int slot = 0; slot < 16; slot++) {
+                for (int band = 0; band < 3; band++) {
+                    pattern[bar][slot][band] = random.nextDouble() < 0.4 ? 0.5 + 2.5 * random.nextDouble() : 0.0;
+                }
+            }
+        }
+        return new Music(pattern);
+    }
 
     private BMSModel decode(GeneratedChartBuilder.Chart chart) throws Exception {
         Path bms = directory.resolve("chart.bms");
@@ -39,56 +95,8 @@ class GeneratedChartBuilderTest {
         return model;
     }
 
-    private static GeneratedChartBuilder.Chart build(GeneratedChartBuilder.Settings settings, long seed, double firstBeat) {
-        return GeneratedChartBuilder.build("曲名 test", "audio.mp3", BPM, firstBeat, 60.0, STRENGTH, settings, seed);
-    }
-
-    /** Key lanes 0-6 per time line that has key notes, in time order. */
-    private static List<List<Integer>> keyRows(BMSModel model) {
-        List<List<Integer>> rows = new ArrayList<>();
-        for (TimeLine timeLine : model.getAllTimeLines()) {
-            List<Integer> lanes = new ArrayList<>();
-            for (int lane = 0; lane < 7; lane++) {
-                if (timeLine.getNote(lane) != null) {
-                    lanes.add(lane);
-                }
-            }
-            if (!lanes.isEmpty()) {
-                rows.add(lanes);
-            }
-        }
-        return rows;
-    }
-
-    @Test
-    void decodesAsSevenKeyChartAlignedToTheAudio() throws Exception {
-        double firstBeat = 1.234;
-        GeneratedChartBuilder.Chart chart = build(new GeneratedChartBuilder.Settings(8, 1, 3, false), 1, firstBeat);
-        BMSModel model = decode(chart);
-        assertEquals(Mode.BEAT_7K, model.getMode());
-        assertEquals(BPM, model.getBpm(), 1e-6);
-        assertEquals(chart.notes(), model.getTotalNotes());
-
-        long audioStart = audioStartMicros(model);
-        long firstNote = firstKeyMicros(model);
-        long lastNote = -1;
-        for (TimeLine timeLine : model.getAllTimeLines()) {
-            if (keyCount(timeLine) > 0) {
-                lastNote = timeLine.getMicroTime();
-            }
-        }
-        // one empty lead-in measure, then notes start on the given beat of the audio
-        assertEquals(4 * BEAT * 1e6, audioStart, 2);
-        assertEquals(firstBeat * 1e6, firstNote - audioStart, 2);
-        assertTrue((lastNote - audioStart) / 1e6 <= 60.0);
-        // 8th notes from 1.234 s through 60 s
-        assertEquals((int) Math.floor((60.0 - firstBeat) / (BEAT / 2)) + 1, chart.positions());
-    }
-
-    @Test
-    void earlyFirstBeatGetsALeadOfAtLeastAQuarterBeat() throws Exception {
-        BMSModel model = decode(build(new GeneratedChartBuilder.Settings(4, 1, 1, false), 1, 0.01));
-        assertEquals((0.01 + BEAT) * 1e6, firstKeyMicros(model) - audioStartMicros(model), 2);
+    private static GeneratedChartBuilder.Chart build(Music music, GeneratedChartBuilder.Settings settings, long seed) {
+        return GeneratedChartBuilder.build("曲名 test", "audio.mp3", BPM, FIRST_BEAT, music.endSec(), music, settings, seed);
     }
 
     private static long audioStartMicros(BMSModel model) {
@@ -102,113 +110,284 @@ class GeneratedChartBuilderTest {
         return -1;
     }
 
-    private static long firstKeyMicros(BMSModel model) {
-        for (TimeLine timeLine : model.getAllTimeLines()) {
-            if (keyCount(timeLine) > 0) {
-                return timeLine.getMicroTime();
-            }
-        }
-        return -1;
-    }
-
     private static int keyCount(TimeLine timeLine) {
         int count = 0;
         for (int lane = 0; lane < 7; lane++) {
-            if (timeLine.getNote(lane) != null) {
-                count++;
-            }
+            count += timeLine.getNote(lane) != null ? 1 : 0;
         }
         return count;
     }
 
-    @Test
-    void chordSizesStayInRangeAndFollowStrength() throws Exception {
-        BMSModel model = decode(build(new GeneratedChartBuilder.Settings(8, 2, 4, false), 3, 0.5));
-        List<List<Integer>> rows = keyRows(model);
-        int[] histogram = new int[8];
-        for (List<Integer> row : rows) {
-            assertTrue(row.size() >= 2 && row.size() <= 4, "chord " + row);
-            histogram[row.size()]++;
-        }
-        // each size is roughly half as frequent as the one below
-        assertTrue(histogram[2] > histogram[3] && histogram[3] > histogram[4], java.util.Arrays.toString(histogram));
-        assertTrue(histogram[4] > 0);
-
-        // stronger (on-beat, loud) positions carry the large chords
-        int[] sizes = GeneratedChartBuilder.chordSizes(BEAT, BEAT / 2, 100, STRENGTH,
-                new GeneratedChartBuilder.Settings(8, 1, 3, false));
-        double onBeatMean = 0;
-        double offBeatMean = 0;
-        for (int position = 0; position < sizes.length; position++) {
-            if (position % 2 == 0) {
-                onBeatMean += sizes[position];
-            } else {
-                offBeatMean += sizes[position];
+    /** grid slot (from the first beat) → sorted key lanes, plus scratch as lane 7 */
+    private static List<int[]> rows(BMSModel model) {
+        long start = audioStartMicros(model);
+        List<int[]> rows = new ArrayList<>();
+        for (TimeLine timeLine : model.getAllTimeLines()) {
+            List<Integer> lanes = new ArrayList<>();
+            for (int lane = 0; lane < 8; lane++) {
+                if (timeLine.getNote(lane) != null) {
+                    lanes.add(lane);
+                }
             }
+            if (lanes.isEmpty()) {
+                continue;
+            }
+            double audio = (timeLine.getMicroTime() - start) / 1e6;
+            int slot = (int) Math.round((audio - FIRST_BEAT) / SLOT);
+            assertEquals(FIRST_BEAT + slot * SLOT, audio, 2e-6, "note off the 16th grid");
+            int[] row = new int[lanes.size() + 1];
+            row[0] = slot;
+            for (int index = 0; index < lanes.size(); index++) {
+                row[index + 1] = lanes.get(index);
+            }
+            rows.add(row);
         }
-        assertTrue(onBeatMean > offBeatMean, onBeatMean + " vs " + offBeatMean);
+        return rows;
     }
 
     @Test
-    void equalMinAndMaxGivesAConstantChord() throws Exception {
-        for (List<Integer> row : keyRows(decode(build(new GeneratedChartBuilder.Settings(16, 3, 3, false), 4, 0.5)))) {
-            assertEquals(3, row.size());
+    void decodesAsSevenKeyChartOnTheAudioGrid() throws Exception {
+        Music music = varied(24);
+        GeneratedChartBuilder.Chart chart = build(music, new GeneratedChartBuilder.Settings(3, 1, 3, false), 1);
+        BMSModel model = decode(chart);
+        assertEquals(Mode.BEAT_7K, model.getMode());
+        assertEquals(BPM, model.getBpm(), 1e-6);
+        assertEquals(chart.notes(), model.getTotalNotes());
+        assertEquals(4 * BEAT * 1e6, audioStartMicros(model), 2);
+        assertEquals(chart.positions(), rows(model).size());
+        assertTrue(chart.text().contains("#TOTAL "));
+    }
+
+    @Test
+    void notesGoWhereTheMusicHitsAndNotInSilence() throws Exception {
+        double[][][] bars = new double[16][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            bars[bar] = bar >= 6 && bar < 9 ? null : drumBar(2000 + bar);
+        }
+        Music music = new Music(bars);
+        java.util.Set<Integer> placed = new java.util.HashSet<>();
+        for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(1, 1, 1, false), 2)))) {
+            int bar = row[0] / 16;
+            assertFalse(bar >= 6 && bar < 9, "note in a silent bar at slot " + row[0]);
+            assertTrue(music.strength(FIRST_BEAT + row[0] * SLOT) > 0, "note on silence at slot " + row[0]);
+            placed.add(row[0]);
+        }
+        // the smallest amount still keeps every kick and snare
+        for (int bar = 0; bar < bars.length; bar++) {
+            if (bars[bar] == null) {
+                continue;
+            }
+            for (int column : new int[] {0, 4, 8, 12}) {
+                assertTrue(placed.contains(bar * 16 + column), "missing hit at bar " + bar + " slot " + column);
+            }
+        }
+    }
+
+    @Test
+    void noteAmountScalesTheSongsOwnDensity() {
+        Music music = varied(20);
+        int slots = (int) Math.floor((music.endSec() - FIRST_BEAT) / SLOT) + 1;
+        double[] strength = strengths(music, slots);
+        int clear = GeneratedChartBuilder.clearOnsets(strength);
+        int nonZero = 0;
+        for (double value : strength) {
+            nonZero += value > 0 ? 1 : 0;
+        }
+        assertTrue(clear > 0 && clear <= nonZero, clear + " of " + nonZero);
+        int previous = 0;
+        for (int density = GeneratedChartBuilder.MIN_DENSITY; density <= GeneratedChartBuilder.MAX_DENSITY; density++) {
+            int count = 0;
+            for (boolean chosen : GeneratedChartBuilder.choose(strength, density)) {
+                count += chosen ? 1 : 0;
+            }
+            assertEquals(Math.min(slots, Math.round(GeneratedChartBuilder.DENSITY_SCALE[density - 1] * clear)), count);
+            assertTrue(count > previous);
+            previous = count;
+        }
+        // "as the music" places exactly the song's clear onsets
+        int count = 0;
+        for (boolean chosen : GeneratedChartBuilder.choose(strength, GeneratedChartBuilder.DEFAULT_DENSITY)) {
+            count += chosen ? 1 : 0;
+        }
+        assertEquals(clear, count);
+    }
+
+    private static double[] strengths(Music music, int slots) {
+        double[] strength = new double[slots];
+        for (int slot = 0; slot < slots; slot++) {
+            strength[slot] = music.strength(FIRST_BEAT + slot * SLOT);
+        }
+        return strength;
+    }
+
+    @Test
+    void repeatedBarsRepeatTheirLayout() throws Exception {
+        double[][] verse = drumBar(1);
+        double[][] fill = drumBar(2);
+        fill[2][0] = 3.0;
+        fill[6][0] = 3.0;
+        fill[10][1] = 3.0;
+        double[][][] bars = {verse, verse, verse, fill, verse, verse, fill, verse};
+        GeneratedChartBuilder.Chart chart = build(new Music(bars), new GeneratedChartBuilder.Settings(3, 1, 3, false), 3);
+        assertEquals(6, chart.repeated(), "every bar after the first verse and the first fill repeats");
+        assertEquals(0, build(varied(8), new GeneratedChartBuilder.Settings(3, 1, 3, false), 3).repeated());
+        List<int[]> rows = rows(decode(chart));
+        String first = layout(rows, 0);
+        String firstFill = layout(rows, 3);
+        assertNotEquals(first, firstFill);
+        for (int bar : new int[] {1, 2, 4, 5, 7}) {
+            assertEquals(first, layout(rows, bar), "verse bar " + bar);
+        }
+        assertEquals(firstFill, layout(rows, 6), "second fill");
+    }
+
+    private static String layout(List<int[]> rows, int bar) {
+        StringBuilder text = new StringBuilder();
+        for (int[] row : rows) {
+            if (row[0] / 16 == bar) {
+                text.append(row[0] % 16).append(':');
+                for (int index = 1; index < row.length; index++) {
+                    text.append(row[index]).append(',');
+                }
+                text.append(' ');
+            }
+        }
+        return text.toString();
+    }
+
+    @Test
+    void chordSizesStayInRangeAndConstantWhenMinEqualsMax() throws Exception {
+        Music music = varied(20);
+        int[] histogram = new int[8];
+        for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(3, 2, 4, false), 4)))) {
+            int size = row.length - 1;
+            assertTrue(size >= 2 && size <= 4, "chord " + size);
+            histogram[size]++;
+        }
+        assertTrue(histogram[2] > histogram[3] && histogram[3] > histogram[4], java.util.Arrays.toString(histogram));
+        for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(2, 3, 3, false), 4)))) {
+            assertEquals(3, row.length - 1);
         }
     }
 
     @Test
     void lanesAvoidRepeatsWhenThereIsRoom() throws Exception {
-        List<List<Integer>> rows = keyRows(decode(build(new GeneratedChartBuilder.Settings(16, 1, 3, false), 5, 0.5)));
+        // every bar differs, so no layout is copied across a bar line
+        List<int[]> rows = rows(decode(build(varied(20), new GeneratedChartBuilder.Settings(4, 1, 3, false), 5)));
         for (int index = 1; index < rows.size(); index++) {
-            for (int lane : rows.get(index)) {
-                assertFalse(rows.get(index - 1).contains(lane), "jack at row " + index);
-            }
-        }
-        // with 4 of 7 lanes taken every time, exactly one lane (4 + 4 - 7) must repeat
-        int[][] lanes = GeneratedChartBuilder.assignLanes(new int[] {4, 4, 4, 4, 4, 4}, new java.util.Random(1));
-        for (int index = 1; index < lanes.length; index++) {
-            int repeats = 0;
-            for (int lane : lanes[index]) {
-                for (int previous : lanes[index - 1]) {
-                    repeats += lane == previous ? 1 : 0;
+            for (int a = 1; a < rows.get(index).length; a++) {
+                for (int b = 1; b < rows.get(index - 1).length; b++) {
+                    assertNotEquals(rows.get(index - 1)[b], rows.get(index)[a], "jack at slot " + rows.get(index)[0]);
                 }
             }
-            assertEquals(1, repeats);
+        }
+    }
+
+    @Test
+    void scratchOnlyOnHiHatsAndNeverOnAdjacentSixteenths() throws Exception {
+        double[][][] bars = new double[16][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            double[][] pattern = drumBar(3000 + bar);
+            pattern[15][2] = 2.0; // a hi-hat run across the bar line
+            pattern[14][2] = 2.0;
+            bars[bar] = pattern;
+        }
+        Music music = new Music(bars);
+        int scratches = 0;
+        int previousScratchSlot = Integer.MIN_VALUE;
+        for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(4, 1, 2, true), 6)))) {
+            boolean scratch = row[row.length - 1] == 7;
+            if (scratch) {
+                double[] bands = music.bands(FIRST_BEAT + row[0] * SLOT);
+                assertEquals(2, GeneratedChartBuilder.dominantBand(bands), "scratch away from a hi-hat at " + row[0]);
+                assertNotEquals(previousScratchSlot + 1, row[0], "adjacent scratches");
+                previousScratchSlot = row[0];
+                scratches++;
+            }
+        }
+        assertTrue(scratches > 0);
+        for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(4, 1, 2, false), 6)))) {
+            assertNotEquals(7, row[row.length - 1]);
         }
     }
 
     @Test
     void sameSeedIsDeterministicAndReshuffleChangesLanes() {
-        GeneratedChartBuilder.Settings settings = new GeneratedChartBuilder.Settings(8, 1, 2, false);
-        assertEquals(build(settings, 9, 0.5).text(), build(settings, 9, 0.5).text());
-        assertNotEquals(build(settings, 9, 0.5).text(), build(settings, 10, 0.5).text());
+        Music music = varied(12);
+        GeneratedChartBuilder.Settings settings = new GeneratedChartBuilder.Settings(2, 1, 2, false);
+        assertEquals(build(music, settings, 9).text(), build(music, settings, 9).text());
+        assertNotEquals(build(music, settings, 9).text(), build(music, settings, 10).text());
     }
 
     @Test
-    void scratchOnlyOnStrongHitsAndNeverTwiceInARow() throws Exception {
-        BMSModel model = decode(build(new GeneratedChartBuilder.Settings(8, 1, 1, true), 6, 0.5));
-        int scratches = 0;
-        boolean previous = false;
-        int rows = 0;
+    void earlyFirstBeatGetsALeadOfAtLeastAQuarterBeat() throws Exception {
+        GeneratedChartBuilder.Chart chart = GeneratedChartBuilder.build("t", "audio.mp3", BPM, 0.01, 20.0,
+                new GeneratedChartBuilder.Onsets() {
+                    public double strength(double timeSec) {
+                        return 1.0;
+                    }
+
+                    public double[] bands(double timeSec) {
+                        return new double[] {1, 0, 0};
+                    }
+                }, new GeneratedChartBuilder.Settings(4, 1, 1, false), 1);
+        BMSModel model = decode(chart);
+        long start = audioStartMicros(model);
+        long first = -1;
         for (TimeLine timeLine : model.getAllTimeLines()) {
-            if (keyCount(timeLine) == 0) {
-                continue;
+            if (keyCount(timeLine) > 0) {
+                first = timeLine.getMicroTime();
+                break;
             }
-            rows++;
-            boolean scratch = timeLine.getNote(7) != null;
-            assertFalse(scratch && previous, "consecutive scratch");
-            scratches += scratch ? 1 : 0;
-            previous = scratch;
         }
-        assertTrue(scratches > 0 && scratches <= rows / 10 + 1, scratches + " of " + rows);
+        assertEquals((0.01 + BEAT) * 1e6, first - start, 2);
+    }
+
+    @Test
+    void followMusicOffIsThePlainFixedGrid() throws Exception {
+        Music music = varied(12);
+        int slots = (int) Math.floor((music.endSec() - FIRST_BEAT) / SLOT) + 1;
+        for (int division : new int[] {4, 8, 16}) {
+            GeneratedChartBuilder.Settings settings =
+                    new GeneratedChartBuilder.Settings(false, 3, division, false, 1, 1, false);
+            List<int[]> rows = rows(decode(build(music, settings, 7)));
+            int step = 16 / division;
+            assertEquals((slots + step - 1) / step, rows.size(), "every " + division + "th");
+            for (int[] row : rows) {
+                assertEquals(0, row[0] % step);
+            }
+        }
+    }
+
+    @Test
+    void repeatOffLaysOutEveryBarIndependently() throws Exception {
+        double[][] verse = drumBar(1);
+        double[][][] bars = {verse, verse, verse, verse, verse, verse};
+        GeneratedChartBuilder.Settings off = new GeneratedChartBuilder.Settings(true, 3, 8, false, 1, 3, false);
+        GeneratedChartBuilder.Chart chart = build(new Music(bars), off, 3);
+        assertEquals(0, chart.repeated());
+        List<int[]> rows = rows(decode(chart));
+        java.util.Set<String> layouts = new java.util.HashSet<>();
+        for (int bar = 0; bar < bars.length; bar++) {
+            layouts.add(layout(rows, bar));
+        }
+        assertTrue(layouts.size() > 1, "identical audio still gets fresh random lanes per bar");
+        GeneratedChartBuilder.Settings on = new GeneratedChartBuilder.Settings(true, 3, 8, true, 1, 3, false);
+        List<int[]> repeated = rows(decode(build(new Music(bars), on, 3)));
+        for (int bar = 1; bar < bars.length; bar++) {
+            assertEquals(layout(repeated, 0), layout(repeated, bar));
+        }
     }
 
     @Test
     void rejectsInvalidSettings() {
-        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(12, 1, 1, false));
-        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(8, 0, 1, false));
-        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(8, 3, 2, false));
-        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(8, 1, 8, false));
+        assertThrows(IllegalArgumentException.class,
+                () -> new GeneratedChartBuilder.Settings(false, 3, 12, true, 1, 1, false));
+        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(0, 1, 1, false));
+        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(5, 1, 1, false));
+        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(2, 0, 1, false));
+        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(2, 3, 2, false));
+        assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(2, 1, 8, false));
     }
 
     @Test

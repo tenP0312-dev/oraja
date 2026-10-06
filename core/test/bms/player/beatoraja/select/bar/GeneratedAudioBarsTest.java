@@ -56,6 +56,9 @@ class GeneratedAudioBarsTest {
 
     @Test
     void settingCyclesStayInRange() {
+        assertEquals(2, GeneratedAudioChartBar.nextDensity(1));
+        assertEquals(4, GeneratedAudioChartBar.nextDensity(3));
+        assertEquals(1, GeneratedAudioChartBar.nextDensity(4));
         assertEquals(8, GeneratedAudioChartBar.nextDivision(4));
         assertEquals(16, GeneratedAudioChartBar.nextDivision(8));
         assertEquals(4, GeneratedAudioChartBar.nextDivision(16));
@@ -71,22 +74,37 @@ class GeneratedAudioBarsTest {
         config.setGeneratedChartChords(0, 99);
         assertEquals(1, config.getGeneratedChartMinChord());
         assertEquals(7, config.getGeneratedChartMaxChord());
-        config.setGeneratedChartDivision(12);
-        assertEquals(8, config.getGeneratedChartDivision());
+        config.setGeneratedChartDensity(9);
+        assertEquals(4, config.getGeneratedChartDensity());
+        config.setGeneratedChartDensity(0);
+        assertEquals(1, config.getGeneratedChartDensity());
     }
 
     @Test
     void settingsAreRememberedInThePlayerConfig() {
         PlayerConfig config = new PlayerConfig();
-        assertEquals(new GeneratedChartBuilder.Settings(8, 1, 2, false), AudioChartSession.settings(config));
-        config.setGeneratedChartDivision(16);
+        assertEquals(new GeneratedChartBuilder.Settings(3, 1, 2, false), AudioChartSession.settings(config));
+        config.setGeneratedChartDensity(4);
         config.setGeneratedChartChords(2, 4);
         config.setGeneratedChartScratch(true);
+        config.setGeneratedChartFollowMusic(false);
+        config.setGeneratedChartDivision(16);
+        config.setGeneratedChartRepeatBars(false);
         Json json = new Json();
         PlayerConfig restored = json.fromJson(PlayerConfig.class, json.toJson(config));
         restored.validate();
-        assertEquals(new GeneratedChartBuilder.Settings(16, 2, 4, true), AudioChartSession.settings(restored));
-        assertEquals(new GeneratedChartBuilder.Settings(8, 1, 2, false), AudioChartSession.settings(null));
+        assertEquals(new GeneratedChartBuilder.Settings(false, 4, 16, false, 2, 4, true),
+                AudioChartSession.settings(restored));
+        assertEquals(new GeneratedChartBuilder.Settings(3, 1, 2, false), AudioChartSession.settings(null));
+        // a config written by 0.4.14.96-0.4.14.98 still loads (old field ignored like other unknown fields)
+        Json lenient = new Json();
+        lenient.setIgnoreUnknownFields(true);
+        PlayerConfig old = lenient.fromJson(PlayerConfig.class, "{\"generatedChartDivision\":16}");
+        old.validate();
+        assertEquals(3, old.getGeneratedChartDensity());
+        assertEquals(16, old.getGeneratedChartDivision(), "the old division now drives the fixed grid");
+        assertTrue(old.isGeneratedChartFollowMusic());
+        assertTrue(old.isGeneratedChartRepeatBars());
     }
 
     @Test
@@ -126,9 +144,9 @@ class GeneratedAudioBarsTest {
 
     @Test
     void keyedRowsKeepTheCursorWhenTheirLabelChanges() {
-        KeyedFunctionBar before = new KeyedFunctionBar("division", (s, b) -> { }, "Notes: 8th", FunctionBar.STYLE_TABLE);
-        KeyedFunctionBar after = new KeyedFunctionBar("division", (s, b) -> { }, "Notes: 16th", FunctionBar.STYLE_TABLE);
-        KeyedFunctionBar other = new KeyedFunctionBar("scratch", (s, b) -> { }, "Notes: 8th", FunctionBar.STYLE_TABLE);
+        KeyedFunctionBar before = new KeyedFunctionBar("density", (s, b) -> { }, "Note amount: As the music", FunctionBar.STYLE_TABLE);
+        KeyedFunctionBar after = new KeyedFunctionBar("density", (s, b) -> { }, "Note amount: Dense", FunctionBar.STYLE_TABLE);
+        KeyedFunctionBar other = new KeyedFunctionBar("scratch", (s, b) -> { }, "Note amount: As the music", FunctionBar.STYLE_TABLE);
         assertTrue(KeyedFunctionBar.sameRow(before, after));
         assertFalse(KeyedFunctionBar.sameRow(before, other));
         FunctionBar plainA = new FunctionBar((s, b) -> { }, "Same", FunctionBar.STYLE_TABLE);

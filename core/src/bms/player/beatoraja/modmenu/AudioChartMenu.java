@@ -25,10 +25,13 @@ import static bms.player.beatoraja.modmenu.ImGuiRenderer.*;
  */
 public final class AudioChartMenu {
 
-    private static final ImInt DIVISION = new ImInt(8);
+    private static final ImInt DENSITY = new ImInt(GeneratedChartBuilder.DEFAULT_DENSITY);
     private static final int[] MIN_CHORD = {1};
     private static final int[] MAX_CHORD = {2};
     private static final ImBoolean SCRATCH = new ImBoolean(false);
+    private static final ImBoolean FOLLOW_MUSIC = new ImBoolean(true);
+    private static final ImInt DIVISION = new ImInt(8);
+    private static final ImBoolean REPEAT_BARS = new ImBoolean(true);
     private static AudioChartSession loadedFor;
     private static final float[] WARNING = {1.0f, 0.75f, 0.3f, 1.0f};
 
@@ -48,10 +51,13 @@ public final class AudioChartMenu {
             // start each window from the remembered settings shared with the Music Select folder
             loadedFor = session;
             GeneratedChartBuilder.Settings remembered = AudioChartSession.settings(BMSIRArenaClient.playerConfig());
-            DIVISION.set(remembered.division());
+            DENSITY.set(remembered.density());
             MIN_CHORD[0] = remembered.minChord();
             MAX_CHORD[0] = remembered.maxChord();
             SCRATCH.set(remembered.scratch());
+            FOLLOW_MUSIC.set(remembered.followMusic());
+            DIVISION.set(remembered.division());
+            REPEAT_BARS.set(remembered.repeatBars());
         }
         ImGui.setNextWindowPos(windowWidth * 0.30f, windowHeight * 0.15f, ImGuiCond.FirstUseEver);
         ImBoolean open = new ImBoolean(true);
@@ -116,13 +122,21 @@ public final class AudioChartMenu {
         }
 
         ImGui.separator();
-        ImGui.text(t("音符", "Notes"));
-        ImGui.sameLine();
-        ImGui.radioButton(t("4分", "4th"), DIVISION, 4);
-        ImGui.sameLine();
-        ImGui.radioButton(t("8分", "8th"), DIVISION, 8);
-        ImGui.sameLine();
-        ImGui.radioButton(t("16分", "16th"), DIVISION, 16);
+        ImGui.checkbox(t("鳴っている所にだけ置く", "Place notes where the music hits"), FOLLOW_MUSIC);
+        if (FOLLOW_MUSIC.get()) {
+            ImGui.text(t("ノーツの量", "Note amount"));
+            for (int level = GeneratedChartBuilder.MIN_DENSITY; level <= GeneratedChartBuilder.MAX_DENSITY; level++) {
+                ImGui.sameLine();
+                ImGui.radioButton(densityLabel(level), DENSITY, level);
+            }
+        } else {
+            ImGui.text(t("音符", "Notes"));
+            for (int division : new int[] {4, 8, 16}) {
+                ImGui.sameLine();
+                ImGui.radioButton(divisionLabel(division), DIVISION, division);
+            }
+        }
+        ImGui.checkbox(t("繰り返しは同じ配置にする", "Repeat the layout of repeated phrases"), REPEAT_BARS);
         ImGui.sliderInt(t("最小同時押し", "Min chord"), MIN_CHORD, 1, GeneratedChartBuilder.KEYS);
         ImGui.sliderInt(t("最大同時押し", "Max chord"), MAX_CHORD, 1, GeneratedChartBuilder.KEYS);
         if (MAX_CHORD[0] < MIN_CHORD[0]) {
@@ -130,9 +144,9 @@ public final class AudioChartMenu {
         }
         ImGui.sameLine();
         helpMarker(t(
-                "音の強い位置ほど同時押しが多くなります。最小と最大を同じにすると、常にその数の同時押しになります。",
-                "Stronger hits get larger chords. Set min and max equal for a constant chord size."));
-        ImGui.checkbox(t("皿あり(強いところだけ)", "Scratch on strong hits"), SCRATCH);
+                "音が鳴っている所にノーツを置き、強い音ほど同時押しが多くなります。同じフレーズの繰り返しは同じ配置になります。最小と最大を同じにすると常にその数の同時押しです。",
+                "Notes go where the music hits; stronger hits get larger chords and repeated phrases repeat their layout. Set min and max equal for a constant chord size."));
+        ImGui.checkbox(t("皿あり(ハイハットの所)", "Scratch on hi-hats"), SCRATCH);
         if (ImGui.button(t("配置を変える", "Reshuffle lanes"))) session.reshuffle();
         ImGui.sameLine();
         ImGui.text(t("スコア保存・IR送信なし", "No score saving or IR submission"));
@@ -143,17 +157,33 @@ public final class AudioChartMenu {
         }
     }
 
+    public static String divisionLabel(int division) {
+        return t(division + "分", division + "th");
+    }
+
+    public static String densityLabel(int level) {
+        return switch (level) {
+            case 1 -> t("少なめ", "Light");
+            case 2 -> t("やや少なめ", "Reduced");
+            case 3 -> t("曲どおり", "As the music");
+            default -> t("多め", "Dense");
+        };
+    }
+
     private static void play(AudioChartSession session) {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config != null) {
-            config.setGeneratedChartDivision(DIVISION.get());
+            config.setGeneratedChartDensity(DENSITY.get());
             config.setGeneratedChartChords(MIN_CHORD[0], MAX_CHORD[0]);
             config.setGeneratedChartScratch(SCRATCH.get());
+            config.setGeneratedChartFollowMusic(FOLLOW_MUSIC.get());
+            config.setGeneratedChartDivision(DIVISION.get());
+            config.setGeneratedChartRepeatBars(REPEAT_BARS.get());
         }
         Path chart;
         try {
-            chart = session.writeChart(new GeneratedChartBuilder.Settings(
-                    DIVISION.get(), MIN_CHORD[0], MAX_CHORD[0], SCRATCH.get()));
+            chart = session.writeChart(new GeneratedChartBuilder.Settings(FOLLOW_MUSIC.get(), DENSITY.get(),
+                    DIVISION.get(), REPEAT_BARS.get(), MIN_CHORD[0], MAX_CHORD[0], SCRATCH.get()));
         } catch (IOException | RuntimeException exception) {
             ImGuiNotify.error(t("譜面を書き出せませんでした: ", "Could not write the chart: ")
                     + exception.getMessage(), 5000);
