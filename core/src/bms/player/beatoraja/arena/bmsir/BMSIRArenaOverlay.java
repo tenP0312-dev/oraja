@@ -259,6 +259,10 @@ public final class BMSIRArenaOverlay {
                 renderManual();
                 ImGui.endTabItem();
             }
+            if (ImGui.beginTabItem(t("プロファイル", "Profiles"))) {
+                BMSIRKeyProfilePanel.render(config);
+                ImGui.endTabItem();
+            }
             if (ImGui.beginTabItem(t("設定", "Settings"))) {
                 renderSettings(config);
                 ImGui.endTabItem();

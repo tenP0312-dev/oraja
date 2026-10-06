@@ -67,6 +67,10 @@ public class PlayModeConfig {
         return midi;
     }
 
+    public void setMidiConfig(MidiConfig midi) {
+        this.midi = midi;
+    }
+
     public void setController(ControllerConfig[] controllerassign) {
         this.controller = controllerassign;
     }
