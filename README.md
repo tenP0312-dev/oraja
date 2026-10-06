@@ -20,6 +20,11 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.98 preserves the 0.4.14.97 internal test lineage and fixes a
+Music Select crash as soon as the CHARTS FROM AUDIO row was drawn (0.4.14.97
+with an audio folder set). Plugin 0.0.77 and launcher 0.2.29 remain optional.
+See [the test scope](docs/TEST_RELEASE_0.4.14.98.md).
+
 Version 0.4.14.97 preserves the 0.4.14.96 internal test lineage and fixes the
 CHARTS FROM AUDIO folder and its folder/audio-file rows rendering as blank
 bars; the top settings row now names the song. Plugin 0.0.77 and launcher
@@ -115,7 +120,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.97**. Its Windows native-audio
+The current client source version is **0.4.14.98**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
