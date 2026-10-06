@@ -55,11 +55,12 @@ public final class AudioChartSession {
     /** Difficulty settings remembered in the player config, shared by the drop window and the folder. */
     public static GeneratedChartBuilder.Settings settings(bms.player.beatoraja.PlayerConfig config) {
         if (config == null) {
-            return new GeneratedChartBuilder.Settings(8, 1, 2, false);
+            return new GeneratedChartBuilder.Settings(GeneratedChartBuilder.DEFAULT_DENSITY, 1, 2, false);
         }
-        return new GeneratedChartBuilder.Settings(config.getGeneratedChartDivision(),
-                config.getGeneratedChartMinChord(), config.getGeneratedChartMaxChord(),
-                config.isGeneratedChartScratch());
+        return new GeneratedChartBuilder.Settings(config.isGeneratedChartFollowMusic(),
+                config.getGeneratedChartDensity(), config.getGeneratedChartDivision(),
+                config.isGeneratedChartRepeatBars(), config.getGeneratedChartMinChord(),
+                config.getGeneratedChartMaxChord(), config.isGeneratedChartScratch());
     }
 
     public static boolean isAudioFile(Path path) {
@@ -253,12 +254,23 @@ public final class AudioChartSession {
                 chartBpm,
                 chartFirstBeat,
                 estimate.lastSoundSec(),
-                time -> estimate.onsetStrengthAt(time, ONSET_RADIUS_SEC),
+                new GeneratedChartBuilder.Onsets() {
+                    @Override
+                    public double strength(double timeSec) {
+                        return estimate.onsetStrengthAt(timeSec, ONSET_RADIUS_SEC);
+                    }
+
+                    @Override
+                    public double[] bands(double timeSec) {
+                        return estimate.bandStrengthsAt(timeSec, ONSET_RADIUS_SEC);
+                    }
+                },
                 settings,
                 chartSeed);
         Path bms = directory.resolve("chart.bms");
         Files.write(bms, chart.text().getBytes(BMS_CHARSET));
-        logger.info("Generated chart written: {} ({} notes, {} positions)", bms, chart.notes(), chart.positions());
+        logger.info("Generated chart written: {} ({} notes, {} positions, {} repeated bars)",
+                bms, chart.notes(), chart.positions(), chart.repeated());
         return bms;
     }
 
