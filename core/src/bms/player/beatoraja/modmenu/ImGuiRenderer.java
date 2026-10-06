@@ -248,6 +248,7 @@ public class ImGuiRenderer {
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
         }
+        AudioChartMenu.render();
         renderMyDifficultyTableBatchIndicator();
         BMSIRArenaOverlay.render();
         FunctionKeyMenu.render();
