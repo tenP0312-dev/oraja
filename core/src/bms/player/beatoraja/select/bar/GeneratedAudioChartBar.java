@@ -6,6 +6,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.generated.AudioChartSession;
 import bms.player.beatoraja.generated.AudioGridEstimator;
 import bms.player.beatoraja.generated.GeneratedChartBuilder;
+import bms.player.beatoraja.modmenu.AudioChartMenu;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import bms.player.beatoraja.select.MusicSelector;
 import com.badlogic.gdx.Gdx;
@@ -114,9 +115,25 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
         }
         rows.add(row("status", STYLE_SEARCH, status, ignored -> { }));
 
-        rows.add(row("division", STYLE_TABLE,
-                t("音符: ", "Notes: ") + divisionLabel(settings.division()) + t("（決定で切替）", " (press to change)"),
-                c -> c.setGeneratedChartDivision(nextDivision(settings.division())), config));
+        rows.add(row("followMusic", STYLE_TABLE,
+                t("鳴っている所にだけ置く: ", "Place where the music hits: ") + onOff(settings.followMusic())
+                        + t("（決定で切替）", " (press to change)"),
+                c -> c.setGeneratedChartFollowMusic(!settings.followMusic()), config));
+        if (settings.followMusic()) {
+            rows.add(row("density", STYLE_TABLE,
+                    t("ノーツの量: ", "Note amount: ") + AudioChartMenu.densityLabel(settings.density())
+                            + t("（決定で切替）", " (press to change)"),
+                    c -> c.setGeneratedChartDensity(nextDensity(settings.density())), config));
+        } else {
+            rows.add(row("division", STYLE_TABLE,
+                    t("音符: ", "Notes: ") + AudioChartMenu.divisionLabel(settings.division())
+                            + t("（決定で切替）", " (press to change)"),
+                    c -> c.setGeneratedChartDivision(nextDivision(settings.division())), config));
+        }
+        rows.add(row("repeatBars", STYLE_TABLE,
+                t("繰り返しは同じ配置: ", "Repeat repeated phrases: ") + onOff(settings.repeatBars())
+                        + t("（決定で切替）", " (press to change)"),
+                c -> c.setGeneratedChartRepeatBars(!settings.repeatBars()), config));
         rows.add(row("minChord", STYLE_TABLE,
                 t("最小同時押し: ", "Min chord: ") + settings.minChord() + t("（決定で+1）", " (press for +1)"),
                 c -> c.setGeneratedChartChords(nextMinChord(settings.minChord()), settings.maxChord()), config));
@@ -124,7 +141,7 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
                 t("最大同時押し: ", "Max chord: ") + settings.maxChord() + t("（決定で+1）", " (press for +1)"),
                 c -> c.setGeneratedChartChords(settings.minChord(), nextMaxChord(settings.minChord(), settings.maxChord())), config));
         rows.add(row("scratch", STYLE_TABLE,
-                t("皿: ", "Scratch: ") + (settings.scratch() ? t("強い音だけ", "strong hits") : t("なし", "off"))
+                t("皿: ", "Scratch: ") + (settings.scratch() ? t("ハイハットの所", "on hi-hats") : t("なし", "off"))
                         + t("（決定で切替）", " (press to change)"),
                 c -> c.setGeneratedChartScratch(!settings.scratch()), config));
         rows.add(row("reshuffle", STYLE_TABLE, t("配置を変える", "Reshuffle lanes"), ignored -> session.reshuffle()));
@@ -186,12 +203,17 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
         return dot > 0 ? name.substring(0, dot) : name;
     }
 
-    static String divisionLabel(int division) {
-        return t(division + "分", division + "th");
+    static String onOff(boolean on) {
+        return on ? "ON" : "OFF";
     }
 
     static int nextDivision(int division) {
         return division == 4 ? 8 : division == 8 ? 16 : 4;
+    }
+
+    /** light → reduced → as the music → dense → light */
+    static int nextDensity(int density) {
+        return density >= GeneratedChartBuilder.MAX_DENSITY ? GeneratedChartBuilder.MIN_DENSITY : density + 1;
     }
 
     /** 1 → 2 → … → 7 → 1; the max follows when it falls below. */
