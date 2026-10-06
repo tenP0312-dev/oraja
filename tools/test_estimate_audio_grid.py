@@ -105,6 +105,13 @@ class EstimateAudioGridTest(unittest.TestCase):
         result = self.analyze(bpm=120.0, offset=0.3, duration=90, seed=6, bpm_after_half=126.0)
         self.assertFalse(result["stable_tempo"])
 
+    def test_rejects_silent_audio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "silent.wav"
+            write_wav(path, np.zeros(SAMPLE_RATE * 5))
+            with self.assertRaisesRegex(RuntimeError, "silent"):
+                estimate_audio_grid.analyze(str(path))
+
     def test_rejects_too_short_audio(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "short.wav"

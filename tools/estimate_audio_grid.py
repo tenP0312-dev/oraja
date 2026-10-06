@@ -33,6 +33,10 @@ DOUBLE_TIME_RATIO = 0.8
 # sit well above it.
 FIRST_SOUND_RATIO = 0.3
 STABLE_DRIFT_MS = 30.0
+# (subdivision, weight): beats, plus 8th notes at half weight. Chosen on 26
+# constant-BPM BMS renders: exact BPM 19 -> 22 of 26. Adding 16ths, or
+# weighting the low band, did not help there.
+GRID_LEVELS = ((1, 1.0), (2, 0.5))
 
 
 def decode_mono(path, sample_rate=SAMPLE_RATE):
@@ -46,6 +50,8 @@ def decode_mono(path, sample_rate=SAMPLE_RATE):
     samples = np.frombuffer(proc.stdout, dtype="<f4")
     if samples.size < sample_rate:
         raise RuntimeError("audio is shorter than one second")
+    if np.abs(samples).max() < 1e-4:
+        raise RuntimeError("audio is silent")
     return samples
 
 
@@ -80,15 +86,20 @@ def interp(env, positions):
 
 
 def grid_score(env, bpm, phases, span=None):
-    """Mean onset strength on the beat grid for each phase offset (frames)."""
+    """Mean onset strength on the beat grid for each phase offset (frames).
+
+    The 8th-note grid is scored too, at half weight: a 2:3 or 3:4 wrong tempo
+    can land every beat on a real hit, but its subdivisions miss the music.
+    """
     period = FRAME_RATE * 60.0 / bpm
     n_beats = int((env.size - 2 - period) // period)
     if span is not None:
         n_beats = min(n_beats, span)
-    beats = np.arange(n_beats)[None, :] * period
-    scores = np.empty(phases.size)
-    for i, phase in enumerate(phases):
-        scores[i] = interp(env, beats + phase).mean()
+    scores = np.zeros(phases.size)
+    for level, weight in GRID_LEVELS:
+        points = np.arange(n_beats * level) * (period / level)
+        for i, phase in enumerate(phases):
+            scores[i] += weight * interp(env, points + phase).mean()
     return scores, period
 
 
