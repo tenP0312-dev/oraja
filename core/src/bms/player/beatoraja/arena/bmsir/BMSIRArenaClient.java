@@ -896,6 +896,22 @@ public final class BMSIRArenaClient {
         return main == null ? null : main.getPlayerConfig();
     }
 
+    /** Player root directory shared by every player, or null before startup. */
+    static String playerRootPath() {
+        return main == null ? null : main.getConfig().getPlayerpath();
+    }
+
+    /** Re-reads the active mode's key assignment after a profile was applied. */
+    static void refreshInputAfterKeyProfile() {
+        if (main == null) {
+            return;
+        }
+        main.getInputProcessor().setPlayConfig(
+                main.getPlayerConfig().getPlayConfig(currentPlayModeForLayout())
+        );
+        main.getInputProcessor().resetAllKeyState();
+    }
+
     public static boolean saveArenaConfig() {
         return main != null
                 && BMSIRArenaConfigStore.write(
