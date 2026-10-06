@@ -37,6 +37,8 @@ public final class AudioChartSession {
     private static volatile AudioChartSession current;
 
     private final Path audio;
+    private final boolean window;
+    private final Runnable onFinished;
     private volatile State state = State.ANALYZING;
     private volatile String error;
     private volatile AudioGridEstimator.Result result;
@@ -44,8 +46,20 @@ public final class AudioChartSession {
     private double firstBeatSec;
     private long seed;
 
-    private AudioChartSession(Path audio) {
+    private AudioChartSession(Path audio, boolean window, Runnable onFinished) {
         this.audio = audio;
+        this.window = window;
+        this.onFinished = onFinished;
+    }
+
+    /** Difficulty settings remembered in the player config, shared by the drop window and the folder. */
+    public static GeneratedChartBuilder.Settings settings(bms.player.beatoraja.PlayerConfig config) {
+        if (config == null) {
+            return new GeneratedChartBuilder.Settings(8, 1, 2, false);
+        }
+        return new GeneratedChartBuilder.Settings(config.getGeneratedChartDivision(),
+                config.getGeneratedChartMinChord(), config.getGeneratedChartMaxChord(),
+                config.isGeneratedChartScratch());
     }
 
     public static boolean isAudioFile(Path path) {
@@ -54,9 +68,19 @@ public final class AudioChartSession {
         return dot >= 0 && AUDIO_EXTENSIONS.contains(name.substring(dot + 1).toLowerCase(Locale.ROOT));
     }
 
-    /** Starts analysing a dropped audio file, replacing any previous session. */
+    /** Starts analysing a dropped audio file in the drop window, replacing any previous session. */
     public static AudioChartSession start(Path audio) {
-        AudioChartSession session = new AudioChartSession(audio);
+        return start(audio, true, null);
+    }
+
+    /**
+     * Starts analysing an audio file, replacing any previous session.
+     *
+     * @param window     whether the drop window shows this session (false for the Music Select folder)
+     * @param onFinished run on the analysis thread once the session is READY or FAILED; may be null
+     */
+    public static AudioChartSession start(Path audio, boolean window, Runnable onFinished) {
+        AudioChartSession session = new AudioChartSession(audio, window, onFinished);
         current = session;
         Thread worker = new Thread(session::analyze, "generated-chart-analysis");
         worker.setDaemon(true);
@@ -73,6 +97,16 @@ public final class AudioChartSession {
     }
 
     private void analyze() {
+        try {
+            analyzeOrFail();
+        } finally {
+            if (onFinished != null) {
+                onFinished.run();
+            }
+        }
+    }
+
+    private void analyzeOrFail() {
         try {
             // the whole file is decoded in memory; a 15-minute WAV is ~160 MB
             if (Files.size(audio) > MAX_FILE_BYTES) {
@@ -119,6 +153,11 @@ public final class AudioChartSession {
 
     public Path audio() {
         return audio;
+    }
+
+    /** Whether the drop window shows this session. */
+    public boolean window() {
+        return window;
     }
 
     public State state() {

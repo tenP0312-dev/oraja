@@ -8,6 +8,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -50,6 +51,19 @@
                     </Button>
                 </VBox>
             </HBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Label prefWidth="90.0" text="%GENERATED_CHART_AUDIO_DIRECTORY" wrapText="true" />
+                <TextField fx:id="generatedChartAudioDirectory" editable="false" HBox.hgrow="ALWAYS" />
+                <Button mnemonicParsing="false" onAction="#chooseGeneratedChartAudioDirectory"
+                        prefHeight="31.0" prefWidth="74.0" text="%GENERATED_CHART_AUDIO_DIRECTORY_CHOOSE" />
+                <Button mnemonicParsing="false" onAction="#clearGeneratedChartAudioDirectory"
+                        prefHeight="31.0" prefWidth="74.0" text="%GENERATED_CHART_AUDIO_DIRECTORY_CLEAR" />
+            </HBox>
+            <Label maxWidth="680.0" style="-fx-text-fill: #555555;"
+                   text="%GENERATED_CHART_AUDIO_DIRECTORY_HINT" wrapText="true" />
+
+            <Separator />
 
             <CheckBox fx:id="bmsirPhysicalFolderFilterEnabled" mnemonicParsing="false"
                       text="%BMSIR_PHYSICAL_FOLDER_FILTER_ENABLED" />
