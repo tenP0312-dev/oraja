@@ -32,6 +32,7 @@ DOUBLE_TIME_RATIO = 0.8
 # Log-spectral flux inflates room noise, so the first-sound threshold has to
 # sit well above it.
 FIRST_SOUND_RATIO = 0.3
+SUSTAIN_SEC = 2.0
 STABLE_DRIFT_MS = 30.0
 # (subdivision, weight): beats, plus 8th notes at half weight. Chosen on 26
 # constant-BPM BMS renders: exact BPM 19 -> 22 of 26. Adding 16ths, or
@@ -208,6 +209,19 @@ def stability(env, bpm, phase, window_sec=15.0):
     return float(max(abs(d) for d in devs))
 
 
+def first_sustained_sound(env, threshold):
+    """Start of the music: the first onset burst followed by another within
+    SUSTAIN_SEC. A lone burst is ignored; decoders that keep the encoder delay
+    produce one where digital silence steps into the track's noise floor."""
+    loud = env > threshold
+    bursts = np.nonzero(loud & ~np.concatenate([[False], loud[:-1]]))[0]
+    window = int(SUSTAIN_SEC * FRAME_RATE)
+    for current, following in zip(bursts, bursts[1:]):
+        if following - current <= window:
+            return float(current / FRAME_RATE)
+    return float(bursts[0] / FRAME_RATE) if bursts.size else 0.0
+
+
 def analyze(path, min_bpm=70.0, max_bpm=200.0):
     samples = decode_mono(path)
     env = onset_envelope(samples)
@@ -216,9 +230,7 @@ def analyze(path, min_bpm=70.0, max_bpm=200.0):
     bpm = best["bpm"]
     period_sec = 60.0 / bpm
     phase_sec = best["phase_frames"] / FRAME_RATE + ONSET_LAG_SEC
-    # first audible sound: the first frame that clearly exceeds the noise floor
-    loud = np.nonzero(env > np.percentile(env, 99) * FIRST_SOUND_RATIO)[0]
-    first_sound = float(loud[0] / FRAME_RATE) if loud.size else 0.0
+    first_sound = first_sustained_sound(env, np.percentile(env, 99) * FIRST_SOUND_RATIO)
     # earliest grid beat that is not before the music starts (with one beat of slack)
     k = int(np.ceil((first_sound - period_sec * 0.5 - phase_sec) / period_sec))
     first_beat = phase_sec + max(k, int(np.ceil(-phase_sec / period_sec))) * period_sec
