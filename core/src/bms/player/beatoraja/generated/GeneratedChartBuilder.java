@@ -23,8 +23,8 @@ import java.util.Random;
  *       (detected repeats had real-chart rhythm similarity 0.78-0.82 vs 0.57
  *       for random bar pairs).</li>
  *   <li>Chord size follows onset strength within [min, max]; lanes are random,
- *       avoiding the previous position's lanes; scratch (optional) goes where
- *       the high band (hi-hat) dominates, never on adjacent 16ths.</li>
+ *       avoiding the previous position's lanes; scratch (optional) goes on clear
+ *       hi-hats ({@link #isHiHat}), at least an 8th apart.</li>
  * </ul>
  *
  * <p>Layout: measure 0 is an empty lead-in, measure 1 starts the audio and is
@@ -60,6 +60,9 @@ public final class GeneratedChartBuilder {
     private static final double METRIC_WEIGHT = 0.3;
     /** Cosine similarity of bar onset patterns above which a bar repeats an earlier one. */
     static final double REPEAT_SIMILARITY = 0.85;
+    static final double HI_HAT_DOMINANCE = 2.0;
+    /** Scratches are at least an 8th apart. */
+    static final int SCRATCH_MIN_GAP = 2;
     /** Bars below this share of the median bar energy count as silent. */
     private static final double SILENT_BAR_SHARE = 0.25;
 
@@ -237,8 +240,8 @@ public final class GeneratedChartBuilder {
         Placement[] bySlot = new Placement[slots];
         List<Placement> placements = new ArrayList<>();
         boolean[] previousLanes = new boolean[KEYS];
-        int previousSlot = Integer.MIN_VALUE;
-        boolean previousScratch = false;
+        double hiHatFloor = settings.scratch() ? hiHatFloor(positions, bands) : 0.0;
+        int lastScratchSlot = Integer.MIN_VALUE / 2;
         for (int index = 0; index < positions.size(); index++) {
             int slot = positions.get(index);
             int bar = slot / SLOTS_PER_BAR;
@@ -251,8 +254,8 @@ public final class GeneratedChartBuilder {
                 placement = new Placement(slot, copied.lanes.clone(), copied.scratch);
             } else {
                 boolean scratch = settings.scratch()
-                        && dominantBand(bands[slot]) == AudioGridEstimator.BAND_HIGH
-                        && !(previousScratch && slot - previousSlot == 1);
+                        && isHiHat(bands[slot], hiHatFloor)
+                        && slot - lastScratchSlot >= SCRATCH_MIN_GAP;
                 int keys = Math.max(scratch ? 0 : 1, sizes[index] - (scratch ? 1 : 0));
                 placement = new Placement(slot, chooseLanes(keys, previousLanes, random), scratch);
             }
@@ -262,8 +265,9 @@ public final class GeneratedChartBuilder {
             for (int lane : placement.lanes) {
                 previousLanes[lane] = true;
             }
-            previousSlot = slot;
-            previousScratch = placement.scratch;
+            if (placement.scratch) {
+                lastScratchSlot = slot;
+            }
         }
         return placements;
     }
@@ -431,6 +435,29 @@ public final class GeneratedChartBuilder {
             sum += left[index] * right[index];
         }
         return sum;
+    }
+
+    /** The median hi-hat strength over the placed positions: scratch uses the stronger half. */
+    static double hiHatFloor(List<Integer> positions, double[][] bands) {
+        if (positions.isEmpty()) {
+            return 0.0;
+        }
+        double[] highs = new double[positions.size()];
+        for (int index = 0; index < highs.length; index++) {
+            highs[index] = bands[positions.get(index)][AudioGridEstimator.BAND_HIGH];
+        }
+        return AudioGridEstimator.percentile(highs, 50);
+    }
+
+    /**
+     * A clear hi-hat: the high band at least {@link #HI_HAT_DOMINANCE} times the
+     * low and mid bands, and among the stronger half of hi-hats. A bare
+     * "high band is the largest" put scratch on 38-56% of positions in real
+     * songs; this keeps it near 11%.
+     */
+    static boolean isHiHat(double[] bands, double floor) {
+        double high = bands[AudioGridEstimator.BAND_HIGH];
+        return high >= HI_HAT_DOMINANCE * Math.max(bands[0], bands[1]) && high >= floor && high > 0;
     }
 
     static int dominantBand(double[] bands) {

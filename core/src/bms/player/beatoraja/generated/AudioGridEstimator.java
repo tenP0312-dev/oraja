@@ -27,6 +27,8 @@ public final class AudioGridEstimator {
     public static final double ONSET_LAG_SEC = 0.035;
     static final double COARSE_SPAN_SEC = 40.0;
     static final double DOUBLE_TIME_RATIO = 0.8;
+    /** An octave alternative this close to the chosen tempo is offered to the player. */
+    public static final double OCTAVE_CLOSE = 0.75;
     /** Log-spectral flux inflates room noise, so the first-sound threshold sits well above it. */
     static final double FIRST_SOUND_RATIO = 0.3;
     static final double SUSTAIN_SEC = 2.0;
@@ -72,6 +74,23 @@ public final class AudioGridEstimator {
         /** Peak onset strength within {@code radiusSec} of an audio time. */
         public double onsetStrengthAt(double timeSec, double radiusSec) {
             return peakNear(envelope, timeSec, radiusSec);
+        }
+
+        /**
+         * The half or double tempo when it scored at least {@link #OCTAVE_CLOSE}
+         * of the chosen tempo: such songs are often heard at the other tempo
+         * (operator: アオとキラメキ, 173 chosen, 86.5 heard), and no threshold
+         * settles it for every song, so callers offer it as a one-step choice.
+         */
+        public Candidate octaveAlternative() {
+            for (Candidate candidate : alternatives) {
+                double ratio = candidate.bpm() / bpm;
+                boolean octave = Math.abs(ratio - 2.0) < 0.01 || Math.abs(ratio - 0.5) < 0.0025;
+                if (octave && candidate.confidence() >= OCTAVE_CLOSE * confidence) {
+                    return candidate;
+                }
+            }
+            return null;
         }
 
         /** Peak low / mid / high onset strengths within {@code radiusSec} of an audio time. */

@@ -120,6 +120,11 @@ class AudioGridEstimatorTest {
             found |= Math.abs(candidate.bpm() - 93.5) < 0.05;
         }
         assertTrue(found, "93.5 missing: " + result.bpm() + " " + result.alternatives());
+        // and it is close enough to be offered as a one-press choice
+        AudioGridEstimator.Candidate octave = result.octaveAlternative();
+        assertNotNull(octave, "half/double tempo not offered: " + result.alternatives());
+        double ratio = octave.bpm() / result.bpm();
+        assertTrue(Math.abs(ratio - 2) < 0.01 || Math.abs(ratio - 0.5) < 0.01, "ratio " + ratio);
     }
 
     @Test
