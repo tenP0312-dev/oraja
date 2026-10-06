@@ -168,7 +168,7 @@ public final class BarRenderer {
 					ba.value = fn.getDisplayBarType();
 					ba.text = fn.getDisplayTextType();
                 } else {
-					ba.value = -1;
+					ba.value = generatedChartBarStyle(sd);
 				}
 			} else {
 				ba.value = -1;
@@ -563,4 +563,18 @@ public final class BarRenderer {
 //		cda.write("default", course);
 	}
 
+
+	/**
+	 * Bar style for the generated-chart folder (#436): folders use the folder
+	 * bar and audio files the song bar. Other unknown bars stay hidden (-1).
+	 */
+	static int generatedChartBarStyle(Bar bar) {
+		if (bar instanceof GeneratedAudioFolderBar) {
+			return 1;
+		}
+		if (bar instanceof GeneratedAudioChartBar) {
+			return 0;
+		}
+		return -1;
+	}
 }

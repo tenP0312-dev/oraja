@@ -113,6 +113,18 @@ class GeneratedAudioBarsTest {
     }
 
     @Test
+    void rowLabelsNameTheSongAndAvoidGlyphsMissingFromSkinFonts() {
+        assertEquals("my song.v2", GeneratedAudioChartBar.songName(Path.of("dir", "my song.v2.mp3")));
+        AudioChartSession session = AudioChartSession.start(directory.resolve("song name.mp3"), false, null);
+        for (KeyedFunctionBar row : GeneratedAudioChartBar.rows(session, new PlayerConfig())) {
+            assertFalse(row.getTitle().contains("\u25b6") || row.getTitle().contains("\u301c"), row.getTitle());
+            if (row.getSelectionKey().equals("status") && session.state() == AudioChartSession.State.ANALYZING) {
+                assertTrue(row.getTitle().contains("song name"), row.getTitle());
+            }
+        }
+    }
+
+    @Test
     void keyedRowsKeepTheCursorWhenTheirLabelChanges() {
         KeyedFunctionBar before = new KeyedFunctionBar("division", (s, b) -> { }, "Notes: 8th", FunctionBar.STYLE_TABLE);
         KeyedFunctionBar after = new KeyedFunctionBar("division", (s, b) -> { }, "Notes: 16th", FunctionBar.STYLE_TABLE);
