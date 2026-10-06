@@ -290,6 +290,8 @@ public final class PlayerConfig {
 	private boolean bmsirTableLevelDisplayEnabled = true;
 	/** Hide unavailable song/course bars only while browsing difficulty tables. */
 	private boolean bmsirHideMissingTableSongs = false;
+	/** Keep songs/charts marked as ignored (invisible) in ordinary Music Select lists. */
+	private boolean bmsirKeepIgnoredVisible = true;
 	/** Apply a per-player allow-list to physical root folders in Music Select. */
 	private boolean bmsirPhysicalFolderFilterEnabled = false;
 	/** Configured BMS roots that remain visible while the physical-folder filter is ON. */
@@ -835,6 +837,14 @@ public final class PlayerConfig {
 
 	public void setBmsirHideMissingTableSongs(boolean enabled) {
 		bmsirHideMissingTableSongs = enabled;
+	}
+
+	public boolean isBmsirKeepIgnoredVisible() {
+		return bmsirKeepIgnoredVisible;
+	}
+
+	public void setBmsirKeepIgnoredVisible(boolean enabled) {
+		bmsirKeepIgnoredVisible = enabled;
 	}
 
 	public boolean isBmsirPhysicalFolderFilterEnabled() {
