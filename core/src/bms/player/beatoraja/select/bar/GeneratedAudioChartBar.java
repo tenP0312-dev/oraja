@@ -88,7 +88,8 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
         List<KeyedFunctionBar> rows = new ArrayList<>();
         switch (session.state()) {
             case ANALYZING -> rows.add(row("status", STYLE_SEARCH,
-                    t("解析中…（決定で更新）", "Analyzing... (press to refresh)"), ignored -> { }));
+                    t("解析中: ", "Analyzing: ") + songName(session.audio()) + t("（決定で更新）", " (press to refresh)"),
+                    ignored -> { }));
             case FAILED -> {
                 rows.add(row("status", STYLE_SEARCH,
                         t("解析できませんでした: ", "Analysis failed: ") + session.error(), ignored -> { }));
@@ -103,8 +104,9 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
     private static void readyRows(AudioChartSession session, PlayerConfig config, List<KeyedFunctionBar> rows) {
         GeneratedChartBuilder.Settings settings = AudioChartSession.settings(config);
         AudioGridEstimator.Result result = session.result();
+        // the selected row's title is shown large on Music Select, so the play row names the song
         rows.add(new KeyedFunctionBar("play", (selector, self) -> play(selector, session),
-                t("▶ プレイ（", "▶ Play (") + describe(settings) + t("）", ")"), STYLE_SONG));
+                t("プレイ: ", "Play: ") + songName(session.audio()), STYLE_SONG));
         String status = String.format(Locale.ROOT, t("BPM %.2f / 開始 %.0f ms / 信頼度 %.1f", "BPM %.2f / first beat %.0f ms / confidence %.1f"),
                 session.bpm(), session.firstBeatSec() * 1000.0, result.confidence());
         if (!result.stableTempo()) {
@@ -178,12 +180,10 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
         selector.playGeneratedChart(chart);
     }
 
-    static String describe(GeneratedChartBuilder.Settings settings) {
-        String chords = settings.minChord() == settings.maxChord()
-                ? Integer.toString(settings.minChord())
-                : settings.minChord() + t("〜", "-") + settings.maxChord();
-        return divisionLabel(settings.division()) + t("・同時押し", ", chords ") + chords
-                + (settings.scratch() ? t("・皿あり", ", scratch") : "");
+    static String songName(Path audio) {
+        String name = audio.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
     }
 
     static String divisionLabel(int division) {
