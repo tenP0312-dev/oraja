@@ -45,6 +45,8 @@ public final class AudioChartSession {
     private double bpm;
     private double firstBeatSec;
     private long seed;
+    private String key;
+    private volatile boolean restoredAdjustment;
 
     private AudioChartSession(Path audio, boolean window, Runnable onFinished) {
         this.audio = audio;
@@ -129,6 +131,12 @@ public final class AudioChartSession {
                 bpm = estimate.bpm();
                 firstBeatSec = estimate.firstBeatSec();
                 seed = initialSeed();
+                double[] saved = key != null ? loadGrid(generatedRoot().resolve(key), estimate) : null;
+                if (saved != null) {
+                    bpm = saved[0];
+                    firstBeatSec = saved[1];
+                    restoredAdjustment = true;
+                }
             }
             state = State.READY;
         } catch (IllegalArgumentException exception) {
@@ -146,7 +154,8 @@ public final class AudioChartSession {
 
     private long initialSeed() {
         try {
-            return Long.parseLong(audioKey().substring(0, 15), 16);
+            key = audioKey();
+            return Long.parseLong(key.substring(0, 15), 16);
         } catch (IOException | RuntimeException exception) {
             return audio.getFileName().toString().hashCode();
         }
@@ -216,6 +225,12 @@ public final class AudioChartSession {
             bpm = result.bpm();
             firstBeatSec = result.firstBeatSec();
         }
+        restoredAdjustment = false;
+    }
+
+    /** Whether the BPM / first beat came from this file's saved correction. */
+    public boolean restoredAdjustment() {
+        return restoredAdjustment;
     }
 
     public synchronized void reshuffle() {
@@ -267,11 +282,54 @@ public final class AudioChartSession {
                 },
                 settings,
                 chartSeed);
+        saveGrid(directory, chartBpm, chartFirstBeat, estimate);
         Path bms = directory.resolve("chart.bms");
         Files.write(bms, chart.text().getBytes(BMS_CHARSET));
         logger.info("Generated chart written: {} ({} notes, {} positions, {} repeated bars)",
                 bms, chart.notes(), chart.positions(), chart.repeated());
         return bms;
+    }
+
+    private static final String GRID_FILE = "grid.properties";
+
+    /**
+     * Remembers the player's BPM / first beat for this file. The analysed values
+     * are stored too, so a correction is only reused for the same analysis.
+     */
+    static void saveGrid(Path directory, double bpm, double firstBeat, AudioGridEstimator.Result estimate) {
+        java.util.Properties grid = new java.util.Properties();
+        grid.setProperty("bpm", Double.toString(bpm));
+        grid.setProperty("firstBeatSec", Double.toString(firstBeat));
+        grid.setProperty("analysedBpm", Double.toString(estimate.bpm()));
+        grid.setProperty("analysedFirstBeatSec", Double.toString(estimate.firstBeatSec()));
+        try (var out = Files.newOutputStream(directory.resolve(GRID_FILE))) {
+            grid.store(out, "generated chart grid correction");
+        } catch (IOException exception) {
+            logger.warn("Could not save the generated chart grid: {}", directory, exception);
+        }
+    }
+
+    /** @return {bpm, firstBeatSec} saved for the same analysis, or null */
+    static double[] loadGrid(Path directory, AudioGridEstimator.Result estimate) {
+        Path file = directory.resolve(GRID_FILE);
+        if (!Files.isRegularFile(file)) {
+            return null;
+        }
+        java.util.Properties grid = new java.util.Properties();
+        try (var in = Files.newInputStream(file)) {
+            grid.load(in);
+            double analysedBpm = Double.parseDouble(grid.getProperty("analysedBpm"));
+            double analysedFirst = Double.parseDouble(grid.getProperty("analysedFirstBeatSec"));
+            if (Math.abs(analysedBpm - estimate.bpm()) > 1e-6
+                    || Math.abs(analysedFirst - estimate.firstBeatSec()) > 1e-6) {
+                return null;
+            }
+            double bpm = Double.parseDouble(grid.getProperty("bpm"));
+            double first = Double.parseDouble(grid.getProperty("firstBeatSec"));
+            return bpm >= 20.0 && bpm <= 999.0 && first >= 0.0 ? new double[] {bpm, first} : null;
+        } catch (IOException | RuntimeException exception) {
+            return null;
+        }
     }
 
     /** Charts live under the work-folder marker, so they never save scores or reach IR/Arena. */

@@ -20,6 +20,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.100 preserves the 0.4.14.99 internal test lineage and refines
+generated charts: scratch only on clear hi-hats (about one position in ten),
+a one-press half/double tempo choice when it is a close call, and per-song
+memory of the player's BPM / first-beat correction. Plugin 0.0.77 and launcher
+0.2.29 remain optional. See [the test scope](docs/TEST_RELEASE_0.4.14.100.md).
+
 Version 0.4.14.99 preserves the 0.4.14.98 internal test lineage and makes
 generated charts follow the music: notes where the music hits (note amount
 scales the song's own density), repeated phrases reuse their layout, and
@@ -127,7 +133,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.99**. Its Windows native-audio
+The current client source version is **0.4.14.100**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
