@@ -292,6 +292,11 @@ public final class PlayerConfig {
 	private boolean bmsirHideMissingTableSongs = false;
 	/** Keep songs/charts marked as ignored (invisible) in ordinary Music Select lists. */
 	private boolean bmsirKeepIgnoredVisible = true;
+	/** Last settings for charts generated from audio (#433/#436). */
+	private int generatedChartDivision = 8;
+	private int generatedChartMinChord = 1;
+	private int generatedChartMaxChord = 2;
+	private boolean generatedChartScratch = false;
 	/** Apply a per-player allow-list to physical root folders in Music Select. */
 	private boolean bmsirPhysicalFolderFilterEnabled = false;
 	/** Configured BMS roots that remain visible while the physical-folder filter is ON. */
@@ -845,6 +850,36 @@ public final class PlayerConfig {
 
 	public void setBmsirKeepIgnoredVisible(boolean enabled) {
 		bmsirKeepIgnoredVisible = enabled;
+	}
+
+	public int getGeneratedChartDivision() {
+		return generatedChartDivision;
+	}
+
+	public void setGeneratedChartDivision(int division) {
+		generatedChartDivision = division == 4 || division == 16 ? division : 8;
+	}
+
+	public int getGeneratedChartMinChord() {
+		return generatedChartMinChord;
+	}
+
+	public int getGeneratedChartMaxChord() {
+		return generatedChartMaxChord;
+	}
+
+	/** Keeps 1 <= min <= max <= 7. */
+	public void setGeneratedChartChords(int min, int max) {
+		generatedChartMinChord = Math.max(1, Math.min(7, min));
+		generatedChartMaxChord = Math.max(generatedChartMinChord, Math.min(7, max));
+	}
+
+	public boolean isGeneratedChartScratch() {
+		return generatedChartScratch;
+	}
+
+	public void setGeneratedChartScratch(boolean scratch) {
+		generatedChartScratch = scratch;
 	}
 
 	public boolean isBmsirPhysicalFolderFilterEnabled() {
@@ -1864,6 +1899,8 @@ public final class PlayerConfig {
 
 	public void validate() {
 		getModMenuSettings().normalize();
+		setGeneratedChartDivision(generatedChartDivision);
+		setGeneratedChartChords(generatedChartMinChord, generatedChartMaxChord);
 		setBmsirStartButtonAction(bmsirStartButtonAction);
 		setBmsirSelectButtonAction(bmsirSelectButtonAction);
 		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);

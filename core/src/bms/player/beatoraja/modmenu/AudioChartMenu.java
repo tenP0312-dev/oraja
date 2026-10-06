@@ -1,5 +1,7 @@
 package bms.player.beatoraja.modmenu;
 
+import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.generated.AudioChartSession;
 import bms.player.beatoraja.generated.AudioGridEstimator;
@@ -27,6 +29,7 @@ public final class AudioChartMenu {
     private static final int[] MIN_CHORD = {1};
     private static final int[] MAX_CHORD = {2};
     private static final ImBoolean SCRATCH = new ImBoolean(false);
+    private static AudioChartSession loadedFor;
     private static final float[] WARNING = {1.0f, 0.75f, 0.3f, 1.0f};
 
     private AudioChartMenu() {
@@ -38,8 +41,17 @@ public final class AudioChartMenu {
 
     public static void render() {
         AudioChartSession session = AudioChartSession.current();
-        if (session == null) {
+        if (session == null || !session.window()) {
             return;
+        }
+        if (loadedFor != session) {
+            // start each window from the remembered settings shared with the Music Select folder
+            loadedFor = session;
+            GeneratedChartBuilder.Settings remembered = AudioChartSession.settings(BMSIRArenaClient.playerConfig());
+            DIVISION.set(remembered.division());
+            MIN_CHORD[0] = remembered.minChord();
+            MAX_CHORD[0] = remembered.maxChord();
+            SCRATCH.set(remembered.scratch());
         }
         ImGui.setNextWindowPos(windowWidth * 0.30f, windowHeight * 0.15f, ImGuiCond.FirstUseEver);
         ImBoolean open = new ImBoolean(true);
@@ -132,6 +144,12 @@ public final class AudioChartMenu {
     }
 
     private static void play(AudioChartSession session) {
+        PlayerConfig config = BMSIRArenaClient.playerConfig();
+        if (config != null) {
+            config.setGeneratedChartDivision(DIVISION.get());
+            config.setGeneratedChartChords(MIN_CHORD[0], MAX_CHORD[0]);
+            config.setGeneratedChartScratch(SCRATCH.get());
+        }
         Path chart;
         try {
             chart = session.writeChart(new GeneratedChartBuilder.Settings(
