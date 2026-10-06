@@ -12,6 +12,7 @@ import bms.player.beatoraja.arena.bmsir.BMSIRManiacApiClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRNumpadAction;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext;
 import bms.player.beatoraja.arena.bmsir.BMSIRManiacSettings;
+import bms.player.beatoraja.bmsir.BMSIRTestPlayFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.IntStream;
@@ -745,6 +746,28 @@ public final class MusicSelector extends MainState {
 		}
 	}
 	
+	/**
+	 * Plays a chart generated from a dropped audio file. It lives in the work
+	 * folder, so BMSPlayer/MusicResult already disable scores, replays and IR.
+	 */
+	public boolean playGeneratedChart(Path chart) {
+		if (!BMSIRTestPlayFolder.contains(chart.toString())) {
+			return false;
+		}
+		resource.clear();
+		if (!resource.setBMSFile(chart, BMSPlayerMode.PLAY)) {
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"生成した譜面を読み込めませんでした",
+					"Failed to load the generated chart"), 3000);
+			return false;
+		}
+		resource.setRankingData(null);
+		resource.setRivalScoreData(null);
+		resource.setChartOption(null);
+		main.changeState(MainStateType.DECIDE);
+		return true;
+	}
+
 	private void readCourse(BMSPlayerMode mode) {
 		final GradeBar gradeBar = (GradeBar) manager.getSelected();
 		if (!gradeBar.existsAllSongs()) {

@@ -1,5 +1,6 @@
 package bms.player.beatoraja;
 
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bms.player.beatoraja.exceptions.PlayerConfigException;
+import bms.player.beatoraja.generated.AudioChartSession;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaClient;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n;
 import bms.player.beatoraja.arena.bmsir.BMSIRArenaOverlay;
@@ -1607,9 +1609,37 @@ public class MainController {
 	private volatile UpdateThread updateSong;
 	private SongUpdateRequestQueue.Request activeSongUpdateRequest;
 
-	/** Handles loose chart files dropped onto the game window. */
+	/** A single dropped audio file starts chart generation instead of a chart import. */
+	static Path droppedAudioFile(String[] files) {
+		if (files.length != 1) {
+			return null;
+		}
+		try {
+			Path path = Paths.get(files[0]);
+			return AudioChartSession.isAudioFile(path) && Files.isRegularFile(path) ? path : null;
+		} catch (InvalidPathException exception) {
+			return null;
+		}
+	}
+
+	/** Handles loose chart files and audio files dropped onto the game window. */
 	public void handleFilesDropped(String[] files) {
 		if (files == null || files.length == 0) {
+			return;
+		}
+		Path droppedAudio = droppedAudioFile(files);
+		if (droppedAudio != null) {
+			if (selector == null || current != selector) {
+				ImGuiNotify.warning(BMSIRArenaI18n.text(
+						"音源からの譜面生成は選曲画面でのみ使用できます",
+						"Charts from audio can only be generated in Music Select"), 5000);
+			} else if (BMSIRArenaClient.isNominationOpen() || BMSIRArenaClient.isSelectionBlocked()) {
+				ImGuiNotify.warning(BMSIRArenaI18n.text(
+						"Arenaの対戦準備中は音源から譜面を生成できません",
+						"Charts from audio cannot be generated while Arena is preparing a match"), 5000);
+			} else {
+				AudioChartSession.start(droppedAudio);
+			}
 			return;
 		}
 		if (selector == null || current != selector) {
