@@ -113,6 +113,18 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
         if (!result.stableTempo()) {
             status += t(" / テンポ不安定", " / unstable tempo");
         }
+        if (session.restoredAdjustment()) {
+            status += t(" / 保存した補正", " / saved correction");
+        }
+        AudioGridEstimator.Candidate octave = result.octaveAlternative();
+        if (octave != null && Math.abs(octave.bpm() - session.bpm()) > 0.05
+                && Math.abs(result.bpm() - session.bpm()) < 0.05) {
+            // half/double tempo is a close call: one press away, right under Play
+            String value = String.format(Locale.ROOT, "%.2f", octave.bpm());
+            rows.add(row("octave", STYLE_SPECIAL,
+                    t("倍/半分の可能性: BPM ", "Maybe half/double tempo: BPM ") + value + t(" にする", ""),
+                    ignored -> session.setBpm(octave.bpm())));
+        }
         rows.add(row("status", STYLE_SEARCH, status, ignored -> { }));
 
         rows.add(row("followMusic", STYLE_TABLE,
@@ -141,7 +153,7 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
                 t("最大同時押し: ", "Max chord: ") + settings.maxChord() + t("（決定で+1）", " (press for +1)"),
                 c -> c.setGeneratedChartChords(settings.minChord(), nextMaxChord(settings.minChord(), settings.maxChord())), config));
         rows.add(row("scratch", STYLE_TABLE,
-                t("皿: ", "Scratch: ") + (settings.scratch() ? t("ハイハットの所", "on hi-hats") : t("なし", "off"))
+                t("皿: ", "Scratch: ") + (settings.scratch() ? t("はっきりしたハイハットの所", "on clear hi-hats") : t("なし", "off"))
                         + t("（決定で切替）", " (press to change)"),
                 c -> c.setGeneratedChartScratch(!settings.scratch()), config));
         rows.add(row("reshuffle", STYLE_TABLE, t("配置を変える", "Reshuffle lanes"), ignored -> session.reshuffle()));

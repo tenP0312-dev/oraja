@@ -284,7 +284,7 @@ class GeneratedChartBuilderTest {
     }
 
     @Test
-    void scratchOnlyOnHiHatsAndNeverOnAdjacentSixteenths() throws Exception {
+    void scratchOnlyOnClearHiHatsAtLeastAnEighthApart() throws Exception {
         double[][][] bars = new double[16][][];
         for (int bar = 0; bar < bars.length; bar++) {
             double[][] pattern = drumBar(3000 + bar);
@@ -294,21 +294,32 @@ class GeneratedChartBuilderTest {
         }
         Music music = new Music(bars);
         int scratches = 0;
-        int previousScratchSlot = Integer.MIN_VALUE;
+        int positions = 0;
+        int previousScratchSlot = Integer.MIN_VALUE / 2;
         for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(4, 1, 2, true), 6)))) {
-            boolean scratch = row[row.length - 1] == 7;
-            if (scratch) {
+            positions++;
+            if (row[row.length - 1] == 7) {
                 double[] bands = music.bands(FIRST_BEAT + row[0] * SLOT);
-                assertEquals(2, GeneratedChartBuilder.dominantBand(bands), "scratch away from a hi-hat at " + row[0]);
-                assertNotEquals(previousScratchSlot + 1, row[0], "adjacent scratches");
+                assertTrue(bands[2] >= 2.0 * Math.max(bands[0], bands[1]) && bands[2] > 0,
+                        "scratch away from a clear hi-hat at " + row[0]);
+                assertTrue(row[0] - previousScratchSlot >= 2, "scratches closer than an 8th at " + row[0]);
                 previousScratchSlot = row[0];
                 scratches++;
             }
         }
         assertTrue(scratches > 0);
+        assertTrue(scratches < positions / 3, scratches + " scratches of " + positions);
         for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(4, 1, 2, false), 6)))) {
             assertNotEquals(7, row[row.length - 1]);
         }
+    }
+
+    @Test
+    void hiHatRuleNeedsDominanceAndTheStrongerHalf() {
+        assertTrue(GeneratedChartBuilder.isHiHat(new double[] {0.5, 0.4, 1.0}, 0.8));
+        assertFalse(GeneratedChartBuilder.isHiHat(new double[] {0.6, 0.4, 1.0}, 0.8), "high band not 2x the low band");
+        assertFalse(GeneratedChartBuilder.isHiHat(new double[] {0.1, 0.1, 0.7}, 0.8), "weaker half of hi-hats");
+        assertFalse(GeneratedChartBuilder.isHiHat(new double[] {0, 0, 0}, 0.0));
     }
 
     @Test
