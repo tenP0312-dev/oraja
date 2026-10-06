@@ -20,6 +20,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.96 preserves the 0.4.14.95 internal test lineage and makes
+generated charts usable with the controller alone: an audio folder set in the
+pre-launch Resource settings appears in Music Select as CHARTS FROM AUDIO,
+where analysis, settings and Play are all decide-button rows. Plugin 0.0.77
+and launcher 0.2.29 remain optional. Physical acceptance remains pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.96.md).
+
 Version 0.4.14.95 preserves the 0.4.14.94 internal test lineage and adds
 charts generated from an audio file dropped in Music Select (no score, replay,
 IR, or Arena), named key/play-setting profiles in the Arena overlay, and an
@@ -103,7 +110,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.95**. Its Windows native-audio
+The current client source version is **0.4.14.96**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or

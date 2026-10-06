@@ -224,6 +224,8 @@ public class Config implements Validatable {
 	private String downloadDirectory = DEFAULT_DOWNLOAD_DIRECTORY;
 	public static final String DEFAULT_DOWNLOAD_DIRECTORY = "http_download";
 	private String workDirectory = "";
+	/** Folder whose audio files are listed for generated practice charts; empty hides the folder. */
+	private String generatedChartAudioDirectory = "";
 
 	private int irSendCount = 5;
 
@@ -807,6 +809,14 @@ public class Config implements Validatable {
 		this.workDirectory = workDirectory;
 	}
 
+	public String getGeneratedChartAudioDirectory() {
+		return generatedChartAudioDirectory;
+	}
+
+	public void setGeneratedChartAudioDirectory(String generatedChartAudioDirectory) {
+		this.generatedChartAudioDirectory = generatedChartAudioDirectory;
+	}
+
 	public String getIpfsUrl() {
 		return ipfsurl;
 	}
@@ -1061,6 +1071,7 @@ public class Config implements Validatable {
 		skinpath = skinpath != null ? skinpath : SKINPATH_DEFAULT;
 		downloadDirectory = validatePath(downloadDirectory) ? downloadDirectory : DEFAULT_DOWNLOAD_DIRECTORY;
 		workDirectory = validatePath(workDirectory) ? workDirectory : "";
+		generatedChartAudioDirectory = validatePath(generatedChartAudioDirectory) ? generatedChartAudioDirectory : "";
 		return true;
 	}
 

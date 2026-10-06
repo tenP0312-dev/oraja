@@ -394,6 +394,11 @@ public class BarManager {
 			if (ignoredFolder != null) {
 				l.add(ignoredFolder);
 			}
+			GeneratedAudioFolderBar generatedAudio = GeneratedAudioFolderBar.root(
+					select, select.resource.getConfig().getGeneratedChartAudioDirectory());
+			if (generatedAudio != null) {
+				l.add(generatedAudio);
+			}
 			appendFolders.keySet().forEach((key) -> {
 			    l.add(appendFolders.get(key));
 			});
@@ -599,7 +604,7 @@ public class BarManager {
 					}
 				} else {
 					for (int i = 0; i < currentsongs.length; i++) {
-						if (currentsongs[i].getClass() == prevbar.getClass() && currentsongs[i].getTitle().equals(prevbar.getTitle())) {
+						if (KeyedFunctionBar.sameRow(prevbar, currentsongs[i])) {
 							selectedindex = i;
 							break;
 						}

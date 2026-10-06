@@ -74,6 +74,8 @@ public class ResourceConfigurationView implements Initializable {
 	private VBox bmsirVisiblePhysicalFolders;
 	@FXML
 	private Label bmsirPhysicalFolderEmpty;
+	@FXML
+	private TextField generatedChartAudioDirectory;
 
 	private Config config;
 	private ResourceBundle resources;
@@ -276,6 +278,7 @@ public class ResourceConfigurationView implements Initializable {
 		this.downloadDirectory = config.getDownloadDirectory();
 		this.workDirectory = config.getWorkDirectory();
 		bmsroot.getItems().setAll(config.getBmsroot());
+		generatedChartAudioDirectory.setText(config.getGeneratedChartAudioDirectory());
 		updatesong.setSelected(config.isUpdatesong());
 		scanSongArchives.setSelected(config.isScanSongArchives());
 
@@ -297,6 +300,7 @@ public class ResourceConfigurationView implements Initializable {
 		config.setAvailableURL(availableTableUrls.toArray(new String[0]));
 		config.setDownloadDirectory(downloadDirectory);
 		config.setWorkDirectory(workDirectory);
+		config.setGeneratedChartAudioDirectory(generatedChartAudioDirectory.getText());
 	}
 
     @FXML
@@ -510,6 +514,29 @@ public class ResourceConfigurationView implements Initializable {
 		new Thread(loadTableRunnable).start();
 	}
 
+
+	/** One folder whose audio files Music Select lists for generated charts (#436). */
+	@FXML
+	public void chooseGeneratedChartAudioDirectory() {
+		DirectoryChooser chooser = new DirectoryChooser();
+		chooser.setTitle(englishUi
+				? "Choose the folder with audio files for generated charts"
+				: "譜面生成用の音源フォルダを選択してください");
+		File f = chooser.showDialog(null);
+		if (f != null) {
+			final String defaultPath = new File(".").getAbsoluteFile().getParent() + File.separatorChar;
+			String targetPath = f.getAbsolutePath();
+			if (targetPath.startsWith(defaultPath)) {
+				targetPath = targetPath.substring(defaultPath.length());
+			}
+			generatedChartAudioDirectory.setText(targetPath);
+		}
+	}
+
+	@FXML
+	public void clearGeneratedChartAudioDirectory() {
+		generatedChartAudioDirectory.setText("");
+	}
 
     @FXML
 	public void addSongPath() {
