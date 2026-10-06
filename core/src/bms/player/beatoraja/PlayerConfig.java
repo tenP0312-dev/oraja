@@ -293,7 +293,13 @@ public final class PlayerConfig {
 	/** Keep songs/charts marked as ignored (invisible) in ordinary Music Select lists. */
 	private boolean bmsirKeepIgnoredVisible = true;
 	/** Last settings for charts generated from audio (#433/#436). */
+	/** Note amount 1 (light) to 4 (dense), 3 = as the music, used while following the music. */
+	private int generatedChartDensity = 3;
+	/** Place notes where the music hits; off = fixed {@link #generatedChartDivision} grid. */
+	private boolean generatedChartFollowMusic = true;
 	private int generatedChartDivision = 8;
+	/** Reuse an earlier bar's layout for a repeated phrase. */
+	private boolean generatedChartRepeatBars = true;
 	private int generatedChartMinChord = 1;
 	private int generatedChartMaxChord = 2;
 	private boolean generatedChartScratch = false;
@@ -852,12 +858,36 @@ public final class PlayerConfig {
 		bmsirKeepIgnoredVisible = enabled;
 	}
 
+	public int getGeneratedChartDensity() {
+		return generatedChartDensity;
+	}
+
+	public void setGeneratedChartDensity(int density) {
+		generatedChartDensity = Math.max(1, Math.min(4, density));
+	}
+
+	public boolean isGeneratedChartFollowMusic() {
+		return generatedChartFollowMusic;
+	}
+
+	public void setGeneratedChartFollowMusic(boolean followMusic) {
+		generatedChartFollowMusic = followMusic;
+	}
+
 	public int getGeneratedChartDivision() {
 		return generatedChartDivision;
 	}
 
 	public void setGeneratedChartDivision(int division) {
 		generatedChartDivision = division == 4 || division == 16 ? division : 8;
+	}
+
+	public boolean isGeneratedChartRepeatBars() {
+		return generatedChartRepeatBars;
+	}
+
+	public void setGeneratedChartRepeatBars(boolean repeatBars) {
+		generatedChartRepeatBars = repeatBars;
 	}
 
 	public int getGeneratedChartMinChord() {
@@ -1899,6 +1929,7 @@ public final class PlayerConfig {
 
 	public void validate() {
 		getModMenuSettings().normalize();
+		setGeneratedChartDensity(generatedChartDensity);
 		setGeneratedChartDivision(generatedChartDivision);
 		setGeneratedChartChords(generatedChartMinChord, generatedChartMaxChord);
 		setBmsirStartButtonAction(bmsirStartButtonAction);

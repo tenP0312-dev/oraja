@@ -35,6 +35,11 @@ public final class AudioGridEstimator {
     private static final int[] GRID_LEVELS = {1, 2};
     private static final double[] GRID_WEIGHTS = {1.0, 0.5};
 
+    /** Number of onset bands (low / mid / high) and their edges. */
+    public static final int BANDS = 3;
+    public static final int BAND_HIGH = 2;
+    private static final double[] BAND_EDGES_HZ = {200.0, 2000.0};
+
     public static final double DEFAULT_MIN_BPM = 70.0;
     public static final double DEFAULT_MAX_BPM = 250.0;
 
@@ -49,6 +54,7 @@ public final class AudioGridEstimator {
      * @param firstBeatSec audio time of the first beat at or just before the music starts
      * @param phaseSec     beat phase in [0, 60 / bpm)
      * @param envelope     onset strength per frame, for callers that weight notes by it
+     * @param bandEnvelopes low / mid / high onset strength per frame, each scaled to mean 1
      */
     public record Result(
             double bpm,
@@ -60,16 +66,30 @@ public final class AudioGridEstimator {
             double maxDriftMs,
             boolean stableTempo,
             List<Candidate> alternatives,
-            double[] envelope) {
+            double[] envelope,
+            double[][] bandEnvelopes) {
 
         /** Peak onset strength within {@code radiusSec} of an audio time. */
         public double onsetStrengthAt(double timeSec, double radiusSec) {
+            return peakNear(envelope, timeSec, radiusSec);
+        }
+
+        /** Peak low / mid / high onset strengths within {@code radiusSec} of an audio time. */
+        public double[] bandStrengthsAt(double timeSec, double radiusSec) {
+            double[] strengths = new double[bandEnvelopes.length];
+            for (int band = 0; band < strengths.length; band++) {
+                strengths[band] = peakNear(bandEnvelopes[band], timeSec, radiusSec);
+            }
+            return strengths;
+        }
+
+        private static double peakNear(double[] values, double timeSec, double radiusSec) {
             double centre = (timeSec - ONSET_LAG_SEC) * FRAME_RATE;
             int from = Math.max(0, (int) Math.floor(centre - radiusSec * FRAME_RATE));
-            int to = Math.min(envelope.length - 1, (int) Math.ceil(centre + radiusSec * FRAME_RATE));
+            int to = Math.min(values.length - 1, (int) Math.ceil(centre + radiusSec * FRAME_RATE));
             double peak = 0.0;
             for (int index = from; index <= to; index++) {
-                peak = Math.max(peak, envelope[index]);
+                peak = Math.max(peak, values[index]);
             }
             return peak;
         }
@@ -92,7 +112,8 @@ public final class AudioGridEstimator {
             throw new IllegalArgumentException("audio is silent");
         }
 
-        double[] env = onsetEnvelope(audio);
+        double[][] envelopes = onsetEnvelopes(audio);
+        double[] env = envelopes[0];
         List<Scored> candidates = estimate(env, minBpm, maxBpm);
         Scored best = candidates.get(0);
         double bpm = best.bpm;
@@ -128,7 +149,8 @@ public final class AudioGridEstimator {
                 drift,
                 drift <= STABLE_DRIFT_MS,
                 List.copyOf(alternatives),
-                env);
+                env,
+                new double[][] {envelopes[1], envelopes[2], envelopes[3]});
     }
 
     /**
@@ -189,10 +211,25 @@ public final class AudioGridEstimator {
     }
 
     static double[] onsetEnvelope(float[] audio) {
+        return onsetEnvelopes(audio)[0];
+    }
+
+    /**
+     * Onset envelopes from one STFT pass: [0] full band (30 Hz-8 kHz, used for
+     * the tempo/beat search), then low (30-200 Hz), mid (200 Hz-2 kHz) and high
+     * (2-8 kHz). Each band is scaled by its own mean, so bands are comparable
+     * ("which part of the kit moved here").
+     */
+    static double[][] onsetEnvelopes(float[] audio) {
         int frames = 1 + (audio.length - WINDOW) / HOP;
         int lowBin = (int) Math.ceil(30.0 * WINDOW / SAMPLE_RATE);
         int highBin = (int) Math.floor(8000.0 * WINDOW / SAMPLE_RATE);
         int bins = highBin - lowBin + 1;
+        int[] bandOfBin = new int[bins];
+        for (int bin = 0; bin < bins; bin++) {
+            double frequency = (lowBin + bin) * (double) SAMPLE_RATE / WINDOW;
+            bandOfBin[bin] = frequency < BAND_EDGES_HZ[0] ? 0 : frequency < BAND_EDGES_HZ[1] ? 1 : 2;
+        }
         double[] window = new double[WINDOW];
         for (int index = 0; index < WINDOW; index++) {
             window[index] = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * index / (WINDOW - 1));
@@ -204,7 +241,7 @@ public final class AudioGridEstimator {
         double[] previous = new double[bins];
         double[] current = new double[bins];
         double[] next = new double[bins];
-        double[] flux = new double[frames];
+        double[][] flux = new double[1 + BANDS][frames];
         // two real frames per complex FFT: frame a in the real part, frame b in the imaginary part
         for (int frame = 0; frame < frames; frame += 2) {
             boolean pair = frame + 1 < frames;
@@ -225,15 +262,42 @@ public final class AudioGridEstimator {
                 current[bin] = Math.log1p(100.0 * Math.hypot(aRe, aIm));
                 next[bin] = Math.log1p(100.0 * Math.hypot(bRe, bIm));
             }
-            flux[frame] = frame == 0 ? 0.0 : positiveDifference(current, previous);
+            if (frame > 0) {
+                addPositiveDifference(current, previous, bandOfBin, flux, frame);
+            }
             if (pair) {
-                flux[frame + 1] = positiveDifference(next, current);
+                addPositiveDifference(next, current, bandOfBin, flux, frame + 1);
                 System.arraycopy(next, 0, previous, 0, bins);
             } else {
                 System.arraycopy(current, 0, previous, 0, bins);
             }
         }
+        double[][] envelopes = new double[1 + BANDS][];
+        envelopes[0] = detrendAndSmooth(flux[0]);
+        for (int band = 1; band <= BANDS; band++) {
+            double[] env = detrendAndSmooth(flux[band]);
+            double scale = mean(env) + 1e-9;
+            for (int index = 0; index < env.length; index++) {
+                env[index] /= scale;
+            }
+            envelopes[band] = env;
+        }
+        return envelopes;
+    }
 
+    private static void addPositiveDifference(double[] current, double[] previous, int[] bandOfBin,
+            double[][] flux, int frame) {
+        for (int bin = 0; bin < current.length; bin++) {
+            double delta = current[bin] - previous[bin];
+            if (delta > 0) {
+                flux[0][frame] += delta;
+                flux[1 + bandOfBin[bin]][frame] += delta;
+            }
+        }
+    }
+
+    private static double[] detrendAndSmooth(double[] flux) {
+        int frames = flux.length;
         // remove slow trends so quiet and loud passages weigh comparably (numpy "same" convolution)
         int kernel = (int) (FRAME_RATE * 0.5);
         int before = kernel - 1 - (kernel - 1) / 2;
@@ -257,17 +321,6 @@ public final class AudioGridEstimator {
             env[index] = 0.25 * left + 0.5 * rectified[index] + 0.25 * right;
         }
         return env;
-    }
-
-    private static double positiveDifference(double[] current, double[] previous) {
-        double sum = 0.0;
-        for (int bin = 0; bin < current.length; bin++) {
-            double delta = current[bin] - previous[bin];
-            if (delta > 0) {
-                sum += delta;
-            }
-        }
-        return sum;
     }
 
     // ---------------------------------------------------------------- comb search
