@@ -114,6 +114,18 @@ public final class AudioChartMenu {
                 "倍・半分のテンポや、表拍と裏拍の取り違えは自動では決めきれません。ずれていたらここで直してください。",
                 "Half/double tempo and beat vs. off-beat cannot always be told apart automatically. Correct them here."));
 
+        AudioGridEstimator.Candidate octave = result.octaveAlternative();
+        if (octave != null) {
+            ImGui.textColored(WARNING[0], WARNING[1], WARNING[2], WARNING[3],
+                    t("倍/半分のテンポの可能性があります", "This may be at half/double tempo"));
+            ImGui.sameLine();
+            if (ImGui.button(String.format(Locale.ROOT, "BPM %.2f", octave.bpm()))) {
+                session.setBpm(octave.bpm());
+            }
+        }
+        if (session.restoredAdjustment()) {
+            ImGui.text(t("前回の補正を使っています", "Using your saved correction"));
+        }
         ImGui.text(String.format(Locale.ROOT, t("信頼度 %.1f", "Confidence %.1f"), result.confidence()));
         if (!result.stableTempo()) {
             ImGui.textColored(WARNING[0], WARNING[1], WARNING[2], WARNING[3], String.format(Locale.ROOT,
@@ -146,7 +158,7 @@ public final class AudioChartMenu {
         helpMarker(t(
                 "音が鳴っている所にノーツを置き、強い音ほど同時押しが多くなります。同じフレーズの繰り返しは同じ配置になります。最小と最大を同じにすると常にその数の同時押しです。",
                 "Notes go where the music hits; stronger hits get larger chords and repeated phrases repeat their layout. Set min and max equal for a constant chord size."));
-        ImGui.checkbox(t("皿あり(ハイハットの所)", "Scratch on hi-hats"), SCRATCH);
+        ImGui.checkbox(t("皿あり(はっきりしたハイハットの所)", "Scratch on clear hi-hats"), SCRATCH);
         if (ImGui.button(t("配置を変える", "Reshuffle lanes"))) session.reshuffle();
         ImGui.sameLine();
         ImGui.text(t("スコア保存・IR送信なし", "No score saving or IR submission"));
