@@ -72,8 +72,8 @@ public final class GeneratedAudioFolderBar extends DirectoryBar {
         if (children.isEmpty()) {
             // an empty folder still needs one row so it can be entered and left
             children.add(new FunctionBar((currentSelector, self) -> currentSelector.getBarManager().updateBar(),
-                    BMSIRArenaI18n.text("音声ファイル（MP3/OGG/WAV/FLAC）がありません",
-                            "No audio files (MP3/OGG/WAV/FLAC)"), STYLE_SEARCH));
+                    BMSIRArenaI18n.text("音声・動画ファイル（MP3/OGG/WAV/FLAC/MP4など）がありません",
+                            "No audio or video files (MP3/OGG/WAV/FLAC/MP4...)"), STYLE_SEARCH));
         }
         return children.toArray(new Bar[0]);
     }
@@ -87,7 +87,7 @@ public final class GeneratedAudioFolderBar extends DirectoryBar {
                     .forEach(path -> {
                         if (Files.isDirectory(path)) {
                             folders.add(path);
-                        } else if (AudioChartSession.isAudioFile(path) && Files.isRegularFile(path)) {
+                        } else if (AudioChartSession.isSupportedFile(path) && Files.isRegularFile(path)) {
                             audio.add(path);
                         }
                     });
