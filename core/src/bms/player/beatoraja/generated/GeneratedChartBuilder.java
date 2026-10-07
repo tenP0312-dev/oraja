@@ -78,6 +78,8 @@ public final class GeneratedChartBuilder {
     /** The first measure of notes must start at least this far into the audio. */
     private static final double MIN_LEAD_BEATS = 0.25;
     private static final double METRIC_WEIGHT = 0.3;
+    /** Exact BPM changes (#BPMxx) on this channel. */
+    private static final String BPM_CHANGE_CHANNEL = "08";
     /**
      * A triplet position wins only when its sound peaks at least this far from
      * the neighbouring 16th toward the triplet. Sung or loosely played 16ths
@@ -117,6 +119,39 @@ public final class GeneratedChartBuilder {
         /** Time of the strongest onset between two audio times; NaN when unknown. */
         default double peakTime(double fromSec, double toSec) {
             return Double.NaN;
+        }
+
+        /**
+         * Audio start times of {@code bars + 1} consecutive bars when the music's
+         * tempo drifts away from the fixed grid that starts at
+         * {@code firstBarSec} with bars of {@code barSec}; null to keep that grid.
+         */
+        default double[] barStarts(double firstBarSec, double barSec, int bars) {
+            return null;
+        }
+    }
+
+    /** Audio time of each grid position: a fixed grid, or bars following the music's tempo. */
+    static final class Grid {
+        final double firstSec;
+        final double slotSec;
+        final int perBar;
+        final double[] barStarts;
+
+        Grid(double firstSec, double slotSec, int perBar, double[] barStarts) {
+            this.firstSec = firstSec;
+            this.slotSec = slotSec;
+            this.perBar = perBar;
+            this.barStarts = barStarts;
+        }
+
+        double time(int slot) {
+            if (barStarts == null) {
+                return firstSec + slot * slotSec;
+            }
+            int bar = Math.min(slot / perBar, barStarts.length - 2);
+            double fraction = (slot - bar * perBar) / (double) perBar;
+            return barStarts[bar] + fraction * (barStarts[bar + 1] - barStarts[bar]);
         }
     }
 
@@ -218,17 +253,26 @@ public final class GeneratedChartBuilder {
         }
         int perBar = settings.perBar();
         double slotSec = measureSec / perBar;
-        int slots = Math.max(0, (int) Math.floor((endSec - firstSlotSec) / slotSec) + 1);
+        int fixedBars = Math.max(0, (int) Math.ceil((endSec - firstSlotSec) / measureSec)) + 2;
+        double[] barStarts = onsets.barStarts(firstSlotSec, measureSec, fixedBars);
+        if (barStarts != null && !(barStarts[0] > 0)) {
+            barStarts = null;
+        }
+        Grid grid = new Grid(firstSlotSec, slotSec, perBar, barStarts);
+        int slots = 0;
+        while (grid.time(slots) <= endSec && (barStarts == null || slots / perBar < barStarts.length - 1)) {
+            slots++;
+        }
 
         double[] strength = new double[slots];
         double[][] bands = new double[slots][];
         for (int slot = 0; slot < slots; slot++) {
-            double time = firstSlotSec + slot * slotSec;
+            double time = grid.time(slot);
             strength[slot] = onsets.strength(time);
             bands[slot] = onsets.bands(time);
         }
         byte[] tripletTiming = perBar == UNION_SLOTS_PER_BAR
-                ? tripletTiming(onsets, firstSlotSec, slotSec, slots)
+                ? tripletTiming(onsets, grid, slots)
                 : null;
         List<Placement> placements = place(strength, bands, tripletTiming, settings, new Random(seed), perBar, beat);
         int repeated = settings.repeatBars() ? countRepeatedBars(bands, slots, perBar) : 0;
@@ -255,8 +299,32 @@ public final class GeneratedChartBuilder {
         if (bgaFileName != null) {
             text.append("#BMP").append(BGA_BMP).append(' ').append(bgaFileName).append('\n');
         }
+        // a drifting tempo: each bar of notes gets the BPM that makes it as long as the music's bar
+        List<Double> tempos = new ArrayList<>();
+        int[] tempoOfMeasure = new int[measures];
+        Arrays.fill(tempoOfMeasure, -1);
+        if (barStarts != null) {
+            double current = bpm;
+            for (int measure = 0; measure < measures; measure++) {
+                int bar = Math.min(measure, barStarts.length - 2);
+                double barBpm = Math.round(BEATS_PER_MEASURE * 60.0 / (barStarts[bar + 1] - barStarts[bar]) * 100) / 100.0;
+                if (Math.abs(barBpm - current) >= 0.005) {
+                    int index = tempos.indexOf(barBpm);
+                    if (index < 0) {
+                        tempos.add(barBpm);
+                        index = tempos.size() - 1;
+                    }
+                    tempoOfMeasure[measure] = index;
+                    current = barBpm;
+                }
+            }
+            for (int index = 0; index < tempos.size(); index++) {
+                text.append(String.format(Locale.ROOT, "#BPM%s %.2f\n", base36(index + 1), tempos.get(index)));
+            }
+        }
         text.append("\n*---------------------- MAIN DATA FIELD\n");
-        text.append(String.format(Locale.ROOT, "#00102:%.9f\n", firstSlotSec / measureSec));
+        // the lead-in bar ends where the first bar of notes starts in the audio
+        text.append(String.format(Locale.ROOT, "#00102:%.9f\n", grid.time(0) / measureSec));
         text.append("#00101:").append(AUDIO_WAV).append('\n');
         if (bgaFileName != null) {
             // the movie's first frame and the extracted audio start at the same instant
@@ -281,6 +349,10 @@ public final class GeneratedChartBuilder {
         }
         for (int measure = 0; measure < measures; measure++) {
             String measureNumber = String.format(Locale.ROOT, "%03d", measure + 2);
+            if (tempoOfMeasure[measure] >= 0) {
+                text.append('#').append(measureNumber).append(BPM_CHANGE_CHANNEL).append(':')
+                        .append(base36(tempoOfMeasure[measure] + 1)).append('\n');
+            }
             for (int channel = 0; channel <= KEY_CHANNELS.length; channel++) {
                 String data = String.join("", channelSlots[measure][channel]);
                 if (data.chars().allMatch(c -> c == '0')) {
@@ -538,6 +610,12 @@ public final class GeneratedChartBuilder {
         return effective;
     }
 
+    /** Two base-36 digits, as BMS object ids. */
+    static String base36(int value) {
+        String digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        return "" + digits.charAt(value / 36) + digits.charAt(value % 36);
+    }
+
     /** The straight position keeps a tie; the loser is no longer a candidate. */
     private static void compete(double[] strength, boolean[] candidate, int straight, int triplet) {
         if (triplet >= strength.length) {
@@ -571,6 +649,10 @@ public final class GeneratedChartBuilder {
      * beat; operator: 燦々デイズ at 90 BPM), not a triplet.
      */
     static byte[] tripletTiming(Onsets onsets, double firstSlotSec, double slotSec, int slots) {
+        return tripletTiming(onsets, new Grid(firstSlotSec, slotSec, UNION_SLOTS_PER_BAR, null), slots);
+    }
+
+    static byte[] tripletTiming(Onsets onsets, Grid grid, int slots) {
         byte[] timing = new byte[slots];
         for (int beatStart = 0; beatStart < slots; beatStart += UNION_PER_BEAT) {
             for (int[] pair : new int[][] {{3, 4}, {9, 8}}) {
@@ -578,8 +660,8 @@ public final class GeneratedChartBuilder {
                 if (triplet >= slots) {
                     continue;
                 }
-                double straightSec = firstSlotSec + (beatStart + pair[0]) * slotSec;
-                double tripletSec = firstSlotSec + triplet * slotSec;
+                double straightSec = grid.time(beatStart + pair[0]);
+                double tripletSec = grid.time(triplet);
                 double direction = Math.signum(tripletSec - straightSec);
                 double farEdge = tripletSec + direction * TIMING_MARGIN_SEC;
                 double peak = onsets.peakTime(Math.min(straightSec, tripletSec) - TIMING_MARGIN_SEC,

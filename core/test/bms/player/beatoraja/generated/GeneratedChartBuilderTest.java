@@ -615,6 +615,57 @@ class GeneratedChartBuilderTest {
     }
 
     @Test
+    void barsFollowADriftingTempoWithExactBpmChanges() throws Exception {
+        // the music's bars grow from 1.6 s to 1.62 s; notes must land on its beats
+        int bars = 12;
+        double[] starts = new double[bars + 1];
+        starts[0] = FIRST_BEAT;
+        for (int bar = 0; bar < bars; bar++) {
+            starts[bar + 1] = starts[bar] + 4 * BEAT * (1 + 0.001 * bar);
+        }
+        List<double[]> events = new ArrayList<>();
+        for (int bar = 0; bar < bars; bar++) {
+            for (int beat = 0; beat < 4; beat++) {
+                events.add(new double[] {starts[bar] + beat * (starts[bar + 1] - starts[bar]) / 4, 2.0});
+            }
+        }
+        Events music = new Events(events.toArray(new double[0][]));
+        GeneratedChartBuilder.Onsets drifting = new GeneratedChartBuilder.Onsets() {
+            public double strength(double timeSec) {
+                return music.strength(timeSec);
+            }
+
+            public double[] bands(double timeSec) {
+                return music.bands(timeSec);
+            }
+
+            public double[] barStarts(double firstBarSec, double barSec, int count) {
+                assertEquals(FIRST_BEAT, firstBarSec, 1e-9);
+                return starts;
+            }
+        };
+        GeneratedChartBuilder.Chart chart = GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT,
+                starts[bars] - 0.01, drifting, new GeneratedChartBuilder.Settings(3, 1, 1, false), 2);
+        assertTrue(chart.text().contains("#BPM01 "), chart.text());
+        BMSModel model = decode(chart);
+        long audio = audioStartMicros(model);
+        int checked = 0;
+        for (TimeLine timeLine : model.getAllTimeLines()) {
+            if (keyCount(timeLine) == 0) {
+                continue;
+            }
+            double time = (timeLine.getMicroTime() - audio) / 1e6;
+            double nearest = Double.MAX_VALUE;
+            for (double[] event : events) {
+                nearest = Math.min(nearest, Math.abs(event[0] - time));
+            }
+            assertTrue(nearest < 0.003, "a note " + nearest * 1000 + " ms off the drifting beats at " + time);
+            checked++;
+        }
+        assertTrue(checked >= bars * 3, "too few notes: " + checked);
+    }
+
+    @Test
     void aMovieStartsTogetherWithTheAudio() throws Exception {
         Music music = varied(4);
         GeneratedChartBuilder.Chart chart = GeneratedChartBuilder.build("t", "audio.wav", "bga.mp4", BPM, FIRST_BEAT,

@@ -318,6 +318,11 @@ public final class AudioChartSession {
                     public double peakTime(double fromSec, double toSec) {
                         return estimate.onsetPeakTime(fromSec, toSec);
                     }
+
+                    @Override
+                    public double[] barStarts(double firstBarSec, double barSec, int bars) {
+                        return estimate.barStarts(firstBarSec, barSec, bars);
+                    }
                 },
                 settings,
                 chartSeed);
