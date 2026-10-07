@@ -61,7 +61,6 @@ public final class AudioChartSession {
         }
         return new GeneratedChartBuilder.Settings(config.isGeneratedChartFollowMusic(),
                 config.getGeneratedChartDensity(), config.getGeneratedChartDivision(),
-                config.isGeneratedChartTriplet(),
                 config.isGeneratedChartRepeatBars(), config.getGeneratedChartMinChord(),
                 config.getGeneratedChartMaxChord(), config.isGeneratedChartScratch());
     }
