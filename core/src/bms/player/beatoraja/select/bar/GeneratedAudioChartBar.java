@@ -132,10 +132,6 @@ public final class GeneratedAudioChartBar extends DirectoryBar {
                         + t("（決定で切替）", " (press to change)"),
                 c -> c.setGeneratedChartFollowMusic(!settings.followMusic()), config));
         if (settings.followMusic()) {
-            rows.add(row("rhythm", STYLE_TABLE,
-                    t("リズム: ", "Rhythm: ") + (settings.triplet() ? t("三連系", "triplets") : t("16分系", "16ths"))
-                            + t("（決定で切替）", " (press to change)"),
-                    c -> c.setGeneratedChartTriplet(!settings.triplet()), config));
             rows.add(row("density", STYLE_TABLE,
                     t("ノーツの量: ", "Note amount: ") + AudioChartMenu.densityLabel(settings.density())
                             + t("（決定で切替）", " (press to change)"),

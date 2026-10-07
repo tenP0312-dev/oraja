@@ -53,8 +53,19 @@ public final class GeneratedChartBuilder {
     private static final String SILENT_WAV = "02";
     private static final int BEATS_PER_MEASURE = 4;
     static final int SLOTS_PER_BAR = 16;
-    /** Triplet grid: triplet 8ths and 16ths (6 per beat). */
+    /** Fixed 12th / 24th grid (6 per beat). */
     static final int TRIPLET_SLOTS_PER_BAR = 24;
+    /**
+     * Following the music: 12 per beat, of which only 0, 1/4, 1/3, 1/2, 2/3 and
+     * 3/4 are candidates. 1/4 vs 1/3 and 2/3 vs 3/4 are too close to tell apart
+     * and compete (the stronger onset wins), so straight 16ths and triplet 8ths
+     * are chosen per position and a song may switch between them. On 26 real
+     * BMS this kept F1 (0.755 vs 0.758 on 16ths only) while capturing triplets
+     * (one song: 44 of 48), with 1.9% of notes on false triplets. 16th triplets
+     * (1/6, 5/6) lowered F1 to 0.73 and are left out.
+     */
+    static final int UNION_SLOTS_PER_BAR = 48;
+    private static final int UNION_PER_BEAT = 12;
     /**
      * Ranking mixes the local (two-bar) onset level with the song-wide level:
      * score = local^(1-w) x song-wide^w. On 26 real BMS
@@ -65,8 +76,6 @@ public final class GeneratedChartBuilder {
     static final double SONG_WIDE_SHARE = 0.7;
     /** The first measure of notes must start at least this far into the audio. */
     private static final double MIN_LEAD_BEATS = 0.25;
-    /** Neighbourhood for onset normalization: two bars of 16ths each side. */
-    private static final int LOCAL_WINDOW = 32;
     private static final double METRIC_WEIGHT = 0.3;
     /** Cosine similarity of bar onset patterns above which a bar repeats an earlier one. */
     static final double REPEAT_SIMILARITY = 0.85;
@@ -89,11 +98,10 @@ public final class GeneratedChartBuilder {
      * @param followMusic place notes where the music hits ({@code density}); off = every
      *                    {@code division}th note (4, 8, 12, 16 or 24), the original fixed grid
      * @param density     note amount 1 (light) to 4 (dense) when following the music; 3 = as the music
-     * @param triplet     when following the music: a triplet grid (24 per bar) instead of 16ths
      * @param repeatBars  reuse the layout of an earlier bar with the same onset pattern
      * @param scratch     scratch where the hi-hat range dominates
      */
-    public record Settings(boolean followMusic, int density, int division, boolean triplet, boolean repeatBars,
+    public record Settings(boolean followMusic, int density, int division, boolean repeatBars,
             int minChord, int maxChord, boolean scratch) {
         public Settings {
             if (density < MIN_DENSITY || density > MAX_DENSITY) {
@@ -107,26 +115,24 @@ public final class GeneratedChartBuilder {
             }
         }
 
-        /** Straight rhythm. */
-        public Settings(boolean followMusic, int density, int division, boolean repeatBars,
-                int minChord, int maxChord, boolean scratch) {
-            this(followMusic, density, division, false, repeatBars, minChord, maxChord, scratch);
-        }
-
-        /** Everything on: follow the music at {@code density} on a straight grid, repeat bars. */
+        /** Everything on: follow the music at {@code density}, repeat bars. */
         public Settings(int density, int minChord, int maxChord, boolean scratch) {
-            this(true, density, 8, false, true, minChord, maxChord, scratch);
+            this(true, density, 8, true, minChord, maxChord, scratch);
         }
 
-        /** Grid positions per 4/4 bar: 16 (straight), or 24 for triplets and the 12th/24th fixed grids. */
+        /**
+         * Grid positions per 4/4 bar: following the music uses the union grid
+         * (48, straight and triplet positions); the fixed grid uses 16, or 24
+         * for 12ths and 24ths.
+         */
         public int perBar() {
-            return followMusic ? (triplet ? TRIPLET_SLOTS_PER_BAR : SLOTS_PER_BAR)
+            return followMusic ? UNION_SLOTS_PER_BAR
                     : division % 3 == 0 ? TRIPLET_SLOTS_PER_BAR : SLOTS_PER_BAR;
         }
 
         public String label() {
             String chords = minChord == maxChord ? Integer.toString(minChord) : minChord + "-" + maxChord;
-            return (followMusic ? "amount " + density + (triplet ? " triplet" : "") : division + "th") + " x" + chords
+            return (followMusic ? "amount " + density : division + "th") + " x" + chords
                     + (repeatBars ? " +RP" : "") + (scratch ? " +SC" : "");
         }
     }
@@ -239,9 +245,16 @@ public final class GeneratedChartBuilder {
     static List<Placement> place(double[] strength, double[][] bands, Settings settings, Random random,
             int perBar, double beatSec) {
         int slots = strength.length;
-        boolean[] chosen = settings.followMusic()
-                ? choose(strength, settings.density(), metricWeights(slots, perBar, beatSec))
-                : fixedGrid(slots, settings.division(), perBar);
+        boolean[] chosen;
+        if (settings.followMusic()) {
+            boolean[] candidate = new boolean[slots];
+            // the losers of the straight/triplet competitions count as silent from here on
+            strength = unionCandidates(strength, perBar, candidate);
+            chosen = choose(strength, settings.density(), metricWeights(slots, perBar, beatSec), candidate,
+                    candidatesPerBar(perBar));
+        } else {
+            chosen = fixedGrid(slots, settings.division(), perBar);
+        }
         int[] source;
         if (settings.repeatBars()) {
             source = repeatSources(bands, slots, perBar);
@@ -249,7 +262,7 @@ public final class GeneratedChartBuilder {
                 followSourceBars(chosen, strength, source, perBar);
             }
         } else {
-            source = new int[slots / perBar];
+            source = new int[(slots + perBar - 1) / perBar];
             Arrays.fill(source, -1);
         }
         // scratches stay at least an 8th apart (2 straight / 3 triplet positions)
@@ -309,7 +322,7 @@ public final class GeneratedChartBuilder {
             if (source[bar] < 0) {
                 continue;
             }
-            for (int column = 0; column < perBar; column++) {
+            for (int column = 0; column < perBar && bar * perBar + column < chosen.length; column++) {
                 int own = bar * perBar + column;
                 int original = source[bar] * perBar + column;
                 chosen[own] = chosen[original]
@@ -333,6 +346,39 @@ public final class GeneratedChartBuilder {
      * the song-wide level, see {@link #SONG_WIDE_SHARE}) plus a metrical bonus.
      */
     static boolean[] choose(double[] strength, int density, double[] metric) {
+        boolean[] all = new boolean[strength.length];
+        Arrays.fill(all, true);
+        return choose(strength, density, metric, all, SLOTS_PER_BAR);
+    }
+
+    /**
+     * As {@link #choose(double[], int, double[])} over the candidate positions
+     * only; the local level spans two bars of candidates.
+     */
+    static boolean[] choose(double[] fullStrength, int density, double[] fullMetric, boolean[] candidate,
+            int candidatesPerBar) {
+        int[] index = new int[fullStrength.length];
+        int count = 0;
+        for (int slot = 0; slot < fullStrength.length; slot++) {
+            if (candidate[slot]) {
+                index[count++] = slot;
+            }
+        }
+        double[] strength = new double[count];
+        double[] metric = new double[count];
+        for (int i = 0; i < count; i++) {
+            strength[i] = fullStrength[index[i]];
+            metric[i] = fullMetric[index[i]];
+        }
+        boolean[] picked = chooseAmong(strength, density, metric, 2 * candidatesPerBar);
+        boolean[] chosen = new boolean[fullStrength.length];
+        for (int i = 0; i < count; i++) {
+            chosen[index[i]] = picked[i];
+        }
+        return chosen;
+    }
+
+    private static boolean[] chooseAmong(double[] strength, int density, double[] metric, int localWindow) {
         int slots = strength.length;
         boolean[] chosen = new boolean[slots];
         if (slots == 0) {
@@ -340,8 +386,8 @@ public final class GeneratedChartBuilder {
         }
         double[] local = new double[slots];
         for (int slot = 0; slot < slots; slot++) {
-            int from = Math.max(0, slot - LOCAL_WINDOW);
-            int to = Math.min(slots, slot + LOCAL_WINDOW + 1);
+            int from = Math.max(0, slot - localWindow);
+            int to = Math.min(slots, slot + localWindow + 1);
             double reference = AudioGridEstimator.percentile(Arrays.copyOfRange(strength, from, to), 90);
             local[slot] = strength[slot] / (reference + 1e-9);
         }
@@ -365,6 +411,53 @@ public final class GeneratedChartBuilder {
             chosen[order[index]] = true;
         }
         return chosen;
+    }
+
+    /** Candidate positions per bar: all of them, or six per beat on the union grid. */
+    static int candidatesPerBar(int perBar) {
+        return perBar == UNION_SLOTS_PER_BAR ? 6 * BEATS_PER_MEASURE : perBar;
+    }
+
+    /**
+     * Marks the union-grid candidates and settles the straight/triplet
+     * competitions (1/4 vs 1/3, 2/3 vs 3/4): the weaker position is dropped and
+     * its strength cleared in the returned copy.
+     */
+    static double[] unionCandidates(double[] strength, int perBar, boolean[] candidate) {
+        double[] effective = strength.clone();
+        if (perBar != UNION_SLOTS_PER_BAR) {
+            Arrays.fill(candidate, true);
+            return effective;
+        }
+        for (int slot = 0; slot < strength.length; slot++) {
+            int position = slot % UNION_PER_BEAT;
+            candidate[slot] = position == 0 || position == 3 || position == 4 || position == 6
+                    || position == 8 || position == 9;
+            if (!candidate[slot]) {
+                effective[slot] = 0.0;
+            }
+        }
+        for (int beatStart = 0; beatStart < strength.length; beatStart += UNION_PER_BEAT) {
+            compete(effective, candidate, beatStart + 3, beatStart + 4);
+            compete(effective, candidate, beatStart + 9, beatStart + 8);
+        }
+        return effective;
+    }
+
+    /** The straight position keeps a tie; the loser is no longer a candidate. */
+    private static void compete(double[] strength, boolean[] candidate, int straight, int triplet) {
+        if (triplet >= strength.length) {
+            return;
+        }
+        if (straight >= strength.length || strength[triplet] > strength[straight]) {
+            if (straight < strength.length) {
+                strength[straight] = 0.0;
+                candidate[straight] = false;
+            }
+        } else {
+            strength[triplet] = 0.0;
+            candidate[triplet] = false;
+        }
     }
 
     /** Every {@code division}th note: the original fixed grid. */
@@ -405,6 +498,10 @@ public final class GeneratedChartBuilder {
                 spacing = beatSec;
             } else if (perBeat == 4) {
                 spacing = position == 2 ? beatSec / 2 : beatSec / 4;
+            } else if (perBeat == UNION_PER_BEAT) {
+                spacing = position == 6 ? beatSec / 2
+                        : position == 4 || position == 8 ? beatSec / 3
+                        : position == 3 || position == 9 ? beatSec / 4 : beatSec / 12;
             } else {
                 spacing = position % 2 == 0 ? beatSec / 3 : beatSec / 6;
             }
@@ -424,12 +521,13 @@ public final class GeneratedChartBuilder {
      * low/mid/high onset pattern at least {@link #REPEAT_SIMILARITY}), or -1.
      */
     static int[] repeatSources(double[][] bands, int slots, int perBar) {
-        int bars = slots / perBar;
+        // a final partial bar takes part too; its missing positions count as silent
+        int bars = (slots + perBar - 1) / perBar;
         double[][] features = new double[bars][];
         double[] energy = new double[bars];
         for (int bar = 0; bar < bars; bar++) {
             double[] feature = new double[AudioGridEstimator.BANDS * perBar];
-            for (int column = 0; column < perBar; column++) {
+            for (int column = 0; column < perBar && bar * perBar + column < slots; column++) {
                 double[] band = bands[bar * perBar + column];
                 for (int b = 0; b < AudioGridEstimator.BANDS; b++) {
                     feature[b * perBar + column] = band[b];

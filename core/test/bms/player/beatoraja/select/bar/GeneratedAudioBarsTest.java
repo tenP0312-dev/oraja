@@ -92,11 +92,10 @@ class GeneratedAudioBarsTest {
         config.setGeneratedChartFollowMusic(false);
         config.setGeneratedChartDivision(16);
         config.setGeneratedChartRepeatBars(false);
-        config.setGeneratedChartTriplet(true);
         Json json = new Json();
         PlayerConfig restored = json.fromJson(PlayerConfig.class, json.toJson(config));
         restored.validate();
-        assertEquals(new GeneratedChartBuilder.Settings(false, 4, 16, true, false, 2, 4, true),
+        assertEquals(new GeneratedChartBuilder.Settings(false, 4, 16, false, 2, 4, true),
                 AudioChartSession.settings(restored));
         config.setGeneratedChartDivision(12);
         assertEquals(12, config.getGeneratedChartDivision());
