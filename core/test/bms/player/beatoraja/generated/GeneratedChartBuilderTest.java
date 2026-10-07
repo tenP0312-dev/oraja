@@ -596,6 +596,15 @@ class GeneratedChartBuilderTest {
     }
 
     @Test
+    void halfTempoSixteenthsAreNotSnappedToTriplets() throws Exception {
+        // at half tempo the real 16ths land on 3/8 and 7/8 of the beat, between grid positions
+        Events halfTempo = eventsPerBeat(64, 3.0 / 8, 7.0 / 8);
+        for (int[] row : unionRows(halfTempo, FIRST_BEAT + 64 * BEAT, directory.resolve("half.bms"))) {
+            assertTrue(row[0] % 12 != 4 && row[0] % 12 != 8, "a 3/8 sound snapped to a triplet at twelfth " + row[0]);
+        }
+    }
+
+    @Test
     void clearTripletsStayTriplets() throws Exception {
         Events triplets = eventsPerBeat(64, 1.0 / 3, 2.0 / 3);
         int onTriplets = 0;
