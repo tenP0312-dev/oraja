@@ -32,6 +32,7 @@ public final class AudioChartMenu {
     private static final ImBoolean FOLLOW_MUSIC = new ImBoolean(true);
     private static final ImInt DIVISION = new ImInt(8);
     private static final ImBoolean REPEAT_BARS = new ImBoolean(true);
+    private static final ImBoolean TRIPLET = new ImBoolean(false);
     private static AudioChartSession loadedFor;
     private static final float[] WARNING = {1.0f, 0.75f, 0.3f, 1.0f};
 
@@ -58,6 +59,7 @@ public final class AudioChartMenu {
             FOLLOW_MUSIC.set(remembered.followMusic());
             DIVISION.set(remembered.division());
             REPEAT_BARS.set(remembered.repeatBars());
+            TRIPLET.set(remembered.triplet());
         }
         ImGui.setNextWindowPos(windowWidth * 0.30f, windowHeight * 0.15f, ImGuiCond.FirstUseEver);
         ImBoolean open = new ImBoolean(true);
@@ -136,6 +138,7 @@ public final class AudioChartMenu {
         ImGui.separator();
         ImGui.checkbox(t("鳴っている所にだけ置く", "Place notes where the music hits"), FOLLOW_MUSIC);
         if (FOLLOW_MUSIC.get()) {
+            ImGui.checkbox(t("三連系のリズム", "Triplet rhythm"), TRIPLET);
             ImGui.text(t("ノーツの量", "Note amount"));
             for (int level = GeneratedChartBuilder.MIN_DENSITY; level <= GeneratedChartBuilder.MAX_DENSITY; level++) {
                 ImGui.sameLine();
@@ -143,7 +146,7 @@ public final class AudioChartMenu {
             }
         } else {
             ImGui.text(t("音符", "Notes"));
-            for (int division : new int[] {4, 8, 16}) {
+            for (int division : new int[] {4, 8, 12, 16, 24}) {
                 ImGui.sameLine();
                 ImGui.radioButton(divisionLabel(division), DIVISION, division);
             }
@@ -191,11 +194,12 @@ public final class AudioChartMenu {
             config.setGeneratedChartFollowMusic(FOLLOW_MUSIC.get());
             config.setGeneratedChartDivision(DIVISION.get());
             config.setGeneratedChartRepeatBars(REPEAT_BARS.get());
+            config.setGeneratedChartTriplet(TRIPLET.get());
         }
         Path chart;
         try {
             chart = session.writeChart(new GeneratedChartBuilder.Settings(FOLLOW_MUSIC.get(), DENSITY.get(),
-                    DIVISION.get(), REPEAT_BARS.get(), MIN_CHORD[0], MAX_CHORD[0], SCRATCH.get()));
+                    DIVISION.get(), TRIPLET.get(), REPEAT_BARS.get(), MIN_CHORD[0], MAX_CHORD[0], SCRATCH.get()));
         } catch (IOException | RuntimeException exception) {
             ImGuiNotify.error(t("譜面を書き出せませんでした: ", "Could not write the chart: ")
                     + exception.getMessage(), 5000);
