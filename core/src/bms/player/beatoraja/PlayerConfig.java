@@ -298,6 +298,8 @@ public final class PlayerConfig {
 	/** Place notes where the music hits; off = fixed {@link #generatedChartDivision} grid. */
 	private boolean generatedChartFollowMusic = true;
 	private int generatedChartDivision = 8;
+	/** While following the music: triplet grid (24 per bar) instead of 16ths. */
+	private boolean generatedChartTriplet = false;
 	/** Reuse an earlier bar's layout for a repeated phrase. */
 	private boolean generatedChartRepeatBars = true;
 	private int generatedChartMinChord = 1;
@@ -879,7 +881,15 @@ public final class PlayerConfig {
 	}
 
 	public void setGeneratedChartDivision(int division) {
-		generatedChartDivision = division == 4 || division == 16 ? division : 8;
+		generatedChartDivision = division == 4 || division == 12 || division == 16 || division == 24 ? division : 8;
+	}
+
+	public boolean isGeneratedChartTriplet() {
+		return generatedChartTriplet;
+	}
+
+	public void setGeneratedChartTriplet(boolean triplet) {
+		generatedChartTriplet = triplet;
 	}
 
 	public boolean isGeneratedChartRepeatBars() {
