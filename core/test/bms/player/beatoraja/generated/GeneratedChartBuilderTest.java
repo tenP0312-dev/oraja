@@ -120,6 +120,12 @@ class GeneratedChartBuilderTest {
 
     /** grid slot (from the first beat) → sorted key lanes, plus scratch as lane 7 */
     private static List<int[]> rows(BMSModel model) {
+        return rows(model, 4);
+    }
+
+    /** as {@link #rows(BMSModel)} on a grid of {@code perBeat} positions per beat */
+    private static List<int[]> rows(BMSModel model, int perBeat) {
+        double grid = BEAT / perBeat;
         long start = audioStartMicros(model);
         List<int[]> rows = new ArrayList<>();
         for (TimeLine timeLine : model.getAllTimeLines()) {
@@ -133,8 +139,8 @@ class GeneratedChartBuilderTest {
                 continue;
             }
             double audio = (timeLine.getMicroTime() - start) / 1e6;
-            int slot = (int) Math.round((audio - FIRST_BEAT) / SLOT);
-            assertEquals(FIRST_BEAT + slot * SLOT, audio, 2e-6, "note off the 16th grid");
+            int slot = (int) Math.round((audio - FIRST_BEAT) / grid);
+            assertEquals(FIRST_BEAT + slot * grid, audio, 2e-6, "note off the grid");
             int[] row = new int[lanes.size() + 1];
             row[0] = slot;
             for (int index = 0; index < lanes.size(); index++) {
@@ -357,12 +363,13 @@ class GeneratedChartBuilderTest {
     @Test
     void followMusicOffIsThePlainFixedGrid() throws Exception {
         Music music = varied(12);
-        int slots = (int) Math.floor((music.endSec() - FIRST_BEAT) / SLOT) + 1;
-        for (int division : new int[] {4, 8, 16}) {
+        for (int division : new int[] {4, 8, 12, 16, 24}) {
             GeneratedChartBuilder.Settings settings =
                     new GeneratedChartBuilder.Settings(false, 3, division, false, 1, 1, false);
-            List<int[]> rows = rows(decode(build(music, settings, 7)));
-            int step = 16 / division;
+            int perBar = settings.perBar();
+            int slots = (int) Math.floor((music.endSec() - FIRST_BEAT) / (4 * BEAT / perBar)) + 1;
+            List<int[]> rows = rows(decode(build(music, settings, 7)), perBar / 4);
+            int step = perBar / division;
             assertEquals((slots + step - 1) / step, rows.size(), "every " + division + "th");
             for (int[] row : rows) {
                 assertEquals(0, row[0] % step);
@@ -390,10 +397,94 @@ class GeneratedChartBuilderTest {
         }
     }
 
+    /** Hits on triplet 8ths (k/3 of a beat) with nothing on straight 8ths or 16ths. */
+    private static GeneratedChartBuilder.Onsets tripletMusic() {
+        return new GeneratedChartBuilder.Onsets() {
+            public double strength(double timeSec) {
+                double[] bands = bands(timeSec);
+                return bands[0] + bands[1] + bands[2];
+            }
+
+            public double[] bands(double timeSec) {
+                double position = (timeSec - FIRST_BEAT) / (BEAT / 3);
+                if (timeSec < FIRST_BEAT || Math.abs(position - Math.rint(position)) > 1e-6) {
+                    return new double[3];
+                }
+                long third = Math.round(position);
+                return third % 3 == 0 ? new double[] {3.0, 0, 0.5} : new double[] {0, 1.5, 0.8};
+            }
+        };
+    }
+
+    @Test
+    void tripletRhythmChartsTripletsTheStraightGridCannot() throws Exception {
+        GeneratedChartBuilder.Onsets music = tripletMusic();
+        GeneratedChartBuilder.Settings triplet = new GeneratedChartBuilder.Settings(true, 3, 8, true, true, 1, 1, false);
+        assertEquals(24, triplet.perBar());
+        Path bms = directory.resolve("triplet.bms");
+        Files.write(bms, GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, 20.0, music, triplet, 1)
+                .text().getBytes(Charset.forName("MS932")));
+        List<int[]> rows = rows(new BMSDecoder().decode(bms), 6);
+        assertFalse(rows.isEmpty());
+        int onTriplets = 0;
+        for (int[] row : rows) {
+            assertEquals(0, row[0] % 2, "a note between the triplet hits at sixth " + row[0]);
+            onTriplets += row[0] % 6 != 0 ? 1 : 0;
+        }
+        assertTrue(onTriplets > rows.size() / 3, onTriplets + " of " + rows.size() + " on the off-beat triplets");
+
+        // the straight grid has no triplet positions, so none of its notes can sit on an off-beat triplet
+        GeneratedChartBuilder.Settings straight = new GeneratedChartBuilder.Settings(true, 3, 8, false, true, 1, 1, false);
+        Path plain = directory.resolve("straight.bms");
+        Files.write(plain, GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, 20.0, music, straight, 1)
+                .text().getBytes(Charset.forName("MS932")));
+        for (int[] row : rows(new BMSDecoder().decode(plain))) {
+            assertEquals(0, row[0] % 4, "only the beat is shared with triplets");
+        }
+    }
+
+    @Test
+    void metricalBonusFollowsTheRealInterval() {
+        // 150 BPM: beat / 8th / 16th = 1 / 0.5 / 0.25, as before
+        double[] fast = GeneratedChartBuilder.metricWeights(4, 16, 60.0 / 150);
+        assertArrayEquals(new double[] {1.0, 0.25, 0.5, 0.25}, fast, 1e-9);
+        // 79 BPM: an 8th is 380 ms (beat-like) and a 16th 190 ms (8th-like)
+        double[] slow = GeneratedChartBuilder.metricWeights(4, 16, 60.0 / 79);
+        assertArrayEquals(new double[] {1.0, 0.5, 1.0, 0.5}, slow, 1e-9);
+        // triplet grid at 150 BPM: beat 1, triplet 8th (133 ms) and 16th 0.25
+        double[] triplet = GeneratedChartBuilder.metricWeights(6, 24, 60.0 / 150);
+        assertArrayEquals(new double[] {1.0, 0.25, 0.25, 0.25, 0.25, 0.25}, triplet, 1e-9);
+    }
+
+    @Test
+    void thinPassagesKeepOnlyTheirHits() throws Exception {
+        // eight loud drum bars, then eight bars of quiet kicks on the beat with faint noise between
+        double[][][] bars = new double[16][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            if (bar < 8) {
+                bars[bar] = drumBar(5000 + bar);
+            } else {
+                double[][] thin = new double[16][3];
+                for (int slot = 0; slot < 16; slot++) {
+                    thin[slot][2] = 0.04;
+                }
+                for (int slot = 0; slot < 16; slot += 4) {
+                    thin[slot][0] = 0.9;
+                }
+                bars[bar] = thin;
+            }
+        }
+        for (int[] row : rows(decode(build(new Music(bars), new GeneratedChartBuilder.Settings(3, 1, 1, false), 8)))) {
+            if (row[0] / 16 >= 8) {
+                assertEquals(0, row[0] % 4, "a note between the kicks of the thin passage at slot " + row[0]);
+            }
+        }
+    }
+
     @Test
     void rejectsInvalidSettings() {
         assertThrows(IllegalArgumentException.class,
-                () -> new GeneratedChartBuilder.Settings(false, 3, 12, true, 1, 1, false));
+                () -> new GeneratedChartBuilder.Settings(false, 3, 6, true, 1, 1, false));
         assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(0, 1, 1, false));
         assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(5, 1, 1, false));
         assertThrows(IllegalArgumentException.class, () -> new GeneratedChartBuilder.Settings(2, 0, 1, false));
