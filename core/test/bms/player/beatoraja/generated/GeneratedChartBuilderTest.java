@@ -416,31 +416,58 @@ class GeneratedChartBuilderTest {
         };
     }
 
+    private static List<int[]> unionRows(GeneratedChartBuilder.Onsets music, double endSec, Path bms) throws Exception {
+        Files.write(bms, GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, endSec, music,
+                new GeneratedChartBuilder.Settings(3, 1, 1, false), 1).text().getBytes(Charset.forName("MS932")));
+        return rows(new BMSDecoder().decode(bms), 12);
+    }
+
     @Test
-    void tripletRhythmChartsTripletsTheStraightGridCannot() throws Exception {
-        GeneratedChartBuilder.Onsets music = tripletMusic();
-        GeneratedChartBuilder.Settings triplet = new GeneratedChartBuilder.Settings(true, 3, 8, true, true, 1, 1, false);
-        assertEquals(24, triplet.perBar());
-        Path bms = directory.resolve("triplet.bms");
-        Files.write(bms, GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, 20.0, music, triplet, 1)
-                .text().getBytes(Charset.forName("MS932")));
-        List<int[]> rows = rows(new BMSDecoder().decode(bms), 6);
+    void tripletsAreChartedWhereTheyAreWithoutASetting() throws Exception {
+        List<int[]> rows = unionRows(tripletMusic(), 20.0, directory.resolve("triplet.bms"));
         assertFalse(rows.isEmpty());
         int onTriplets = 0;
         for (int[] row : rows) {
-            assertEquals(0, row[0] % 2, "a note between the triplet hits at sixth " + row[0]);
-            onTriplets += row[0] % 6 != 0 ? 1 : 0;
+            assertTrue(row[0] % 4 == 0, "a note off the triplet hits at twelfth " + row[0]);
+            onTriplets += row[0] % 12 == 4 || row[0] % 12 == 8 ? 1 : 0;
         }
         assertTrue(onTriplets > rows.size() / 3, onTriplets + " of " + rows.size() + " on the off-beat triplets");
+    }
 
-        // the straight grid has no triplet positions, so none of its notes can sit on an off-beat triplet
-        GeneratedChartBuilder.Settings straight = new GeneratedChartBuilder.Settings(true, 3, 8, false, true, 1, 1, false);
-        Path plain = directory.resolve("straight.bms");
-        Files.write(plain, GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, 20.0, music, straight, 1)
-                .text().getBytes(Charset.forName("MS932")));
-        for (int[] row : rows(new BMSDecoder().decode(plain))) {
-            assertEquals(0, row[0] % 4, "only the beat is shared with triplets");
+    @Test
+    void straightMusicGetsNoTriplets() throws Exception {
+        Music music = varied(16);
+        for (int[] row : unionRows(music, music.endSec(), directory.resolve("straight.bms"))) {
+            assertTrue(row[0] % 12 != 4 && row[0] % 12 != 8, "false triplet at twelfth " + row[0]);
         }
+    }
+
+    @Test
+    void aSongCanSwitchBetweenStraightAndTriplets() throws Exception {
+        Music straight = varied(8);
+        GeneratedChartBuilder.Onsets triplets = tripletMusic();
+        double switchSec = FIRST_BEAT + 8 * 4 * BEAT;
+        GeneratedChartBuilder.Onsets mixed = new GeneratedChartBuilder.Onsets() {
+            public double strength(double timeSec) {
+                return timeSec < switchSec ? straight.strength(timeSec) : triplets.strength(timeSec);
+            }
+
+            public double[] bands(double timeSec) {
+                return timeSec < switchSec ? straight.bands(timeSec) : triplets.bands(timeSec);
+            }
+        };
+        int before = 0;
+        int after = 0;
+        for (int[] row : unionRows(mixed, switchSec + 8 * 4 * BEAT, directory.resolve("mixed.bms"))) {
+            boolean triplet = row[0] % 12 == 4 || row[0] % 12 == 8;
+            if (triplet && row[0] < 8 * 4 * 12) {
+                before++;
+            } else if (triplet) {
+                after++;
+            }
+        }
+        assertEquals(0, before, "triplets in the straight half");
+        assertTrue(after > 0, "no triplets in the triplet half");
     }
 
     @Test
@@ -451,9 +478,16 @@ class GeneratedChartBuilderTest {
         // 79 BPM: an 8th is 380 ms (beat-like) and a 16th 190 ms (8th-like)
         double[] slow = GeneratedChartBuilder.metricWeights(4, 16, 60.0 / 79);
         assertArrayEquals(new double[] {1.0, 0.5, 1.0, 0.5}, slow, 1e-9);
-        // triplet grid at 150 BPM: beat 1, triplet 8th (133 ms) and 16th 0.25
-        double[] triplet = GeneratedChartBuilder.metricWeights(6, 24, 60.0 / 150);
-        assertArrayEquals(new double[] {1.0, 0.25, 0.25, 0.25, 0.25, 0.25}, triplet, 1e-9);
+        // union grid (12 per beat) at 150 BPM: beat 1, 8th 0.5, 16th and triplet 8th (133 ms) 0.25
+        double[] union = GeneratedChartBuilder.metricWeights(12, 48, 60.0 / 150);
+        assertEquals(1.0, union[0], 1e-9);
+        assertEquals(0.25, union[3], 1e-9);
+        assertEquals(0.25, union[4], 1e-9);
+        assertEquals(0.5, union[6], 1e-9);
+        // ... and at 79 BPM a triplet 8th (253 ms) is beat-like, a 16th (190 ms) 8th-like
+        double[] slowUnion = GeneratedChartBuilder.metricWeights(12, 48, 60.0 / 79);
+        assertEquals(1.0, slowUnion[4], 1e-9);
+        assertEquals(0.5, slowUnion[3], 1e-9);
     }
 
     @Test
