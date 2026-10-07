@@ -60,8 +60,10 @@ class GeneratedAudioBarsTest {
         assertEquals(4, GeneratedAudioChartBar.nextDensity(3));
         assertEquals(1, GeneratedAudioChartBar.nextDensity(4));
         assertEquals(8, GeneratedAudioChartBar.nextDivision(4));
-        assertEquals(16, GeneratedAudioChartBar.nextDivision(8));
-        assertEquals(4, GeneratedAudioChartBar.nextDivision(16));
+        assertEquals(12, GeneratedAudioChartBar.nextDivision(8));
+        assertEquals(16, GeneratedAudioChartBar.nextDivision(12));
+        assertEquals(24, GeneratedAudioChartBar.nextDivision(16));
+        assertEquals(4, GeneratedAudioChartBar.nextDivision(24));
         assertEquals(2, GeneratedAudioChartBar.nextMinChord(1));
         assertEquals(1, GeneratedAudioChartBar.nextMinChord(GeneratedChartBuilder.KEYS));
         assertEquals(4, GeneratedAudioChartBar.nextMaxChord(2, 3));
@@ -90,11 +92,16 @@ class GeneratedAudioBarsTest {
         config.setGeneratedChartFollowMusic(false);
         config.setGeneratedChartDivision(16);
         config.setGeneratedChartRepeatBars(false);
+        config.setGeneratedChartTriplet(true);
         Json json = new Json();
         PlayerConfig restored = json.fromJson(PlayerConfig.class, json.toJson(config));
         restored.validate();
-        assertEquals(new GeneratedChartBuilder.Settings(false, 4, 16, false, 2, 4, true),
+        assertEquals(new GeneratedChartBuilder.Settings(false, 4, 16, true, false, 2, 4, true),
                 AudioChartSession.settings(restored));
+        config.setGeneratedChartDivision(12);
+        assertEquals(12, config.getGeneratedChartDivision());
+        config.setGeneratedChartDivision(6);
+        assertEquals(8, config.getGeneratedChartDivision());
         assertEquals(new GeneratedChartBuilder.Settings(3, 1, 2, false), AudioChartSession.settings(null));
         // a config written by 0.4.14.96-0.4.14.98 still loads (old field ignored like other unknown fields)
         Json lenient = new Json();
