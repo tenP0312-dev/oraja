@@ -1616,7 +1616,7 @@ public class MainController {
 		}
 		try {
 			Path path = Paths.get(files[0]);
-			return AudioChartSession.isAudioFile(path) && Files.isRegularFile(path) ? path : null;
+			return AudioChartSession.isSupportedFile(path) && Files.isRegularFile(path) ? path : null;
 		} catch (InvalidPathException exception) {
 			return null;
 		}

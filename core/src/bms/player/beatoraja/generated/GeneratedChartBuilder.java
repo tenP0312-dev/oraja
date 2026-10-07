@@ -49,6 +49,7 @@ public final class GeneratedChartBuilder {
     private static final String[] KEY_CHANNELS = {"11", "12", "13", "14", "15", "18", "19"};
     private static final String SCRATCH_CHANNEL = "16";
     private static final String AUDIO_WAV = "01";
+    private static final String BGA_BMP = "01";
     /** Notes reference an undefined WAV id so pressing keys stays silent. */
     private static final String SILENT_WAV = "02";
     private static final int BEATS_PER_MEASURE = 4;
@@ -164,6 +165,22 @@ public final class GeneratedChartBuilder {
             Onsets onsets,
             Settings settings,
             long seed) {
+        return build(title, audioFileName, null, bpm, firstBeatSec, endSec, onsets, settings, seed);
+    }
+
+    /**
+     * @param bgaFileName a movie started together with the audio (#459), or null
+     */
+    public static Chart build(
+            String title,
+            String audioFileName,
+            String bgaFileName,
+            double bpm,
+            double firstBeatSec,
+            double endSec,
+            Onsets onsets,
+            Settings settings,
+            long seed) {
         if (!(bpm > 0) || !Double.isFinite(bpm)) {
             throw new IllegalArgumentException("bpm must be positive");
         }
@@ -207,9 +224,16 @@ public final class GeneratedChartBuilder {
         text.append(String.format(Locale.ROOT, "#TOTAL %.1f\n",
                 Math.max(100.0, 7.605 * totalNotes / (0.01 * totalNotes + 6.5))));
         text.append("#WAV").append(AUDIO_WAV).append(' ').append(audioFileName).append('\n');
+        if (bgaFileName != null) {
+            text.append("#BMP").append(BGA_BMP).append(' ').append(bgaFileName).append('\n');
+        }
         text.append("\n*---------------------- MAIN DATA FIELD\n");
         text.append(String.format(Locale.ROOT, "#00102:%.9f\n", firstSlotSec / measureSec));
         text.append("#00101:").append(AUDIO_WAV).append('\n');
+        if (bgaFileName != null) {
+            // the movie's first frame and the extracted audio start at the same instant
+            text.append("#00104:").append(BGA_BMP).append('\n');
+        }
 
         String[][][] channelSlots = new String[measures][KEY_CHANNELS.length + 1][perBar];
         for (String[][] measure : channelSlots) {

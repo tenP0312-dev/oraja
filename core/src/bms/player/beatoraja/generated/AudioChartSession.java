@@ -65,6 +65,11 @@ public final class AudioChartSession {
                 config.getGeneratedChartMaxChord(), config.isGeneratedChartScratch());
     }
 
+    /** Audio files, or movies whose audio is extracted and shown as BGA (#459). */
+    public static boolean isSupportedFile(Path path) {
+        return isAudioFile(path) || VideoAudioExtractor.isVideoFile(path);
+    }
+
     public static boolean isAudioFile(Path path) {
         String name = path.getFileName() == null ? "" : path.getFileName().toString();
         int dot = name.lastIndexOf('.');
@@ -111,12 +116,16 @@ public final class AudioChartSession {
 
     private void analyzeOrFail() {
         try {
-            // the whole file is decoded in memory; a 15-minute WAV is ~160 MB
-            if (Files.size(audio) > MAX_FILE_BYTES) {
+            Path source = audio;
+            if (VideoAudioExtractor.isVideoFile(audio)) {
+                // the movie's audio, aligned to its first frame, is what gets analysed and played
+                source = extractedAudio();
+            } else if (Files.size(audio) > MAX_FILE_BYTES) {
+                // the whole file is decoded in memory; a 15-minute WAV is ~160 MB
                 fail("the file is larger than " + (MAX_FILE_BYTES >> 20) + " MB");
                 return;
             }
-            AudioFileDecoder.MonoAudio decoded = AudioFileDecoder.decodeMono(audio, DECODE_SAMPLE_RATE);
+            AudioFileDecoder.MonoAudio decoded = AudioFileDecoder.decodeMono(source, DECODE_SAMPLE_RATE);
             if (decoded == null) {
                 fail("could not decode the audio file");
                 return;
@@ -145,6 +154,22 @@ public final class AudioChartSession {
             logger.warn("Generated chart analysis failed: {}", audio, throwable);
             fail(throwable.getClass().getSimpleName() + ": " + throwable.getMessage());
         }
+    }
+
+    private static final String EXTRACTED_AUDIO = "audio.wav";
+
+    /** Extracts (once per file) the movie's audio next to the generated chart. */
+    private Path extractedAudio() throws IOException {
+        Path directory = generatedRoot().resolve(audioKey());
+        Files.createDirectories(directory);
+        Path wav = directory.resolve(EXTRACTED_AUDIO);
+        if (!Files.isRegularFile(wav)) {
+            long started = System.nanoTime();
+            VideoAudioExtractor.Extracted extracted = VideoAudioExtractor.extract(audio, wav);
+            logger.info("Generated chart video audio: {} {} ({} ms)", audio.getFileName(), extracted,
+                    (System.nanoTime() - started) / 1_000_000);
+        }
+        return wav;
     }
 
     private void fail(String message) {
@@ -257,15 +282,24 @@ public final class AudioChartSession {
         }
         Path directory = generatedRoot().resolve(audioKey());
         Files.createDirectories(directory);
-        String audioName = "audio." + extension(audio);
-        Path copy = directory.resolve(audioName);
-        if (!Files.exists(copy) || Files.size(copy) != Files.size(audio)) {
-            Files.copy(audio, copy, StandardCopyOption.REPLACE_EXISTING);
+        String audioName;
+        String bgaName = null;
+        if (VideoAudioExtractor.isVideoFile(audio)) {
+            audioName = EXTRACTED_AUDIO;
+            bgaName = "bga." + extension(audio);
+            placeBeside(directory.resolve(bgaName));
+        } else {
+            audioName = "audio." + extension(audio);
+            Path copy = directory.resolve(audioName);
+            if (!Files.exists(copy) || Files.size(copy) != Files.size(audio)) {
+                Files.copy(audio, copy, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
         String title = stripExtension(audio.getFileName().toString());
         GeneratedChartBuilder.Chart chart = GeneratedChartBuilder.build(
                 title,
                 audioName,
+                bgaName,
                 chartBpm,
                 chartFirstBeat,
                 estimate.lastSoundSec(),
@@ -348,6 +382,19 @@ public final class AudioChartSession {
             return HexFormat.of().formatHex(digest.digest()).substring(0, 16);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
+        }
+    }
+
+    /** A hard link to the source file (no second copy of a large movie), or a copy if linking fails. */
+    private void placeBeside(Path target) throws IOException {
+        if (Files.exists(target) && Files.size(target) == Files.size(audio)) {
+            return;
+        }
+        Files.deleteIfExists(target);
+        try {
+            Files.createLink(target, audio);
+        } catch (IOException | UnsupportedOperationException exception) {
+            Files.copy(audio, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

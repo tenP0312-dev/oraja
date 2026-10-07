@@ -516,6 +516,27 @@ class GeneratedChartBuilderTest {
     }
 
     @Test
+    void aMovieStartsTogetherWithTheAudio() throws Exception {
+        Music music = varied(4);
+        GeneratedChartBuilder.Chart chart = GeneratedChartBuilder.build("t", "audio.wav", "bga.mp4", BPM, FIRST_BEAT,
+                music.endSec(), music, new GeneratedChartBuilder.Settings(3, 1, 1, false), 1);
+        assertTrue(chart.text().contains("#BMP01 bga.mp4"));
+        BMSModel model = decode(chart);
+        assertEquals("bga.mp4", model.getBgaList()[0]);
+        long audioStart = audioStartMicros(model);
+        long movieStart = -1;
+        for (TimeLine timeLine : model.getAllTimeLines()) {
+            if (timeLine.getBGA() == 0) {
+                movieStart = timeLine.getMicroTime();
+                break;
+            }
+        }
+        assertEquals(audioStart, movieStart, "movie and audio must start at the same instant");
+        assertFalse(build(music, new GeneratedChartBuilder.Settings(3, 1, 1, false), 1).text().contains("#BMP"),
+                "audio-only charts have no BGA");
+    }
+
+    @Test
     void rejectsInvalidSettings() {
         assertThrows(IllegalArgumentException.class,
                 () -> new GeneratedChartBuilder.Settings(false, 3, 6, true, 1, 1, false));
