@@ -58,6 +58,71 @@ class AudioGridEstimatorTest {
         return samples;
     }
 
+    /** Beat times at {@code bpm} until {@code slowFromSec}, then slowing linearly to {@code endBpm} at 90 s. */
+    static double[] driftingBeats(double bpm, double slowFromSec, double endBpm, double duration) {
+        java.util.List<Double> beats = new java.util.ArrayList<>();
+        double now = 0.5;
+        while (now < duration) {
+            beats.add(now);
+            double share = Math.max(0, Math.min(1, (now - slowFromSec) / (90.0 - slowFromSec)));
+            now += 60.0 / (bpm + share * (endBpm - bpm));
+        }
+        return beats.stream().mapToDouble(Double::doubleValue).toArray();
+    }
+
+    static float[] trackOnBeats(double[] beats, double duration) {
+        Random random = new Random(7);
+        double[] out = new double[(int) (duration * RATE)];
+        double[] click = new double[(int) (0.08 * RATE)];
+        for (int index = 0; index < click.length; index++) {
+            click[index] = random.nextGaussian() * Math.exp(-index / (double) RATE * 60) * 0.5;
+        }
+        for (int k = 0; k < beats.length; k++) {
+            add(out, beats[k], click, k % 4 == 0 ? 1.0 : 0.6);
+            if (k + 1 < beats.length) {
+                add(out, (beats[k] + beats[k + 1]) / 2, click, 0.35);
+            }
+        }
+        float[] samples = new float[out.length];
+        for (int index = 0; index < out.length; index++) {
+            samples[index] = (float) (0.5 * out[index] + random.nextGaussian() * 0.005);
+        }
+        return samples;
+    }
+
+    @Test
+    void aDriftingTempoIsFollowedBarByBar() {
+        // 150 BPM, easing to 149.6 BPM from 60 s: the fixed grid ends ~65 ms early
+        double duration = 100.0;
+        double[] beats = driftingBeats(150.0, 60.0, 149.6, duration);
+        AudioGridEstimator.Result result = AudioGridEstimator.analyze(trackOnBeats(beats, duration), RATE);
+        double barSec = 4 * 60.0 / result.bpm();
+        double first = result.firstBeatSec();
+        int firstBeat = 0;
+        while (beats[firstBeat] < first - 0.03) {
+            firstBeat++;
+        }
+        int bars = (beats.length - firstBeat) / 4 - 1;
+        double[] starts = result.barStarts(first, barSec, bars);
+        assertNotNull(starts, "drift not followed");
+        double fixedError = 0;
+        double trackedError = 0;
+        for (int bar = bars - 5; bar < bars; bar++) {
+            double truth = beats[firstBeat + 4 * bar];
+            fixedError = Math.max(fixedError, Math.abs(first + bar * barSec - truth));
+            trackedError = Math.max(trackedError, Math.abs(starts[bar] - truth));
+        }
+        assertTrue(fixedError > 0.04, "the fixed grid should be off at the end: " + fixedError);
+        assertTrue(trackedError < 0.015, "tracked bars off at the end by " + trackedError);
+    }
+
+    @Test
+    void aSteadyTempoKeepsTheFixedGrid() {
+        AudioGridEstimator.Result result = AudioGridEstimator.analyze(synthTrack(150, 0.4, 60, 3, 0, 0.5), RATE);
+        double barSec = 4 * 60.0 / result.bpm();
+        assertNull(result.barStarts(result.firstBeatSec(), barSec, (int) (55 / barSec)));
+    }
+
     private static void add(double[] out, double time, double[] sound, double gain) {
         int start = (int) Math.round(time * RATE);
         for (int index = 0; index < sound.length && start + index < out.length; index++) {
