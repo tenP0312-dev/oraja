@@ -42,6 +42,7 @@ import bms.player.beatoraja.play.bga.FFmpegNativeLoader;
 import bms.player.beatoraja.song.SQLiteSongDatabaseAccessor;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
 import bms.player.beatoraja.system.ClientLogDirectory;
+import bms.player.beatoraja.system.MacSleepInhibitor;
 import org.slf4j.jul.JULServiceProvider;
 
 /**
@@ -240,6 +241,7 @@ public class MainLoader extends Application {
 
 			Config.DisplayMode displaymode = config.getDisplaymode();
 			Graphics.DisplayMode finalGdxDisplayMode = gdxDisplayMode;
+			MacSleepInhibitor.start();
 			new Lwjgl3Application(
 					new StartupApplication(
 							main,
@@ -253,8 +255,10 @@ public class MainLoader extends Application {
 		} catch (Throwable e) {
 			logger.error("{} : {}", e.getClass().getName(), e.getMessage());
 			logger.error("Uncaught global exception: ", e);
+			MacSleepInhibitor.stop();
 			System.exit(1);
 		}
+		MacSleepInhibitor.stop();
 		System.exit(0);
 	}
 
