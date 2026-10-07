@@ -20,6 +20,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.104 preserves the 0.4.14.103 internal test lineage and keeps
+generated-chart notes out of silent breaks and off false triplets: a triplet
+needs its sound to peak at the triplet (late 16ths stay 16ths, half-tempo 3/8
+sounds are not snapped). Plugin 0.0.77 and launcher 0.2.29 remain optional.
+See [the test scope](docs/TEST_RELEASE_0.4.14.104.md).
+
 Version 0.4.14.103 preserves the 0.4.14.102 internal test lineage and generates
 charts from video files: the audio track is extracted aligned to the first
 video frame and the video plays as the BGA. Plugin 0.0.77 and launcher 0.2.29
@@ -150,7 +156,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.103**. Its Windows native-audio
+The current client source version is **0.4.14.104**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or

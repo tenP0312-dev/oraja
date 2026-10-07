@@ -93,6 +93,19 @@ public final class AudioGridEstimator {
             return null;
         }
 
+        /** Audio time of the strongest onset between two audio times. */
+        public double onsetPeakTime(double fromSec, double toSec) {
+            int from = Math.max(0, (int) Math.floor((fromSec - ONSET_LAG_SEC) * FRAME_RATE));
+            int to = Math.min(envelope.length - 1, (int) Math.ceil((toSec - ONSET_LAG_SEC) * FRAME_RATE));
+            int best = from;
+            for (int index = from; index <= to; index++) {
+                if (envelope[index] > envelope[best]) {
+                    best = index;
+                }
+            }
+            return best / FRAME_RATE + ONSET_LAG_SEC;
+        }
+
         /** Peak low / mid / high onset strengths within {@code radiusSec} of an audio time. */
         public double[] bandStrengthsAt(double timeSec, double radiusSec) {
             double[] strengths = new double[bandEnvelopes.length];
