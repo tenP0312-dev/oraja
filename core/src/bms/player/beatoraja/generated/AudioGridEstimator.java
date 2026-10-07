@@ -33,6 +33,14 @@ public final class AudioGridEstimator {
     static final double FIRST_SOUND_RATIO = 0.3;
     static final double SUSTAIN_SEC = 2.0;
     static final double STABLE_DRIFT_MS = 30.0;
+    /** Tempo following: per-bar alignment step, the drift that switches it on, and its limits. */
+    static final double TEMPO_STEP_SEC = 0.03;
+    static final double TEMPO_DRIFT_SEC = 0.03;
+    /** Beyond this the fixed tempo is wrong (a 4:3 miss drifted ~300 ms), not drifting. */
+    static final double TEMPO_MAX_DRIFT_SEC = 0.15;
+    static final double TEMPO_CLEAR_RATIO = 1.15;
+    static final double TEMPO_MAX_CHANGE = 0.03;
+    static final int TEMPO_MIN_BARS = 8;
     /** (subdivision, weight): beats, plus 8th notes at half weight. */
     private static final int[] GRID_LEVELS = {1, 2};
     private static final double[] GRID_WEIGHTS = {1.0, 0.5};
@@ -91,6 +99,87 @@ public final class AudioGridEstimator {
                 }
             }
             return null;
+        }
+
+        /**
+         * Follows a tempo that drifts away from the fixed grid (a band without a
+         * click; operator: 誘惑 slows ~60 ms behind over its last 80 s, so the
+         * fixed grid lost the hits and the ending thinned out). Each bar's grid
+         * of beats and 8ths is aligned to the onsets within
+         * {@link #TEMPO_STEP_SEC} of the previous bar's alignment, the
+         * alignments are smoothed, and the start times of {@code bars + 1} bars
+         * are returned, relative to the song's median alignment (so the first
+         * one is near {@code firstBarSec}). Null when the
+         * alignment stays within {@link #TEMPO_DRIFT_SEC} (a steady song keeps
+         * its fixed grid and constant BPM; 26 BMS renders and 9 of 11 operator
+         * songs stayed within 25 ms) or exceeds {@link #TEMPO_MAX_DRIFT_SEC}.
+         */
+        public double[] barStarts(double firstBarSec, double barSec, int bars) {
+            if (bars < TEMPO_MIN_BARS) {
+                return null;
+            }
+            int reach = (int) Math.round(TEMPO_STEP_SEC * FRAME_RATE);
+            double[] raw = new double[bars + 1];
+            boolean[] heard = new boolean[bars + 1];
+            double previous = 0.0;
+            for (int bar = 0; bar <= bars; bar++) {
+                double start = firstBarSec + bar * barSec;
+                double best = previous;
+                double bestScore = -1.0;
+                double sum = 0.0;
+                for (int k = -reach; k <= reach; k++) {
+                    double shift = previous + k / FRAME_RATE;
+                    double score = 0.0;
+                    for (int j = -16; j < 16; j++) {
+                        double time = start + j * barSec / 16 + shift;
+                        score += (j % 2 == 0 ? 1.0 : 0.5) * peakNear(envelope, time, 0.01);
+                    }
+                    sum += score;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = shift;
+                    }
+                }
+                // a clear alignment only: a quiet or rhythmless stretch keeps the previous one
+                heard[bar] = bestScore > TEMPO_CLEAR_RATIO * sum / (2 * reach + 1);
+                raw[bar] = heard[bar] ? best : previous;
+                previous = raw[bar];
+            }
+            double[] smooth = new double[bars + 1];
+            for (int bar = 0; bar <= bars; bar++) {
+                double[] window = Arrays.copyOfRange(raw, Math.max(0, bar - 2), Math.min(bars + 1, bar + 3));
+                smooth[bar] = percentile(window, 50);
+            }
+            List<Double> heardOffsets = new ArrayList<>();
+            for (int bar = 0; bar <= bars; bar++) {
+                if (heard[bar]) {
+                    heardOffsets.add(smooth[bar]);
+                }
+            }
+            if (heardOffsets.size() < TEMPO_MIN_BARS) {
+                return null;
+            }
+            double[] values = heardOffsets.stream().mapToDouble(Double::doubleValue).toArray();
+            double drift = percentile(values, 95) - percentile(values, 5);
+            // steady: keep the fixed grid; far beyond a band's drift: the tempo itself is wrong
+            if (drift < TEMPO_DRIFT_SEC || drift > TEMPO_MAX_DRIFT_SEC) {
+                return null;
+            }
+            // the fixed grid already fits the song as a whole: keep its median alignment
+            double reference = percentile(values, 50);
+            double[] starts = new double[bars + 1];
+            for (int bar = 0; bar <= bars; bar++) {
+                double left = smooth[Math.max(0, bar - 1)];
+                double right = smooth[Math.min(bars, bar + 1)];
+                starts[bar] = firstBarSec + bar * barSec + (left + smooth[bar] + right) / 3 - reference;
+            }
+            for (int bar = 1; bar <= bars; bar++) {
+                // a bar stays within TEMPO_MAX_CHANGE of the fixed bar length
+                double length = Math.max(barSec * (1 - TEMPO_MAX_CHANGE),
+                        Math.min(barSec * (1 + TEMPO_MAX_CHANGE), starts[bar] - starts[bar - 1]));
+                starts[bar] = starts[bar - 1] + length;
+            }
+            return starts;
         }
 
         /** Audio time of the strongest onset between two audio times. */
