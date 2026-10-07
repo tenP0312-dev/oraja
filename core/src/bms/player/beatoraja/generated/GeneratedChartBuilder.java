@@ -78,6 +78,26 @@ public final class GeneratedChartBuilder {
     /** The first measure of notes must start at least this far into the audio. */
     private static final double MIN_LEAD_BEATS = 0.25;
     private static final double METRIC_WEIGHT = 0.3;
+    /**
+     * A triplet position wins only when its sound peaks at least this far from
+     * the neighbouring 16th toward the triplet. Sung or loosely played 16ths
+     * land ~30 ms late, nearer the triplet than the 16th at ~105 BPM (operator:
+     * CANDY POP had slightly-off notes in 8th streams); quantized BMS triplets
+     * all pass (40 of 40 on 26 BMS).
+     */
+    static final double TRIPLET_TIMING = 0.75;
+    /**
+     * A 1/3 triplet also needs a 2/3 triplet within this many beats: a late
+     * 16th moves 1/4 toward 1/3 but 3/4 away from 2/3, so a lone 1/3 is
+     * usually a late 16th. Keeps 37 of 40 BMS triplets.
+     */
+    static final int TRIPLET_CONTEXT_BEATS = 4;
+    /**
+     * Positions below this share of the song's loud level are silent: the
+     * metrical bonus alone never puts a note there (operator: CANDY POP had
+     * 8ths during a 1.3-second break, at 0-1% of the loud level).
+     */
+    static final double SILENT_ONSET = 0.05;
     /** Cosine similarity of bar onset patterns above which a bar repeats an earlier one. */
     static final double REPEAT_SIMILARITY = 0.85;
     static final double HI_HAT_DOMINANCE = 2.0;
@@ -93,6 +113,11 @@ public final class GeneratedChartBuilder {
 
         /** low / mid / high strengths, each on its own comparable scale */
         double[] bands(double timeSec);
+
+        /** Time of the strongest onset between two audio times; NaN when unknown. */
+        default double peakTime(double fromSec, double toSec) {
+            return Double.NaN;
+        }
     }
 
     /**
@@ -202,7 +227,10 @@ public final class GeneratedChartBuilder {
             strength[slot] = onsets.strength(time);
             bands[slot] = onsets.bands(time);
         }
-        List<Placement> placements = place(strength, bands, settings, new Random(seed), perBar, beat);
+        byte[] tripletTiming = perBar == UNION_SLOTS_PER_BAR
+                ? tripletTiming(onsets, firstSlotSec, slotSec, slots)
+                : null;
+        List<Placement> placements = place(strength, bands, tripletTiming, settings, new Random(seed), perBar, beat);
         int repeated = settings.repeatBars() ? countRepeatedBars(bands, slots, perBar) : 0;
 
         int totalNotes = 0;
@@ -268,12 +296,17 @@ public final class GeneratedChartBuilder {
     /** Chooses positions, chord sizes, scratch and lanes; repeated bars copy their source bar. */
     static List<Placement> place(double[] strength, double[][] bands, Settings settings, Random random,
             int perBar, double beatSec) {
+        return place(strength, bands, null, settings, random, perBar, beatSec);
+    }
+
+    static List<Placement> place(double[] strength, double[][] bands, byte[] tripletTiming, Settings settings,
+            Random random, int perBar, double beatSec) {
         int slots = strength.length;
         boolean[] chosen;
         if (settings.followMusic()) {
             boolean[] candidate = new boolean[slots];
             // the losers of the straight/triplet competitions count as silent from here on
-            strength = unionCandidates(strength, perBar, candidate);
+            strength = unionCandidates(strength, perBar, candidate, tripletTiming);
             chosen = choose(strength, settings.density(), metricWeights(slots, perBar, beatSec), candidate,
                     candidatesPerBar(perBar));
         } else {
@@ -418,19 +451,24 @@ public final class GeneratedChartBuilder {
         double scale = AudioGridEstimator.percentile(local, 95) + 1e-9;
         double loud = AudioGridEstimator.percentile(strength, 95) + 1e-9;
         double[] score = new double[slots];
+        int eligible = slots;
         Integer[] order = new Integer[slots];
         for (int slot = 0; slot < slots; slot++) {
             double localLevel = local[slot] / scale;
             double songLevel = Math.max(strength[slot] / loud, 1e-6);
             score[slot] = Math.pow(localLevel, 1.0 - SONG_WIDE_SHARE) * Math.pow(songLevel, SONG_WIDE_SHARE)
                     + METRIC_WEIGHT * metric[slot];
+            if (strength[slot] < SILENT_ONSET * loud) {
+                score[slot] = Double.NEGATIVE_INFINITY;
+                eligible--;
+            }
             order[slot] = slot;
         }
         Arrays.sort(order, (left, right) -> {
             int compare = Double.compare(score[right], score[left]);
             return compare != 0 ? compare : Integer.compare(left, right);
         });
-        int count = Math.min(slots, (int) Math.round(DENSITY_SCALE[density - 1] * clearOnsets(strength)));
+        int count = Math.min(eligible, (int) Math.round(DENSITY_SCALE[density - 1] * clearOnsets(strength)));
         for (int index = 0; index < count; index++) {
             chosen[order[index]] = true;
         }
@@ -448,6 +486,16 @@ public final class GeneratedChartBuilder {
      * its strength cleared in the returned copy.
      */
     static double[] unionCandidates(double[] strength, int perBar, boolean[] candidate) {
+        return unionCandidates(strength, perBar, candidate, null);
+    }
+
+    /**
+     * As {@link #unionCandidates(double[], int, boolean[])}; with peak timings
+     * ({@link #tripletTiming}) a triplet needs {@link #ON_TRIPLET} and a 1/3
+     * also {@link #TRIPLET_CONTEXT_BEATS}; a late 16th keeps the onset on the
+     * 16th, and a sound beyond the triplet drops it.
+     */
+    static double[] unionCandidates(double[] strength, int perBar, boolean[] candidate, byte[] tripletTiming) {
         double[] effective = strength.clone();
         if (perBar != UNION_SLOTS_PER_BAR) {
             Arrays.fill(candidate, true);
@@ -461,9 +509,31 @@ public final class GeneratedChartBuilder {
                 effective[slot] = 0.0;
             }
         }
-        for (int beatStart = 0; beatStart < strength.length; beatStart += UNION_PER_BEAT) {
-            compete(effective, candidate, beatStart + 3, beatStart + 4);
-            compete(effective, candidate, beatStart + 9, beatStart + 8);
+        if (tripletTiming == null) {
+            for (int beatStart = 0; beatStart < strength.length; beatStart += UNION_PER_BEAT) {
+                compete(effective, candidate, beatStart + 3, beatStart + 4);
+                compete(effective, candidate, beatStart + 9, beatStart + 8);
+            }
+            return effective;
+        }
+        int beats = (strength.length + UNION_PER_BEAT - 1) / UNION_PER_BEAT;
+        boolean[] lateTriplet = new boolean[beats];
+        for (int beat = 0; beat < beats; beat++) {
+            int triplet = beat * UNION_PER_BEAT + 8;
+            int straight = triplet + 1;
+            lateTriplet[beat] = triplet < strength.length && tripletTiming[triplet] == ON_TRIPLET
+                    && effective[triplet] > 0
+                    && (straight >= strength.length || effective[triplet] > effective[straight]);
+        }
+        for (int beat = 0; beat < beats; beat++) {
+            int beatStart = beat * UNION_PER_BEAT;
+            boolean context = false;
+            for (int near = Math.max(0, beat - TRIPLET_CONTEXT_BEATS);
+                    near <= Math.min(beats - 1, beat + TRIPLET_CONTEXT_BEATS) && !context; near++) {
+                context = lateTriplet[near];
+            }
+            settle(effective, candidate, tripletTiming, beatStart + 3, beatStart + 4, context);
+            settle(effective, candidate, tripletTiming, beatStart + 9, beatStart + 8, true);
         }
         return effective;
     }
@@ -479,6 +549,77 @@ public final class GeneratedChartBuilder {
                 candidate[straight] = false;
             }
         } else {
+            strength[triplet] = 0.0;
+            candidate[triplet] = false;
+        }
+    }
+
+    /** Triplet timing: the sound belongs to a position beyond the triplet; drop the triplet. */
+    static final byte BEYOND_TRIPLET = 0;
+    /** Triplet timing: a late (or early) 16th; the 16th takes the onset. */
+    static final byte LATE_SIXTEENTH = 1;
+    /** Triplet timing: the sound peaks at the triplet; it competes with the 16th. */
+    static final byte ON_TRIPLET = 2;
+    /** Search margin around a 16th/triplet pair, and the distance that counts as its edge. */
+    private static final double TIMING_MARGIN_SEC = 0.02;
+    private static final double TIMING_EDGE_SEC = 0.006;
+
+    /**
+     * Where each triplet position's sound peaks, or null when peak times are
+     * unknown. A peak at the far edge of the search window is the rising slope
+     * of a sound past the triplet (at half tempo, the real 16th at 3/8 of the
+     * beat; operator: 燦々デイズ at 90 BPM), not a triplet.
+     */
+    static byte[] tripletTiming(Onsets onsets, double firstSlotSec, double slotSec, int slots) {
+        byte[] timing = new byte[slots];
+        for (int beatStart = 0; beatStart < slots; beatStart += UNION_PER_BEAT) {
+            for (int[] pair : new int[][] {{3, 4}, {9, 8}}) {
+                int triplet = beatStart + pair[1];
+                if (triplet >= slots) {
+                    continue;
+                }
+                double straightSec = firstSlotSec + (beatStart + pair[0]) * slotSec;
+                double tripletSec = firstSlotSec + triplet * slotSec;
+                double direction = Math.signum(tripletSec - straightSec);
+                double farEdge = tripletSec + direction * TIMING_MARGIN_SEC;
+                double peak = onsets.peakTime(Math.min(straightSec, tripletSec) - TIMING_MARGIN_SEC,
+                        Math.max(straightSec, tripletSec) + TIMING_MARGIN_SEC);
+                if (Double.isNaN(peak)) {
+                    return null;
+                }
+                if (Math.abs(peak - farEdge) <= TIMING_EDGE_SEC) {
+                    timing[triplet] = BEYOND_TRIPLET;
+                } else if ((peak - straightSec) / (tripletSec - straightSec) >= TRIPLET_TIMING) {
+                    timing[triplet] = ON_TRIPLET;
+                } else {
+                    timing[triplet] = LATE_SIXTEENTH;
+                }
+            }
+        }
+        return timing;
+    }
+
+    private static void settle(double[] strength, boolean[] candidate, byte[] timing, int straight, int triplet,
+            boolean context) {
+        if (triplet >= strength.length) {
+            compete(strength, candidate, straight, triplet);
+        } else if (timing[triplet] == ON_TRIPLET && context) {
+            compete(strength, candidate, straight, triplet);
+        } else if (timing[triplet] == BEYOND_TRIPLET) {
+            strength[triplet] = 0.0;
+            candidate[triplet] = false;
+        } else {
+            keepStraight(strength, candidate, straight, triplet);
+        }
+    }
+
+    /** The straight position takes the onset of both (a late 16th peaks between them). */
+    private static void keepStraight(double[] strength, boolean[] candidate, int straight, int triplet) {
+        if (straight >= strength.length) {
+            return;
+        }
+        if (triplet < strength.length) {
+            strength[straight] = Math.max(strength[straight], strength[triplet]);
             strength[triplet] = 0.0;
             candidate[triplet] = false;
         }

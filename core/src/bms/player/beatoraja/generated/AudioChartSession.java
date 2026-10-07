@@ -313,6 +313,11 @@ public final class AudioChartSession {
                     public double[] bands(double timeSec) {
                         return estimate.bandStrengthsAt(timeSec, ONSET_RADIUS_SEC);
                     }
+
+                    @Override
+                    public double peakTime(double fromSec, double toSec) {
+                        return estimate.onsetPeakTime(fromSec, toSec);
+                    }
                 },
                 settings,
                 chartSeed);

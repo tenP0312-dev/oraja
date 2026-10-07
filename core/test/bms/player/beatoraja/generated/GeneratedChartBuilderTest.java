@@ -200,14 +200,20 @@ class GeneratedChartBuilderTest {
             nonZero += value > 0 ? 1 : 0;
         }
         assertTrue(clear > 0 && clear <= nonZero, clear + " of " + nonZero);
+        // the extra notes of the higher amounts go only where something sounds
+        double loud = AudioGridEstimator.percentile(strength, 95);
+        int audible = 0;
+        for (double value : strength) {
+            audible += value >= GeneratedChartBuilder.SILENT_ONSET * loud ? 1 : 0;
+        }
         int previous = 0;
         for (int density = GeneratedChartBuilder.MIN_DENSITY; density <= GeneratedChartBuilder.MAX_DENSITY; density++) {
             int count = 0;
             for (boolean chosen : GeneratedChartBuilder.choose(strength, density)) {
                 count += chosen ? 1 : 0;
             }
-            assertEquals(Math.min(slots, Math.round(GeneratedChartBuilder.DENSITY_SCALE[density - 1] * clear)), count);
-            assertTrue(count > previous);
+            assertEquals(Math.min(audible, Math.round(GeneratedChartBuilder.DENSITY_SCALE[density - 1] * clear)), count);
+            assertTrue(count > previous || count == audible);
             previous = count;
         }
         // "as the music" places exactly the song's clear onsets
@@ -314,7 +320,8 @@ class GeneratedChartBuilderTest {
             }
         }
         assertTrue(scratches > 0);
-        assertTrue(scratches < positions / 3, scratches + " scratches of " + positions);
+        // positions are audible hits only (no silent filler), most of them hi-hats here
+        assertTrue(scratches < positions * 2 / 5, scratches + " scratches of " + positions);
         for (int[] row : rows(decode(build(music, new GeneratedChartBuilder.Settings(4, 1, 2, false), 6)))) {
             assertNotEquals(7, row[row.length - 1]);
         }
@@ -513,6 +520,98 @@ class GeneratedChartBuilderTest {
                 assertEquals(0, row[0] % 4, "a note between the kicks of the thin passage at slot " + row[0]);
             }
         }
+    }
+
+    @Test
+    void noNotesInASilentBreakEvenAtTheHighestAmount() throws Exception {
+        // more notes are wanted than there are hits; the extra ones must not fill the break
+        double[][][] bars = new double[12][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            bars[bar] = bar == 5 || bar == 6 ? null : drumBar(6000 + bar);
+        }
+        GeneratedChartBuilder.Settings dense = new GeneratedChartBuilder.Settings(GeneratedChartBuilder.MAX_DENSITY,
+                1, 1, false);
+        for (int[] row : rows(decode(build(new Music(bars), dense, 9)))) {
+            int bar = row[0] / 16;
+            assertTrue(bar != 5 && bar != 6, "a note in the silent break at slot " + row[0]);
+        }
+    }
+
+    /** Onsets at exact times (seconds → strength), seen within 20 ms like the real envelope. */
+    private record Events(double[][] events) implements GeneratedChartBuilder.Onsets {
+        @Override
+        public double strength(double timeSec) {
+            double peak = 0.0;
+            for (double[] event : events) {
+                if (Math.abs(event[0] - timeSec) <= 0.02) {
+                    peak = Math.max(peak, event[1]);
+                }
+            }
+            return peak;
+        }
+
+        @Override
+        public double[] bands(double timeSec) {
+            return new double[] {strength(timeSec), 0, 0};
+        }
+
+        @Override
+        public double peakTime(double fromSec, double toSec) {
+            double best = fromSec;
+            double strongest = 0.0;
+            for (double[] event : events) {
+                if (event[0] >= fromSec && event[0] <= toSec && event[1] > strongest) {
+                    strongest = event[1];
+                    best = event[0];
+                }
+            }
+            return best;
+        }
+    }
+
+    /** beats and 8ths, plus hits at {@code offsets} (in beats) inside every beat */
+    private static Events eventsPerBeat(int beats, double... offsets) {
+        List<double[]> events = new ArrayList<>();
+        for (int beat = 0; beat < beats; beat++) {
+            double start = FIRST_BEAT + beat * BEAT;
+            events.add(new double[] {start, 3.0});
+            events.add(new double[] {start + BEAT / 2, 2.0});
+            for (double offset : offsets) {
+                events.add(new double[] {start + offset * BEAT, 1.5});
+            }
+        }
+        return new Events(events.toArray(new double[0][]));
+    }
+
+    @Test
+    void lateSixteenthsStaySixteenthsInsteadOfOffTriplets() throws Exception {
+        // a 16th sung 22 ms late (150 BPM): nearer the 1/3 triplet than the 16th
+        Events late = eventsPerBeat(64, 0.25 + 0.022 / BEAT);
+        int sixteenths = 0;
+        for (int[] row : unionRows(late, FIRST_BEAT + 64 * BEAT, directory.resolve("late.bms"))) {
+            assertTrue(row[0] % 12 != 4 && row[0] % 12 != 8, "an off triplet at twelfth " + row[0]);
+            sixteenths += row[0] % 12 == 3 ? 1 : 0;
+        }
+        assertTrue(sixteenths > 32, "late 16ths lost: " + sixteenths);
+    }
+
+    @Test
+    void halfTempoSixteenthsAreNotSnappedToTriplets() throws Exception {
+        // at half tempo the real 16ths land on 3/8 and 7/8 of the beat, between grid positions
+        Events halfTempo = eventsPerBeat(64, 3.0 / 8, 7.0 / 8);
+        for (int[] row : unionRows(halfTempo, FIRST_BEAT + 64 * BEAT, directory.resolve("half.bms"))) {
+            assertTrue(row[0] % 12 != 4 && row[0] % 12 != 8, "a 3/8 sound snapped to a triplet at twelfth " + row[0]);
+        }
+    }
+
+    @Test
+    void clearTripletsStayTriplets() throws Exception {
+        Events triplets = eventsPerBeat(64, 1.0 / 3, 2.0 / 3);
+        int onTriplets = 0;
+        for (int[] row : unionRows(triplets, FIRST_BEAT + 64 * BEAT, directory.resolve("clear.bms"))) {
+            onTriplets += row[0] % 12 == 4 || row[0] % 12 == 8 ? 1 : 0;
+        }
+        assertTrue(onTriplets > 64, "triplets lost: " + onTriplets);
     }
 
     @Test
