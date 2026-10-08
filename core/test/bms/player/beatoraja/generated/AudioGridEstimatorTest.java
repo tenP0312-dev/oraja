@@ -123,6 +123,51 @@ class AudioGridEstimatorTest {
         assertNull(result.barStarts(result.firstBeatSec(), barSec, (int) (55 / barSec)));
     }
 
+    @Test
+    void talkBeforeTheMusicIsLeftOutOfTheRhythmicSpan() {
+        // 20 s of irregular bursts and noise (a video's talk scene), then a steady 150 BPM track
+        Random random = new Random(11);
+        float[] music = synthTrack(150, 0.0, 60, 4, 0, 0.5);
+        int intro = 20 * RATE;
+        float[] samples = new float[intro + music.length];
+        double[] click = new double[(int) (0.06 * RATE)];
+        for (int index = 0; index < click.length; index++) {
+            click[index] = random.nextGaussian() * Math.exp(-index / (double) RATE * 40) * 0.3;
+        }
+        double[] talk = new double[intro];
+        // syllable-like bursts at irregular 70-320 ms gaps, as speech has
+        for (double time = 0.3; time < 19.5; time += 0.07 + random.nextDouble() * 0.25) {
+            add(talk, time, click, 0.3 + random.nextDouble());
+        }
+        for (int index = 0; index < intro; index++) {
+            samples[index] = (float) (talk[index] + random.nextGaussian() * 0.01);
+        }
+        System.arraycopy(music, 0, samples, intro, music.length);
+        AudioGridEstimator.Result result = AudioGridEstimator.analyze(samples, RATE);
+        double barSec = 4 * 60.0 / result.bpm();
+        double first = result.firstBeatSec();
+        double[] span = result.rhythmicSpan(first, barSec, result.lastSoundSec(), null);
+        assertNotNull(span);
+        assertTrue(span[0] > 19.0 && span[0] < 22.5, "the music starts at 20 s, span starts at " + span[0]);
+        assertTrue(span[1] > 75.0, "the music runs to the end, span ends at " + span[1]);
+    }
+
+    @Test
+    void aDyingTailIsFadingButAHitIsNot() {
+        float[] samples = new float[3 * RATE];
+        for (int index = 0; index < samples.length; index++) {
+            double t = index / (double) RATE;
+            // a loud chord from 0.5 s decaying, then a new hit at 2.0 s
+            double chord = t >= 0.5 ? Math.exp(-(t - 0.5) * 4) : 0.0;
+            double hit = t >= 2.0 ? Math.exp(-(t - 2.0) * 4) : 0.0;
+            samples[index] = (float) (0.5 * Math.sin(2 * Math.PI * 220 * t) * (chord + hit));
+        }
+        AudioGridEstimator.Result result = AudioGridEstimator.analyze(samples, RATE);
+        assertTrue(result.fadingAt(1.6), "the quiet tail before the new hit");
+        assertFalse(result.fadingAt(2.0), "the new hit");
+        assertFalse(result.fadingAt(0.6), "the loud chord just after it starts");
+    }
+
     private static void add(double[] out, double time, double[] sound, double gain) {
         int start = (int) Math.round(time * RATE);
         for (int index = 0; index < sound.length && start + index < out.length; index++) {
