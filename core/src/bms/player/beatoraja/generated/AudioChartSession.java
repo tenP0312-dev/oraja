@@ -323,6 +323,16 @@ public final class AudioChartSession {
                     public double[] barStarts(double firstBarSec, double barSec, int bars) {
                         return estimate.barStarts(firstBarSec, barSec, bars);
                     }
+
+                    @Override
+                    public double[] rhythmicSpan(double firstBarSec, double barSec, double endSec, double[] barStarts) {
+                        return estimate.rhythmicSpan(firstBarSec, barSec, endSec, barStarts);
+                    }
+
+                    @Override
+                    public boolean fading(double timeSec) {
+                        return estimate.fadingAt(timeSec);
+                    }
                 },
                 settings,
                 chartSeed);

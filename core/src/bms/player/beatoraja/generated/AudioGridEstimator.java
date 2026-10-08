@@ -33,6 +33,14 @@ public final class AudioGridEstimator {
     static final double FIRST_SOUND_RATIO = 0.3;
     static final double SUSTAIN_SEC = 2.0;
     static final double STABLE_DRIFT_MS = 30.0;
+    /** A stretch quieter than this (dB against the song's average) and falling has no new hit. */
+    static final double FADING_LEVEL_DB = -15.0;
+    /** Rhythmic span: bars in a row, shift search, shift continuity, and the clear-alignment thresholds. */
+    static final int RHYTHM_RUN_BARS = 4;
+    static final double RHYTHM_SEARCH_SEC = 0.15;
+    static final double RHYTHM_STEP_SEC = 0.015;
+    static final double RHYTHM_CLEAR_SHARE = 0.5;
+    static final double RHYTHM_MIN_RATIO = 1.2;
     /** Tempo following: per-bar alignment step, the drift that switches it on, and its limits. */
     static final double TEMPO_STEP_SEC = 0.03;
     static final double TEMPO_DRIFT_SEC = 0.03;
@@ -77,7 +85,8 @@ public final class AudioGridEstimator {
             boolean stableTempo,
             List<Candidate> alternatives,
             double[] envelope,
-            double[][] bandEnvelopes) {
+            double[][] bandEnvelopes,
+            double[] power) {
 
         /** Peak onset strength within {@code radiusSec} of an audio time. */
         public double onsetStrengthAt(double timeSec, double radiusSec) {
@@ -182,6 +191,112 @@ public final class AudioGridEstimator {
             return starts;
         }
 
+        /** Level between two audio times in dB against the song's average power. */
+        public double levelDb(double fromSec, double toSec) {
+            int from = Math.max(0, (int) Math.floor(fromSec * SAMPLE_RATE / HOP));
+            int to = Math.min(power.length, (int) Math.ceil(toSec * SAMPLE_RATE / HOP));
+            if (to <= from) {
+                return -120.0;
+            }
+            double sum = 0.0;
+            for (int frame = from; frame < to; frame++) {
+                sum += power[frame];
+            }
+            return 10 * Math.log10(sum / (to - from) + 1e-12);
+        }
+
+        /**
+         * Whether a time sits in a quiet, falling stretch: the tail of a sound
+         * dying away (operator: the "Stop!" break of Uptown Funk). Quiet means
+         * below {@link #FADING_LEVEL_DB}; falling means quieter than the 60 ms
+         * before. 0.2% of the notes of 26 BMS charts sit there, 1.4-2% of
+         * generated ones did.
+         */
+        public boolean fadingAt(double timeSec) {
+            double level = levelDb(timeSec - 0.01, timeSec + 0.04);
+            return level < FADING_LEVEL_DB && level < levelDb(timeSec - 0.08, timeSec - 0.02);
+        }
+
+        /**
+         * The audio {start, end} whose bars play on the beat: from the first to
+         * the last run of {@link #RHYTHM_RUN_BARS} bars that line up with the
+         * grid. Talk or noise before or after the music (a video's intro:
+         * operator, Sugar's 38 s wedding scene) does not, and gets no notes.
+         * A bar lines up when its beat/8th/16th grid, at its best shift within a
+         * 32nd, scores at least {@link #RHYTHM_CLEAR_SHARE} of the song's
+         * well-aligned bars (90th percentile) against its average over a 16th of
+         * shifts, and its shift continues the neighbour's (music moves smoothly,
+         * talk does not). The fixed grid is used, so a drift or an edit only
+         * moves the shift. On 26 BMS renders 0.36% of notes fell outside.
+         */
+        public double[] rhythmicSpan(double firstBarSec, double barSec, double endSec, double[] barStarts) {
+            int bars = (int) Math.floor((endSec - firstBarSec) / barSec);
+            if (barStarts != null) {
+                bars = Math.min(bars, barStarts.length - 1);
+            }
+            if (bars < 2 * RHYTHM_RUN_BARS) {
+                return null;
+            }
+            int reach = (int) Math.round(Math.min(RHYTHM_SEARCH_SEC, barSec / 32) * FRAME_RATE);
+            int spread = Math.max(reach + 1, (int) Math.round(barSec / 16 * FRAME_RATE));
+            int[] shift = new int[bars];
+            double[] ratio = new double[bars];
+            for (int bar = 0; bar < bars; bar++) {
+                double start = firstBarSec + bar * barSec;
+                double[] score = new double[2 * spread + 1];
+                double mean = 0.0;
+                for (int k = -spread; k <= spread; k++) {
+                    double value = 0.0;
+                    for (int j = 0; j < 16; j++) {
+                        value += (j % 2 == 0 ? 1.0 : 0.5) * peakNear(envelope, start + j * barSec / 16 + k / FRAME_RATE, 0.01);
+                    }
+                    score[k + spread] = value;
+                    mean += value / score.length;
+                }
+                int best = 0;
+                for (int k = -reach; k <= reach; k++) {
+                    if (score[k + spread] > score[best + spread]) {
+                        best = k;
+                    }
+                }
+                shift[bar] = best;
+                ratio[bar] = score[best + spread] / (mean + 1e-12);
+            }
+            double threshold = Math.max(RHYTHM_MIN_RATIO, RHYTHM_CLEAR_SHARE * percentile(ratio, 90));
+            int step = (int) Math.ceil(RHYTHM_STEP_SEC * FRAME_RATE);
+            boolean[] clear = new boolean[bars];
+            for (int bar = 0; bar < bars; bar++) {
+                clear[bar] = ratio[bar] > threshold;
+            }
+            boolean[] onGrid = new boolean[bars];
+            for (int bar = 0; bar < bars; bar++) {
+                boolean steady = bar > 0 && clear[bar - 1] && Math.abs(shift[bar] - shift[bar - 1]) <= step
+                        || bar + 1 < bars && clear[bar + 1] && Math.abs(shift[bar] - shift[bar + 1]) <= step;
+                onGrid[bar] = clear[bar] && steady;
+            }
+            int first = -1;
+            int last = -1;
+            for (int bar = 0; bar + RHYTHM_RUN_BARS <= bars; bar++) {
+                boolean run = true;
+                for (int k = 0; k < RHYTHM_RUN_BARS && run; k++) {
+                    run = onGrid[bar + k];
+                }
+                if (run) {
+                    if (first < 0) {
+                        first = bar;
+                    }
+                    last = bar + RHYTHM_RUN_BARS - 1;
+                }
+            }
+            if (first < 0) {
+                return null;
+            }
+            double start = barStarts != null ? barStarts[first] : firstBarSec + first * barSec;
+            double end = last >= bars - RHYTHM_RUN_BARS ? endSec
+                    : barStarts != null ? barStarts[last + 1] : firstBarSec + (last + 1) * barSec;
+            return new double[] {start, end};
+        }
+
         /** Audio time of the strongest onset between two audio times. */
         public double onsetPeakTime(double fromSec, double toSec) {
             int from = Math.max(0, (int) Math.floor((fromSec - ONSET_LAG_SEC) * FRAME_RATE));
@@ -271,7 +386,24 @@ public final class AudioGridEstimator {
                 drift <= STABLE_DRIFT_MS,
                 List.copyOf(alternatives),
                 env,
-                new double[][] {envelopes[1], envelopes[2], envelopes[3]});
+                new double[][] {envelopes[1], envelopes[2], envelopes[3]},
+                framePower(audio));
+    }
+
+    /** Mean square of each HOP-sample block, scaled so the whole song averages 1. */
+    static double[] framePower(float[] audio) {
+        double[] power = new double[audio.length / HOP + 1];
+        double total = 0.0;
+        for (int index = 0; index < audio.length; index++) {
+            double square = audio[index] * (double) audio[index];
+            power[index / HOP] += square / HOP;
+            total += square;
+        }
+        double mean = total / Math.max(1, audio.length) + 1e-12;
+        for (int frame = 0; frame < power.length; frame++) {
+            power[frame] /= mean;
+        }
+        return power;
     }
 
     /**
