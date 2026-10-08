@@ -78,6 +78,11 @@ public final class GeneratedChartBuilder {
     /** The first measure of notes must start at least this far into the audio. */
     private static final double MIN_LEAD_BEATS = 0.25;
     private static final double METRIC_WEIGHT = 0.3;
+    /** Chord sizes are ranked within this many bars around each note. */
+    static final int CHORD_WINDOW_BARS = 4;
+    static final double CHORD_AROUND_SHARE = 0.5;
+    /** Notes may sit this close outside the rhythmic span (an onset's own timing slack). */
+    private static final double SPAN_MARGIN_SEC = 0.03;
     /** Exact BPM changes (#BPMxx) on this channel. */
     private static final String BPM_CHANGE_CHANNEL = "08";
     /**
@@ -128,6 +133,19 @@ public final class GeneratedChartBuilder {
          */
         default double[] barStarts(double firstBarSec, double barSec, int bars) {
             return null;
+        }
+
+        /**
+         * The audio {start, end} where music plays on the beat; notes stay
+         * inside it. Null to use the whole range.
+         */
+        default double[] rhythmicSpan(double firstBarSec, double barSec, double endSec, double[] barStarts) {
+            return null;
+        }
+
+        /** Whether a sound is only dying away here (no new hit), so no note belongs here. */
+        default boolean fading(double timeSec) {
+            return false;
         }
     }
 
@@ -264,11 +282,13 @@ public final class GeneratedChartBuilder {
             slots++;
         }
 
+        double[] span = onsets.rhythmicSpan(firstSlotSec, measureSec, endSec, barStarts);
         double[] strength = new double[slots];
         double[][] bands = new double[slots][];
         for (int slot = 0; slot < slots; slot++) {
             double time = grid.time(slot);
-            strength[slot] = onsets.strength(time);
+            boolean outside = span != null && (time < span[0] - SPAN_MARGIN_SEC || time > span[1] + SPAN_MARGIN_SEC);
+            strength[slot] = outside || onsets.fading(time) ? 0.0 : onsets.strength(time);
             bands[slot] = onsets.bands(time);
         }
         byte[] tripletTiming = perBar == UNION_SLOTS_PER_BAR
@@ -386,10 +406,9 @@ public final class GeneratedChartBuilder {
         }
         int[] source;
         if (settings.repeatBars()) {
+            // positions always come from the bar's own audio; a repeat only reuses lanes (fills and
+            // variations keep their notes: operator, DOPAMINE lost beats, CANDY POP its drum roll)
             source = repeatSources(bands, slots, perBar);
-            if (settings.followMusic()) {
-                followSourceBars(chosen, strength, source, perBar);
-            }
         } else {
             source = new int[(slots + perBar - 1) / perBar];
             Arrays.fill(source, -1);
@@ -402,7 +421,7 @@ public final class GeneratedChartBuilder {
                 positions.add(slot);
             }
         }
-        int[] sizes = chordSizes(positions, strength, settings);
+        int[] sizes = chordSizes(positions, chordWeight(positions, strength, perBar), settings);
 
         Placement[] bySlot = new Placement[slots];
         List<Placement> placements = new ArrayList<>();
@@ -437,28 +456,6 @@ public final class GeneratedChartBuilder {
             }
         }
         return placements;
-    }
-
-    /**
-     * A repeated bar takes its source bar's positions where its own audio still
-     * hits (at least half the source's strength), and adds a column the source
-     * did not use only for a clearly stronger hit of its own (a new fill).
-     * Identical audio is charted identically even though local normalization
-     * sees different neighbours, and no note lands where this bar is silent.
-     */
-    static void followSourceBars(boolean[] chosen, double[] strength, int[] source, int perBar) {
-        for (int bar = 0; bar < source.length; bar++) {
-            if (source[bar] < 0) {
-                continue;
-            }
-            for (int column = 0; column < perBar && bar * perBar + column < chosen.length; column++) {
-                int own = bar * perBar + column;
-                int original = source[bar] * perBar + column;
-                chosen[own] = chosen[original]
-                        ? strength[own] >= 0.5 * strength[original]
-                        : chosen[own] && strength[own] > 1.5 * strength[original];
-            }
-        }
     }
 
     /** {@link #choose(double[], int, double[])} on a straight 16th grid with note-value weights. */
@@ -878,6 +875,51 @@ public final class GeneratedChartBuilder {
             }
         }
         return best;
+    }
+
+    /**
+     * The weight that ranks chord sizes: each note's onset against the 90th
+     * percentile of its own bar's notes (at least {@link #CHORD_AROUND_SHARE} of
+     * that within {@link #CHORD_WINDOW_BARS} bars). Ranked
+     * song-wide, a dense chorus (whose single onsets measure smaller than a
+     * sparse verse's drums) got the smallest chords (operator: choruses thinner
+     * than A-melodies); locally every section gets its share (per-4-bar mean
+     * chord on 4 songs 1.11-2.87 before, 1.29-1.93 after).
+     */
+    static double[] chordWeight(List<Integer> positions, double[] strength, int perBar) {
+        double[] weight = strength.clone();
+        int window = CHORD_WINDOW_BARS * perBar / 2;
+        int[] slots = positions.stream().mapToInt(Integer::intValue).toArray();
+        for (int index = 0, from = 0, to = 0, barFrom = 0, barTo = 0; index < slots.length; index++) {
+            while (slots[from] < slots[index] - window) {
+                from++;
+            }
+            while (to < slots.length && slots[to] <= slots[index] + window) {
+                to++;
+            }
+            int bar = slots[index] / perBar;
+            while (slots[barFrom] / perBar < bar) {
+                barFrom++;
+            }
+            while (barTo < slots.length && slots[barTo] / perBar <= bar) {
+                barTo++;
+            }
+            // the note's own bar sets the level, so the first bar of a section is not
+            // measured against the louder section before it; the bars around keep a lone
+            // hit in an otherwise quiet bar from always getting the largest chord
+            double reference = Math.max(near(slots, strength, barFrom, barTo),
+                    CHORD_AROUND_SHARE * near(slots, strength, from, to));
+            weight[slots[index]] = strength[slots[index]] / (reference + 1e-9);
+        }
+        return weight;
+    }
+
+    private static double near(int[] slots, double[] strength, int from, int to) {
+        double[] values = new double[to - from];
+        for (int k = from; k < to; k++) {
+            values[k - from] = strength[slots[k]];
+        }
+        return AudioGridEstimator.percentile(values, 90);
     }
 
     /** Ranks the chosen positions by onset strength; stronger positions get larger chords. */

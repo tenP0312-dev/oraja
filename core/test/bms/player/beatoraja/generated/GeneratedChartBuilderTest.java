@@ -253,6 +253,104 @@ class GeneratedChartBuilderTest {
         assertEquals(firstFill, layout(rows, 6), "second fill");
     }
 
+    @Test
+    void aRepeatedBarKeepsItsOwnFill() throws Exception {
+        // the fourth bar repeats the verse except for a 16th roll in its last beat
+        double[][] verse = drumBar(1);
+        double[][] rolled = drumBar(1);
+        for (int slot = 12; slot < 16; slot++) {
+            rolled[slot][1] = Math.max(rolled[slot][1], 1.2);
+        }
+        double[][][] bars = {verse, verse, verse, rolled, verse, verse};
+        List<int[]> repeated = rows(decode(build(new Music(bars), new GeneratedChartBuilder.Settings(3, 1, 3, false), 4)));
+        GeneratedChartBuilder.Settings noRepeat = new GeneratedChartBuilder.Settings(true, 3, 8, false, 1, 3, false);
+        List<int[]> independent = rows(decode(build(new Music(bars), noRepeat, 4)));
+        // repetition only reuses lanes: every bar keeps the positions of its own audio
+        assertEquals(positions(independent), positions(repeated));
+        for (int slot = 3 * 16 + 12; slot < 4 * 16; slot++) {
+            final int roll = slot;
+            assertTrue(repeated.stream().anyMatch(row -> row[0] == roll), "roll 16th without a note at " + slot);
+        }
+    }
+
+    private static List<Integer> positions(List<int[]> rows) {
+        List<Integer> positions = new ArrayList<>();
+        for (int[] row : rows) {
+            positions.add(row[0]);
+        }
+        return positions;
+    }
+
+    @Test
+    void noNotesOutsideTheRhythmicSpanOrWhereASoundDiesAway() throws Exception {
+        double[][][] bars = new double[12][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            bars[bar] = drumBar(7000 + bar);
+        }
+        Music music = new Music(bars);
+        double spanStart = FIRST_BEAT + 2 * 4 * BEAT;
+        double spanEnd = FIRST_BEAT + 10 * 4 * BEAT;
+        double fadeFrom = FIRST_BEAT + 5 * 4 * BEAT;
+        double fadeTo = FIRST_BEAT + 6 * 4 * BEAT;
+        GeneratedChartBuilder.Onsets limited = new GeneratedChartBuilder.Onsets() {
+            public double strength(double timeSec) {
+                return music.strength(timeSec);
+            }
+
+            public double[] bands(double timeSec) {
+                return music.bands(timeSec);
+            }
+
+            public double[] rhythmicSpan(double firstBarSec, double barSec, double endSec, double[] barStarts) {
+                return new double[] {spanStart, spanEnd};
+            }
+
+            public boolean fading(double timeSec) {
+                return timeSec >= fadeFrom && timeSec < fadeTo;
+            }
+        };
+        List<int[]> rows = rows(decode(GeneratedChartBuilder.build("t", "audio.mp3", BPM, FIRST_BEAT, music.endSec(),
+                limited, new GeneratedChartBuilder.Settings(4, 1, 1, false), 5)));
+        assertFalse(rows.isEmpty());
+        for (int[] row : rows) {
+            int bar = row[0] / 16;
+            assertTrue(row[0] >= 2 * 16 && row[0] <= 10 * 16, "a note outside the rhythmic span at slot " + row[0]);
+            assertNotEquals(5, bar, "a note where the sound dies away at slot " + row[0]);
+        }
+    }
+
+    @Test
+    void aDenseChorusGetsChordsLikeASparseVerse() throws Exception {
+        // verse: few loud drum hits; chorus: twice the hits, each measuring half as strong
+        double[][][] bars = new double[16][][];
+        for (int bar = 0; bar < bars.length; bar++) {
+            double[][] pattern = new double[16][3];
+            boolean chorus = bar >= 8;
+            for (int slot = 0; slot < 16; slot += chorus ? 1 : 2) {
+                pattern[slot][0] = (chorus ? 1.0 : 2.0) * (1.0 + 0.3 * ((slot * 7 + bar * 3) % 5) / 4.0);
+            }
+            bars[bar] = pattern;
+        }
+        List<int[]> rows = rows(decode(build(new Music(bars), new GeneratedChartBuilder.Settings(3, 1, 4, false), 6)));
+        double verse = 0;
+        double chorus = 0;
+        int verseRows = 0;
+        int chorusRows = 0;
+        for (int[] row : rows) {
+            if (row[0] / 16 < 8) {
+                verse += row.length - 1;
+                verseRows++;
+            } else {
+                chorus += row.length - 1;
+                chorusRows++;
+            }
+        }
+        assertTrue(verseRows > 0 && chorusRows > 0);
+        // ranked song-wide the chorus got only single notes (1.0 vs 2.0)
+        assertTrue(chorus / chorusRows >= 0.75 * verse / verseRows,
+                "chorus chords " + chorus / chorusRows + " vs verse " + verse / verseRows);
+    }
+
     private static String layout(List<int[]> rows, int bar) {
         StringBuilder text = new StringBuilder();
         for (int[] row : rows) {

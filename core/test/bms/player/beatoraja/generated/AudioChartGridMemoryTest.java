@@ -15,7 +15,7 @@ class AudioChartGridMemoryTest {
 
     private static AudioGridEstimator.Result result(double bpm, double firstBeat) {
         return new AudioGridEstimator.Result(bpm, firstBeat, 0.0, 200.0, 199.0, 10.0, 0.0, true,
-                List.of(new AudioGridEstimator.Candidate(bpm / 2, 11.0)), new double[10], new double[3][10]);
+                List.of(new AudioGridEstimator.Candidate(bpm / 2, 11.0)), new double[10], new double[3][10], new double[10]);
     }
 
     @Test
@@ -40,7 +40,7 @@ class AudioChartGridMemoryTest {
         assertEquals(86.5, close.octaveAlternative().bpm(), 1e-9);
         AudioGridEstimator.Result far = new AudioGridEstimator.Result(173.0, 0.5, 0.0, 200.0, 199.0, 10.0, 0.0, true,
                 List.of(new AudioGridEstimator.Candidate(86.5, 5.0), new AudioGridEstimator.Candidate(115.3, 9.9)),
-                new double[10], new double[3][10]);
+                new double[10], new double[3][10], new double[10]);
         assertNull(far.octaveAlternative(), "a weak octave or a non-octave candidate is not offered");
     }
 }
