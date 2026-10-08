@@ -20,6 +20,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.106 preserves the 0.4.14.105 internal test lineage and refines
+generated charts: repeated bars keep their own fills, choruses get chords like
+A-melodies, no notes on dying tails, and notes stay within the span where the
+music plays on the beat (a video's talk intro gets none). Plugin 0.0.77 and
+launcher 0.2.29 remain optional. See
+[the test scope](docs/TEST_RELEASE_0.4.14.106.md).
+
 Version 0.4.14.105 preserves the 0.4.14.104 internal test lineage and lets
 generated charts follow a drifting tempo (bands without a click) with exact
 per-bar BPM changes; steady songs keep a constant BPM. Plugin 0.0.77 and
@@ -162,7 +169,7 @@ indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
 0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
 tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.105**. Its Windows native-audio
+The current client source version is **0.4.14.106**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
