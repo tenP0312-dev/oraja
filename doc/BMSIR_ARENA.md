@@ -1177,6 +1177,17 @@ depends on the old `dream-pro.info` redirect for this feature. Ranking reads
 request gzip, accept the BMS-IR Shift-JIS payload, cap decompressed data, and
 keep a short per-chart cache.
 
+The dedicated song leaderboard sends the configured `BMS-IR` account ID,
+including when another service is Primary IR. BMS-IR therefore applies that
+account's existing Web receive setting: full, up to 9999 rows, through self,
+or score submission only (no remote ranking rows). The short ranking cache is
+separate for each account; Web setting changes apply after its 30-second expiry.
+Without a valid BMS-IR account, the existing anonymous view remains available.
+These are the existing receive modes, not a new top-1000 or self-neighborhood
+API. Limited responses contain only the selected ranking rows. The generic
+plugin's player totals/lamp distributions describe received rows, and its
+separate full-score rival synchronization remains unchanged.
+
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
 with a grade/class constraint. They are written to
