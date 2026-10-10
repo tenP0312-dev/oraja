@@ -1188,6 +1188,23 @@ API. Limited responses contain only the selected ranking rows. The generic
 plugin's player totals/lamp distributions describe received rows, and its
 separate full-score rival synchronization remains unchanged.
 
+Automatic rankings that load after a song/course remains selected also honor
+the Web receive setting. With the matching BMS-IR plugin/server profile support,
+the worker first checks a small receive-profile identity and restores only a
+matching persistent cache. Settings changes and old unclassified entries fetch
+that selected ranking again; unchanged settings reuse the saved rows, including
+successful zero-row responses. Cache/profile I/O runs off the render thread.
+Real plugin scores with gauge-history records now round-trip through the cache.
+Other IRs and older plugins/servers retain their existing cache behavior.
+Profile checks are reused for one minute in the plugin; in-memory rankings keep
+the existing ten-minute refresh interval (one minute for an empty result, ten
+seconds after failure), plus the five-second selection debounce. Changing a Web
+setting therefore applies on the next scheduled refresh or after restarting.
+Failed reads keep the last successful data as an offline fallback, without
+marking its receive setting current. The normal separate rival synchronization
+is unchanged. `full` still retrieves every row; limited modes retain the current
+received-row statistics rather than adding a full-population summary API.
+
 When `BMS-IR段位をローカル同期する` is enabled (the default), a successful
 table fetch from an exactly named `BMS-IR` Primary IR extracts only courses
 with a grade/class constraint. They are written to
