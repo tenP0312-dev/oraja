@@ -194,6 +194,13 @@ public class Config implements Validatable {
 	 */
 	private boolean timingDiagnostics = false;
 
+    private String bgaQualityMode = "BALANCED";
+    private boolean bgaAsyncPipeline = true;
+    private int bgaMaxFps, bgaMaxWidth, bgaMaxHeight, bgaDecodedQueueLength;
+    private int bgaPreloadWindowMs = -1, bgaPreloadResourceCount = -1;
+    private int bgaMaxActiveDecoders = 2, bgaNativeMemoryBudgetMb = 128;
+    private boolean bgaDropLateFrames = true, bgaShowPerformanceStats;
+
 	private boolean updatesong = false;
 
 	/** Whether song database updates scan BMS/BMSON charts in ZIP/RAR files. */
@@ -425,6 +432,36 @@ public class Config implements Validatable {
 	public void setBga(int bga) {
 		this.bga = bga;
 	}
+
+    public bms.player.beatoraja.play.bga.BgaQualityProfile.Mode getBgaQualityMode() {
+        try { return bms.player.beatoraja.play.bga.BgaQualityProfile.Mode.valueOf(bgaQualityMode); }
+        catch (IllegalArgumentException | NullPointerException ignored) {
+            return bms.player.beatoraja.play.bga.BgaQualityProfile.Mode.BALANCED;
+        }
+    }
+    public void setBgaQualityMode(bms.player.beatoraja.play.bga.BgaQualityProfile.Mode mode) { bgaQualityMode = mode == null ? "BALANCED" : mode.name(); }
+    public boolean isBgaAsyncPipeline() { return bgaAsyncPipeline; }
+    public void setBgaAsyncPipeline(boolean value) { bgaAsyncPipeline = value; }
+    public int getBgaMaxFps() { return bgaMaxFps; }
+    public void setBgaMaxFps(int value) { bgaMaxFps = value; }
+    public int getBgaMaxWidth() { return bgaMaxWidth; }
+    public void setBgaMaxWidth(int value) { bgaMaxWidth = value; }
+    public int getBgaMaxHeight() { return bgaMaxHeight; }
+    public void setBgaMaxHeight(int value) { bgaMaxHeight = value; }
+    public int getBgaPreloadWindowMs() { return bgaPreloadWindowMs; }
+    public void setBgaPreloadWindowMs(int value) { bgaPreloadWindowMs = value; }
+    public int getBgaPreloadResourceCount() { return bgaPreloadResourceCount; }
+    public void setBgaPreloadResourceCount(int value) { bgaPreloadResourceCount = value; }
+    public int getBgaDecodedQueueLength() { return bgaDecodedQueueLength; }
+    public void setBgaDecodedQueueLength(int value) { bgaDecodedQueueLength = value; }
+    public boolean isBgaDropLateFrames() { return bgaDropLateFrames; }
+    public void setBgaDropLateFrames(boolean value) { bgaDropLateFrames = value; }
+    public int getBgaMaxActiveDecoders() { return bgaMaxActiveDecoders; }
+    public void setBgaMaxActiveDecoders(int value) { bgaMaxActiveDecoders = value; }
+    public int getBgaNativeMemoryBudgetMb() { return bgaNativeMemoryBudgetMb; }
+    public void setBgaNativeMemoryBudgetMb(int value) { bgaNativeMemoryBudgetMb = value; }
+    public boolean isBgaShowPerformanceStats() { return bgaShowPerformanceStats; }
+    public void setBgaShowPerformanceStats(boolean value) { bgaShowPerformanceStats = value; }
 
 	public boolean isTimingDiagnostics() {
 		return timingDiagnostics;
@@ -1014,6 +1051,15 @@ public class Config implements Validatable {
 
 		bga = MathUtils.clamp(bga, 0, 2);
 		bgaExpand = MathUtils.clamp(bgaExpand, 0, 2);
+        bgaQualityMode = getBgaQualityMode().name();
+        if (bgaMaxFps != 0 && bgaMaxFps != 15 && bgaMaxFps != 24 && bgaMaxFps != 30 && bgaMaxFps != 60) bgaMaxFps = 0;
+        bgaMaxWidth = MathUtils.clamp(bgaMaxWidth, 0, 7680);
+        bgaMaxHeight = MathUtils.clamp(bgaMaxHeight, 0, 4320);
+        bgaPreloadWindowMs = MathUtils.clamp(bgaPreloadWindowMs, -1, 2000);
+        bgaPreloadResourceCount = MathUtils.clamp(bgaPreloadResourceCount, -1, 3);
+        bgaDecodedQueueLength = MathUtils.clamp(bgaDecodedQueueLength, 0, 4);
+        bgaMaxActiveDecoders = MathUtils.clamp(bgaMaxActiveDecoders, 1, 3);
+        bgaNativeMemoryBudgetMb = MathUtils.clamp(bgaNativeMemoryBudgetMb, 16, 512);
 		if (ipfsurl == null) {
 			ipfsurl = "https://gateway.ipfs.io/";
 		}
