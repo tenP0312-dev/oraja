@@ -482,7 +482,10 @@ feel remains a final manual acceptance item before merge or distribution.
 Play-skin previews now expose the synthetic session as ordinary play, include
 a silent representative BGA, and drive gauge-increase and gauge-max timers.
 Skins such as WMII can therefore construct their normal-play score graph and
-BGA frame and animate gauge effects without leaving Skin Select.
+BGA frame and animate gauge effects without leaving Skin Select. Falling notes
+now use the synthetic PLAY timer's elapsed time, so they continue from the
+chart start after every preview loop while untimed skin animations still
+rewind.
 
 The current development source separates Arena play cursor visibility from
 pointer capture. When `Show cursor during play` is off, the cursor becomes
