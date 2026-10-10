@@ -61,7 +61,7 @@ public class LeaderBoardBar extends DirectoryBar {
 		// NOTE: For further devs, the leaderboard's children is sorted by 'exscore', if you want to implement a
 		// different sort strategy, you need to change two 'fromIRScoreData' implementation
 		Pair<IRScoreData, LeaderboardEntry[]> scores = LR2IRAccessor.getScoreData(
-				new IRChartData(songData)
+				new IRChartData(songData), selector.main.getPlayerConfig().getIrconfig()
 		);
 		IRScoreData localScore = scores.getKey();
 		LeaderboardEntry[] scoreData = scores.getValue();
