@@ -59,6 +59,12 @@ public interface IRConnection {
 
 	public IRResponse<IRScoreData[]> getCoursePlayData(IRPlayerData player, IRCourseData course);
 
+	/** Optional lightweight receive settings; null means unsupported by this IR. */
+	default IRResponse<String> getRankingCacheScope() { return null; }
+
+	/** Scope actually used for this thread's last successful ranking response. */
+	default String getRankingResponseCacheScope() { return null; }
+
 	/**
 	 * スコアデータを送信する
 	 * 
