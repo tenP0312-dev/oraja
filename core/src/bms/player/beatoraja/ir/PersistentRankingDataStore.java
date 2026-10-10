@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.SerializationException;
 
 import bms.model.BMSDecoder;
@@ -37,6 +38,33 @@ public final class PersistentRankingDataStore {
         json.setIgnoreUnknownFields(true);
         json.setOutputType(JsonWriter.OutputType.json);
         json.setUsePrototypes(false);
+        // IRGaugeHistory is a record, so the default no-arg JSON reader cannot restore it.
+        json.setSerializer(IRGaugeHistory.class, new Json.Serializer<IRGaugeHistory>() {
+            public void write(Json writer, IRGaugeHistory history, Class knownType) {
+                writer.writeObjectStart();
+                writeGauge(writer, "easy", history.easy()); writeGauge(writer, "groove", history.groove());
+                writeGauge(writer, "hard", history.hard()); writeGauge(writer, "exhard", history.exhard());
+                writer.writeObjectEnd();
+            }
+            public IRGaugeHistory read(Json reader, JsonValue value, Class type) {
+                return new IRGaugeHistory(readGauge(value, "easy"), readGauge(value, "groove"),
+                        readGauge(value, "hard"), readGauge(value, "exhard"));
+            }
+        });
+    }
+
+    private static void writeGauge(Json writer, String name, java.util.List<Float> values) {
+        writer.writeArrayStart(name);
+        if (values != null) for (Float value : values) writer.writeValue(value, Float.class);
+        writer.writeArrayEnd();
+    }
+
+    private static java.util.List<Float> readGauge(JsonValue history, String name) {
+        java.util.ArrayList<Float> values = new java.util.ArrayList<>();
+        JsonValue channel = history.get(name);
+        if (channel != null) for (JsonValue value : channel)
+            values.add(value.isObject() ? value.getFloat("value") : value.asFloat());
+        return values;
     }
 
     public synchronized IRScoreData[] load(
@@ -78,6 +106,29 @@ public final class PersistentRankingDataStore {
         return load(playerPath, playerId, ir, context, (Object) targetIdentity);
     }
 
+    public IRScoreData[] loadScoped(String playerPath, String playerId, IRStatus ir,
+            IRRankingContext context, Object target, String scope) {
+        return load(playerPath, playerId, ir, context, scopedTarget(target, scope));
+    }
+
+    /** Offline fallback only: never treat this result as a verified current profile. */
+    public synchronized IRScoreData[] loadLastGood(String playerPath, String playerId, IRStatus ir,
+            IRRankingContext context, Object target) {
+        String baseKey = cacheKey(ir, context, target);
+        if (baseKey == null) return null;
+        Entry latest = null;
+        for (Entry entry : readOrEmpty(cachePath(playerPath, playerId)).entries) {
+            if (entry != null && (baseKey.equals(entry.baseKey) || baseKey.equals(entry.key))
+                    && valid(entry.scores) && (latest == null || entry.savedAt > latest.savedAt)) latest = entry;
+        }
+        return latest == null ? null : Arrays.stream(latest.scores).map(ScoreEntry::toScore).toArray(IRScoreData[]::new);
+    }
+
+    private static Object scopedTarget(Object target, String scope) {
+        String identity = targetIdentity(target);
+        return identity.isEmpty() || scope == null || scope.isEmpty() ? target : identity + "\nreceive:" + scope;
+    }
+
     public synchronized boolean contains(String playerPath, String playerId, IRStatus ir,
             IRRankingContext context, String targetIdentity) {
         return load(playerPath, playerId, ir, context, targetIdentity) != null;
@@ -86,19 +137,28 @@ public final class PersistentRankingDataStore {
     public synchronized void save(
             String playerPath, String playerId, IRStatus ir, IRRankingContext context,
             Object target, IRScoreData[] scores) {
+        saveScoped(playerPath, playerId, ir, context, target, "", scores);
+    }
+
+    public synchronized void saveScoped(
+            String playerPath, String playerId, IRStatus ir, IRRankingContext context,
+            Object target, String scope, IRScoreData[] scores) {
         if (scores == null || scores.length > 100_000) return;
         for (IRScoreData score : scores) {
             if (score == null || score.clear == null || score.player == null
                     || score.clear.id < 0 || score.clear.id >= 11) return;
         }
-        String key = cacheKey(ir, context, target);
-        if (key == null) return;
+        String baseKey = cacheKey(ir, context, target);
+        String key = cacheKey(ir, context, scopedTarget(target, scope));
+        if (key == null || baseKey == null) return;
         Path path = cachePath(playerPath, playerId);
         CacheFile file = readOrEmpty(path);
         if (file.entries == null) file.entries = new java.util.ArrayList<>();
-        file.entries.removeIf(entry -> entry == null || key.equals(entry.key));
+        file.entries.removeIf(entry -> entry == null || key.equals(entry.key)
+                || baseKey.equals(entry.key) || baseKey.equals(entry.baseKey));
         Entry entry = new Entry();
         entry.key = key;
+        entry.baseKey = baseKey;
         entry.savedAt = System.currentTimeMillis();
         entry.scores = Arrays.stream(scores).map(ScoreEntry::new).toArray(ScoreEntry[]::new);
         file.entries.add(entry);
@@ -205,6 +265,7 @@ public final class PersistentRankingDataStore {
 
     public static class Entry {
         public String key;
+        public String baseKey;
         public long savedAt;
         public ScoreEntry[] scores;
     }

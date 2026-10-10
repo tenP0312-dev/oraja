@@ -1,6 +1,9 @@
 package bms.player.beatoraja.modmenu;
 
 import bms.model.Mode;
+import bms.player.beatoraja.AudioConfig;
+import bms.player.beatoraja.AudioConfig.EqualizerMode;
+import bms.player.beatoraja.audio.PortAudioDriver;
 import bms.player.beatoraja.Config;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.PlayConfig;
@@ -66,6 +69,7 @@ public class MiscSettingMenu {
 
         if (ImGui.begin(t("その他設定", "Misc Settings") + "###misc-settings",
                 showMiscSetting, ImGuiWindowFlags.AlwaysAutoResize)) {
+            renderEqualizer();
             if (ImGui.combo(t("通知位置", "Notification Position"),
                     NOTIFICATION_POSITION, ImGuiNotify.notificationPositions())) {
                 ImGuiNotify.setNotificationPosition(NOTIFICATION_POSITION.get());
@@ -126,6 +130,55 @@ public class MiscSettingMenu {
         MiscSettingMenu.main = main;
         MiscSettingMenu.config = main.getConfig();
         MiscSettingMenu.SELECTED_PLAYER = new ImInt(Arrays.asList(players).indexOf(config.getPlayername()));
+    }
+
+    private static void renderEqualizer() {
+        if (!ImGui.collapsingHeader(t("出力イコライザー", "Output Equalizer") + "###output-equalizer")) return;
+        AudioConfig audio = config.getAudioConfig();
+        ImInt modeIndex = new ImInt(audio.getEqualizerMode().ordinal());
+        boolean changed = ImGui.combo(t("方式", "Mode") + "##eq-mode", modeIndex,
+                new String[]{"OFF", t("Switch方式（4バンド）", "Switch (4 bands)"),
+                        t("LR2風（7バンド）", "LR2-style (7 bands)")});
+        if (changed) audio.setEqualizerMode(EqualizerMode.values()[modeIndex.get()]);
+        if (main.getAudioProcessor() instanceof PortAudioDriver) {
+            ImGui.textWrapped(t("変更は再起動なしで反映されます。", "Changes apply without restarting."));
+        } else {
+            ImGui.textWrapped(t("現在の音声出力はEQ未対応です。設定は保存できます。",
+                    "The current audio output does not support EQ. Settings can still be saved."));
+        }
+        EqualizerMode mode = audio.getEqualizerMode();
+        ImGui.beginDisabled(mode == EqualizerMode.OFF);
+        double[] gains = mode == EqualizerMode.SWITCH
+                ? audio.getSwitchEqualizerGains() : audio.getLr2EqualizerGains();
+        double[] frequencies = mode.getFrequencies();
+        boolean bandsChanged = false;
+        for (int i = 0; i < frequencies.length; i++) {
+            float[] gain = {(float) gains[i]};
+            if (ImGui.sliderFloat((int) frequencies[i] + " Hz##eq-band-" + i, gain, -12, 12, "%.1f dB")) {
+                gains[i] = Math.round(gain[0] * 2) / 2.0;
+                bandsChanged = true;
+            }
+        }
+        if (ImGui.button(t("バンドを0 dBに戻す", "Reset bands to 0 dB") + "##eq-reset")) {
+            Arrays.fill(gains, 0);
+            bandsChanged = true;
+        }
+        if (bandsChanged) {
+            if (mode == EqualizerMode.SWITCH) audio.setSwitchEqualizerGains(gains);
+            else audio.setLr2EqualizerGains(gains);
+            changed = true;
+        }
+        float[] preamp = {(float) audio.getEqualizerPreamp()};
+        if (ImGui.sliderFloat(t("プリアンプ", "Preamp") + "##eq-preamp", preamp, -24, 0, "%.1f dB")) {
+            audio.setEqualizerPreamp(Math.round(preamp[0] * 2) / 2.0);
+            changed = true;
+        }
+        ImGui.endDisabled();
+        ImGui.textWrapped(t("音が歪む場合はプリアンプを下げてください。Ctrl+クリックで数値入力できます。",
+                "Lower the preamp if audio distorts. Ctrl+click a slider to enter a value."));
+        if (changed) main.getAudioProcessor().updateOutputEqualizer(audio);
+        if (ImGui.button(t("EQ設定を保存", "Save EQ settings") + "##eq-save")) main.saveConfig();
+        ImGui.separator();
     }
 
     /**

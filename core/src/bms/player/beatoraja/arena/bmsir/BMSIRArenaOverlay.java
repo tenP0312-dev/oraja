@@ -232,6 +232,7 @@ public final class BMSIRArenaOverlay {
         renderModeBanner();
         renderPhaseBanner(false);
         renderPinnedRoomReady(config);
+		bms.player.beatoraja.modmenu.FunctionKeyMenu.renderOpenButton();
 		renderSpeedBlock(false);
         ImGui.separator();
         if (ImGui.beginChild("##bmsir-arena-scroll-content", 0, 0, false)
@@ -256,6 +257,10 @@ public final class BMSIRArenaOverlay {
             }
             if (ImGui.beginTabItem(t("マニュアル", "Manual"))) {
                 renderManual();
+                ImGui.endTabItem();
+            }
+            if (ImGui.beginTabItem(t("プロファイル", "Profiles"))) {
+                BMSIRKeyProfilePanel.render(config);
                 ImGui.endTabItem();
             }
             if (ImGui.beginTabItem(t("設定", "Settings"))) {
@@ -836,6 +841,9 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
+        if (!gameplay && !BMSIRArenaClient.isResultState()) {
+            bms.player.beatoraja.modmenu.FunctionKeyMenu.renderOpenButton();
+        }
         renderSpeedBlock(true);
         renderPhaseBanner(true);
         if (BMSIRArenaClient.isFillWaiting()) {

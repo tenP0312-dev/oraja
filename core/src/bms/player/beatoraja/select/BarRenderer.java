@@ -168,7 +168,7 @@ public final class BarRenderer {
 					ba.value = fn.getDisplayBarType();
 					ba.text = fn.getDisplayTextType();
                 } else {
-					ba.value = -1;
+					ba.value = generatedChartBarStyle(sd);
 				}
 			} else {
 				ba.value = -1;
@@ -181,25 +181,8 @@ public final class BarRenderer {
 				// 0:通常 1:新規 2:SongBar(通常) 3:SongBar(新規) 4:FolderBar(通常) 5:FolderBar(新規) 6:TableBar or HashBar
 				// 7:GradeBar(曲所持) 8:(SongBar or GradeBar)(曲未所持) 9:CommandBar or ContainerBar 10:SearchWordBar
 				// 3以降で定義されてなければ0か1を用いる
-				int songstatus = ba.value;
-				if(songstatus >= 2) {
-					songstatus += 4;
-					//定義されてなければ0:通常を用いる
-					if(baro.getText(songstatus) == null) songstatus = 0;
-				} else {
-					if (songstatus == 0) {
-						SongData song = ((SongBar) ba.sd).getSongData();
-						songstatus = song == null || System.currentTimeMillis() / 1000 > song.getAdddate() + 3600 * 24 ? 2 : 3;
-						//定義されてなければ0:通常か1:新規を用いる
-						if(baro.getText(songstatus) == null) songstatus = songstatus == 3 ? 1 : 0;
-					} else {
-						FolderData data = ((FolderBar) ba.sd).getFolderData();
-						songstatus = data == null || System.currentTimeMillis() / 1000 > data.getAdddate() + 3600 * 24 ? 4 : 5;
-						//定義されてなければ0:通常か1:新規を用いる
-						if(baro.getText(songstatus) == null) songstatus = songstatus == 5 ? 1 : 0;
-					}
-				}
-				ba.text = songstatus;
+				ba.text = barTextStatus(ba.sd, ba.value, status -> baro.getText(status) != null,
+						System.currentTimeMillis() / 1000);
 			}
 		}
 	}
@@ -563,4 +546,42 @@ public final class BarRenderer {
 //		cda.write("default", course);
 	}
 
+
+	/**
+	 * Bar style for the generated-chart folder (#436): folders use the folder
+	 * bar and audio files the song bar. Other unknown bars stay hidden (-1).
+	 */
+	static int generatedChartBarStyle(Bar bar) {
+		if (bar instanceof GeneratedAudioFolderBar) {
+			return 1;
+		}
+		if (bar instanceof GeneratedAudioChartBar) {
+			return 0;
+		}
+		return -1;
+	}
+
+	/**
+	 * Text style for a drawn bar. Bars drawn with the song (0) or folder (1)
+	 * style are not always SongBar/FolderBar (generated-chart rows, #442), so
+	 * only those classes get the new/normal distinction; others use normal.
+	 */
+	static int barTextStatus(Bar bar, int value, java.util.function.IntPredicate defined, long nowSeconds) {
+		int songstatus = value;
+		if (songstatus >= 2) {
+			songstatus += 4;
+			//定義されてなければ0:通常を用いる
+			return defined.test(songstatus) ? songstatus : 0;
+		}
+		if (songstatus == 0) {
+			SongData song = bar instanceof SongBar songBar ? songBar.getSongData() : null;
+			songstatus = song == null || nowSeconds > song.getAdddate() + 3600 * 24 ? 2 : 3;
+			//定義されてなければ0:通常か1:新規を用いる
+			return defined.test(songstatus) ? songstatus : songstatus == 3 ? 1 : 0;
+		}
+		FolderData data = bar instanceof FolderBar folderBar ? folderBar.getFolderData() : null;
+		songstatus = data == null || nowSeconds > data.getAdddate() + 3600 * 24 ? 4 : 5;
+		//定義されてなければ0:通常か1:新規を用いる
+		return defined.test(songstatus) ? songstatus : songstatus == 5 ? 1 : 0;
+	}
 }

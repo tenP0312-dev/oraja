@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -75,6 +76,11 @@ class ParallelArenaBuildTest(unittest.TestCase):
         self.assertEqual("built", state["status"])
         self.assertEqual("abcdef1234567890", state["source_commit"])
         self.assertEqual(2, len(state["lanes"]))
+        windows_command = next(lane["command"] for lane in state["lanes"] if lane["lane"] == "windows-x86-64")
+        macos_command = next(lane["command"] for lane in state["lanes"] if lane["lane"] == "macos-aarch64")
+        self.assertNotIn("core:test", macos_command)
+        if os.name != "nt":
+            self.assertEqual(["-x", "core:test"], windows_command[-2:])
         self.assertTrue((output / "artifacts/BMS-IR-Arena-oraja-1.2.3-windows-x86-64.jar").is_file())
         self.assertTrue((output / "logs/macos-aarch64.log").is_file())
         self.assertEqual(
