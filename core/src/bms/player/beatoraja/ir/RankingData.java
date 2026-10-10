@@ -70,6 +70,15 @@ public class RankingData {
 	}
 
 	public void load(MainState mainstate, Object song, IRRankingContext context, boolean forceRefresh) {
+		load(mainstate, song, context, forceRefresh, false);
+	}
+
+	/** Cache/profile I/O runs on the same guarded worker as automatic selection reads. */
+	public void loadForSelection(MainState mainstate, Object song, IRRankingContext context, boolean bypassDisk) {
+		load(mainstate, song, context, true, !bypassDisk);
+	}
+
+	private void load(MainState mainstate, Object song, IRRankingContext context, boolean forceRefresh, boolean restoreDisk) {
 		if(!(song instanceof SongData || song instanceof CourseData)) {
 			return;
 		}		
@@ -92,6 +101,24 @@ public class RankingData {
 					logger.trace("IRランキング取得を設定により省略しました");
 					return;
 				}
+				String identity = cacheIdentity(song, context);
+				IRResponse<String> profile = primary.connection.getRankingCacheScope();
+				if (profile != null && (!profile.isSucceeded() || profile.getData() == null)) {
+					if (!hasCachedScores()) {
+						IRScoreData[] fallback = mainstate.main.getPersistentRankingDataStore().loadLastGood(
+								mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(), primary, context, identity);
+						if (compatibleScores(fallback, context)) restoreCachedScores(fallback);
+					}
+					lastAccessFailed = true;
+					if (!hasCachedScores()) state = FAIL;
+					return;
+				}
+				String scope = profile == null ? "" : profile.getData();
+				if (restoreDisk && !hasCachedScores()) {
+					IRScoreData[] stored = mainstate.main.getPersistentRankingDataStore().loadScoped(
+							mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(), primary, context, identity, scope);
+					if (compatibleScores(stored, context)) { restoreCachedScores(stored); return; }
+				}
 				IRResponse<IRScoreData[]> response = null;
 				if(song instanceof SongData songData) {
 					response = primary.connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
@@ -112,17 +139,18 @@ public class RankingData {
 							.filter(score -> score != null && score.lntype == 0).toArray(IRScoreData[]::new);
 					updateScore(received.clone(), localScore);
 					lastAccessFailed = false;
-					if (received.length > 0) {
-						for (IRStatus connected : ir) {
-							if (connected.config == null || !connected.config.isImportrival()) continue;
-							mainstate.main.getPersistentRankingDataStore().save(
-										mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(),
-									connected, context, cacheIdentity(song, context), received);
-						}
-					}
+					String actualScope = primary.connection.getRankingResponseCacheScope();
+					mainstate.main.getPersistentRankingDataStore().saveScoped(
+							mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(), primary,
+							context, identity, actualScope == null || actualScope.isEmpty() ? scope : actualScope, received);
 					logger.trace("IRからのスコア取得成功 : {}", response.getMessage());
 				} else {
 					logger.warn("IRからのスコア取得失敗 : {}", response == null ? "response unavailable" : response.getMessage());
+					if (!hasCachedScores()) {
+						IRScoreData[] fallback = mainstate.main.getPersistentRankingDataStore().loadLastGood(
+								mainstate.main.getPlayerPath(), mainstate.main.getPlayerConfig().getId(), primary, context, identity);
+						if (compatibleScores(fallback, context)) restoreCachedScores(fallback);
+					}
 					lastAccessFailed = true;
 					if (scores == null) state = FAIL;
 				}
@@ -144,6 +172,11 @@ public class RankingData {
 		irprocess.setDaemon(true);
 		irprocess.start();
 
+	}
+
+	private static boolean compatibleScores(IRScoreData[] scores, IRRankingContext context) {
+		return scores != null && (!context.forceLn() || Arrays.stream(scores)
+				.allMatch(score -> score != null && score.lntype == 0));
 	}
 	
 	public synchronized void updateScore(IRScoreData[] scores, ScoreData localscore) {

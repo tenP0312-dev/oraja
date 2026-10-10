@@ -290,6 +290,19 @@ public final class PlayerConfig {
 	private boolean bmsirTableLevelDisplayEnabled = true;
 	/** Hide unavailable song/course bars only while browsing difficulty tables. */
 	private boolean bmsirHideMissingTableSongs = false;
+	/** Keep songs/charts marked as ignored (invisible) in ordinary Music Select lists. */
+	private boolean bmsirKeepIgnoredVisible = true;
+	/** Last settings for charts generated from audio (#433/#436). */
+	/** Note amount 1 (light) to 4 (dense), 3 = as the music, used while following the music. */
+	private int generatedChartDensity = 3;
+	/** Place notes where the music hits; off = fixed {@link #generatedChartDivision} grid. */
+	private boolean generatedChartFollowMusic = true;
+	private int generatedChartDivision = 8;
+	/** Reuse an earlier bar's layout for a repeated phrase. */
+	private boolean generatedChartRepeatBars = true;
+	private int generatedChartMinChord = 1;
+	private int generatedChartMaxChord = 2;
+	private boolean generatedChartScratch = false;
 	/** Apply a per-player allow-list to physical root folders in Music Select. */
 	private boolean bmsirPhysicalFolderFilterEnabled = false;
 	/** Configured BMS roots that remain visible while the physical-folder filter is ON. */
@@ -835,6 +848,69 @@ public final class PlayerConfig {
 
 	public void setBmsirHideMissingTableSongs(boolean enabled) {
 		bmsirHideMissingTableSongs = enabled;
+	}
+
+	public boolean isBmsirKeepIgnoredVisible() {
+		return bmsirKeepIgnoredVisible;
+	}
+
+	public void setBmsirKeepIgnoredVisible(boolean enabled) {
+		bmsirKeepIgnoredVisible = enabled;
+	}
+
+	public int getGeneratedChartDensity() {
+		return generatedChartDensity;
+	}
+
+	public void setGeneratedChartDensity(int density) {
+		generatedChartDensity = Math.max(1, Math.min(4, density));
+	}
+
+	public boolean isGeneratedChartFollowMusic() {
+		return generatedChartFollowMusic;
+	}
+
+	public void setGeneratedChartFollowMusic(boolean followMusic) {
+		generatedChartFollowMusic = followMusic;
+	}
+
+	public int getGeneratedChartDivision() {
+		return generatedChartDivision;
+	}
+
+	public void setGeneratedChartDivision(int division) {
+		generatedChartDivision = division == 4 || division == 12 || division == 16 || division == 24 ? division : 8;
+	}
+
+
+	public boolean isGeneratedChartRepeatBars() {
+		return generatedChartRepeatBars;
+	}
+
+	public void setGeneratedChartRepeatBars(boolean repeatBars) {
+		generatedChartRepeatBars = repeatBars;
+	}
+
+	public int getGeneratedChartMinChord() {
+		return generatedChartMinChord;
+	}
+
+	public int getGeneratedChartMaxChord() {
+		return generatedChartMaxChord;
+	}
+
+	/** Keeps 1 <= min <= max <= 7. */
+	public void setGeneratedChartChords(int min, int max) {
+		generatedChartMinChord = Math.max(1, Math.min(7, min));
+		generatedChartMaxChord = Math.max(generatedChartMinChord, Math.min(7, max));
+	}
+
+	public boolean isGeneratedChartScratch() {
+		return generatedChartScratch;
+	}
+
+	public void setGeneratedChartScratch(boolean scratch) {
+		generatedChartScratch = scratch;
 	}
 
 	public boolean isBmsirPhysicalFolderFilterEnabled() {
@@ -1854,6 +1930,9 @@ public final class PlayerConfig {
 
 	public void validate() {
 		getModMenuSettings().normalize();
+		setGeneratedChartDensity(generatedChartDensity);
+		setGeneratedChartDivision(generatedChartDivision);
+		setGeneratedChartChords(generatedChartMinChord, generatedChartMaxChord);
 		setBmsirStartButtonAction(bmsirStartButtonAction);
 		setBmsirSelectButtonAction(bmsirSelectButtonAction);
 		setBmsirSelectDifficultyDisplay(bmsirSelectDifficultyDisplay);

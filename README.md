@@ -8,6 +8,11 @@ Arena oraja client. It is based on
 [LR2oraja Endless Dream](https://github.com/Catizard/lr2oraja-endlessdream)
 and ultimately on [beatoraja](https://github.com/exch-bms2/beatoraja).
 
+選曲画面のF5メニューとArenaオーバーレイ（通常／コンパクト）に
+「ファンクションキーメニューを開く」があります。Fキーとテンキーの機能を
+名前で選べるため、キーへの割り当てなしで操作できます。
+詳細と実機確認項目は [機能一覧メニュー](docs/FUNCTION_KEY_MENU.md) を参照してください。
+
 音声設定には独自DSPのSwitch方式4バンド／LR2風7バンドEQがあります。
 PortAudio／ASIO対応で、初期OFF、方式ごとのゲイン保存、プリアンプ調整が可能です。
 OpenALでは未対応と表示し、設定値を保持します。変更は本体の再起動後に適用します。

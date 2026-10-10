@@ -2,6 +2,7 @@ package bms.player.beatoraja.ir;
 
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.ScoreDatabaseAccessor;
+import bms.player.beatoraja.IRConfig;
 import bms.player.beatoraja.modmenu.ImGuiNotify;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
@@ -20,6 +21,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.zip.GZIPInputStream;
 
@@ -188,15 +190,24 @@ public class LR2IRAccessor {
 	 * @return A pair, first is local score and second is scores from LR2IR. The first can be null.
 	 */
 	public static Pair<IRScoreData, LeaderboardEntry[]> getScoreData(IRChartData chart) {
+		return getScoreData(chart, null);
+	}
+
+	public static Pair<IRScoreData, LeaderboardEntry[]> getScoreData(IRChartData chart, IRConfig[] configurations) {
+		return getScoreData(chart, configurations, form -> makePOSTRequest("/getrankingxml.cgi", form));
+	}
+
+	static Pair<IRScoreData, LeaderboardEntry[]> getScoreData(IRChartData chart, IRConfig[] configurations,
+			Function<String, String> fetchRanking) {
 		if (chart.md5 == null || chart.md5.isEmpty()) {
 			return new Pair<>(null, new LeaderboardEntry[0]);
 		}
-		LR2IRSongData lr2IRSongData = new LR2IRSongData(chart.md5, "0");
+		LR2IRSongData lr2IRSongData = new LR2IRSongData(chart.md5, bmsirViewerId(configurations));
 		try {
             String requestURL = lr2IRSongData.toUrlEncodedForm();
             LeaderboardEntry[] scoreData = cachedRanking(requestURL);
             if (scoreData == null) {
-                String res = makePOSTRequest("/getrankingxml.cgi", requestURL);
+                String res = fetchRanking.apply(requestURL);
 				Ranking ranking = (Ranking) convertXMLToObject(
 						rankingXml(res),
 						Ranking.class
@@ -224,6 +235,23 @@ public class LR2IRAccessor {
 			ImGuiNotify.error("Failed to get score data from BMS-IR: " + e.getMessage());
 			return new Pair<>(null, new LeaderboardEntry[0]);
 		}
+	}
+
+	/** Use only the BMS-IR account, even when a different service is Primary IR. */
+	static String bmsirViewerId(IRConfig[] configurations) {
+		if (configurations != null) {
+			for (IRConfig config : configurations) {
+				if (config == null || !"BMS-IR".equals(config.getIrname())) continue;
+				try {
+					String id = config.getUserid();
+					int playerId = id == null ? 0 : Integer.parseInt(id.trim());
+					if (playerId > 0) return Integer.toString(playerId);
+				} catch (NumberFormatException ignored) {
+					// An absent/invalid BMS-IR account keeps anonymous browsing.
+				}
+			}
+		}
+		return "0";
 	}
 
     public static LR2GhostData getGhostData(String MD5, long scoreId) {

@@ -16,6 +16,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install audio-analysis test dependencies
+        run: sudo apt-get install -y --no-install-recommends python3-numpy ffmpeg
+
       - name: Test release and native-audio validators
         run: python3 -m unittest discover -s tools -p 'test_*.py' -v
 
