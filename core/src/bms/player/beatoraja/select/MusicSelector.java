@@ -459,19 +459,7 @@ public final class MusicSelector extends MainState {
 					}
 					irc.discardIncompatibleScores(rankingContext);
 					if (!irc.isAccessInFlight()) {
-						boolean restored = false;
-						if (!rankingRefreshPending && irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
-							for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
-								bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
-										main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
-										rankingContext, RankingData.cacheIdentity(song, rankingContext));
-								if (stored != null && (!rankingContext.forceLn() || java.util.Arrays.stream(stored)
-										.allMatch(score -> score != null && score.lntype == 0))) {
-									irc.restoreCachedScores(stored); restored = true; break;
-								}
-							}
-						}
-						if (!restored) irc.load(this, song, rankingContext, true);
+						irc.loadForSelection(this, song, rankingContext, rankingRefreshPending);
 					}
 				}
 	            currentir = irc;
@@ -486,19 +474,7 @@ public final class MusicSelector extends MainState {
 				}
 				irc.discardIncompatibleScores(rankingContext);
 				if (!irc.isAccessInFlight()) {
-					boolean restored = false;
-					if (!rankingRefreshPending && irc.getState() == RankingData.NONE && main.getIRStatus() != null) {
-						for (bms.player.beatoraja.MainController.IRStatus connected : main.getIRStatus()) {
-							bms.player.beatoraja.ir.IRScoreData[] stored = main.getPersistentRankingDataStore().load(
-									main.getPlayerPath(), main.getPlayerConfig().getId(), connected,
-									rankingContext, RankingData.cacheIdentity(course, rankingContext));
-								if (stored != null && (!rankingContext.forceLn() || java.util.Arrays.stream(stored)
-										.allMatch(score -> score != null && score.lntype == 0))) {
-									irc.restoreCachedScores(stored); restored = true; break;
-								}
-						}
-					}
-					if (!restored) irc.load(this, course, rankingContext, true);
+					irc.loadForSelection(this, course, rankingContext, rankingRefreshPending);
 				}
 	            currentir = irc;
 				rankingRefreshPending = false;

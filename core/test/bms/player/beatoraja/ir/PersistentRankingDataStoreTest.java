@@ -18,6 +18,43 @@ class PersistentRankingDataStoreTest {
     @TempDir Path directory;
 
     @Test
+    void realPluginScoreGaugeRecordSurvivesCacheRoundTrip() {
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        IRStatus status = status("BMS-IR", "190031");
+        IRRankingContext context = new IRRankingContext(0, false);
+        SongData chart = chartTarget("f".repeat(64));
+        bms.player.beatoraja.ScoreData remote = new bms.player.beatoraja.ScoreData();
+        remote.setPlayer("fixture"); remote.setClear(ClearType.Hard.id); remote.setEpg(123);
+        IRScoreData score = new IRScoreData(remote);
+        score.gaugeHistory = new IRGaugeHistory(java.util.List.of(100f, 90f), java.util.List.of(80f),
+                java.util.List.of(60f), java.util.List.of(40f));
+        store.save(directory.toString(), "player", status, context, chart, new IRScoreData[]{score});
+        IRScoreData restored = store.load(directory.toString(), "player", status, context, chart)[0];
+        assertEquals(score.gaugeHistory, restored.gaugeHistory);
+        assertEquals(246, restored.getExscore());
+    }
+
+    @Test
+    void previousDefaultWriterEmptyGaugeRecordDoesNotForceRefetch() throws Exception {
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        IRStatus status = status("BMS-IR", "190031");
+        IRRankingContext context = new IRRankingContext(0, false);
+        SongData chart = chartTarget("f".repeat(64));
+        store.save(directory.toString(), "player", status, context, chart,
+                new IRScoreData[]{score("fixture", 100, ClearType.Hard)});
+        Path path = directory.resolve("player/ir-ranking-cache.json");
+        com.badlogic.gdx.utils.Json oldJson = new com.badlogic.gdx.utils.Json();
+        oldJson.setUsePrototypes(false);
+        PersistentRankingDataStore.CacheFile oldFile = oldJson.fromJson(PersistentRankingDataStore.CacheFile.class, Files.readString(path));
+        oldFile.entries.get(0).scores[0].gaugeHistory = IRGaugeHistory.fromGaugeLog(null);
+        Files.writeString(path, oldJson.toJson(oldFile));
+        IRScoreData restored = store.load(directory.toString(), "player", status, context, chart)[0];
+        assertEquals(200, restored.getExscore());
+        // The old generic writer omitted record components; missing history stays empty.
+        assertEquals(new IRGaugeHistory(java.util.List.of(), java.util.List.of(), java.util.List.of(), java.util.List.of()), restored.gaugeHistory);
+    }
+
+    @Test
     void persistsAndScopesRankingByEndpointAccountAndTarget() {
         PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRStatus first = status("https://ir-one.example", "account-a");
