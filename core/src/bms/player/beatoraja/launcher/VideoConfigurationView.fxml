@@ -101,6 +101,26 @@
         <Label text="%HAND_CAMERA_MIRROR" labelFor="$handCameraMirror" GridPane.rowIndex="21" styleClass="optionLabel"/>
         <CheckBox fx:id="handCameraBgaFrame" GridPane.rowIndex="22" GridPane.columnIndex="1"/>
         <Label text="%HAND_CAMERA_BGA_FRAME" labelFor="$handCameraBgaFrame" GridPane.rowIndex="22" styleClass="optionLabel"/>
+        <NumericSpinner fx:id="handCameraOffsetX" editable="true" GridPane.rowIndex="23" GridPane.columnIndex="1">
+            <valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" min="-100" max="100"/></valueFactory>
+        </NumericSpinner>
+        <Label text="%HAND_CAMERA_OFFSET_X" labelFor="$handCameraOffsetX" GridPane.rowIndex="23" styleClass="optionLabel"/>
+        <NumericSpinner fx:id="handCameraOffsetY" editable="true" GridPane.rowIndex="24" GridPane.columnIndex="1">
+            <valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" min="-100" max="100"/></valueFactory>
+        </NumericSpinner>
+        <Label text="%HAND_CAMERA_OFFSET_Y" labelFor="$handCameraOffsetY" GridPane.rowIndex="24" styleClass="optionLabel"/>
+        <NumericSpinner fx:id="handCameraZoom" editable="true" GridPane.rowIndex="25" GridPane.columnIndex="1">
+            <valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="100" min="100" max="400"/></valueFactory>
+        </NumericSpinner>
+        <Label text="%HAND_CAMERA_ZOOM" labelFor="$handCameraZoom" GridPane.rowIndex="25" styleClass="optionLabel"/>
+        <NumericSpinner fx:id="handCameraFocusX" editable="true" GridPane.rowIndex="26" GridPane.columnIndex="1">
+            <valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="50" min="0" max="100"/></valueFactory>
+        </NumericSpinner>
+        <Label text="%HAND_CAMERA_FOCUS_X" labelFor="$handCameraFocusX" GridPane.rowIndex="26" styleClass="optionLabel"/>
+        <NumericSpinner fx:id="handCameraFocusY" editable="true" GridPane.rowIndex="27" GridPane.columnIndex="1">
+            <valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="50" min="0" max="100"/></valueFactory>
+        </NumericSpinner>
+        <Label text="%HAND_CAMERA_FOCUS_Y" labelFor="$handCameraFocusY" GridPane.rowIndex="27" styleClass="optionLabel"/>
 
         <stylesheets>
             <URL value="@LauncherStyle.css"/>

@@ -1370,7 +1370,18 @@ public class PlayConfigurationView implements Initializable {
                         sidebarSettingRow(videoTab, "handCameraBgaFrame", "BGA枠に表示", "Show in the BGA frame",
                                 "カメラ部品のないスキンで、プレイ画面のBGA枠にBGAの代わりに表示します。映らない間と、カメラ部品のあるスキンではBGAを表示します。",
                                 "Show the camera in the play skin's BGA frame instead of the BGA for skins without a camera part. "
-                                        + "The BGA is shown while the camera is unavailable and for skins with a camera part.")
+                                        + "The BGA is shown while the camera is unavailable and for skins with a camera part."),
+                        sidebarSettingRow(videoTab, "handCameraOffsetX", "表示位置X（%）", "Display offset X (%)",
+                                "表示枠の幅に対する左右のずらし量です。正で右。ゲーム中はF5でも変更できます。",
+                                "Horizontal shift in % of the display width; positive moves right. Also in the F5 menu."),
+                        sidebarSettingRow(videoTab, "handCameraOffsetY", "表示位置Y（%）", "Display offset Y (%)",
+                                "表示枠の高さに対する上下のずらし量です。正で下。", "Vertical shift in % of the display height; positive moves down."),
+                        sidebarSettingRow(videoTab, "handCameraZoom", "拡大率（%）", "Zoom (%)",
+                                "100で全体、200で中央付近の半分を拡大します。", "100 shows the whole image; 200 shows half of it, enlarged."),
+                        sidebarSettingRow(videoTab, "handCameraFocusX", "切り抜き中心X（%）", "Crop centre X (%)",
+                                "拡大したときに映す場所の左右位置です。50が中央。", "Horizontal centre of the zoomed area; 50 is the middle."),
+                        sidebarSettingRow(videoTab, "handCameraFocusY", "切り抜き中心Y（%）", "Crop centre Y (%)",
+                                "拡大したときに映す場所の上下位置です。0が上、50が中央。", "Vertical centre of the zoomed area; 0 is the top, 50 the middle.")
                 )
 		);
 	}

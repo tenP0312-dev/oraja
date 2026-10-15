@@ -5,6 +5,7 @@ import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.BMSPlayerMode;
 import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
+import bms.player.beatoraja.camera.HandCameraView;
 import bms.player.beatoraja.skin.SkinCamera;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.StretchType;
@@ -82,10 +83,13 @@ public class SkinBGA extends SkinObject {
 		if (texture == null) {
 			return false;
 		}
-		handCamera.setTexture(texture);
-		handCamera.setRegion(0, 0, texture.getWidth(), texture.getHeight());
 		mirrorHandCamera = player.main.getConfig().isHandCameraMirror();
-		draw(sprite, handCamera, region.x, region.y, region.width, region.height);
+		final HandCameraView view = HandCameraView.from(player.main.getConfig());
+		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, mirrorHandCamera);
+		handCamera.setTexture(texture);
+		handCamera.setRegion(source[0], source[1], source[2], source[3]);
+		draw(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
+				region.width, region.height);
 		return true;
 	}
 

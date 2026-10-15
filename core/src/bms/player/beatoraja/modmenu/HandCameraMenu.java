@@ -8,6 +8,7 @@ import bms.player.beatoraja.camera.FFmpegCameraProcess.Device;
 import bms.player.beatoraja.camera.HandCameraDeviceResolver;
 import bms.player.beatoraja.camera.HandCameraPresets;
 import bms.player.beatoraja.camera.HandCameraSettings;
+import bms.player.beatoraja.camera.HandCameraView;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
@@ -78,6 +79,8 @@ public final class HandCameraMenu {
             config.setHandCameraMirror(mirror.get());
         }
 
+        renderView(config);
+
         ImGui.separator();
         var manager = main.getHandCameraManager();
         HandCameraSettings settings = HandCameraSettings.from(config);
@@ -89,6 +92,33 @@ public final class HandCameraMenu {
                                 "Status: waiting (connects automatically on a screen that shows the camera)"));
         ImGui.textDisabled(t("サイズとFPSはカメラが対応する値を選んでください。ランチャーの「画面」でも変更できます。",
                 "Choose a size and FPS the camera supports. Also available on the launcher's Video page."));
+    }
+
+    /** Applied on the next frame without reopening the camera, so it can be tuned during play. */
+    private static void renderView(Config config) {
+        ImGui.separator();
+        ImGui.text(t("表示の調整（プレイ中もすぐ反映）", "Display adjustment (applies immediately, even during play)"));
+        HandCameraView view = HandCameraView.from(config);
+        int[] offsetX = {view.offsetX()}, offsetY = {view.offsetY()}, zoom = {view.zoom()};
+        int[] focusX = {view.focusX()}, focusY = {view.focusY()};
+        boolean changed = ImGui.sliderInt(t("表示位置X（%、正で右）", "Offset X (%, + right)") + "##hand-camera-offset-x",
+                offsetX, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
+        changed |= ImGui.sliderInt(t("表示位置Y（%、正で下）", "Offset Y (%, + down)") + "##hand-camera-offset-y",
+                offsetY, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
+        changed |= ImGui.sliderInt(t("拡大率（%）", "Zoom (%)") + "##hand-camera-zoom",
+                zoom, HandCameraView.MIN_ZOOM, HandCameraView.MAX_ZOOM);
+        ImGui.beginDisabled(zoom[0] <= HandCameraView.MIN_ZOOM);
+        changed |= ImGui.sliderInt(t("切り抜き中心X（%）", "Crop centre X (%)") + "##hand-camera-focus-x", focusX, 0, 100);
+        changed |= ImGui.sliderInt(t("切り抜き中心Y（%）", "Crop centre Y (%)") + "##hand-camera-focus-y", focusY, 0, 100);
+        ImGui.endDisabled();
+        if (changed) {
+            config.setHandCameraView(new HandCameraView(offsetX[0], offsetY[0], zoom[0], focusX[0], focusY[0]));
+        }
+        if (ImGui.button(t("表示の調整を元に戻す", "Reset display adjustment") + "##hand-camera-view-reset")) {
+            config.setHandCameraView(HandCameraView.DEFAULT);
+        }
+        ImGui.textDisabled(t("切り抜き中心は拡大率が100%より大きいときに使います。Ctrl+クリックで数値入力できます。",
+                "The crop centre applies when zoom is above 100%. Ctrl+click a slider to enter a value."));
     }
 
     private static void renderDevice(Config config) {
