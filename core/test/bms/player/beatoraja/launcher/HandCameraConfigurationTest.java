@@ -23,7 +23,7 @@ class HandCameraConfigurationTest {
             }
         }
         for (String id : List.of("handCameraEnabled", "handCameraDevice", "handCameraRefresh", "handCameraStatus",
-                "handCameraWidth", "handCameraHeight", "handCameraFps", "handCameraMirror", "handCameraBgaFrame", "handCameraOffsetX", "handCameraOffsetY", "handCameraZoom",
+                "handCameraWidth", "handCameraHeight", "handCameraFps", "handCameraMirror", "handCameraFlipVertical", "handCameraBgaFrame", "handCameraOffsetX", "handCameraOffsetY", "handCameraZoom",
                 "handCameraFocusX", "handCameraFocusY")) {
             assertTrue(ids.contains(id));
             assertNotNull(VideoConfigurationView.class.getDeclaredField(id).getAnnotation(javafx.fxml.FXML.class));

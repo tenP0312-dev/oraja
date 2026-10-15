@@ -42,7 +42,7 @@ public class VideoConfigurationView implements Initializable {
     @FXML private Label handCameraStatus;
     @FXML private Spinner<Integer> handCameraWidth, handCameraHeight, handCameraFps;
     @FXML private Spinner<Integer> handCameraOffsetX, handCameraOffsetY, handCameraZoom, handCameraFocusX, handCameraFocusY;
-    @FXML private CheckBox handCameraMirror, handCameraBgaFrame;
+    @FXML private CheckBox handCameraMirror, handCameraFlipVertical, handCameraBgaFrame;
     private FFmpegCameraProcess.Device savedHandCamera;
     private ResourceBundle resources;
 
@@ -86,6 +86,7 @@ public class VideoConfigurationView implements Initializable {
         handCameraHeight.getValueFactory().setValue(config.getHandCameraHeight());
         handCameraFps.getValueFactory().setValue(config.getHandCameraFps());
         handCameraMirror.setSelected(config.isHandCameraMirror());
+        handCameraFlipVertical.setSelected(config.isHandCameraFlipVertical());
         handCameraBgaFrame.setSelected(config.isHandCameraBgaFrame());
         var view = bms.player.beatoraja.camera.HandCameraView.from(config);
         handCameraOffsetX.getValueFactory().setValue(view.offsetX());
@@ -117,6 +118,7 @@ public class VideoConfigurationView implements Initializable {
         config.setHandCameraHeight(handCameraHeight.getValue());
         config.setHandCameraFps(handCameraFps.getValue());
         config.setHandCameraMirror(handCameraMirror.isSelected());
+        config.setHandCameraFlipVertical(handCameraFlipVertical.isSelected());
         config.setHandCameraBgaFrame(handCameraBgaFrame.isSelected());
         config.setHandCameraView(new bms.player.beatoraja.camera.HandCameraView(handCameraOffsetX.getValue(),
                 handCameraOffsetY.getValue(), handCameraZoom.getValue(), handCameraFocusX.getValue(),

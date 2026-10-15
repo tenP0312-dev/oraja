@@ -23,6 +23,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.115 preserves 0.4.14.114 and refines the hand camera view
+(#531): the crop position moves the skin's crop window across the whole camera
+image even at 100% zoom, display offsets are cut off at the camera frame, and a
+vertical flip joins mirroring. Updates remain optional; plugin 0.0.80 and
+launcher 0.2.30 are retained. See [the test scope](docs/TEST_RELEASE_0.4.14.115.md).
+
 Version 0.4.14.114 preserves 0.4.14.113 and adds hand camera display fixes:
 skins with their own camera part no longer also show it in the BGA frame
 (#525), and the display offset, zoom and crop centre can be adjusted live from
