@@ -23,6 +23,8 @@ public class IRScoreData {
 	public final int lntype;
 	/** Local score interpretation revision, optional for compatible IR plugins. */
 	public final int bmsirLongNotePolicy;
+	/** True when floating hi-speed was active during this live play; optional for compatible IR plugins. */
+	public final boolean bmsirFloatingHispeedUsed;
 	/**
 	 * プレイヤー名。自身のスコアの場合は空白
 	 */
@@ -118,6 +120,7 @@ public class IRScoreData {
 		this.sha256 = score.getSha256();
 		this.lntype = score.getMode();
 		this.bmsirLongNotePolicy = score.getBmsirLongNotePolicy();
+		this.bmsirFloatingHispeedUsed = score.isBmsirFloatingHispeedUsed();
 		this.player = score.getPlayer();
 		this.clear = ClearType.getClearTypeByID(score.getClear());
 		this.date = score.getDate();
@@ -159,6 +162,7 @@ public class IRScoreData {
 		this.sha256 = sha256;
 		this.lntype = lntype;
 		this.bmsirLongNotePolicy = bmsirLongNotePolicy;
+		this.bmsirFloatingHispeedUsed = false;
 		this.player = player;
 		this.clear = clear;
 		this.date = date;
@@ -198,6 +202,7 @@ public class IRScoreData {
 		score.setSha256(this.sha256);
 		score.setMode(this.lntype);
 		score.setBmsirLongNotePolicy(this.bmsirLongNotePolicy);
+		score.setBmsirFloatingHispeedUsed(this.bmsirFloatingHispeedUsed);
 		score.setPlayer(this.player);
 		score.setClear(this.clear.id);
 		score.setDate(this.date);

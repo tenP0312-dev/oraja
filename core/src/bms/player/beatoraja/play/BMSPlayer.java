@@ -139,6 +139,8 @@ public class BMSPlayer extends MainState {
 	private boolean bgaPreparationComplete;
 	private boolean countdownStageReported;
 	private boolean playEndMetricsSent;
+	/** Latched while playing so a mid-play switch to floating hi-speed still marks the IR score. */
+	private boolean floatingHispeedUsed;
 	private long diagnosticPlaySessionId;
 
 	public BMSPlayer(MainController main, PlayerResource resource) {
@@ -167,6 +169,7 @@ public class BMSPlayer extends MainState {
 		PlayerConfig config = resource.getPlayerConfig();
 		resource.setFailMeasure(Double.NaN);
 		playEndMetricsSent = false;
+		floatingHispeedUsed = false;
 		BMSIRManiacPlayContext maniacContext = null;
 
 		playinfo.randomoption = config.getRandom();
@@ -1380,6 +1383,9 @@ public class BMSPlayer extends MainState {
 			}
 		}
 
+		if (state == STATE_PLAY && lanerender.isFloatingHispeedEnabled()) {
+			floatingHispeedUsed = true;
+		}
         if (restoresReplayLaneSettings() && laneTimeline != null) {
             lanerender.applyReplayLaneState(timer.isTimerOn(TIMER_PLAY)
                     ? laneTimeline.at(Math.max(0, timer.getNowMicroTime(TIMER_PLAY))) : replayLaneInitial);
@@ -1618,6 +1624,7 @@ public class BMSPlayer extends MainState {
 				? (playinfo.randomoption2 * 10 + playinfo.doubleoption * 100) : 0));
 		score.setSeed((model.getMode().player == 2 ? playinfo.randomoption2seed * 65536 * 256 : 0) + playinfo.randomoptionseed);
 		score.encodeGhost(judge.getGhost());
+		score.setBmsirFloatingHispeedUsed(floatingHispeedUsed);
 		// リプレイデータ保存。スコア保存されない場合はリプレイ保存しない
 		final ReplayData replay = resource.getReplayData();
 		replay.player = main.getPlayerConfig().getName();

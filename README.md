@@ -23,6 +23,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.112 preserves 0.4.14.111 and adds only the floating hi-speed
+score marker (#515): a play that used floating hi-speed at any point is sent to
+BMS-IR with an optional flag so the Web OP column can show `FHS`. Updates
+remain optional; it ships with Arena plugin 0.0.80 and keeps launcher 0.2.30.
+See [the test scope](docs/TEST_RELEASE_0.4.14.112.md).
+
 Version 0.4.14.111 preserves the 0.4.14.110 release lineage and adds the
 dedicated HI-SPEED tab, live speed-mode switching, BGA display toggling,
 settings-window cleanup, gauge/input/replay fixes, compatibility repairs,
