@@ -25,6 +25,17 @@ class CameraCaptureTest {
         while (!condition.getAsBoolean() && System.nanoTime() < deadline) Thread.sleep(5);
         assertTrue(condition.getAsBoolean());
     }
+    /** poll() consumes the frame, so latch it; until() evaluates its condition once more at the end. */
+    void awaitFrame(CameraCapture capture) throws Exception {
+        AtomicBoolean received = new AtomicBoolean();
+        until(() -> {
+            if (!received.get()) {
+                capture.request(settings);
+                try (var frame = capture.poll()) { if (frame != null) received.set(true); }
+            }
+            return received.get();
+        });
+    }
     @Test void disabledAndMissingDeviceNeverOpenTheBackend() throws Exception {
         AtomicInteger opens = new AtomicInteger();
         try (CameraCapture capture = new CameraCapture(s -> { opens.incrementAndGet(); return new Pipe(); })) {
@@ -79,7 +90,7 @@ class CameraCaptureTest {
             assertNull(capture.poll());
         } finally { finish.countDown(); }
     }
-    @Test void partialEofFailsOncePerDemandPeriodAndReentryCanRetry() throws Exception {
+    @Test void partialEofIsNotRetriedEveryFrameAndReentryRetriesImmediately() throws Exception {
         AtomicInteger opens = new AtomicInteger();
         try (CameraCapture capture = new CameraCapture(s -> {
             opens.incrementAndGet();
@@ -97,6 +108,65 @@ class CameraCaptureTest {
             capture.stop();
             capture.request(settings);
             until(() -> opens.get() == 2);
+        }
+    }
+    @Test void aMissingCameraIsRetriedInTheBackgroundWithBackoffLikeAController() throws Exception {
+        AtomicLong now = new AtomicLong();
+        AtomicInteger opens = new AtomicInteger();
+        AtomicBoolean plugged = new AtomicBoolean();
+        Pipe pipe = new Pipe();
+        try (CameraCapture capture = new CameraCapture(s -> {
+            opens.incrementAndGet();
+            if (!plugged.get()) throw new FFmpegCameraProcess.DeviceNotFoundException();
+            return pipe;
+        }, now::get)) {
+            capture.request(settings);
+            until(() -> opens.get() == 1);
+            // Requested every frame, but not reopened before the backoff elapses: 2s, 4s, 8s, then 10s.
+            long[] delays = {2, 4, 8, 10, 10};
+            for (int attempt = 0; attempt < delays.length; attempt++) {
+                int expected = attempt + 1;
+                until(() -> { capture.request(settings); return capture.retryPending(); });
+                now.addAndGet(TimeUnit.SECONDS.toNanos(delays[attempt]) - 1);
+                for (int i = 0; i < 50; i++) capture.request(settings);
+                assertEquals(expected, opens.get());
+                now.incrementAndGet();
+                capture.request(settings);
+                until(() -> opens.get() == expected + 1);
+            }
+            // Plugged in: the next attempt connects and frames flow without leaving the screen.
+            plugged.set(true);
+            int before = opens.get();
+            until(() -> { capture.request(settings); return capture.retryPending(); });
+            now.addAndGet(CameraCapture.MAX_RETRY_NANOS);
+            until(() -> { capture.request(settings); return opens.get() == before + 1; });
+            pipe.output.write(new byte[settings.frameBytes()]);
+            awaitFrame(capture);
+        }
+    }
+    @Test void anUnpluggedCameraIsReopenedQuicklyAndSettingsChangesResetTheBackoff() throws Exception {
+        AtomicLong now = new AtomicLong();
+        AtomicInteger opens = new AtomicInteger();
+        AtomicReference<Pipe> latest = new AtomicReference<>();
+        try (CameraCapture capture = new CameraCapture(s -> {
+            opens.incrementAndGet();
+            Pipe pipe = new Pipe(); latest.set(pipe); return pipe;
+        }, now::get)) {
+            capture.request(settings);
+            until(() -> opens.get() == 1);
+            latest.get().output.write(new byte[settings.frameBytes()]);
+            awaitFrame(capture);
+            // Unplugging ends the stream. After delivering frames the first retry waits only 2s again.
+            latest.get().output.close();
+            until(() -> { capture.request(settings); return capture.retryPending(); });
+            now.addAndGet(CameraCapture.FIRST_RETRY_NANOS - 1);
+            for (int i = 0; i < 50; i++) capture.request(settings);
+            assertEquals(1, opens.get());
+            now.addAndGet(CameraCapture.FIRST_RETRY_NANOS);
+            until(() -> { capture.request(settings); return opens.get() == 2; });
+            // A different setting opens immediately.
+            capture.request(new HandCameraSettings(true, "camera", 320, 240, 30, false));
+            until(() -> opens.get() == 3);
         }
     }
     @Test void aScreenWithNoCameraDemandClosesTheDeviceAndTheNextScreenCanReopen() throws Exception {
