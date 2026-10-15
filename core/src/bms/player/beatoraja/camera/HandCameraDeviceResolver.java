@@ -30,6 +30,13 @@ public final class HandCameraDeviceResolver {
         return named.stream().filter(device -> device.value().equals(saved.value())).findFirst();
     }
 
+    /** Saves a selection from the launcher or the F5 menu with its identity. */
+    public static void remember(bms.player.beatoraja.Config config, Device device) {
+        config.setHandCameraDevice(device.value());
+        config.setHandCameraDeviceName(device.label());
+        config.setHandCameraDeviceId(device.id());
+    }
+
     /** Launcher display of the saved configuration before the operator refreshes the list. */
     public static Device saved(HandCameraSettings settings) {
         return new Device(settings.device(), settings.deviceName(), settings.deviceId());

@@ -1366,7 +1366,11 @@ public class PlayConfigurationView implements Initializable {
                         sidebarSettingRow(videoTab, "handCameraFps", "カメラのFPS", "Camera FPS",
                                 "カメラが対応するFPSを指定します。初期30。", "Choose a supported FPS. Default 30."),
                         sidebarSettingRow(videoTab, "handCameraMirror", "左右反転", "Mirror horizontally",
-                                "手元映像を左右反転します。", "Mirror the hand video horizontally.")
+                                "手元映像を左右反転します。", "Mirror the hand video horizontally."),
+                        sidebarSettingRow(videoTab, "handCameraBgaFrame", "BGA枠に表示", "Show in the BGA frame",
+                                "カメラ部品のないスキンでも、プレイ画面のBGA枠にBGAの代わりに表示します。映らない間はBGAを表示します。",
+                                "Show the camera in the play skin's BGA frame instead of the BGA, even without a camera part. "
+                                        + "The BGA is shown while the camera is unavailable.")
                 )
 		);
 	}

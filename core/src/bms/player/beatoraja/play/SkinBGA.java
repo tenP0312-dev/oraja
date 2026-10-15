@@ -7,6 +7,8 @@ import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.StretchType;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 import static bms.player.beatoraja.skin.SkinProperty.*;
 
@@ -19,6 +21,8 @@ public class SkinBGA extends SkinObject {
 	
 	private BMSPlayer player;
 	private long time;
+	private final TextureRegion handCamera = new TextureRegion();
+	private boolean mirrorHandCamera;
 
 	public SkinBGA(int bgaExpand) {
 		switch (bgaExpand) {
@@ -53,9 +57,32 @@ public class SkinBGA extends SkinObject {
 		final PlayerResource resource = player.resource;
 		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PRACTICE) {
 			player.getPracticeConfiguration().draw(region, sprite, time, player);
-		} else if (resource.getBGAManager() != null) {
+		} else if (!drawHandCamera(sprite) && resource.getBGAManager() != null) {
 			resource.getBGAManager().drawBGA(this,sprite,region);
 		}		
+	}
+
+	/**
+	 * Hand camera in the BGA frame for skins without a camera part. Requested from draw, which runs every
+	 * frame while the frame is shown; the BGA keeps running underneath and is shown while no frame is available.
+	 */
+	private boolean drawHandCamera(SkinObjectRenderer sprite) {
+		final var manager = player.main.getHandCameraManager();
+		final Texture texture = manager == null ? null : manager.requestBgaFrameTexture();
+		if (texture == null) {
+			return false;
+		}
+		handCamera.setTexture(texture);
+		handCamera.setRegion(0, 0, texture.getWidth(), texture.getHeight());
+		mirrorHandCamera = player.main.getConfig().isHandCameraMirror();
+		draw(sprite, handCamera, region.x, region.y, region.width, region.height);
+		return true;
+	}
+
+	@Override
+	protected void transformDrawImage(TextureRegion image) {
+		// Only the hand camera is drawn through SkinObject.draw; the BGA processor draws directly.
+		if (mirrorHandCamera) image.flip(true, false);
 	}
 
 	@Override

@@ -41,7 +41,7 @@ public class VideoConfigurationView implements Initializable {
     @FXML private Button handCameraRefresh;
     @FXML private Label handCameraStatus;
     @FXML private Spinner<Integer> handCameraWidth, handCameraHeight, handCameraFps;
-    @FXML private CheckBox handCameraMirror;
+    @FXML private CheckBox handCameraMirror, handCameraBgaFrame;
     private FFmpegCameraProcess.Device savedHandCamera;
     private ResourceBundle resources;
 
@@ -85,6 +85,7 @@ public class VideoConfigurationView implements Initializable {
         handCameraHeight.getValueFactory().setValue(config.getHandCameraHeight());
         handCameraFps.getValueFactory().setValue(config.getHandCameraFps());
         handCameraMirror.setSelected(config.isHandCameraMirror());
+        handCameraBgaFrame.setSelected(config.isHandCameraBgaFrame());
 		displayMode.setValue(config.getDisplaymode());
 		resolution.setValue(config.getResolution());
 		vSync.setSelected(config.isVsync());
@@ -103,14 +104,13 @@ public class VideoConfigurationView implements Initializable {
 
 	public void commit(Config config) {
         config.setHandCameraEnabled(handCameraEnabled.isSelected());
-        var camera = handCameraDevice.getConverter().fromString(handCameraDevice.getEditor().getText());
-        config.setHandCameraDevice(camera.value());
-        config.setHandCameraDeviceName(camera.label());
-        config.setHandCameraDeviceId(camera.id());
+        HandCameraDeviceResolver.remember(config,
+                handCameraDevice.getConverter().fromString(handCameraDevice.getEditor().getText()));
         config.setHandCameraWidth(handCameraWidth.getValue());
         config.setHandCameraHeight(handCameraHeight.getValue());
         config.setHandCameraFps(handCameraFps.getValue());
         config.setHandCameraMirror(handCameraMirror.isSelected());
+        config.setHandCameraBgaFrame(handCameraBgaFrame.isSelected());
 		config.setResolution(resolution.getValue());
 		config.setDisplaymode(displayMode.getValue());
 		config.setVsync(vSync.isSelected());
