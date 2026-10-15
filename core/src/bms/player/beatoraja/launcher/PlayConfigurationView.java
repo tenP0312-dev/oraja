@@ -1368,9 +1368,9 @@ public class PlayConfigurationView implements Initializable {
                         sidebarSettingRow(videoTab, "handCameraMirror", "左右反転", "Mirror horizontally",
                                 "手元映像を左右反転します。", "Mirror the hand video horizontally."),
                         sidebarSettingRow(videoTab, "handCameraBgaFrame", "BGA枠に表示", "Show in the BGA frame",
-                                "カメラ部品のないスキンでも、プレイ画面のBGA枠にBGAの代わりに表示します。映らない間はBGAを表示します。",
-                                "Show the camera in the play skin's BGA frame instead of the BGA, even without a camera part. "
-                                        + "The BGA is shown while the camera is unavailable.")
+                                "カメラ部品のないスキンで、プレイ画面のBGA枠にBGAの代わりに表示します。映らない間と、カメラ部品のあるスキンではBGAを表示します。",
+                                "Show the camera in the play skin's BGA frame instead of the BGA for skins without a camera part. "
+                                        + "The BGA is shown while the camera is unavailable and for skins with a camera part.")
                 )
 		);
 	}
