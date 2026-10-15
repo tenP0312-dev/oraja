@@ -23,6 +23,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.113 preserves 0.4.14.112 and adds hand camera usability: the
+selected camera is remembered by name and OS ID and reconnects automatically
+at launch and when it is plugged in (#519), skins without a camera part can
+show it in the BGA frame, and every camera setting is editable from the F5
+menu (#521). Updates remain optional; plugin 0.0.80 and launcher 0.2.30 are
+retained. See [the test scope](docs/TEST_RELEASE_0.4.14.113.md).
+
 Version 0.4.14.112 preserves 0.4.14.111 and adds only the floating hi-speed
 score marker (#515): a play that used floating hi-speed at any point is sent to
 BMS-IR with an optional flag so the Web OP column can show `FHS`. Updates

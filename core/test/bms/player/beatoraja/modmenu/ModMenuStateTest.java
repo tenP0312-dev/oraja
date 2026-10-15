@@ -23,6 +23,7 @@ class ModMenuStateTest {
                 Map.entry(ModMenuItem.PLAY_SETTINGS, "SHOW_PLAY_SETTINGS"),
                 Map.entry(ModMenuItem.SOUND_SETTINGS, "SHOW_SOUND_SETTINGS"),
                 Map.entry(ModMenuItem.DISPLAY_SETTINGS, "SHOW_DISPLAY_SETTINGS"),
+                Map.entry(ModMenuItem.HAND_CAMERA, "SHOW_HAND_CAMERA"),
                 Map.entry(ModMenuItem.MANIAC_OPTIONS, "SHOW_MANIAC_OPTIONS"));
         for (var entry : windows.entrySet()) {
             Field field = ImGuiRenderer.class.getDeclaredField(entry.getValue());
