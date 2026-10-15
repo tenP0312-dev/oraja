@@ -193,6 +193,8 @@ public class Config implements Validatable {
     private String handCameraDeviceName = "", handCameraDeviceId = "";
     private int handCameraWidth = 640, handCameraHeight = 480, handCameraFps = 30;
     private boolean handCameraMirror;
+    /** Display-only; both flips together equal a 180-degree rotation. Not part of the capture identity. */
+    private boolean handCameraFlipVertical;
     /** Show the hand camera in the play skin's BGA frame instead of the BGA, for skins without a camera part. */
     private boolean handCameraBgaFrame;
     /** Live display adjustment in percent; see HandCameraView. */
@@ -460,6 +462,8 @@ public class Config implements Validatable {
     public void setHandCameraFps(int value) { handCameraFps = value; }
     public boolean isHandCameraMirror() { return handCameraMirror; }
     public void setHandCameraMirror(boolean value) { handCameraMirror = value; }
+    public boolean isHandCameraFlipVertical() { return handCameraFlipVertical; }
+    public void setHandCameraFlipVertical(boolean value) { handCameraFlipVertical = value; }
     public boolean isHandCameraBgaFrame() { return handCameraBgaFrame; }
     public void setHandCameraBgaFrame(boolean value) { handCameraBgaFrame = value; }
     public int getHandCameraOffsetX() { return handCameraOffsetX; }

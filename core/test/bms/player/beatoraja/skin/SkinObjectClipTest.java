@@ -34,6 +34,15 @@ class SkinObjectClipTest {
         assertArrayEquals(new float[] {1, 0, .5f, 1}, uv, 1e-6f);
     }
 
+    @Test void verticallyFlippedImagesAreCutOnTheDisplayedSide() {
+        // Shifted up: the top 27% leaves the frame. With v flipped (v > v2) that is the source's bottom 27%.
+        Rectangle rect = new Rectangle(100, 54, 400, 200);
+        float[] uv = {0, 1, 1, 0};
+        assertTrue(SkinObject.clipToFrame(rect, uv, FRAME));
+        assertEquals(new Rectangle(100, 54, 400, 146), rect);
+        assertArrayEquals(new float[] {0, .73f, 1, 0}, uv, 1e-6f);
+    }
+
     @Test void anImageEntirelyOutsideTheFrameDrawsNothing() {
         assertFalse(SkinObject.clipToFrame(new Rectangle(100, 200, 400, 200), new float[] {0, 0, 1, 1}, FRAME));
         assertFalse(SkinObject.clipToFrame(new Rectangle(-400, 0, 400, 200), new float[] {0, 0, 1, 1}, FRAME));

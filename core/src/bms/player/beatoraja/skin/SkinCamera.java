@@ -11,7 +11,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public final class SkinCamera extends SkinObject implements FrameDrivenSkinObject {
     private final CameraCrop crop;
     private final TextureRegion image = new TextureRegion();
-    private boolean mirror;
+    private boolean mirror, flipVertical;
     private HandCameraView view = HandCameraView.DEFAULT;
 
     public SkinCamera(CameraCrop crop) {
@@ -31,9 +31,10 @@ public final class SkinCamera extends SkinObject implements FrameDrivenSkinObjec
         Texture texture = state.main.getHandCameraManager().requestTexture();
         if (texture == null) { draw = false; return; }
         mirror = state.main.getConfig().isHandCameraMirror();
+        flipVertical = state.main.getConfig().isHandCameraFlipVertical();
         view = HandCameraView.from(state.main.getConfig());
         int[] source = view.source(crop.pixels(texture.getWidth(), texture.getHeight()), texture.getWidth(),
-                texture.getHeight(), mirror);
+                texture.getHeight(), mirror, flipVertical);
         image.setTexture(texture);
         image.setRegion(source[0], source[1], source[2], source[3]);
     }
@@ -45,7 +46,7 @@ public final class SkinCamera extends SkinObject implements FrameDrivenSkinObjec
     }
 
     @Override protected void transformDrawImage(TextureRegion image) {
-        if (mirror) image.flip(true, false);
+        if (mirror || flipVertical) image.flip(mirror, flipVertical);
     }
 
     @Override public void dispose() { setDisposed(); }

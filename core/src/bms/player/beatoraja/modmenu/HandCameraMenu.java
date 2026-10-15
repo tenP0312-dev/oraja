@@ -78,6 +78,11 @@ public final class HandCameraMenu {
         if (ImGui.checkbox(t("左右を反転する", "Mirror horizontally"), mirror)) {
             config.setHandCameraMirror(mirror.get());
         }
+        ImBoolean flipVertical = new ImBoolean(config.isHandCameraFlipVertical());
+        if (ImGui.checkbox(t("上下を反転する（左右と両方で180度回転）", "Flip vertically (with mirroring: 180-degree turn)"),
+                flipVertical)) {
+            config.setHandCameraFlipVertical(flipVertical.get());
+        }
 
         renderView(config);
 

@@ -51,6 +51,33 @@ class HandCameraViewTest {
         assertEquals(320, left.source(FULL, 640, 480, true)[0]);
     }
 
+    @Test void flippedViewsMoveTheCropTheWayTheSliderPoints() {
+        int[] strip = {0, 144, 640, 192};
+        // Upright: a smaller Y shows a higher part of the camera image.
+        HandCameraView up = new HandCameraView(0, 0, 100, 50, 30);
+        assertEquals(48, up.source(strip, 640, 480, false, false)[1]);
+        // Flipped vertically the displayed top is the source bottom, so the window moves down in the source.
+        assertEquals(240, up.source(strip, 640, 480, false, true)[1]);
+        // Both flips (180 degrees): X and Y both follow the displayed image and still stop at the edges.
+        HandCameraView corner = new HandCameraView(0, 0, 200, 0, 0);
+        assertArrayEquals(new int[] {0, 0, 320, 240}, corner.source(FULL, 640, 480, false, false));
+        assertArrayEquals(new int[] {320, 240, 320, 240}, corner.source(FULL, 640, 480, true, true));
+        // Without moving, flips change nothing about which area is used.
+        assertArrayEquals(strip, HandCameraView.DEFAULT.source(strip, 640, 480, true, true));
+    }
+
+    @Test void verticalFlipPersistsAndOldConfigurationStaysUpright() {
+        Config config = new Config();
+        config.setHandCameraFlipVertical(true);
+        Json json = new Json();
+        assertTrue(json.fromJson(Config.class, json.toJson(config)).isHandCameraFlipVertical());
+        assertFalse(json.fromJson(Config.class, "{handCameraMirror:true}").isHandCameraFlipVertical());
+        // Display-only: toggling it never reopens the camera.
+        Config flipped = new Config();
+        flipped.setHandCameraFlipVertical(true);
+        assertEquals(HandCameraSettings.from(new Config()), HandCameraSettings.from(flipped));
+    }
+
     @Test void offsetsArePercentOfTheDisplayAndPositiveYMovesDown() {
         HandCameraView view = new HandCameraView(25, 50, 100, 50, 50);
         assertEquals(80f, view.dx(320));
