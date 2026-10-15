@@ -556,6 +556,64 @@ public abstract class SkinObject extends DisposableObject {
 		draw(sprite, image, x, y, width, height, color, angle);
 	}
 
+	private final float[] clipUv = new float[4];
+
+	/**
+	 * Like {@link #draw(SkinObjectRenderer, TextureRegion, float, float, float, float)} for a shifted image, but
+	 * never paints outside {@code frame}: the part outside is cut off along with its source pixels.
+	 */
+	protected void drawClipped(SkinObjectRenderer sprite, TextureRegion image, float x, float y, float width,
+			float height, Rectangle frame) {
+		if (angle != 0) {
+			// Rotated frames are not clipped; keep the ordinary path.
+			draw(sprite, image, x, y, width, height, color, angle);
+			return;
+		}
+		if (color == null || color.a == 0f || image == null) {
+			return;
+		}
+		tmpRect.set(x, y, width, height);
+		if (stretch != null) {
+			stretch.stretchRect(tmpRect, tmpImage, image);
+		} else {
+			tmpImage.setRegion(image);
+		}
+		transformDrawImage(tmpImage);
+		clipUv[0] = tmpImage.getU();
+		clipUv[1] = tmpImage.getV();
+		clipUv[2] = tmpImage.getU2();
+		clipUv[3] = tmpImage.getV2();
+		if (!clipToFrame(tmpRect, clipUv, frame)) {
+			return;
+		}
+		tmpImage.setRegion(clipUv[0], clipUv[1], clipUv[2], clipUv[3]);
+		sprite.setColor(color);
+		sprite.setBlend(dstblend);
+		sprite.setType(dstfilter != 0 && imageType == SkinObjectRenderer.TYPE_NORMAL ? SkinObjectRenderer.TYPE_BILINEAR
+				: imageType);
+		sprite.draw(tmpImage, tmpRect.x, tmpRect.y, tmpRect.width, tmpRect.height);
+	}
+
+	/**
+	 * Cuts {@code rect} (y up) down to {@code frame} and moves the texture coordinates {u, v, u2, v2} (v at the
+	 * top, either pair may be flipped) by the same fractions. Returns false when nothing remains to draw.
+	 */
+	static boolean clipToFrame(Rectangle rect, float[] uv, Rectangle frame) {
+		if (rect.width <= 0 || rect.height <= 0) return false;
+		float left = Math.max(rect.x, frame.x), right = Math.min(rect.x + rect.width, frame.x + frame.width);
+		float bottom = Math.max(rect.y, frame.y), top = Math.min(rect.y + rect.height, frame.y + frame.height);
+		if (right <= left || top <= bottom) return false;
+		float du = uv[2] - uv[0], dv = uv[3] - uv[1];
+		float cutLeft = (left - rect.x) / rect.width, cutRight = (rect.x + rect.width - right) / rect.width;
+		float cutBottom = (bottom - rect.y) / rect.height, cutTop = (rect.y + rect.height - top) / rect.height;
+		uv[0] += du * cutLeft;
+		uv[2] -= du * cutRight;
+		uv[1] += dv * cutTop;
+		uv[3] -= dv * cutBottom;
+		rect.set(left, bottom, right - left, top - bottom);
+		return true;
+	}
+
 	protected void draw(SkinObjectRenderer sprite, TextureRegion image, float x, float y, float width, float height,
 			Color color, int angle) {
 		if (color == null || color.a == 0f || image == null) {

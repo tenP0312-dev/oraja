@@ -13,6 +13,7 @@ public enum ModMenuItem {
     PLAY_SETTINGS("play_settings", "プレイ設定", "Play Settings"),
     SOUND_SETTINGS("sound_settings", "音", "Sound"),
     DISPLAY_SETTINGS("display_settings", "表示", "Display"),
+    HAND_CAMERA("hand_camera", "手元カメラ", "Hand Camera"),
     BMSIR_ARENA_OVERLAY("bmsir_arena_overlay", "BMS-IR Arenaオーバーレイ", "BMS-IR Arena Overlay"),
     ARENA_DEBUG("arena_debug", "Arena orajaデバッグ情報", "Arena oraja Debug Information"),
     MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS");

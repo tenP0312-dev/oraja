@@ -1366,7 +1366,29 @@ public class PlayConfigurationView implements Initializable {
                         sidebarSettingRow(videoTab, "handCameraFps", "カメラのFPS", "Camera FPS",
                                 "カメラが対応するFPSを指定します。初期30。", "Choose a supported FPS. Default 30."),
                         sidebarSettingRow(videoTab, "handCameraMirror", "左右反転", "Mirror horizontally",
-                                "手元映像を左右反転します。", "Mirror the hand video horizontally.")
+                                "手元映像を左右反転します。", "Mirror the hand video horizontally."),
+                        sidebarSettingRow(videoTab, "handCameraFlipVertical", "上下反転", "Flip vertically",
+                                "手元映像を上下反転します。左右反転と両方ONで180度回転になります。プレイ中もF5で切り替えられます。",
+                                "Flip the hand video vertically. With mirroring this is a 180-degree turn. Also in the F5 menu."),
+                        sidebarSettingRow(videoTab, "handCameraBgaFrame", "BGA枠に表示", "Show in the BGA frame",
+                                "カメラ部品のないスキンで、プレイ画面のBGA枠にBGAの代わりに表示します。映らない間と、カメラ部品のあるスキンではBGAを表示します。",
+                                "Show the camera in the play skin's BGA frame instead of the BGA for skins without a camera part. "
+                                        + "The BGA is shown while the camera is unavailable and for skins with a camera part."),
+                        sidebarSettingRow(videoTab, "handCameraOffsetX", "表示位置X（%）", "Display offset X (%)",
+                                "枠の中で映像を左右にずらします（枠の幅に対する%、正で右）。枠の外は描きません。ゲーム中はF5でも変更できます。",
+                                "Shifts the image inside the frame (% of its width, + right); nothing is drawn outside the frame. Also in the F5 menu."),
+                        sidebarSettingRow(videoTab, "handCameraOffsetY", "表示位置Y（%）", "Display offset Y (%)",
+                                "枠の中で映像を上下にずらします（枠の高さに対する%、正で下）。枠の外は描きません。",
+                                "Shifts the image inside the frame (% of its height, + down); nothing is drawn outside the frame."),
+                        sidebarSettingRow(videoTab, "handCameraZoom", "拡大率（%）", "Zoom (%)",
+                                "100でスキンが決めた範囲そのまま、200でその半分を拡大します。",
+                                "100 shows the area the skin chose; 200 shows half of it, enlarged."),
+                        sidebarSettingRow(videoTab, "handCameraFocusX", "切り抜き位置X（%）", "Crop position X (%)",
+                                "枠はそのままで、映す範囲をカメラ映像全体の中で左右に動かします。50でスキンの位置、大きいほど右。拡大率100%でも効きます。",
+                                "Moves the shown area across the whole camera image; 50 keeps the skin's, larger moves right. Works at 100% zoom."),
+                        sidebarSettingRow(videoTab, "handCameraFocusY", "切り抜き位置Y（%）", "Crop position Y (%)",
+                                "映す範囲を上下に動かします。50でスキンの位置、小さいほど上、大きいほど下。映像の端で止まります。",
+                                "Moves the shown area up or down; 50 keeps the skin's, smaller is up, larger is down. Stops at the image edges.")
                 )
 		);
 	}

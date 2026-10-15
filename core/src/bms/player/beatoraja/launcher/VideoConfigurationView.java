@@ -16,6 +16,8 @@ import javafx.scene.control.Label;
 import javafx.application.Platform;
 import javafx.util.StringConverter;
 import bms.player.beatoraja.camera.FFmpegCameraProcess;
+import bms.player.beatoraja.camera.HandCameraDeviceResolver;
+import bms.player.beatoraja.camera.HandCameraSettings;
 import javafx.util.Pair;
 
 import java.net.URL;
@@ -39,7 +41,9 @@ public class VideoConfigurationView implements Initializable {
     @FXML private Button handCameraRefresh;
     @FXML private Label handCameraStatus;
     @FXML private Spinner<Integer> handCameraWidth, handCameraHeight, handCameraFps;
-    @FXML private CheckBox handCameraMirror;
+    @FXML private Spinner<Integer> handCameraOffsetX, handCameraOffsetY, handCameraZoom, handCameraFocusX, handCameraFocusY;
+    @FXML private CheckBox handCameraMirror, handCameraFlipVertical, handCameraBgaFrame;
+    private FFmpegCameraProcess.Device savedHandCamera;
     private ResourceBundle resources;
 
 	@FXML
@@ -57,12 +61,13 @@ public class VideoConfigurationView implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         this.resources = resources;
         handCameraDevice.setConverter(new StringConverter<>() {
-            public String toString(FFmpegCameraProcess.Device device) { return device == null ? "" : device.label(); }
+            public String toString(FFmpegCameraProcess.Device device) { return device == null ? "" : device.displayName(); }
             public FFmpegCameraProcess.Device fromString(String text) {
-                String value = text == null ? "" : text.trim();
-                return handCameraDevice.getItems().stream()
-                        .filter(device -> device.label().equals(value) || device.value().equals(value)).findFirst()
-                        .orElse(new FFmpegCameraProcess.Device(value, value));
+                var candidates = new java.util.ArrayList<FFmpegCameraProcess.Device>();
+                candidates.add(handCameraDevice.getValue());
+                candidates.addAll(handCameraDevice.getItems());
+                candidates.add(savedHandCamera);
+                return HandCameraDeviceResolver.select(text, candidates);
             }
         });
 		updateResolutions();
@@ -74,12 +79,21 @@ public class VideoConfigurationView implements Initializable {
 
     public void update(Config config) {
         handCameraEnabled.setSelected(config.isHandCameraEnabled());
-        String device = config.getHandCameraDevice();
-        handCameraDevice.setValue(new FFmpegCameraProcess.Device(device, device));
+        // Show the remembered camera by name; the game looks it up again by name/ID when it opens it.
+        savedHandCamera = HandCameraDeviceResolver.saved(HandCameraSettings.from(config));
+        handCameraDevice.setValue(savedHandCamera);
         handCameraWidth.getValueFactory().setValue(config.getHandCameraWidth());
         handCameraHeight.getValueFactory().setValue(config.getHandCameraHeight());
         handCameraFps.getValueFactory().setValue(config.getHandCameraFps());
         handCameraMirror.setSelected(config.isHandCameraMirror());
+        handCameraFlipVertical.setSelected(config.isHandCameraFlipVertical());
+        handCameraBgaFrame.setSelected(config.isHandCameraBgaFrame());
+        var view = bms.player.beatoraja.camera.HandCameraView.from(config);
+        handCameraOffsetX.getValueFactory().setValue(view.offsetX());
+        handCameraOffsetY.getValueFactory().setValue(view.offsetY());
+        handCameraZoom.getValueFactory().setValue(view.zoom());
+        handCameraFocusX.getValueFactory().setValue(view.focusX());
+        handCameraFocusY.getValueFactory().setValue(view.focusY());
 		displayMode.setValue(config.getDisplaymode());
 		resolution.setValue(config.getResolution());
 		vSync.setSelected(config.isVsync());
@@ -98,11 +112,17 @@ public class VideoConfigurationView implements Initializable {
 
 	public void commit(Config config) {
         config.setHandCameraEnabled(handCameraEnabled.isSelected());
-        config.setHandCameraDevice(handCameraDevice.getConverter().fromString(handCameraDevice.getEditor().getText()).value());
+        HandCameraDeviceResolver.remember(config,
+                handCameraDevice.getConverter().fromString(handCameraDevice.getEditor().getText()));
         config.setHandCameraWidth(handCameraWidth.getValue());
         config.setHandCameraHeight(handCameraHeight.getValue());
         config.setHandCameraFps(handCameraFps.getValue());
         config.setHandCameraMirror(handCameraMirror.isSelected());
+        config.setHandCameraFlipVertical(handCameraFlipVertical.isSelected());
+        config.setHandCameraBgaFrame(handCameraBgaFrame.isSelected());
+        config.setHandCameraView(new bms.player.beatoraja.camera.HandCameraView(handCameraOffsetX.getValue(),
+                handCameraOffsetY.getValue(), handCameraZoom.getValue(), handCameraFocusX.getValue(),
+                handCameraFocusY.getValue()));
 		config.setResolution(resolution.getValue());
 		config.setDisplaymode(displayMode.getValue());
 		config.setVsync(vSync.isSelected());
@@ -130,8 +150,8 @@ public class VideoConfigurationView implements Initializable {
                 var devices = FFmpegCameraProcess.devices();
                 Platform.runLater(() -> {
                     handCameraDevice.getItems().setAll(devices);
-                    handCameraDevice.setValue(devices.stream().filter(device -> device.value().equals(selected.value()))
-                            .findFirst().orElse(selected));
+                    // Enumeration order and macOS indexes change; match by identity, not by the old value.
+                    handCameraDevice.setValue(HandCameraDeviceResolver.refreshed(selected, devices));
                     handCameraStatus.setText(resources.getString(devices.isEmpty()
                             ? "HAND_CAMERA_EMPTY" : "HAND_CAMERA_READY"));
                     handCameraRefresh.setDisable(false);

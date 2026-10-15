@@ -19,6 +19,11 @@ public final class HandCameraManager implements AutoCloseable {
     HandCameraManager(Config config, CameraCapture capture) { this.config = config; this.capture = capture; }
     public void beginFrame() { requested = false; polled = false; }
 
+    /** For the play skin's BGA frame: null (show the BGA) unless that option is on and a frame is available. */
+    public Texture requestBgaFrameTexture() {
+        return config.isHandCameraBgaFrame() ? requestTexture() : null;
+    }
+
     public Texture requestTexture() {
         HandCameraSettings next = HandCameraSettings.from(config);
         if (!next.usable()) return null;
@@ -58,6 +63,9 @@ public final class HandCameraManager implements AutoCloseable {
         // A disconnected or stalled camera must not leave a frozen hand image indefinitely.
         return uploadedAt != 0 && System.nanoTime() - uploadedAt < 1_000_000_000L ? texture : null;
     }
+
+    /** In-game menu status: a frame was shown within the last second. */
+    public boolean isReceiving() { return uploadedAt != 0 && System.nanoTime() - uploadedAt < 1_000_000_000L; }
 
     public void endFrame() {
         if (!requested) {
