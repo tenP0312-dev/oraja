@@ -101,24 +101,28 @@ public final class HandCameraMenu {
         HandCameraView view = HandCameraView.from(config);
         int[] offsetX = {view.offsetX()}, offsetY = {view.offsetY()}, zoom = {view.zoom()};
         int[] focusX = {view.focusX()}, focusY = {view.focusY()};
-        boolean changed = ImGui.sliderInt(t("表示位置X（%、正で右）", "Offset X (%, + right)") + "##hand-camera-offset-x",
-                offsetX, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
-        changed |= ImGui.sliderInt(t("表示位置Y（%、正で下）", "Offset Y (%, + down)") + "##hand-camera-offset-y",
-                offsetY, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
+        // Window position first: it changes what the fixed frame shows, which is the usual adjustment.
+        boolean changed = ImGui.sliderInt(t("切り抜き位置X（%、50でスキンの位置、大きいほど右）",
+                "Crop position X (%, 50 = skin's, larger = right)") + "##hand-camera-focus-x", focusX, 0, 100);
+        changed |= ImGui.sliderInt(t("切り抜き位置Y（%、50でスキンの位置、大きいほど下）",
+                "Crop position Y (%, 50 = skin's, larger = down)") + "##hand-camera-focus-y", focusY, 0, 100);
         changed |= ImGui.sliderInt(t("拡大率（%）", "Zoom (%)") + "##hand-camera-zoom",
                 zoom, HandCameraView.MIN_ZOOM, HandCameraView.MAX_ZOOM);
-        ImGui.beginDisabled(zoom[0] <= HandCameraView.MIN_ZOOM);
-        changed |= ImGui.sliderInt(t("切り抜き中心X（%）", "Crop centre X (%)") + "##hand-camera-focus-x", focusX, 0, 100);
-        changed |= ImGui.sliderInt(t("切り抜き中心Y（%）", "Crop centre Y (%)") + "##hand-camera-focus-y", focusY, 0, 100);
-        ImGui.endDisabled();
+        changed |= ImGui.sliderInt(t("表示位置X（%、正で右、枠の外は切り落とし）", "Offset X (%, + right, cut at the frame)")
+                + "##hand-camera-offset-x", offsetX, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
+        changed |= ImGui.sliderInt(t("表示位置Y（%、正で下、枠の外は切り落とし）", "Offset Y (%, + down, cut at the frame)")
+                + "##hand-camera-offset-y", offsetY, HandCameraView.MIN_OFFSET, HandCameraView.MAX_OFFSET);
         if (changed) {
             config.setHandCameraView(new HandCameraView(offsetX[0], offsetY[0], zoom[0], focusX[0], focusY[0]));
         }
         if (ImGui.button(t("表示の調整を元に戻す", "Reset display adjustment") + "##hand-camera-view-reset")) {
             config.setHandCameraView(HandCameraView.DEFAULT);
         }
-        ImGui.textDisabled(t("切り抜き中心は拡大率が100%より大きいときに使います。Ctrl+クリックで数値入力できます。",
-                "The crop centre applies when zoom is above 100%. Ctrl+click a slider to enter a value."));
+        ImGui.textDisabled(t("切り抜き位置は、枠をそのままにして映す範囲をカメラ映像全体の中で動かします（端で止まります）。"
+                        + "表示位置は枠の中で映像をずらし、枠の外は描きません。Ctrl+クリックで数値入力できます。",
+                "Crop position moves the shown area across the whole camera image, stopping at its edges, while the "
+                        + "frame stays put. Offset shifts the image inside the frame and never draws outside it. "
+                        + "Ctrl+click a slider to enter a value."));
     }
 
     private static void renderDevice(Config config) {

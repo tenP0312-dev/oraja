@@ -6,11 +6,12 @@ import bms.player.beatoraja.Config;
  * Operator adjustment applied to every hand camera display (skin camera parts and the BGA frame), inside the
  * crop the skin declares. Read each frame from Config, so changes apply live without reopening the camera.
  *
- * @param offsetX display shift in % of the display width, positive to the right
- * @param offsetY display shift in % of the display height, positive downwards
- * @param zoom    magnification in %, 100 shows the whole (skin-cropped) image
- * @param focusX  horizontal centre of the zoomed area in % of the image as displayed (after mirroring)
- * @param focusY  vertical centre of the zoomed area in %, 0 is the top
+ * @param offsetX display shift in % of the display width, positive to the right; clipped to the frame
+ * @param offsetY display shift in % of the display height, positive downwards; clipped to the frame
+ * @param zoom    magnification in %, 100 shows the skin's crop window at its size
+ * @param focusX  window position: 50 keeps the skin's crop, every 1 moves it 1% of the whole camera image
+ *                to the right as displayed (after mirroring)
+ * @param focusY  window position: 50 keeps the skin's crop, larger moves it down by % of the whole image
  */
 public record HandCameraView(int offsetX, int offsetY, int zoom, int focusX, int focusY) {
     public static final int MIN_OFFSET = -100, MAX_OFFSET = 100, MIN_ZOOM = 100, MAX_ZOOM = 400;
@@ -29,14 +30,21 @@ public record HandCameraView(int offsetX, int offsetY, int zoom, int focusX, int
                 config.getHandCameraZoom(), config.getHandCameraFocusX(), config.getHandCameraFocusY());
     }
 
-    /** The zoomed sub-rectangle {x, y, width, height} (top-left origin) of {@code base}, which it never leaves. */
-    public int[] source(int[] base, boolean mirror) {
-        int width = Math.max(1, Math.round(base[2] * 100f / zoom));
-        int height = Math.max(1, Math.round(base[3] * 100f / zoom));
-        // Focus follows the displayed image, so a mirrored view moves the same way as the slider.
-        int focus = mirror ? 100 - focusX : focusX;
-        int x = base[0] + clamp(Math.round(base[2] * focus / 100f - width / 2f), 0, base[2] - width);
-        int y = base[1] + clamp(Math.round(base[3] * focusY / 100f - height / 2f), 0, base[3] - height);
+    /**
+     * The source window {x, y, width, height} (top-left origin) in a {@code fullWidth} x {@code fullHeight}
+     * camera image. It starts as the skin's crop {@code base}, shrinks around its centre by the zoom and moves
+     * by the window position across the whole image (adding to the skin's own crop offset), stopping at the
+     * image edges. Even at 100% a skin crop smaller than the image (e.g. IIDX33's 40% strip) can be moved.
+     */
+    public int[] source(int[] base, int fullWidth, int fullHeight, boolean mirror) {
+        int width = Math.min(fullWidth, Math.max(1, Math.round(base[2] * 100f / zoom)));
+        int height = Math.min(fullHeight, Math.max(1, Math.round(base[3] * 100f / zoom)));
+        // The position follows the displayed image, so a mirrored view moves the same way as the slider.
+        int shiftX = mirror ? 50 - focusX : focusX - 50;
+        float centreX = base[0] + base[2] / 2f + fullWidth * shiftX / 100f;
+        float centreY = base[1] + base[3] / 2f + fullHeight * (focusY - 50) / 100f;
+        int x = clamp(Math.round(centreX - width / 2f), 0, fullWidth - width);
+        int y = clamp(Math.round(centreY - height / 2f), 0, fullHeight - height);
         return new int[] {x, y, width, height};
     }
 

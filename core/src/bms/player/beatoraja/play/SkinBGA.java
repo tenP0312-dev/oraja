@@ -85,11 +85,13 @@ public class SkinBGA extends SkinObject {
 		}
 		mirrorHandCamera = player.main.getConfig().isHandCameraMirror();
 		final HandCameraView view = HandCameraView.from(player.main.getConfig());
-		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, mirrorHandCamera);
+		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, texture.getWidth(),
+				texture.getHeight(), mirrorHandCamera);
 		handCamera.setTexture(texture);
 		handCamera.setRegion(source[0], source[1], source[2], source[3]);
-		draw(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
-				region.width, region.height);
+		// The BGA frame stays fixed; a shifted camera image is cut off at its edges.
+		drawClipped(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
+				region.width, region.height, region);
 		return true;
 	}
 

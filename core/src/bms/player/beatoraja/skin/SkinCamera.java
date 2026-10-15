@@ -32,14 +32,16 @@ public final class SkinCamera extends SkinObject implements FrameDrivenSkinObjec
         if (texture == null) { draw = false; return; }
         mirror = state.main.getConfig().isHandCameraMirror();
         view = HandCameraView.from(state.main.getConfig());
-        int[] source = view.source(crop.pixels(texture.getWidth(), texture.getHeight()), mirror);
+        int[] source = view.source(crop.pixels(texture.getWidth(), texture.getHeight()), texture.getWidth(),
+                texture.getHeight(), mirror);
         image.setTexture(texture);
         image.setRegion(source[0], source[1], source[2], source[3]);
     }
 
     @Override public void draw(Skin.SkinObjectRenderer sprite) {
-        draw(sprite, image, region.x + view.dx(region.width), region.y + view.dy(region.height),
-                region.width, region.height);
+        // The skin's camera frame stays fixed; a shifted image is cut off at its edges.
+        drawClipped(sprite, image, region.x + view.dx(region.width), region.y + view.dy(region.height),
+                region.width, region.height, region);
     }
 
     @Override protected void transformDrawImage(TextureRegion image) {
