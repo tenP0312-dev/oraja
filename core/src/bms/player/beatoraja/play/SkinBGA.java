@@ -24,7 +24,7 @@ public class SkinBGA extends SkinObject {
 	private BMSPlayer player;
 	private long time;
 	private final TextureRegion handCamera = new TextureRegion();
-	private boolean mirrorHandCamera;
+	private boolean mirrorHandCamera, flipHandCameraVertical;
 	/** Whether the skin places the hand camera itself; resolved on first draw. */
 	private Boolean skinHasCamera;
 
@@ -84,12 +84,15 @@ public class SkinBGA extends SkinObject {
 			return false;
 		}
 		mirrorHandCamera = player.main.getConfig().isHandCameraMirror();
+		flipHandCameraVertical = player.main.getConfig().isHandCameraFlipVertical();
 		final HandCameraView view = HandCameraView.from(player.main.getConfig());
-		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, mirrorHandCamera);
+		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, texture.getWidth(),
+				texture.getHeight(), mirrorHandCamera, flipHandCameraVertical);
 		handCamera.setTexture(texture);
 		handCamera.setRegion(source[0], source[1], source[2], source[3]);
-		draw(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
-				region.width, region.height);
+		// The BGA frame stays fixed; a shifted camera image is cut off at its edges.
+		drawClipped(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
+				region.width, region.height, region);
 		return true;
 	}
 
@@ -104,7 +107,7 @@ public class SkinBGA extends SkinObject {
 	@Override
 	protected void transformDrawImage(TextureRegion image) {
 		// Only the hand camera is drawn through SkinObject.draw; the BGA processor draws directly.
-		if (mirrorHandCamera) image.flip(true, false);
+		if (mirrorHandCamera || flipHandCameraVertical) image.flip(mirrorHandCamera, flipHandCameraVertical);
 	}
 
 	@Override
