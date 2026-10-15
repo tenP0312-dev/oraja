@@ -41,6 +41,7 @@ public class VideoConfigurationView implements Initializable {
     @FXML private Button handCameraRefresh;
     @FXML private Label handCameraStatus;
     @FXML private Spinner<Integer> handCameraWidth, handCameraHeight, handCameraFps;
+    @FXML private Spinner<Integer> handCameraOffsetX, handCameraOffsetY, handCameraZoom, handCameraFocusX, handCameraFocusY;
     @FXML private CheckBox handCameraMirror, handCameraBgaFrame;
     private FFmpegCameraProcess.Device savedHandCamera;
     private ResourceBundle resources;
@@ -86,6 +87,12 @@ public class VideoConfigurationView implements Initializable {
         handCameraFps.getValueFactory().setValue(config.getHandCameraFps());
         handCameraMirror.setSelected(config.isHandCameraMirror());
         handCameraBgaFrame.setSelected(config.isHandCameraBgaFrame());
+        var view = bms.player.beatoraja.camera.HandCameraView.from(config);
+        handCameraOffsetX.getValueFactory().setValue(view.offsetX());
+        handCameraOffsetY.getValueFactory().setValue(view.offsetY());
+        handCameraZoom.getValueFactory().setValue(view.zoom());
+        handCameraFocusX.getValueFactory().setValue(view.focusX());
+        handCameraFocusY.getValueFactory().setValue(view.focusY());
 		displayMode.setValue(config.getDisplaymode());
 		resolution.setValue(config.getResolution());
 		vSync.setSelected(config.isVsync());
@@ -111,6 +118,9 @@ public class VideoConfigurationView implements Initializable {
         config.setHandCameraFps(handCameraFps.getValue());
         config.setHandCameraMirror(handCameraMirror.isSelected());
         config.setHandCameraBgaFrame(handCameraBgaFrame.isSelected());
+        config.setHandCameraView(new bms.player.beatoraja.camera.HandCameraView(handCameraOffsetX.getValue(),
+                handCameraOffsetY.getValue(), handCameraZoom.getValue(), handCameraFocusX.getValue(),
+                handCameraFocusY.getValue()));
 		config.setResolution(resolution.getValue());
 		config.setDisplaymode(displayMode.getValue());
 		config.setVsync(vSync.isSelected());

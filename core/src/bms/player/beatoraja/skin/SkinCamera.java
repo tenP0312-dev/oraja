@@ -2,6 +2,7 @@ package bms.player.beatoraja.skin;
 
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.camera.CameraCrop;
+import bms.player.beatoraja.camera.HandCameraView;
 import bms.player.beatoraja.skin.scene.FrameDrivenSkinObject;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -11,6 +12,7 @@ public final class SkinCamera extends SkinObject implements FrameDrivenSkinObjec
     private final CameraCrop crop;
     private final TextureRegion image = new TextureRegion();
     private boolean mirror;
+    private HandCameraView view = HandCameraView.DEFAULT;
 
     public SkinCamera(CameraCrop crop) {
         this.crop = crop;
@@ -28,14 +30,16 @@ public final class SkinCamera extends SkinObject implements FrameDrivenSkinObjec
         }
         Texture texture = state.main.getHandCameraManager().requestTexture();
         if (texture == null) { draw = false; return; }
-        int[] source = crop.pixels(texture.getWidth(), texture.getHeight());
+        mirror = state.main.getConfig().isHandCameraMirror();
+        view = HandCameraView.from(state.main.getConfig());
+        int[] source = view.source(crop.pixels(texture.getWidth(), texture.getHeight()), mirror);
         image.setTexture(texture);
         image.setRegion(source[0], source[1], source[2], source[3]);
-        mirror = state.main.getConfig().isHandCameraMirror();
     }
 
     @Override public void draw(Skin.SkinObjectRenderer sprite) {
-        draw(sprite, image, region.x, region.y, region.width, region.height);
+        draw(sprite, image, region.x + view.dx(region.width), region.y + view.dy(region.height),
+                region.width, region.height);
     }
 
     @Override protected void transformDrawImage(TextureRegion image) {
