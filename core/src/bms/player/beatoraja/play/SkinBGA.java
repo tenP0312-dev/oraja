@@ -5,6 +5,8 @@ import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.BMSPlayerMode;
 import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
+import bms.player.beatoraja.camera.HandCameraView;
+import bms.player.beatoraja.skin.SkinCamera;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.StretchType;
 import com.badlogic.gdx.graphics.Texture;
@@ -23,6 +25,8 @@ public class SkinBGA extends SkinObject {
 	private long time;
 	private final TextureRegion handCamera = new TextureRegion();
 	private boolean mirrorHandCamera;
+	/** Whether the skin places the hand camera itself; resolved on first draw. */
+	private Boolean skinHasCamera;
 
 	public SkinBGA(int bgaExpand) {
 		switch (bgaExpand) {
@@ -67,16 +71,34 @@ public class SkinBGA extends SkinObject {
 	 * frame while the frame is shown; the BGA keeps running underneath and is shown while no frame is available.
 	 */
 	private boolean drawHandCamera(SkinObjectRenderer sprite) {
+		if (skinHasCamera == null) {
+			skinHasCamera = player.getSkin() != null && hasCameraPart(player.getSkin().getAllSkinObjects());
+		}
+		// A skin with its own camera part already places the camera; showing it here too would duplicate it.
+		if (skinHasCamera) {
+			return false;
+		}
 		final var manager = player.main.getHandCameraManager();
 		final Texture texture = manager == null ? null : manager.requestBgaFrameTexture();
 		if (texture == null) {
 			return false;
 		}
-		handCamera.setTexture(texture);
-		handCamera.setRegion(0, 0, texture.getWidth(), texture.getHeight());
 		mirrorHandCamera = player.main.getConfig().isHandCameraMirror();
-		draw(sprite, handCamera, region.x, region.y, region.width, region.height);
+		final HandCameraView view = HandCameraView.from(player.main.getConfig());
+		final int[] source = view.source(new int[] {0, 0, texture.getWidth(), texture.getHeight()}, mirrorHandCamera);
+		handCamera.setTexture(texture);
+		handCamera.setRegion(source[0], source[1], source[2], source[3]);
+		draw(sprite, handCamera, region.x + view.dx(region.width), region.y + view.dy(region.height),
+				region.width, region.height);
 		return true;
+	}
+
+	static boolean hasCameraPart(SkinObject[] objects) {
+		if (objects == null) return false;
+		for (SkinObject object : objects) {
+			if (object instanceof SkinCamera) return true;
+		}
+		return false;
 	}
 
 	@Override

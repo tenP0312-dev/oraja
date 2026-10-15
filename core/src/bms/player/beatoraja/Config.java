@@ -195,6 +195,9 @@ public class Config implements Validatable {
     private boolean handCameraMirror;
     /** Show the hand camera in the play skin's BGA frame instead of the BGA, for skins without a camera part. */
     private boolean handCameraBgaFrame;
+    /** Live display adjustment in percent; see HandCameraView. */
+    private int handCameraOffsetX, handCameraOffsetY, handCameraZoom = 100, handCameraFocusX = 50,
+            handCameraFocusY = 50;
 
 	/**
 	 * Write opt-in BGA/input/render/audio timing summaries to
@@ -459,6 +462,23 @@ public class Config implements Validatable {
     public void setHandCameraMirror(boolean value) { handCameraMirror = value; }
     public boolean isHandCameraBgaFrame() { return handCameraBgaFrame; }
     public void setHandCameraBgaFrame(boolean value) { handCameraBgaFrame = value; }
+    public int getHandCameraOffsetX() { return handCameraOffsetX; }
+    public void setHandCameraOffsetX(int value) { handCameraOffsetX = value; }
+    public int getHandCameraOffsetY() { return handCameraOffsetY; }
+    public void setHandCameraOffsetY(int value) { handCameraOffsetY = value; }
+    public int getHandCameraZoom() { return handCameraZoom; }
+    public void setHandCameraZoom(int value) { handCameraZoom = value; }
+    public int getHandCameraFocusX() { return handCameraFocusX; }
+    public void setHandCameraFocusX(int value) { handCameraFocusX = value; }
+    public int getHandCameraFocusY() { return handCameraFocusY; }
+    public void setHandCameraFocusY(int value) { handCameraFocusY = value; }
+    public void setHandCameraView(bms.player.beatoraja.camera.HandCameraView view) {
+        handCameraOffsetX = view.offsetX();
+        handCameraOffsetY = view.offsetY();
+        handCameraZoom = view.zoom();
+        handCameraFocusX = view.focusX();
+        handCameraFocusY = view.focusY();
+    }
 
 	public void setBga(int bga) {
 		this.bga = bga;
@@ -1097,6 +1117,7 @@ public class Config implements Validatable {
         handCameraWidth = camera.width();
         handCameraHeight = camera.height();
         handCameraFps = camera.fps();
+        setHandCameraView(bms.player.beatoraja.camera.HandCameraView.from(this));
 		bgaExpand = MathUtils.clamp(bgaExpand, 0, 2);
         bgaQualityMode = getBgaQualityMode().name();
         if (bgaMaxFps != 0 && bgaMaxFps != 15 && bgaMaxFps != 24 && bgaMaxFps != 30 && bgaMaxFps != 60) bgaMaxFps = 0;

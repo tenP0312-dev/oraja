@@ -23,6 +23,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.114 preserves 0.4.14.113 and adds hand camera display fixes:
+skins with their own camera part no longer also show it in the BGA frame
+(#525), and the display offset, zoom and crop centre can be adjusted live from
+the F5 menu or the launcher (#526). Updates remain optional; plugin 0.0.80 and
+launcher 0.2.30 are retained. See [the test scope](docs/TEST_RELEASE_0.4.14.114.md).
+
 Version 0.4.14.113 preserves 0.4.14.112 and adds hand camera usability: the
 selected camera is remembered by name and OS ID and reconnects automatically
 at launch and when it is plugged in (#519), skins without a camera part can
