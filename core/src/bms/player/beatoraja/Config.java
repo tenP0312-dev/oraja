@@ -189,6 +189,8 @@ public class Config implements Validatable {
 
     private boolean handCameraEnabled;
     private String handCameraDevice = "";
+    /** Stable identity of the selected camera; the device value above may be an index that changes. */
+    private String handCameraDeviceName = "", handCameraDeviceId = "";
     private int handCameraWidth = 640, handCameraHeight = 480, handCameraFps = 30;
     private boolean handCameraMirror;
 
@@ -441,6 +443,10 @@ public class Config implements Validatable {
     public void setHandCameraEnabled(boolean value) { handCameraEnabled = value; }
     public String getHandCameraDevice() { return handCameraDevice; }
     public void setHandCameraDevice(String value) { handCameraDevice = value; }
+    public String getHandCameraDeviceName() { return handCameraDeviceName; }
+    public void setHandCameraDeviceName(String value) { handCameraDeviceName = value; }
+    public String getHandCameraDeviceId() { return handCameraDeviceId; }
+    public void setHandCameraDeviceId(String value) { handCameraDeviceId = value; }
     public int getHandCameraWidth() { return handCameraWidth; }
     public void setHandCameraWidth(int value) { handCameraWidth = value; }
     public int getHandCameraHeight() { return handCameraHeight; }
@@ -1082,6 +1088,8 @@ public class Config implements Validatable {
 		bga = MathUtils.clamp(bga, 0, 2);
         var camera = bms.player.beatoraja.camera.HandCameraSettings.from(this);
         handCameraDevice = camera.device();
+        handCameraDeviceName = camera.deviceName();
+        handCameraDeviceId = camera.deviceId();
         handCameraWidth = camera.width();
         handCameraHeight = camera.height();
         handCameraFps = camera.fps();

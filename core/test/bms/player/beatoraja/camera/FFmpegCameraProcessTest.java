@@ -21,7 +21,7 @@ class FFmpegCameraProcessTest {
         assertThrows(IllegalArgumentException.class, () -> FFmpegCameraProcess.command("ffmpeg", "linux", settings));
     }
     @Test void enumerationIgnoresMicrophonesAndAlternativeDshowNames() {
-        assertEquals(List.of(new FFmpegCameraProcess.Device("USB Camera", "USB Camera")),
+        assertEquals(List.of(new FFmpegCameraProcess.Device("USB Camera", "USB Camera", "@device_pnp_x")),
                 FFmpegCameraProcess.parseDevices("windows", "[dshow @ x] \"USB Camera\" (video)\n"
                         + "[dshow @ x] Alternative name \"@device_pnp_x\"\n[dshow @ x] \"Microphone\" (audio)"));
         assertEquals(List.of(new FFmpegCameraProcess.Device("0", "FaceTime HD Camera")),
