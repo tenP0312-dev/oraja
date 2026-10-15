@@ -99,6 +99,8 @@
         <Label text="%HAND_CAMERA_FPS" labelFor="$handCameraFps" GridPane.rowIndex="20" styleClass="optionLabel"/>
         <CheckBox fx:id="handCameraMirror" GridPane.rowIndex="21" GridPane.columnIndex="1"/>
         <Label text="%HAND_CAMERA_MIRROR" labelFor="$handCameraMirror" GridPane.rowIndex="21" styleClass="optionLabel"/>
+        <CheckBox fx:id="handCameraBgaFrame" GridPane.rowIndex="22" GridPane.columnIndex="1"/>
+        <Label text="%HAND_CAMERA_BGA_FRAME" labelFor="$handCameraBgaFrame" GridPane.rowIndex="22" styleClass="optionLabel"/>
 
         <stylesheets>
             <URL value="@LauncherStyle.css"/>

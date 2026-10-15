@@ -193,6 +193,8 @@ public class Config implements Validatable {
     private String handCameraDeviceName = "", handCameraDeviceId = "";
     private int handCameraWidth = 640, handCameraHeight = 480, handCameraFps = 30;
     private boolean handCameraMirror;
+    /** Show the hand camera in the play skin's BGA frame instead of the BGA, for skins without a camera part. */
+    private boolean handCameraBgaFrame;
 
 	/**
 	 * Write opt-in BGA/input/render/audio timing summaries to
@@ -455,6 +457,8 @@ public class Config implements Validatable {
     public void setHandCameraFps(int value) { handCameraFps = value; }
     public boolean isHandCameraMirror() { return handCameraMirror; }
     public void setHandCameraMirror(boolean value) { handCameraMirror = value; }
+    public boolean isHandCameraBgaFrame() { return handCameraBgaFrame; }
+    public void setHandCameraBgaFrame(boolean value) { handCameraBgaFrame = value; }
 
 	public void setBga(int bga) {
 		this.bga = bga;

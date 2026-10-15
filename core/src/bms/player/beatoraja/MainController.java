@@ -1150,6 +1150,7 @@ public class MainController {
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
 		MiscSettingMenu.setMain(this);
+		HandCameraMenu.setMain(this);
 		FunctionKeyMenu.setMain(this);
 		if (initializeArena) {
 			BMSIRArenaClient.initialize(this);
