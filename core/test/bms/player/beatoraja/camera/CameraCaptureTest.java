@@ -149,8 +149,8 @@ class CameraCaptureTest {
         AtomicInteger opens = new AtomicInteger();
         AtomicReference<Pipe> latest = new AtomicReference<>();
         try (CameraCapture capture = new CameraCapture(s -> {
-            opens.incrementAndGet();
-            Pipe pipe = new Pipe(); latest.set(pipe); return pipe;
+            // Publish the pipe before the count the test waits on.
+            Pipe pipe = new Pipe(); latest.set(pipe); opens.incrementAndGet(); return pipe;
         }, now::get)) {
             capture.request(settings);
             until(() -> opens.get() == 1);
