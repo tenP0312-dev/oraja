@@ -16,7 +16,8 @@ public enum ModMenuItem {
     HAND_CAMERA("hand_camera", "手元カメラ", "Hand Camera"),
     BMSIR_ARENA_OVERLAY("bmsir_arena_overlay", "BMS-IR Arenaオーバーレイ", "BMS-IR Arena Overlay"),
     ARENA_DEBUG("arena_debug", "Arena orajaデバッグ情報", "Arena oraja Debug Information"),
-    MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS");
+    MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS"),
+    NONSTOP_MIX("nonstop_mix", "NONSTOP MIX", "NONSTOP MIX");
 
     public final String id;
     public final String displayName;

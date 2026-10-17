@@ -561,6 +561,11 @@ public class MainController {
 		return offset[index];
 	}
 
+	/** Loudness analyzer shared with NONSTOP MIX volume matching; null before startup finishes. */
+	public bms.player.beatoraja.audio.BMSLoudnessAnalyzer getLoudnessAnalyzer() {
+		return loudnessAnalyzer;
+	}
+
 	public SongDatabaseAccessor getSongDatabase() {
 		return MainLoader.getScoreDatabaseAccessor();
 	}
@@ -1152,6 +1157,7 @@ public class MainController {
 		MiscSettingMenu.setMain(this);
 		HandCameraMenu.setMain(this);
 		FunctionKeyMenu.setMain(this);
+		bms.player.beatoraja.modmenu.NonstopMixMenu.setMain(this);
 		if (initializeArena) {
 			BMSIRArenaClient.initialize(this);
 		}

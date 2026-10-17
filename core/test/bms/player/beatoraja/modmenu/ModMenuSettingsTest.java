@@ -24,7 +24,7 @@ class ModMenuSettingsTest {
             PlayerConfig player = new Json().fromJson(PlayerConfig.class, json);
             player.validate();
             var settings = player.getModMenuSettings();
-            assertEquals(15, settings.itemEnabled.size());
+            assertEquals(ModMenuItem.values().length, settings.itemEnabled.size());
             for (ModMenuItem item : ModMenuItem.values()) {
                 assertEquals(item != ModMenuItem.SONG_MANAGER || !json.contains("false"), settings.isEnabled(item));
             }

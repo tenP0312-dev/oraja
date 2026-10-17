@@ -295,6 +295,18 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 
 	}
 
+	@Override
+	public SongData[] getSongDatasByMode(int mode, int limit) {
+		try {
+			List<SongData> m = qr.query("SELECT * FROM song WHERE mode = ? GROUP BY sha256 LIMIT ?",
+					songhandler, mode, Math.max(1, limit));
+			return Validatable.removeInvalidElements(m).toArray(new SongData[0]);
+		} catch (Exception e) {
+			logger.error("song.db読み込み時の例外:{}", e.getMessage());
+		}
+		return SongData.EMPTY;
+	}
+
 	public SongData[] getSongDatasByText(String text) {
 		try {
 			List<SongData> m = qr.query(

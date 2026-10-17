@@ -63,6 +63,7 @@ public class ImGuiRenderer {
     private static ImBoolean SHOW_DISPLAY_SETTINGS = new ImBoolean(false);
     private static ImBoolean SHOW_HAND_CAMERA = new ImBoolean(false);
     private static ImBoolean SHOW_MANIAC_OPTIONS = new ImBoolean(false);
+    private static ImBoolean SHOW_NONSTOP_MIX = new ImBoolean(false);
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_FONT_SCALE = 1.300f;
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_X_RATIO = 0.346f;
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_Y_RATIO = 0.094f;
@@ -177,6 +178,7 @@ public class ImGuiRenderer {
             if (show(ModMenuItem.DISPLAY_SETTINGS)) ImGui.checkbox(t("表示", "Show Display Window"), SHOW_DISPLAY_SETTINGS);
             if (show(ModMenuItem.HAND_CAMERA)) ImGui.checkbox(t("手元カメラ", "Show Hand Camera Window"), SHOW_HAND_CAMERA);
             if (show(ModMenuItem.MANIAC_OPTIONS) && ImGui.button("MANIAC OPTIONS")) showManiacOptions();
+            if (show(ModMenuItem.NONSTOP_MIX)) ImGui.checkbox(t("NONSTOP MIX（曲をつないで連続プレイ）", "NONSTOP MIX (continuous sets)"), SHOW_NONSTOP_MIX);
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
                     !BMSIRArenaOverlay.isHidden()
@@ -250,6 +252,11 @@ public class ImGuiRenderer {
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
         }
+        bms.player.beatoraja.nonstop.MixMainThread.drain();
+        if (SHOW_NONSTOP_MIX.get()) {
+            NonstopMixMenu.show(SHOW_NONSTOP_MIX);
+        }
+        NonstopMixMenu.renderResultWindow();
         AudioChartMenu.render();
         renderMyDifficultyTableBatchIndicator();
         BMSIRArenaOverlay.render();
@@ -545,6 +552,7 @@ public class ImGuiRenderer {
                 SHOW_MANIAC_OPTIONS.set(false);
                 ManiacOptionsMenu.discard();
             }
+            case NONSTOP_MIX -> SHOW_NONSTOP_MIX.set(false);
             case ARENA_DEBUG -> { }
         }
     }

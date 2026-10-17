@@ -74,6 +74,16 @@ public interface SongDatabaseAccessor {
 	public SongData[] getSongDatasByText(String text);
 
 	/**
+	 * Songs of one key mode for NONSTOP MIX candidate pools (Issue #535).
+	 *
+	 * @param mode  {@link bms.model.Mode#id}
+	 * @param limit upper bound of returned rows
+	 */
+	public default SongData[] getSongDatasByMode(int mode, int limit) {
+		return SongData.EMPTY;
+	}
+
+	/**
 	 * 楽曲を取得する
 	 * 
 	 * @param key
