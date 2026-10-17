@@ -27,7 +27,7 @@ import bms.player.beatoraja.system.RobustFile;
 /** Disk-backed cache for successful IR rankings. */
 public final class PersistentRankingDataStore {
     private static final Logger logger = LoggerFactory.getLogger(PersistentRankingDataStore.class);
-    private static final int FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
     private static final String FILE_NAME = "ir-ranking-cache.json";
     private static final int MAX_ENTRIES = 20_000;
 

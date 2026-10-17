@@ -33,6 +33,8 @@ public class IRCourseData {
 	 * LN TYPE(-1 : 未指定, 0: LN, 1: CN, 2: HCN)
 	 */
 	public final int lntype;
+	public final int bmsirRankingLnType;
+	public final int bmsirRankingNotes;
 
     public IRCourseData(CourseData course) {
     	this(course, -1);
@@ -47,17 +49,33 @@ public class IRCourseData {
 	}
 
 	public IRCourseData(CourseData course, int lntype, boolean forceLn, StageResult[] bmsirStages) {
+		this(course, lntype, forceLn, bmsirStages, false);
+	}
+
+	public static IRCourseData forRanking(CourseData course, int lnmode, boolean forceLn) {
+		return new IRCourseData(course, lnmode, forceLn, null, true);
+	}
+
+	private IRCourseData(CourseData course, int lntype, boolean forceLn, StageResult[] bmsirStages, boolean resolveRanking) {
     	this.name = course.getName();
     	this.charts = new IRChartData[course.getSong().length];
     	for(int i = 0;i < this.charts.length;i++) {
-            charts[i] = forceLn ? IRChartData.forRanking(course.getSong()[i], 0, true)
-                    : new IRChartData(course.getSong()[i]);
+            charts[i] = resolveRanking ? IRChartData.forRanking(course.getSong()[i], Math.max(lntype, 0), forceLn)
+                    : IRChartData.forPlaySnapshot(course.getSong()[i], Math.max(lntype, 0), forceLn);
     	}
     	this.constraint = new CourseDataConstraint[course.getConstraint().length];
     	for(int i = 0;i < this.constraint.length;i++) {
     		constraint[i] =course.getConstraint()[i];
     	}
         this.lntype = forceLn ? 0 : lntype;
+		int notes = 0, effectiveType = 0;
+		for (IRChartData chart : charts) {
+			if (chart.bmsirRankingNotes < 0) { notes = -1; effectiveType = -1; break; }
+			notes = Math.addExact(notes, chart.bmsirRankingNotes);
+			effectiveType = Math.max(effectiveType, chart.bmsirRankingLnType);
+		}
+		this.bmsirRankingNotes = notes;
+		this.bmsirRankingLnType = effectiveType;
 		this.bmsirStages = bmsirStages == null ? null : bmsirStages.clone();
 
     	this.trophy = new IRTrophyData[course.getTrophy().length];

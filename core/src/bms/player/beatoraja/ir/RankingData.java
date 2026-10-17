@@ -60,6 +60,14 @@ public class RankingData {
 	private volatile long lastUpdateTime;
 	private volatile boolean lastAccessFailed;
 	private final AtomicBoolean accessInFlight = new AtomicBoolean();
+	private volatile IRLongNoteContract contract = IRLongNoteContract.UNKNOWN;
+
+	public void setContract(IRLongNoteContract contract) { this.contract = contract; }
+
+	public static boolean matchesContract(IRScoreData[] rows, int lntype, int notes) {
+		IRLongNoteContract expected = new IRLongNoteContract(lntype, notes);
+		return rows != null && Arrays.stream(rows).allMatch(expected::matches);
+	}
 	
 	public void load(MainState mainstate, Object song) {
 		load(mainstate, song, IRRankingContext.from(mainstate.main.getPlayerConfig()));
@@ -101,7 +109,17 @@ public class RankingData {
 					logger.trace("IRランキング取得を設定により省略しました");
 					return;
 				}
+				IRChartData chart = song instanceof SongData songData
+						? IRChartData.forRanking(songData, lnmode, forceLn) : null;
+				IRCourseData courseRequest = song instanceof CourseData course
+						? IRCourseData.forRanking(course, lnmode, forceLn) : null;
+				setContract(chart != null
+						? new IRLongNoteContract(chart.bmsirRankingLnType, chart.bmsirRankingNotes)
+						: new IRLongNoteContract(courseRequest.bmsirRankingLnType, courseRequest.bmsirRankingNotes));
+				discardIncompatibleScores(context);
 				String identity = cacheIdentity(song, context);
+				if (!identity.isEmpty() && contract.notes() >= 0)
+					identity += ":" + contract.lntype() + ":" + contract.notes();
 				IRResponse<String> profile = primary.connection.getRankingCacheScope();
 				if (profile != null && (!profile.isSucceeded() || profile.getData() == null)) {
 					if (!hasCachedScores()) {
@@ -121,9 +139,10 @@ public class RankingData {
 				}
 				IRResponse<IRScoreData[]> response = null;
 				if(song instanceof SongData songData) {
-					response = primary.connection.getPlayData(null, IRChartData.forRanking(songData, lnmode, forceLn));
+					response = primary.connection.getPlayData(null, chart);
 					// Rival databases have no separate forced-LN chart identity.
 					if (response != null && response.isSucceeded() && response.getData() != null
+							&& compatibleScores(response.getData(), context)
 							&& (!forceLn || Arrays.stream(response.getData())
 									.allMatch(score -> score != null && score.lntype == 0)) && !(forceLn
 							&& bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(songData))) {
@@ -131,9 +150,9 @@ public class RankingData {
 								response.getData(), songData, lnmode);
 					}
 				} else if(song instanceof CourseData course) {
-					response = primary.connection.getCoursePlayData(null, new IRCourseData(course, lnmode, forceLn));
+					response = primary.connection.getCoursePlayData(null, courseRequest);
 				}
-				if(response != null && response.isSucceeded() && response.getData() != null) {
+				if(response != null && response.isSucceeded() && compatibleScores(response.getData(), context)) {
 					IRScoreData[] received = response.getData().clone();
 					if (forceLn) received = Arrays.stream(received)
 							.filter(score -> score != null && score.lntype == 0).toArray(IRScoreData[]::new);
@@ -174,15 +193,17 @@ public class RankingData {
 
 	}
 
-	private static boolean compatibleScores(IRScoreData[] scores, IRRankingContext context) {
-		return scores != null && (!context.forceLn() || Arrays.stream(scores)
-				.allMatch(score -> score != null && score.lntype == 0));
+	private boolean compatibleScores(IRScoreData[] scores, IRRankingContext context) {
+		return scores != null && Arrays.stream(scores).allMatch(score -> score != null
+				&& (!context.forceLn() || score.lntype == 0)
+				&& (contract.notes() < 0 || contract.matches(score)));
 	}
 	
 	public synchronized void updateScore(IRScoreData[] scores, ScoreData localscore) {
 		if(scores == null) {
 			return;
 		}
+		if (contract.notes() >= 0 && !Arrays.stream(scores).allMatch(contract::matches)) return;
 		boolean firstUpdate = this.scores == null;
 		
 		Arrays.sort(scores, (s1, s2) -> (s2.getExscore() - s1.getExscore()));
@@ -225,6 +246,7 @@ public class RankingData {
 
 	public void restoreCachedScores(IRScoreData[] cachedScores) {
 		if (cachedScores != null) {
+			if (contract.notes() >= 0 && !Arrays.stream(cachedScores).allMatch(contract::matches)) return;
 			updateScore(cachedScores.clone(), null);
 			prevrank = irrank;
 			localrank = 0;
@@ -249,8 +271,7 @@ public class RankingData {
 
 	public boolean isCompatible(IRRankingContext context) {
 		IRScoreData[] snapshot = getScoresSnapshot();
-		return !context.forceLn() || snapshot == null || Arrays.stream(snapshot)
-				.allMatch(score -> score != null && score.lntype == 0);
+		return snapshot == null || compatibleScores(snapshot, context);
 	}
 
 	/** Clear only incompatible rows, retaining this entry's single-flight guard. */
