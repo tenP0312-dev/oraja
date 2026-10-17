@@ -77,6 +77,7 @@ public final class MixCompiler {
         final int n = plan.tracks.size();
         final Mode mode = plan.mode;
         final int lanes = mode.key;
+        final boolean withBga = !plan.noBga;
         List<Issue> issues = new ArrayList<>();
 
         long[] chartEnds = new long[n];
@@ -97,6 +98,7 @@ public final class MixCompiler {
         int[] wavOffset = new int[n];
         int[] wavCount = new int[n];
         int[] bgaOffset = new int[n];
+        List<String[]> sourceBgas = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             BMSModel model = sources.get(i).model();
             wavOffset[i] = wavs.size();
@@ -107,7 +109,8 @@ public final class MixCompiler {
             }
             bgaOffset[i] = bgas.size();
             String[] bgaList = model.getBgaList();
-            if (bgaList != null) {
+            sourceBgas.add(bgaList);
+            if (withBga && bgaList != null) {
                 for (String name : bgaList) {
                     bgas.add(MixSongResource.prefixed(i, name));
                 }
@@ -274,18 +277,18 @@ public final class MixCompiler {
                     sounds.add(new TimedNote(setMs, bg, true));
                 }
                 if (owns) {
-                    if (tl.getBGA() != -1 || tl.getLayer() != -1 || tl.getEventlayer().length > 0
-                            || tl.getSectionLine() || tl.getStop() > 0) {
+                    boolean bgaEvent = withBga && (tl.getBGA() != -1 || tl.getLayer() != -1 || tl.getEventlayer().length > 0);
+                    if (bgaEvent || tl.getSectionLine() || tl.getStop() > 0) {
                         if (slot == null) {
                             slot = slot(slots, setUs, lanes);
                         }
-                        if (tl.getBGA() != -1) {
+                        if (withBga && tl.getBGA() != -1) {
                             slot.bga = tl.getBGA() + bgaOffset[i];
                         }
-                        if (tl.getLayer() != -1) {
+                        if (withBga && tl.getLayer() != -1) {
                             slot.layer = tl.getLayer() + bgaOffset[i];
                         }
-                        if (tl.getEventlayer().length > 0) {
+                        if (withBga && tl.getEventlayer().length > 0) {
                             slot.eventLayer = remapLayers(tl.getEventlayer(), bgaOffset[i]);
                         }
                         slot.sectionLine |= tl.getSectionLine();
@@ -306,7 +309,7 @@ public final class MixCompiler {
             long chartAt = h - layout.offset()[next];
             int bga = -1;
             int layer = -1;
-            for (TimeLine tl : model.getAllTimeLines()) {
+            for (TimeLine tl : withBga ? model.getAllTimeLines() : new TimeLine[0]) {
                 if (tl.getMilliTime() > chartAt) {
                     break;
                 }
@@ -456,7 +459,7 @@ public final class MixCompiler {
             merged.setStagefile(MixSongResource.prefixed(0, stagefile));
         }
         String backbmp = sources.get(0).model().getBackbmp();
-        if (backbmp != null && !backbmp.isEmpty()) {
+        if (withBga && backbmp != null && !backbmp.isEmpty()) {
             merged.setBackbmp(MixSongResource.prefixed(0, backbmp));
         }
 
@@ -468,8 +471,9 @@ public final class MixCompiler {
         for (int i = 0; i < n; i++) {
             soundTable[i] = trackSounds.get(i).toArray(TimedNote[]::new);
         }
+        MixLoad load = MixLoad.of(n, layout.totalMs(), sourceBgas);
         return new CompiledMix(plan.copy(), merged, MixSongResource.chart(plan.id, charts), layout, chartEnds,
-                staticGain, noteTrack, soundTable, List.copyOf(issues), identity);
+                staticGain, noteTrack, soundTable, List.copyOf(issues), identity, load);
     }
 
     private static Issue longNoteIssue(int track, long startMs, boolean startOwned, boolean endOwned,

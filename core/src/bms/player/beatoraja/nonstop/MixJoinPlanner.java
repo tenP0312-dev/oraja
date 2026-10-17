@@ -134,6 +134,7 @@ public final class MixJoinPlanner {
 
     private static void fade(MixTrack outgoing, MixTrack incoming, MixTransition result, MixTrackAnalysis a,
             MixTrackAnalysis b, Settings settings, double bpm) {
+        tightenRanges(outgoing, incoming, a, b);
         safeCutPoints(outgoing, incoming, a, b);
         long barMs = Math.round(240_000.0 / bpm);
         long segment = outgoing.resolvedOut(a.chartEnd) - outgoing.inMs;
@@ -146,11 +147,57 @@ public final class MixJoinPlanner {
 
     private static void cut(MixTrack outgoing, MixTrack incoming, MixTransition result, MixTrackAnalysis a,
             MixTrackAnalysis b) {
+        tightenRanges(outgoing, incoming, a, b);
         safeCutPoints(outgoing, incoming, a, b);
         result.type = MixTransition.Type.CUT;
         result.overlapMs = 0;
         result.handoffMs = 0;
         result.gapMs = 0;
+    }
+
+    /**
+     * Keeps the stretch without notes across a fade or cut short: the outgoing
+     * song stops at the bar line after its last note (and long-note tail), and
+     * the incoming song starts at the bar line of its first note, so a quiet
+     * outro or intro never leaves more than about two bars without notes.
+     */
+    static void tightenRanges(MixTrack outgoing, MixTrack incoming, MixTrackAnalysis a, MixTrackAnalysis b) {
+        if (!outgoing.lockRange && a.totalNotes > 0 && (outgoing.outMs < 0 || outgoing.outMs >= a.lastNoteMs)) {
+            long out = barAfterLastNote(a);
+            if (out >= 0) {
+                outgoing.outMs = Math.max(outgoing.inMs, out);
+            }
+        }
+        if (!incoming.lockRange && b.totalNotes > 0) {
+            int index = b.barIndexAtOrBefore(b.firstNoteMs);
+            if (index >= 0 && incoming.inMs < b.bars[index]) {
+                incoming.inMs = b.bars[index];
+            }
+        }
+    }
+
+    /**
+     * First bar line strictly after the last note and every long-note end (a
+     * note on the cut point itself would be handed to the next song), or -1
+     * when the chart has no bar lines.
+     */
+    static long barAfterLastNote(MixTrackAnalysis analysis) {
+        long tail = analysis.lastNoteMs;
+        for (long[] span : analysis.longNotes) {
+            tail = Math.max(tail, span[1]);
+        }
+        for (long bar : analysis.bars) {
+            if (bar > tail) {
+                return bar;
+            }
+        }
+        if (analysis.bars.length == 0) {
+            return -1;
+        }
+        // the chart has no bar line after its last note: continue the grid at the end tempo
+        long lastBar = analysis.bars[analysis.bars.length - 1];
+        long barMs = analysis.barMsAtEnd();
+        return lastBar + ((tail - lastBar) / barMs + 1) * barMs;
     }
 
     /** Moves the cut points off long notes, keeping them on bar lines. */

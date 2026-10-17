@@ -44,9 +44,27 @@ public final class MixPreparation {
      */
     public static MixPreparation start(MixPlan plan, MixLibrary library, boolean loudness,
             java.util.function.BiConsumer<MixPlan, long[]> transform) {
+        return start(plan, library, loudness, transform, null);
+    }
+
+    /**
+     * @param finished runs on the worker thread once the job is READY, FAILED or
+     *                 CANCELLED, for callers that do not poll every frame
+     */
+    public static MixPreparation start(MixPlan plan, MixLibrary library, boolean loudness,
+            java.util.function.BiConsumer<MixPlan, long[]> transform, Runnable finished) {
         MixPreparation job = new MixPreparation(plan, library);
         job.transform = transform;
-        Thread worker = new Thread(() -> job.run(loudness), "nonstop-mix-prepare");
+        Thread worker = new Thread(() -> {
+            job.run(loudness);
+            if (finished != null) {
+                try {
+                    finished.run();
+                } catch (RuntimeException e) {
+                    logger.warn("NONSTOP MIX preparation callback failed", e);
+                }
+            }
+        }, "nonstop-mix-prepare");
         worker.setDaemon(true);
         worker.start();
         return job;

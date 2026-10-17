@@ -202,7 +202,8 @@ public final class MixIrClient {
         });
     }
 
-    static long estimatedDuration(MixPlan plan) {
+    /** Rough length of a set; parts without an end count as two minutes. */
+    public static long estimatedDuration(MixPlan plan) {
         long total = 0;
         for (int i = 0; i < plan.tracks.size(); i++) {
             MixTrack track = plan.tracks.get(i);

@@ -42,12 +42,40 @@ class MixStoreTest {
                 java.nio.file.StandardOpenOption.APPEND);
         assertEquals(2, store.records(first.identity).size());
         assertEquals(5, store.best(first.identity).clear, "a better lamp wins over a higher score");
+        assertEquals(5, store.bestByIdentity().get(first.identity).clear, "the one-pass best agrees with best()");
+        assertFalse(store.bestByIdentity().containsKey("other"));
         assertTrue(store.records("other").isEmpty());
 
         store.saveDraft(plan);
         assertEquals(plan.name, store.loadDraft().name);
         store.deleteSet(plan);
         assertTrue(store.listSets().isEmpty());
+    }
+
+    @Test
+    void editorOpensTheNewestSavedSetWhenTheDraftIsEmpty() throws Exception {
+        MixStore store = new MixStore(directory.resolve("nonstopmix"));
+        assertNull(store.openingPlan());
+        MixPlan empty = new MixPlan();
+        store.saveSet(empty);
+        store.saveDraft(empty);
+        assertEquals(empty.id, store.openingPlan().id, "only empty sets: the draft stays");
+        MixPlan saved = MixJsonTest.sample();
+        store.saveSet(saved);
+        assertEquals(saved.id, store.openingPlan().id, "an empty draft must not hide the saved work");
+        MixPlan draft = MixJsonTest.sample();
+        store.saveDraft(draft);
+        assertEquals(draft.id, store.openingPlan().id, "a draft with songs is the work in progress");
+    }
+
+    @Test
+    void wholeNewGenerationBecomesANewSet() {
+        MixPlan current = MixJsonTest.sample();
+        assertTrue(MixGenerator.makesNewSet(current, MixGenerator.Scope.EVERYTHING));
+        assertFalse(MixGenerator.makesNewSet(current, MixGenerator.Scope.ORDER_AND_JOINS));
+        assertFalse(MixGenerator.makesNewSet(current, MixGenerator.Scope.JOINS_ONLY));
+        assertFalse(MixGenerator.makesNewSet(new MixPlan(), MixGenerator.Scope.EVERYTHING),
+                "an empty set is simply filled");
     }
 
     @Test

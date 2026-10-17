@@ -32,6 +32,11 @@ public final class MixPlan {
     public double totalScale = 1.0;
     /** Matches the loudness of each song (needs the loudness analyzer). */
     public boolean normalizeLoudness = true;
+    /**
+     * Plays the set without BGA, layers and BACKBMP (Issue #556). Long sets load
+     * every song's BGA up front; this keeps them light. Not part of the play identity.
+     */
+    public boolean noBga;
     /** "manual" or the generator id that made the first draft. */
     public String origin = "manual";
     /** IR set id after publishing or downloading; empty for local-only sets. */

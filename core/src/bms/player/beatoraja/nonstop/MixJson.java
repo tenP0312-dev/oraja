@@ -50,6 +50,7 @@ public final class MixJson {
         root.put("judge", plan.judge.name());
         root.put("totalScale", plan.totalScale);
         root.put("normalizeLoudness", plan.normalizeLoudness);
+        root.put("noBga", plan.noBga);
         root.put("origin", plan.origin);
         root.put("irId", plan.irId);
         root.put("irRevision", plan.irRevision);
@@ -137,6 +138,7 @@ public final class MixJson {
         plan.judge = enumValue(MixPlan.JudgeRule.class, root.path("judge").asText(), MixPlan.JudgeRule.NORMAL);
         plan.totalScale = clamp(root.path("totalScale").asDouble(1.0), 0.25, 4.0, 1.0);
         plan.normalizeLoudness = root.path("normalizeLoudness").asBoolean(true);
+        plan.noBga = root.path("noBga").asBoolean(false);
         plan.origin = limited(root.path("origin").asText("manual"), 32);
         plan.irId = limited(root.path("irId").asText(""), 64);
         plan.irRevision = root.path("irRevision").asInt(0);

@@ -23,6 +23,17 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.119 preserves 0.4.14.118 and updates NONSTOP MIX (#567): a
+Music Select NONSTOP MIX folder plays saved and IR sets with the controller
+only (#539); the generator ranks charts by difficulty tables and density on
+LV1–LV12 / ★1–★25 scales, uses one chart per song, varies its picks, offers
+genre families and widens rare genres (#552, #563, #565); fade/cut joins keep
+note gaps short (#553); a track can be swapped to another chart of its song
+(#554); a set can turn BGA off and warns when heavy (#556); and a whole new
+generation no longer overwrites the saved set (#555). IR sharing still waits
+for the server. Arena plugin 0.0.81 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.119.md).
+
 Version 0.4.14.118 preserves 0.4.14.117 and fixes two regressions: a chart
 download or folder refresh no longer deletes every other song from the song
 database when old parser metadata is present (#544), and the result screen

@@ -22,10 +22,11 @@ public final class CompiledMix {
     private final MixCompiler.TimedNote[][] sounds;
     private final List<MixCompiler.Issue> issues;
     private final String identity;
+    private final MixLoad load;
 
     CompiledMix(MixPlan plan, BMSModel model, MixSongResource resource, MixPlan.Layout layout, long[] chartEnds,
             float[] staticGain, IdentityHashMap<Note, Integer> noteTrack, MixCompiler.TimedNote[][] sounds,
-            List<MixCompiler.Issue> issues, String identity) {
+            List<MixCompiler.Issue> issues, String identity, MixLoad load) {
         this.plan = plan;
         this.model = model;
         this.resource = resource;
@@ -36,6 +37,7 @@ public final class CompiledMix {
         this.sounds = sounds;
         this.issues = issues;
         this.identity = identity;
+        this.load = load;
     }
 
     public MixPlan plan() {
@@ -74,6 +76,11 @@ public final class CompiledMix {
     /** Hash of everything that changes what is played; records are kept per identity. */
     public String identity() {
         return identity;
+    }
+
+    /** BGA load estimate of the set, counted even when the set plays without BGA. */
+    public MixLoad load() {
+        return load;
     }
 
     public int trackCount() {

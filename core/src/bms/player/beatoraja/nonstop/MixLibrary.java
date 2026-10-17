@@ -41,8 +41,18 @@ public final class MixLibrary {
     public record Loaded(SongData song, BMSModel model, SongResource chart, MixTrackAnalysis analysis) {
     }
 
+    private static MixLibrary shared;
+
     public MixLibrary(MainController main) {
         this.main = main;
+    }
+
+    /** One library (and chart cache) shared by the editor and Music Select's NONSTOP MIX folder. */
+    public static synchronized MixLibrary shared(MainController main) {
+        if (shared == null || shared.main != main) {
+            shared = new MixLibrary(main);
+        }
+        return shared;
     }
 
     public MainController main() {

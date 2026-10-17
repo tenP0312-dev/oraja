@@ -57,6 +57,12 @@ public final class MixResult {
         return maxExScore == 0 ? 0 : exScore * 100.0 / maxExScore;
     }
 
+    public static String clearName(int clear) {
+        String[] names = {"NO PLAY", "FAILED", "ASSIST EASY", "LIGHT ASSIST EASY", "EASY", "CLEAR", "HARD",
+                "EX HARD", "FULL COMBO", "PERFECT", "MAX"};
+        return clear >= 0 && clear < names.length ? names[clear] : String.valueOf(clear);
+    }
+
     /** Collects each song's judgements from the notes of the played chart. */
     public static List<TrackResult> perTrack(CompiledMix mix, BMSModel played) {
         List<TrackResult> rows = new ArrayList<>();
