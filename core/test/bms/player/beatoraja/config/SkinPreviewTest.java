@@ -5,6 +5,7 @@ import bms.model.LongNote;
 import bms.model.Note;
 import bms.model.TimeLine;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.Resolution;
 import bms.player.beatoraja.TimerManager;
 import bms.player.beatoraja.skin.CustomTimer;
 import bms.player.beatoraja.skin.Skin;
@@ -154,7 +155,10 @@ class SkinPreviewTest {
 	@Test
 	void previewStateDoesNotCountTimeSpentBeforeItsFirstFrame() throws InterruptedException {
 		SkinPreviewDecide decide = new SkinPreviewDecide(null, null);
-		Skin skin = new Skin(new SkinHeader());
+		SkinHeader header = new SkinHeader();
+		header.setSourceResolution(Resolution.HD);
+		header.setDestinationResolution(Resolution.HD);
+		Skin skin = new Skin(header);
 		skin.setInput(500);
 		skin.setScene(3000);
 		skin.setFadeout(500);
