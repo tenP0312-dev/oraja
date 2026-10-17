@@ -23,6 +23,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.117 preserves 0.4.14.116 and fixes effective long-note types
+and exact note-count groups in song/course IR rankings. Arena plugin 0.0.81
+keeps the 0.0.80 floating hi-speed marker and adds the paired ranking contract.
+Updates remain optional; launcher 0.2.30 is retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.117.md).
+
 Version 0.4.14.116 preserves 0.4.14.115 and adds NONSTOP MIX (#535): a
 multi-song set editor on Music Select (F5 Mod menu) that joins chart sections
 with mixes, fades or cuts and plays them as one continuous run with local

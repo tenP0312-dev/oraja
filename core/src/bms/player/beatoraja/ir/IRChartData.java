@@ -82,6 +82,9 @@ public class IRChartData {
 	 * 総ノーツ数
 	 */
 	public final int notes;
+	/** Optional BMS-IR exact ranking contract; -1 denotes unresolved metadata. */
+	public final int bmsirRankingLnType;
+	public final int bmsirRankingNotes;
 	/**
 	 * LN TYPE未定義ロングノーツが存在するかどうか
 	 */
@@ -123,10 +126,23 @@ public class IRChartData {
 
 	/** Ranking metadata follows the selected interpretation before chart decoding. */
 	public static IRChartData forRanking(SongData song, int lnmode, boolean forceLn) {
-		return new IRChartData(song, forceLn ? 0 : lnmode, forceLn);
+		return new IRChartData(song, forceLn ? 0 : lnmode, forceLn,
+				IRLongNoteContract.forRanking(song, forceLn ? 0 : lnmode, forceLn));
+	}
+
+	/** Queue-safe metadata snapshot; no chart I/O on the result/render thread. */
+	public static IRChartData forPlaySnapshot(SongData song, int lnmode, boolean forceLn) {
+		return new IRChartData(song, forceLn ? 0 : lnmode, forceLn,
+				song.getBMSModel() == null ? IRLongNoteContract.UNKNOWN
+						: IRLongNoteContract.fromModel(song.getBMSModel(), lnmode, forceLn));
 	}
 
 	private IRChartData(SongData song, int lntype, boolean forceLn) {
+		this(song, lntype, forceLn, song.getBMSModel() == null ? IRLongNoteContract.UNKNOWN
+				: IRLongNoteContract.fromModel(song.getBMSModel(), lntype, false));
+	}
+
+	private IRChartData(SongData song, int lntype, boolean forceLn, IRLongNoteContract contract) {
 		this.title = song.getTitle();
 		this.subtitle = song.getSubtitle();
 		this.genre = song.getGenre();
@@ -144,7 +160,9 @@ public class IRChartData {
 		this.judge = song.getJudge();
 		this.minbpm = song.getMinbpm();
 		this.maxbpm = song.getMaxbpm();
-		this.notes = song.getNotes();
+		this.notes = contract.notes() >= 0 ? contract.notes() : song.getNotes();
+		this.bmsirRankingLnType = contract.lntype();
+		this.bmsirRankingNotes = contract.notes();
 		// Catalog ranking requests can select forced LN before decoding. Loaded
 		// models report their actual undefined notes, preserving ordinary OFF metadata.
 		this.hasUndefinedLN = forceLn ? song.hasAnyLongNote()

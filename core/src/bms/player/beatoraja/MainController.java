@@ -1960,12 +1960,16 @@ public class MainController {
 		public boolean isSent = false;
 		public boolean rankingRefreshRequested = false;
 		private final MainController owner;
+		private final IRChartData chartSnapshot;
+		private final bms.player.beatoraja.ir.IRScoreData scoreSnapshot;
 		public IRSendStatus(IRConnection ir, SongData song, ScoreData score) {
 			this.owner = null;
 			this.ir = ir;
 			this.status = null;
 			this.song = song;
 			this.score = score;
+			this.chartSnapshot = new IRChartData(song);
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 		public IRSendStatus(MainController owner, IRStatus status, SongData song, ScoreData score) {
 			this.owner = owner;
@@ -1973,12 +1977,14 @@ public class MainController {
 			this.status = status;
 			this.song = song;
 			this.score = score;
+			this.chartSnapshot = new IRChartData(song);
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 
 		public boolean send() {
 			logger.info("IRへスコア送信中 : {}", song.getTitle());
 			lastTry = System.currentTimeMillis();
-			IRResponse<Object> send1 = ir.sendPlayData(new IRChartData(song), new bms.player.beatoraja.ir.IRScoreData(score));
+			IRResponse<Object> send1 = ir.sendPlayData(chartSnapshot, scoreSnapshot);
 			retry++;
 			if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", song.getTitle());
