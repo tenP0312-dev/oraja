@@ -4,6 +4,7 @@ import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.PlayerResource;
 import bms.player.beatoraja.ScoreData;
 import bms.player.beatoraja.result.MusicResult;
+import bms.player.beatoraja.result.MusicResultSkin;
 import bms.player.beatoraja.skin.Skin;
 
 import static bms.player.beatoraja.skin.SkinProperty.*;
@@ -31,7 +32,8 @@ final class SkinPreviewMusicResult extends MusicResult implements SkinPreviewSta
 	public long preparePreviewFrame(Skin skin) {
 		timer.update();
 		SkinPreviewLifecycle.SceneFrame frame = SkinPreviewLifecycle.sceneFrame(
-				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout());
+				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout(),
+				skin instanceof MusicResultSkin resultSkin && resultSkin.getRankTime() == 0);
 		if (previewIteration != frame.iteration()) {
 			previewIteration = frame.iteration();
 			timer.resetSkinPreviewCycle();

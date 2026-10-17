@@ -31,7 +31,8 @@ final class SkinPreviewCourseResult extends CourseResult implements SkinPreviewS
 	public long preparePreviewFrame(Skin skin) {
 		timer.update();
 		SkinPreviewLifecycle.SceneFrame frame = SkinPreviewLifecycle.sceneFrame(
-				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout());
+				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout(),
+				true);
 		if (previewIteration != frame.iteration()) {
 			previewIteration = frame.iteration();
 			timer.resetSkinPreviewCycle();
