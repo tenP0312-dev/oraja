@@ -130,6 +130,7 @@ public final class MusicSelector extends MainState {
 
 	private PixmapResourcePool stagefiles;
 	private boolean judgeRankSortRestoredNoticeShown;
+	private long skinPreviewOriginMicros = Long.MIN_VALUE;
 
 	public MusicSelector(MainController main, boolean songUpdated) {
 		super(main);
@@ -261,6 +262,25 @@ public final class MusicSelector extends MainState {
 		folderData.setTitle(title);
 		folderData.setPath("skin-preview://" + pathSuffix);
 		return new FolderBar(selector, folderData, "skin-preview-" + pathSuffix);
+	}
+
+	/**
+	 * Advances the timers render() would set for a Skin Select preview, which
+	 * never runs render(). The selection is treated as made on the first
+	 * preview frame, and the returned skin time counts from that frame.
+	 */
+	public long prepareSkinPreviewFrame() {
+		timer.update();
+		long now = timer.getNowMicroTime();
+		if (skinPreviewOriginMicros == Long.MIN_VALUE) {
+			skinPreviewOriginMicros = now;
+			timer.setMicroTimer(TIMER_SONGBAR_CHANGE, now);
+		}
+		long elapsed = (now - skinPreviewOriginMicros) / 1000L;
+		if (elapsed > getSkin().getInput()) {
+			timer.switchTimer(TIMER_STARTINPUT, true);
+		}
+		return elapsed;
 	}
 
 	public void disposeSkinPreview() {

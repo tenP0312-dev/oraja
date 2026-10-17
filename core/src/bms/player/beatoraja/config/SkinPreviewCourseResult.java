@@ -11,6 +11,7 @@ import static bms.player.beatoraja.skin.SkinProperty.*;
 /** CourseResult-compatible virtual state used only by Skin Select. */
 final class SkinPreviewCourseResult extends CourseResult implements SkinPreviewState {
 	private long previewIteration = Long.MIN_VALUE;
+	private final SkinPreviewLifecycle.Clock previewClock = new SkinPreviewLifecycle.Clock();
 
 	SkinPreviewCourseResult(
 			MainController main, PlayerResource resource, ScoreData oldScore) {
@@ -30,7 +31,8 @@ final class SkinPreviewCourseResult extends CourseResult implements SkinPreviewS
 	public long preparePreviewFrame(Skin skin) {
 		timer.update();
 		SkinPreviewLifecycle.SceneFrame frame = SkinPreviewLifecycle.sceneFrame(
-				timer.getNowTime(), skin.getInput(), skin.getScene(), skin.getFadeout());
+				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout(),
+				true);
 		if (previewIteration != frame.iteration()) {
 			previewIteration = frame.iteration();
 			timer.resetSkinPreviewCycle();
