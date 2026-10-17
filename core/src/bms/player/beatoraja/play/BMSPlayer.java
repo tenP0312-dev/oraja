@@ -341,7 +341,8 @@ public class BMSPlayer extends MainState {
 
 		resource.setFreqOn(false);
 		resource.setFreqString("");
-		if(FreqTrainerMenu.isFreqTrainerEnabled() && autoplay.mode == BMSPlayerMode.Mode.PLAY && resource.getCourseBMSModels() == null) {
+		if(FreqTrainerMenu.isFreqTrainerEnabled() && autoplay.mode == BMSPlayerMode.Mode.PLAY && resource.getCourseBMSModels() == null
+				&& !bms.player.beatoraja.nonstop.MixRuntime.isMix(model)) {
 			int freq = FreqTrainerMenu.getFreq();
 
 			playtime = (model.getLastNoteTime() + 1000) * 100 / freq + TIME_MARGIN;
@@ -366,6 +367,7 @@ public class BMSPlayer extends MainState {
 				&& model.getMode() == Mode.BEAT_7K
 				&& (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY)
 				&& resource.getCourseBMSModels() == null && !BMSIRArenaClient.blocksLocalOneBass()
+				&& !bms.player.beatoraja.nonstop.MixRuntime.isMix(model)
 				&& !Client.connected.get() && ghostBattle.isEmpty() && borrowedChartOption == null;
 		if (autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY) {
 			if (config.isBpmguide() && (model.getMinBPM() < model.getMaxBPM())) {
@@ -446,6 +448,7 @@ public class BMSPlayer extends MainState {
 					model,
 					(courseModels && !allowNantokaDuringCourse)
 							|| arenaBlocksManiac
+							|| bms.player.beatoraja.nonstop.MixRuntime.isMix(model)
 			);
 			resource.setManiacPlayContext(maniacContext);
 			if (maniacContext != null) {
@@ -816,7 +819,9 @@ public class BMSPlayer extends MainState {
 		final boolean testPlay = autoplay.mode == BMSPlayerMode.Mode.PLAY
 				&& BMSIRTestPlayFolder.contains(model, main.getConfig().getWorkDirectory());
 		final boolean sevenToNinePreview = BMSIRSevenToNineModifier.isApplied(model);
-		if (testPlay || sevenToNinePreview || nantokaManiaCourse) {
+		// NONSTOP MIX keeps its own records (Issue #535); never the ordinary chart record or IR
+		final boolean nonstopMix = bms.player.beatoraja.nonstop.MixRuntime.isMix(model);
+		if (testPlay || sevenToNinePreview || nantokaManiaCourse || nonstopMix) {
 			score = false;
 			forceNoIRSend = true;
 		}
@@ -825,7 +830,11 @@ public class BMSPlayer extends MainState {
 			ImGuiNotify.warning("Assist options enabled. Next play will be saved as an assist clear");
 		}
 		if (!score) {
-			ImGuiNotify.warning(sevenToNinePreview
+			ImGuiNotify.warning(nonstopMix
+					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+							"NONSTOP MIX: 記録はミックス専用に保存します（通常の記録・IR送信なし）",
+							"NONSTOP MIX: records are kept for the set only (no chart record or IR submission)")
+					: sevenToNinePreview
 					? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
 							"7K TO 9K 試遊版: 記録・リプレイ・ランキングなし（BGM移動 "
 									+ model.getValues().get(BMSIRSevenToNineModifier.MODEL_REMOVED) + "ノーツ）",
@@ -990,6 +999,13 @@ public class BMSPlayer extends MainState {
 		final PlayerConfig config = resource.getPlayerConfig();
 
 		final long micronow = timer.getNowMicroTime();
+		if (bms.player.beatoraja.nonstop.MixRuntime.isActive() && timer.isTimerOn(TIMER_PLAY)) {
+			float bgVolume = getAdjustedBackgroundVolume();
+			float keyVolume = getAdjustedVolume();
+			bms.player.beatoraja.nonstop.MixRuntime.update(timer.getNowTime(TIMER_PLAY), main.getAudioProcessor(),
+					keyVolume < 0 ? main.getConfig().getAudioConfig().getKeyvolume() : keyVolume,
+					bgVolume < 0 ? main.getConfig().getAudioConfig().getBgvolume() : bgVolume);
+		}
 
 
 		if(micronow > skin.getInput() * 1000){

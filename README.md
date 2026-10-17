@@ -23,6 +23,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.116 preserves 0.4.14.115 and adds NONSTOP MIX (#535): a
+multi-song set editor on Music Select (F5 Mod menu) that joins chart sections
+with mixes, fades or cuts and plays them as one continuous run with local
+records. IR sharing waits for the server API and shows as unsupported. Updates
+remain optional; plugin 0.0.80 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.116.md).
+
 Version 0.4.14.115 preserves 0.4.14.114 and refines the hand camera view
 (#531): the crop position moves the skin's crop window across the whole camera
 image even at 100% zoom, display offsets are cut off at the camera frame, and a

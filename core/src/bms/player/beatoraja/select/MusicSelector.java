@@ -724,6 +724,31 @@ public final class MusicSelector extends MainState {
 	 * Plays a chart generated from a dropped audio file. It lives in the work
 	 * folder, so BMSPlayer/MusicResult already disable scores, replays and IR.
 	 */
+	/**
+	 * Starts a compiled NONSTOP MIX set (Issue #535) from the overlay. Not
+	 * available while an Arena match or room is active.
+	 */
+	public boolean playNonstopMix(bms.player.beatoraja.nonstop.MixRuntime.Session session, BMSPlayerMode mode) {
+		if (BMSIRArenaClient.blocksLocalOneBass() || bms.player.beatoraja.arena.client.Client.connected.get()) {
+			ImGuiNotify.warning(BMSIRArenaI18n.text(
+					"Arena接続中はNONSTOP MIXを遊べません",
+					"NONSTOP MIX is not available while connected to Arena"), 3000);
+			return false;
+		}
+		resource.clear();
+		if (!resource.setNonstopMix(session, mode)) {
+			ImGuiNotify.error(BMSIRArenaI18n.text(
+					"NONSTOP MIXを読み込めませんでした",
+					"Failed to load the NONSTOP MIX set"), 3000);
+			return false;
+		}
+		resource.setRankingData(null);
+		resource.setRivalScoreData(null);
+		resource.setChartOption(null);
+		main.changeState(MainStateType.DECIDE);
+		return true;
+	}
+
 	public boolean playGeneratedChart(Path chart) {
 		if (!BMSIRTestPlayFolder.contains(chart.toString())) {
 			return false;

@@ -340,6 +340,8 @@ public final class PlayDataAccessor {
 	 */
 	public void writeScoreData(ScoreData newscore, BMSModel model, int lnmode, boolean updateScore) {
 		if (bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)) return;
+		// NONSTOP MIX keeps its own records (Issue #535); nothing reaches the chart score database
+		if (bms.player.beatoraja.nonstop.MixRuntime.isMix(model)) return;
 		String hash = scoreHash(model);
 		ScoreDatabaseAccessor targetDatabase = scoreDatabase(model);
 		if (newscore == null) {
