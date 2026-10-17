@@ -62,8 +62,8 @@ tasks {
 
         val platformProp = System.getProperty("platform")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
         val archProp = System.getProperty("arch")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
-        val targetPlatform = platformProp ?: "windows"
-        val targetArch = archProp ?: "x86-64"
+        val targetPlatform = platformProp ?: org.endlessdream.extra.HostTarget.platform()
+        val targetArch = archProp ?: org.endlessdream.extra.HostTarget.arch()
         val platformClassifier = listOfNotNull(platformProp, archProp).joinToString("-")
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))

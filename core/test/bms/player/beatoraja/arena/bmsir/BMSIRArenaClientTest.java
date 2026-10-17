@@ -73,12 +73,12 @@ class BMSIRArenaClientTest {
 
     @Test
     void arenaIdentityUsesOneVersionForDisplayAndWireProtocol() {
-        assertEquals("0.4.14.58", Version.getArenaClientVersion());
+        // The release number itself is checked against Gradle by CI; only the identity wiring is pinned here.
         assertEquals(
                 Version.getArenaClientVersion(),
                 BMSIRArenaClient.clientVersion()
         );
-        assertEquals("Arena oraja 0.4.14.58", Version.getArenaDisplayName());
+        assertEquals("Arena oraja " + Version.getArenaClientVersion(), Version.getArenaDisplayName());
     }
 
     @Test
