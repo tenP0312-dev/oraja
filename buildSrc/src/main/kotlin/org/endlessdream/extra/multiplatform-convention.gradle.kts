@@ -4,16 +4,20 @@ plugins {
     `java-library`
 }
 
-// use `-Dplatform=[platform]` or change this value to set the target platform for the jar
+// use `-Dplatform=[platform]` to set the target platform for the jar
 // Available platforms:
 //    "windows", "linux", "macos"
-val platform = System.getProperty("platform") ?: "windows"
+// Defaults to the host, so plain local `core:test` loads natives that can run here.
+// Release builds and CI always pass both properties explicitly.
+val platform = System.getProperty("platform")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        ?: HostTarget.platform()
 
-// use `-Darch=[arch]` or change this value to set the target arch for the jar
+// use `-Darch=[arch]` to set the target arch for the jar
 // Available arch:
 //    "x86-64", "aarch64"
-// Defauls to x86-64
-val arch = System.getProperty("arch") ?: "x86-64"
+// Defaults to the host
+val arch = System.getProperty("arch")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        ?: HostTarget.arch()
 
 tasks {
     register<Copy>("resolveRuntimeClasspath") {

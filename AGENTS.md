@@ -40,9 +40,14 @@ repository.
 
 ## Validation
 
-- Run the smallest relevant Gradle tests after a stable change.
-- For ordinary client changes, run `./gradlew core:test` and the applicable
-  target build when the environment supports it.
+- Run the smallest relevant Gradle tests after a stable change (for example
+  `./gradlew core:test --tests '<affected classes>'`). Plain `core:test`
+  resolves natives for the host OS/arch when `-Dplatform`/`-Darch` are omitted.
+- The PR's macOS CI lane runs the full `core:test` suite. Do not rerun the
+  whole suite locally for the same commit, including a test-release
+  candidate; its passing CI is the full-suite evidence. Run it locally only
+  when CI cannot run or a shared/cross-cutting area changed and you need the
+  result before pushing.
 - The desktop launcher now lives in its own repository,
   `tenP0312-dev/oraja-Rancher`. For launcher changes, clone that repository
   and run `cargo test --locked` in its `src-tauri` directory, plus the
