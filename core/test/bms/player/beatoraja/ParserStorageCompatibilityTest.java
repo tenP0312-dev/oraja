@@ -149,4 +149,25 @@ class ParserStorageCompatibilityTest {
         assertEquals(3, refreshed.getParsercompatibility()); assertEquals(2, refreshed.getNotes());
         assertEquals(decode(path, false).getSHA256(), refreshed.getSha256());
     }
+    @Test void folderUpdateWithOldMetadataKeepsSongsOutsideThatFolder() throws Exception {
+        Path root = directory.resolve("library"); Path kept = root.resolve("kept"); Path downloaded = root.resolve("downloaded");
+        Files.createDirectories(kept); Files.createDirectories(downloaded);
+        Files.copy(chart(), kept.resolve("fixture.bms"));
+        String[] roots = {root.toString()}; Path database = directory.resolve("folder-song.db");
+        SQLiteSongDatabaseAccessor data = new SQLiteSongDatabaseAccessor(database.toString(), roots);
+        data.updateSongDatas(null, roots, false, false, null);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database); var statement = connection.createStatement()) {
+            statement.execute("UPDATE song SET parsercompatibility=NULL, notes=3");
+        }
+        // A chart download rescans only its own folder; it must not rebuild the whole catalog from it.
+        Files.writeString(downloaded.resolve("new.bms"), Files.readString(chart()).replace("Fixture", "Downloaded"));
+        data.updateSongDatas(downloaded.toString(), roots, false, false, null);
+        assertEquals(1, data.getSongDatas("title", "Downloaded").length);
+        SongData stale = data.getSongDatas("title", "Fixture")[0];
+        assertEquals(3, stale.getNotes()); assertEquals(0, stale.getParsercompatibility());
+        data.updateSongDatas(kept.toString(), roots, false, false, null);
+        SongData refreshed = data.getSongDatas("title", "Fixture")[0];
+        assertEquals(3, refreshed.getParsercompatibility()); assertEquals(2, refreshed.getNotes());
+        assertEquals(1, data.getSongDatas("title", "Downloaded").length);
+    }
 }
