@@ -408,16 +408,7 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 				}
 			}
 		}
-        // A normal update must refresh old parser metadata even when file mtimes are unchanged.
-        boolean parserRefresh = false;
-        try (Connection connection = qr.getDataSource().getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet result = statement.executeQuery("SELECT 1 FROM song WHERE parsercompatibility IS NULL OR parsercompatibility < 2 LIMIT 1")) {
-            parserRefresh = result.next();
-        } catch (SQLException failure) {
-            logger.warn("Parser metadata revision could not be checked: {}", failure.getMessage());
-        }
-		SongDatabaseUpdater updater = new SongDatabaseUpdater(updateAll || parserRefresh, bmsroot, info);
+		SongDatabaseUpdater updater = new SongDatabaseUpdater(updateAll, bmsroot, info);
 		updater.updateSongDatas(path == null ? Stream.of(bmsroot).map(p -> Paths.get(p)) : Stream.of(Paths.get(path)), listener);
 	}
 	
@@ -544,8 +535,8 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 			final String recordKey = SongUtils.crc32(path.toString(), bmsroot, root.toString());
 			final List<SongData> records = qr.query(property.conn,
 					physicalArchive == null
-							? "SELECT path, date, preview FROM song WHERE folder = ?"
-							: "SELECT path, date, preview FROM song WHERE parent = ?",
+							? "SELECT path, date, preview, parsercompatibility FROM song WHERE folder = ?"
+							: "SELECT path, date, preview, parsercompatibility FROM song WHERE parent = ?",
 					songhandler,
 					recordKey);
 			final List<FolderData> folders = qr.query(property.conn, "SELECT path,date FROM folder WHERE parent = ?",
@@ -746,7 +737,9 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 					final SongData record = records.get(i);
 					if (record != null && record.getPath().equals(pathname)) {
 						records.set(i, null);
-						if (record.getDate() == lastModifiedTime) {
+						// Old parser metadata is re-parsed in place; only this scan's files are touched.
+						if (record.getDate() == lastModifiedTime && record.getParsercompatibility()
+								>= bms.player.beatoraja.BMSIRParserCompatibility.CURRENT_REVISION) {
 							update = false;
 
 							final String oldPreview = record.getPreview() == null ? "" : record.getPreview();

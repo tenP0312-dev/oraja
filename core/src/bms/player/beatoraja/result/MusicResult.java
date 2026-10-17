@@ -119,6 +119,9 @@ public class MusicResult extends AbstractResult {
 		loadSkin(SkinType.RESULT);
 	}
 	
+	/** Longer than the server's pending-score replay delay (3 s). */
+	static final long POST_SUBMIT_REFETCH_DELAY_MS = 4500;
+
 	public void prepare() {
 		state = STATE_OFFLINE;
 		final ScoreData newscore = getNewScore();
@@ -207,53 +210,68 @@ public class MusicResult extends AbstractResult {
 					);
 				}
 
+				Runnable fetchRanking = () -> {
+					try {
+						IRChartData request = IRChartData.forRanking(resource.getSongdata(), resource.getBMSModel().getLntype(),
+								bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()));
+						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, request);
+						if(response.isSucceeded() && RankingData.matchesContract(response.getData(),
+								request.bmsirRankingLnType, request.bmsirRankingNotes)) {
+							ranking.setContract(new IRLongNoteContract(request.bmsirRankingLnType, request.bmsirRankingNotes));
+							if (!bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(resource.getBMSModel())) {
+								main.getRivalDataAccessor().updateAllRivalsScores(
+										response.getData(),
+										resource.getSongdata(),
+										resource.getPlayerConfig().getLnmode()
+								);
+							}
+							ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
+								main.getRankingDataCache().updateSongAfterSuccessfulSubmit(
+									resource.getSongdata(), refreshedContext, response.getData(),
+									newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
+							for (IRSendStatus sent : currentScores) {
+								if (!sent.rankingRefreshRequested || sent.status == null || sent.status != ir[0]) continue;
+								main.getPersistentRankingDataStore().save(
+										main.getPlayerPath(), main.getPlayerConfig().getId(), sent.status,
+										new IRRankingContext(resource.getBMSModel().getLntype(),
+											bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
+										RankingData.cacheIdentity(resource.getSongdata(),
+											new IRRankingContext(resource.getBMSModel().getLntype(),
+												bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())))
+											+ ":" + request.bmsirRankingLnType + ":" + request.bmsirRankingNotes,
+										response.getData());
+							}
+							rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
+							logger.info("IRからのスコア取得成功 : {}", response.getMessage());
+						} else {
+							logger.warn("IRからのスコア取得失敗 : {}", response.getMessage());
+						}
+					} catch (Exception e) {
+						logger.warn("IRからのスコア取得時例外: {}", e.getMessage());
+						e.printStackTrace();
+					}
+				};
+				boolean refetchAfterQueue = false;
 				if(irsend > 0) {
 					timer.switchTimer(succeed ? TIMER_IR_CONNECT_SUCCESS : TIMER_IR_CONNECT_FAIL, true);
 					if (!sendManiac && rankingRefreshNeeded && ir[0].config.isImportrival()
 							&& currentScores.stream().anyMatch(score -> score.status == ir[0])) {
-						try {
-							IRChartData request = IRChartData.forRanking(resource.getSongdata(), resource.getBMSModel().getLntype(),
-									bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()));
-							IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, request);
-							if(response.isSucceeded() && RankingData.matchesContract(response.getData(),
-									request.bmsirRankingLnType, request.bmsirRankingNotes)) {
-								ranking.setContract(new IRLongNoteContract(request.bmsirRankingLnType, request.bmsirRankingNotes));
-								if (!bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(resource.getBMSModel())) {
-									main.getRivalDataAccessor().updateAllRivalsScores(
-											response.getData(),
-											resource.getSongdata(),
-											resource.getPlayerConfig().getLnmode()
-									);
-								}
-								ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
-									main.getRankingDataCache().updateSongAfterSuccessfulSubmit(
-										resource.getSongdata(), refreshedContext, response.getData(),
-										newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
-								for (IRSendStatus sent : currentScores) {
-									if (!sent.rankingRefreshRequested || sent.status == null || sent.status != ir[0]) continue;
-									main.getPersistentRankingDataStore().save(
-											main.getPlayerPath(), main.getPlayerConfig().getId(), sent.status,
-											new IRRankingContext(resource.getBMSModel().getLntype(),
-												bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
-											RankingData.cacheIdentity(resource.getSongdata(),
-												new IRRankingContext(resource.getBMSModel().getLntype(),
-													bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())))
-												+ ":" + request.bmsirRankingLnType + ":" + request.bmsirRankingNotes,
-											response.getData());
-								}
-								rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
-								logger.info("IRからのスコア取得成功 : {}", response.getMessage());
-							} else {
-								logger.warn("IRからのスコア取得失敗 : {}", response.getMessage());
-							}
-						} catch (Exception e) {
-							logger.warn("IRからのスコア取得時例外: {}", e.getMessage());
-							e.printStackTrace();
-						}
+						fetchRanking.run();
+						refetchAfterQueue = newscore.getExscore() > oldscore.getExscore();
 					}
 				}
 				state = STATE_IR_FINISHED;
 				BMSIRArenaClient.onNormalResultReady();
+				// A busy server queues a new best and applies it a few seconds later; refresh once more then.
+				if (refetchAfterQueue) {
+					try {
+						Thread.sleep(POST_SUBMIT_REFETCH_DELAY_MS);
+					} catch (InterruptedException interrupted) {
+						Thread.currentThread().interrupt();
+						return;
+					}
+					fetchRanking.run();
+				}
             });
 			irprocess.start();
 		}

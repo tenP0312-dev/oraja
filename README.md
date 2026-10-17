@@ -23,6 +23,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.118 preserves 0.4.14.117 and fixes two regressions: a chart
+download or folder refresh no longer deletes every other song from the song
+database when old parser metadata is present (#544), and the result screen
+refetches the IR ranking once after a queued new best (#546). Arena plugin
+0.0.81 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.118.md).
+
 Version 0.4.14.117 preserves 0.4.14.116 and fixes effective long-note types
 and exact note-count groups in song/course IR rankings. Arena plugin 0.0.81
 keeps the 0.0.80 floating hi-speed marker and adds the paired ranking contract.
