@@ -52,6 +52,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private int previewPastNotes;
 	private final int[] previewPastNotesByPlayer;
 	private long previewIteration = Long.MIN_VALUE;
+	private final SkinPreviewLifecycle.Clock previewClock = new SkinPreviewLifecycle.Clock();
 
 	SkinPreviewPlayer(MainController main, PlayerResource resource) {
 		super(main, resource, true);
@@ -88,7 +89,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		timer.update();
 		PlaySkin playSkin = (PlaySkin) skin;
 		SkinPreviewLifecycle.PlayFrame frame = SkinPreviewLifecycle.playFrame(
-				timer.getNowTime(),
+				previewClock.elapsed(timer.getNowTime()),
 				(long) playSkin.getLoadstart() + playSkin.getLoadend(),
 				playSkin.getPlaystart(),
 				getPlaytime(),

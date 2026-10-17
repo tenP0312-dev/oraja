@@ -11,6 +11,7 @@ import static bms.player.beatoraja.skin.SkinProperty.*;
 /** MusicResult-compatible virtual state used only by Skin Select. */
 final class SkinPreviewMusicResult extends MusicResult implements SkinPreviewState {
 	private long previewIteration = Long.MIN_VALUE;
+	private final SkinPreviewLifecycle.Clock previewClock = new SkinPreviewLifecycle.Clock();
 
 	SkinPreviewMusicResult(
 			MainController main, PlayerResource resource, ScoreData oldScore) {
@@ -30,7 +31,7 @@ final class SkinPreviewMusicResult extends MusicResult implements SkinPreviewSta
 	public long preparePreviewFrame(Skin skin) {
 		timer.update();
 		SkinPreviewLifecycle.SceneFrame frame = SkinPreviewLifecycle.sceneFrame(
-				timer.getNowTime(), skin.getInput(), skin.getScene(), skin.getFadeout());
+				previewClock.elapsed(timer.getNowTime()), skin.getInput(), skin.getScene(), skin.getFadeout());
 		if (previewIteration != frame.iteration()) {
 			previewIteration = frame.iteration();
 			timer.resetSkinPreviewCycle();

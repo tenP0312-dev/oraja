@@ -8,6 +8,7 @@ import bms.player.beatoraja.PlayerConfig;
 import bms.player.beatoraja.TimerManager;
 import bms.player.beatoraja.skin.CustomTimer;
 import bms.player.beatoraja.skin.Skin;
+import bms.player.beatoraja.skin.SkinHeader;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinType;
 import com.badlogic.gdx.utils.Json;
@@ -140,6 +141,32 @@ class SkinPreviewTest {
 
 		assertFalse(timer.isTimerOn(TIMER_JUDGE_1P));
 		assertEquals(Long.MIN_VALUE, customTimer.getMicroTimer());
+	}
+
+	@Test
+	void previewClockStartsAtTheFirstRenderedFrame() {
+		var clock = new SkinPreviewLifecycle.Clock();
+
+		assertEquals(0L, clock.elapsed(4_321L));
+		assertEquals(250L, clock.elapsed(4_571L));
+	}
+
+	@Test
+	void previewStateDoesNotCountTimeSpentBeforeItsFirstFrame() throws InterruptedException {
+		SkinPreviewDecide decide = new SkinPreviewDecide(null, null);
+		Skin skin = new Skin(new SkinHeader());
+		skin.setInput(500);
+		skin.setScene(3000);
+		skin.setFadeout(500);
+		// Stands in for loading and preparing a heavy skin after the state exists.
+		Thread.sleep(50L);
+
+		long first = decide.preparePreviewFrame(skin);
+		long second = decide.preparePreviewFrame(skin);
+
+		assertEquals(0L, first);
+		assertTrue(second >= first);
+		assertTrue(decide.timer.getNowTime() >= 50L);
 	}
 
 	@Test

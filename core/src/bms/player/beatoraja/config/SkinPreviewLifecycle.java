@@ -94,6 +94,22 @@ final class SkinPreviewLifecycle {
 				position >= scene ? position - scene : -1L);
 	}
 
+	/**
+	 * Measures a preview timeline from its first rendered frame. Preview states
+	 * are constructed before their skin is loaded, so the state clock already
+	 * contains the load time. The TimerManager itself stays monotonic.
+	 */
+	static final class Clock {
+		private long origin = Long.MIN_VALUE;
+
+		long elapsed(long now) {
+			if (origin == Long.MIN_VALUE) {
+				origin = now;
+			}
+			return now - origin;
+		}
+	}
+
 	static void setTimer(TimerManager timer, int id, long elapsedSinceStart) {
 		if (elapsedSinceStart >= 0L) {
 			timer.setMicroTimer(id,
