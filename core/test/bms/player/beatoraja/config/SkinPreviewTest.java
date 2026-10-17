@@ -170,6 +170,77 @@ class SkinPreviewTest {
 	}
 
 	@Test
+	void notesThatReachedTheJudgeLineAreJudgedAndRewindEachLoop() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+
+		int judged = SkinPreviewPlayer.markJudgedNotes(model, 0, -1L);
+		assertEquals(0, judged);
+		judged = SkinPreviewPlayer.markJudgedNotes(model, judged, firstNoteMillis);
+		assertTrue(judged > 0);
+		judged = SkinPreviewPlayer.markJudgedNotes(model, judged, model.getLastTime());
+
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(1, note.getState());
+				}
+			}
+		}
+
+		SkinPreviewPlayer.clearNoteStates(model);
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(0, note.getState());
+				}
+			}
+		}
+	}
+
+	@Test
+	void notesAheadOfTheLaneClockStayUnjudged() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+
+		SkinPreviewPlayer.markJudgedNotes(model, 0, firstNoteMillis - 1);
+
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(0, note.getState());
+				}
+			}
+		}
+	}
+
+	@Test
+	void rhythmAndQuarterNoteTimingFollowTheMeasureLinesLikeRealPlay() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstSectionLine = -1L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getSectionLine()) {
+				firstSectionLine = timeline.getTime();
+				break;
+			}
+		}
+		assertTrue(firstSectionLine > 0L);
+		long quarter = Math.round(60000d / SkinPreviewModel.BPM);
+
+		assertEquals(-1L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine - 1));
+		assertEquals(0L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine));
+		assertEquals(100L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine + quarter + 100));
+
+		assertEquals(-1L, SkinPreviewPlayer.rhythmTimerElapsed(model, -1L));
+		assertEquals(0L, SkinPreviewPlayer.rhythmTimerElapsed(model, firstSectionLine));
+		assertEquals(Math.round(800 * SkinPreviewModel.BPM / 6000d),
+				SkinPreviewPlayer.rhythmTimerElapsed(model, firstSectionLine + 800));
+	}
+
+	@Test
 	void playDataStartsAtTheFirstRealNoteTimeAndReachesTheFullChart() {
 		var model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
 		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;

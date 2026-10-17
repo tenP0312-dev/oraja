@@ -2,6 +2,7 @@ package bms.player.beatoraja.config;
 
 import bms.model.BMSModel;
 import bms.model.LongNote;
+import bms.model.MineNote;
 import bms.model.Note;
 import bms.model.TimeLine;
 import bms.player.beatoraja.MainController;
@@ -52,6 +53,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private int previewPastNotes;
 	private final int[] previewPastNotesByPlayer;
 	private long previewIteration = Long.MIN_VALUE;
+	private int previewJudgedTimelines;
 	private final SkinPreviewLifecycle.Clock previewClock = new SkinPreviewLifecycle.Clock();
 
 	SkinPreviewPlayer(MainController main, PlayerResource resource) {
@@ -111,7 +113,8 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 						? frame.position() - playSkin.getInput() : -1L);
 		SkinPreviewLifecycle.setTimer(timer, TIMER_READY, frame.readyTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_PLAY, frame.playTime());
-		SkinPreviewLifecycle.setTimer(timer, TIMER_RHYTHM, frame.playTime());
+		SkinPreviewLifecycle.setTimer(timer, TIMER_RHYTHM,
+				rhythmTimerElapsed(previewModel, frame.playTime()));
 		SkinPreviewLifecycle.setTimer(timer, TIMER_MUSIC_END, frame.musicEndTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_FADEOUT, frame.fadeoutTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_FAILED, -1L);
@@ -120,6 +123,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 
 		long played = Math.max(0L, Math.min(getPlaytime(), frame.playTime()));
 		updateLiveData(played);
+		// LaneRenderer keeps drawing unjudged notes below the judge line, so
+		// mark them the way autoplay judgement does once they reach it.
+		previewJudgedTimelines = markJudgedNotes(previewModel, previewJudgedTimelines,
+				frame.playTime() >= 0L
+						? frame.playTime() + resource.getPlayerConfig().getJudgetiming()
+						: -1L);
 		for (int player = 0; player < previewPastNotesByPlayer.length; player++) {
 			long lastNote = latestJudgementTimeForPlayer(
 					previewModel, player, Long.MAX_VALUE);
@@ -144,6 +153,8 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		timer.resetSkinPreviewCycle();
 		skin.resetSkinPreviewCycle();
 		previewLaneRenderer.resetTimelinePosition();
+		clearNoteStates(previewModel);
+		previewJudgedTimelines = 0;
 		Arrays.fill(previewPastNotesByPlayer, 0);
 		clearPlayEffects();
 	}
@@ -182,6 +193,77 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 			SkinPreviewLifecycle.setTimer(timer, GAUGE_MAX_TIMERS[player],
 					maximum ? elapsed : -1L);
 		}
+	}
+
+	/**
+	 * Marks every note up to the lane clock as PGREAT, continuing from the
+	 * returned timeline index of the previous frame.
+	 */
+	static int markJudgedNotes(BMSModel model, int fromTimeline, long laneTime) {
+		TimeLine[] timelines = model.getAllTimeLines();
+		int index = Math.max(0, fromTimeline);
+		if (laneTime < 0L) {
+			return index;
+		}
+		for (; index < timelines.length && timelines[index].getTime() <= laneTime; index++) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timelines[index].getNote(lane);
+				if (note != null && !(note instanceof MineNote)) {
+					note.setState(1);
+				}
+			}
+		}
+		return index;
+	}
+
+	static void clearNoteStates(BMSModel model) {
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					note.setState(0);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Mirrors RhythmTimerProcessor: the timer restarts on each measure line and
+	 * then advances at BPM / 6000 of real time.
+	 */
+	static long rhythmTimerElapsed(BMSModel model, long playTime) {
+		if (playTime < 0L) {
+			return -1L;
+		}
+		long lastSectionLine = 0L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getTime() > playTime) {
+				break;
+			}
+			if (timeline.getSectionLine()) {
+				lastSectionLine = timeline.getTime();
+			}
+		}
+		return Math.round((playTime - lastSectionLine) * model.getBpm() / 6000d);
+	}
+
+	/**
+	 * Time since the latest quarter note, counted from the first measure line
+	 * like RhythmTimerProcessor, or -1 before that line.
+	 */
+	static long quarterNoteElapsed(BMSModel model, long playTime) {
+		long firstSectionLine = -1L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getSectionLine()) {
+				firstSectionLine = timeline.getTime();
+				break;
+			}
+		}
+		if (firstSectionLine < 0L || playTime < firstSectionLine || model.getBpm() <= 0d) {
+			return -1L;
+		}
+		long quarter = Math.max(1L, Math.round(60000d / model.getBpm()));
+		return Math.floorMod(playTime - firstSectionLine, quarter);
 	}
 
 	static long gaugeEffectTime(BMSModel model, int player, long playTime) {
@@ -381,7 +463,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		return previewPastNotes;
 	}
 	@Override public int getPlaytime() { return Math.max(1, previewModel.getLastTime() + 1000); }
-	@Override public long getNowQuarterNoteTime() { return timer.getNowTime(TIMER_PLAY) % 400L; }
+	@Override public long getNowQuarterNoteTime() {
+		// BMSPlayer returns the absolute time of the latest quarter note.
+		long elapsed = timer.isTimerOn(TIMER_PLAY)
+				? quarterNoteElapsed(previewModel, timer.getNowTime(TIMER_PLAY)) : -1L;
+		return elapsed >= 0L ? timer.getNowTime() - elapsed : 0L;
+	}
 
 	@Override
 	public void dispose() {
