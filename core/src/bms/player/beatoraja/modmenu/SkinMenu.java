@@ -1,15 +1,11 @@
 package bms.player.beatoraja.modmenu;
 
 import java.util.*;
-import java.util.stream.Stream;
 import java.io.IOException;
 import java.nio.file.*;
 import java.awt.Desktop;
 
 import bms.player.beatoraja.skin.*;
-import bms.player.beatoraja.skin.json.JSONSkinLoader;
-import bms.player.beatoraja.skin.lr2.LR2SkinHeaderLoader;
-import bms.player.beatoraja.skin.lua.LuaSkinLoader;
 import static bms.player.beatoraja.skin.SkinProperty.OPTION_RANDOM_VALUE;
 
 import bms.player.beatoraja.MainState;
@@ -93,7 +89,8 @@ public class SkinMenu {
 
     private static void menuHeader() {
         if (ImGui.arrowButton("##skin-select-left", 0)) {
-            int index = skins.indexOf(currentSkin);
+            ensureSkins();
+            int index = currentSkinIndex();
             index = (index + skins.size() - 1) % skins.size();
             switchCurrentSceneSkin(skins.get(index));
         }
@@ -101,6 +98,7 @@ public class SkinMenu {
         ImGui.sameLine();
         if (ImGui.beginCombo("##skin-select-combo", currentSkin.getName(),
                              ImGuiComboFlags.HeightLarge)) {
+            ensureSkins();
             for (var header : skins) {
                 String skinPath = header.getPath().toString();
                 ImGui.pushID(skinPath);
@@ -112,9 +110,17 @@ public class SkinMenu {
         ImGui.sameLine();
 
         if (ImGui.arrowButton("##skin-select-right", 1)) {
-            int index = skins.indexOf(currentSkin);
+            ensureSkins();
+            int index = currentSkinIndex();
             index = (index + 1) % skins.size();
             switchCurrentSceneSkin(skins.get(index));
+        }
+
+        ImGui.sameLine();
+        if (ImGui.button(t("一覧を更新", "Refresh list") + "##refresh-skin-list")) {
+            SkinHeaderCatalog.shared().invalidate();
+            skins = null;
+            ensureSkins();
         }
 
         if (ImGui.button(t("フォルダを開く", "Open") + "##open-skin-location")) {
@@ -402,79 +408,29 @@ public class SkinMenu {
         observedState = main.getCurrentState();
         SkinHeader currentSceneSkin = observedState.getSkin().header;
         currentSkinType = currentSceneSkin.getSkinType();
-        currentSkin = null;
-        switchCurrentSceneSkin(currentSceneSkin);
-        skins = loadAllSkins(currentSkinType);
+        // Opening the editor must not replace the running skin or reroll Random options.
+        currentSkin = currentSceneSkin;
+        resetCurrentSkinConfig();
+        loadSavedSkinSettings(currentSceneSkin);
+        completeProperty(currentSceneSkin);
+        skins = null;
         ready = true;
     }
 
-    private static List<SkinHeader> loadAllSkins(SkinType type) {
-        List<Path> paths = new ArrayList<>();
-        Path skinsDir = Paths.get("skin");
-        scanSkins(skinsDir, paths);
-        List<SkinHeader> skins = new ArrayList<SkinHeader>();
-        for (Path path : paths) {
-            String pathString = path.toString().toLowerCase();
-            SkinHeader header = null;
-
-            if (path.equals(currentSkin.getPath())) { header = currentSkin; }
-            else if (pathString.endsWith(".json")) {
-                JSONSkinLoader loader = new JSONSkinLoader();
-                header = loader.loadHeader(path);
-            }
-            else if (pathString.endsWith(".luaskin")) {
-                LuaSkinLoader loader = new LuaSkinLoader();
-                header = loader.loadHeader(path);
-            }
-            else if (pathString.endsWith(".lr2skin")) {
-                LR2SkinHeaderLoader loader = new LR2SkinHeaderLoader(main.getConfig());
-                try {
-                    header = loader.loadSkin(path, null);
-
-                    // 7/14key skinは5/10keyにも加える
-                    if (type == SkinType.PLAY_5KEYS &&
-                        header.getSkinType() == SkinType.PLAY_7KEYS &&
-                        header.getType() == SkinHeader.TYPE_LR2SKIN) {
-                        header = loader.loadSkin(path, null);
-                        header.setSkinType(SkinType.PLAY_5KEYS);
-                        if (!header.getName().toLowerCase().contains("7key")) {
-                            header.setName(header.getName() + " (7KEYS) ");
-                        }
-                    }
-                    if (type == SkinType.PLAY_10KEYS &&
-                        header.getSkinType() == SkinType.PLAY_14KEYS &&
-                        header.getType() == SkinHeader.TYPE_LR2SKIN) {
-                        header = loader.loadSkin(path, null);
-                        header.setSkinType(SkinType.PLAY_10KEYS);
-                        if (!header.getName().toLowerCase().contains("14key")) {
-                            header.setName(header.getName() + " (14KEYS) ");
-                        }
-                    }
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (header != null && header.getSkinType() == type) { skins.add(header); }
+    private static void ensureSkins() {
+        if (skins != null) return;
+        skins = new ArrayList<>();
+        for (SkinHeader header : SkinHeaderCatalog.shared().load(Paths.get("skin"), main.getConfig())) {
+            if (header.getSkinType() == currentSkinType) skins.add(header);
         }
-
-        return skins;
+        if (currentSkinIndex() < 0) skins.add(currentSkin);
     }
 
-    private static void scanSkins(Path path, List<Path> paths) {
-        if (Files.isDirectory(path)) {
-            try (Stream<Path> sub = Files.list(path)) {
-                sub.forEach((Path t) -> { scanSkins(t, paths); });
-            }
-            catch (IOException e) {
-            }
+    private static int currentSkinIndex() {
+        for (int i = 0; i < skins.size(); i++) {
+            if (skins.get(i).getPath().equals(currentSkin.getPath())) return i;
         }
-        else if (path.getFileName().toString().toLowerCase().endsWith(".lr2skin") ||
-                 path.getFileName().toString().toLowerCase().endsWith(".luaskin") ||
-                 path.getFileName().toString().toLowerCase().endsWith(".json")) {
-            paths.add(path);
-        }
+        return -1;
     }
 
     private static List<String> parseCustomFile(SkinHeader.CustomFile file) {
@@ -725,11 +681,6 @@ public class SkinMenu {
 //   difficult to do by accident, useful for viewing changes when done intentionally
 // highlighting non-default values
 //   not sure how to this correctly, not sure how to do it efficiently, not sure if its useful
-// preloading all skin settings when first opening the menu or changing the scene
-// can be slow, up to a few seconds on an older machine with lots of skins
-//   possible fix: show abbreviated paths instead of unnecessarily loading all skin headers
-//   might not be fine to leave as-is, this load doesn't happen all that often
-//   and most people won't have that many skins
 // support for a skin customization overlay file
 //   it might be possible to use the skin debugger to export a skin mod json file
 //   that we could detect and load after the skin to apply the changes
