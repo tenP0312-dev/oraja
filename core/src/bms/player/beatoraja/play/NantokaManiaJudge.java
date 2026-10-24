@@ -24,6 +24,7 @@ public final class NantokaManiaJudge {
         LongNote end;
         LongNote body;
         int direction = -1;
+        long scratchEndInputTime = Long.MIN_VALUE;
         int cursor;
         int hcnState;
         Track(Note[] notes, boolean scratch) { this.notes = notes; this.scratch = scratch; }
@@ -190,6 +191,9 @@ public final class NantokaManiaJudge {
         if (wasPressed == pressed) return;
         LongNote end = track.end;
         if (pressed) {
+            // A reversal can arrive as release then press at the same timestamp.
+            // Keep its held-state change, but do not judge a second note with it.
+            if (track.scratch && track.scratchEndInputTime == at) return;
             if (end != null && end.getState() == 0) {
                 if (track.scratch && track.direction >= 0 && track.direction != direction) {
                     finish(lane, end, at);
@@ -274,6 +278,7 @@ public final class NantokaManiaJudge {
 
     private void finish(int lane, LongNote end, long at) {
         Track track = tracks[lane];
+        if (track.scratch) track.scratchEndInputTime = at;
         long difference = at - end.getMicroTime();
         int base = NantokaManiaRules.judge(difference, track.scratch, doublePlay);
         int judge = base <= 2 ? 0 : base == 3 ? 3
