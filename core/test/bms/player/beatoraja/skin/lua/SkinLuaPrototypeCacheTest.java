@@ -86,6 +86,22 @@ class SkinLuaPrototypeCacheTest {
         assertEquals(2, calls.get());
     }
 
+    @Test void prototypeBudgetIncludesStringBackingStorageInsteadOfOnlyTheVisibleSlice() throws Exception {
+        var calls = new AtomicInteger();
+        Globals globals = JsePlatform.standardGlobals();
+        globals.compiler = (input, name) -> {
+            calls.incrementAndGet();
+            var prototype = new org.luaj.vm2.Prototype();
+            prototype.k = new LuaValue[]{org.luaj.vm2.LuaString.valueUsing(new byte[8192], 0, 1)};
+            return prototype;
+        };
+        cache(8, 8192, 1024, 4096).wrapCompiler(globals);
+        for (int i = 0; i < 2; i++) {
+            globals.compiler.compile(new ByteArrayInputStream(new byte[]{1}), "@slice");
+        }
+        assertEquals(2, calls.get(), "oversized backing storage must bypass the cache");
+    }
+
     @Test void syntaxAndReadErrorsAreNotCachedAndChunkNamesRemainDistinct() throws Exception {
         var calls = new AtomicInteger();
         Globals globals = countingGlobals(cache(8, 8192, 8192, 4096), calls);

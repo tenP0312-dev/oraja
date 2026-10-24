@@ -98,23 +98,24 @@ final class SkinLuaPrototypeCache {
         long bytes = 512;
         if (prototype.code != null) bytes += 4L * prototype.code.length;
         if (prototype.lineinfo != null) bytes += 4L * prototype.lineinfo.length;
-        if (prototype.source != null) bytes += prototype.source.m_length;
+        if (prototype.source != null) bytes += prototype.source.m_bytes.length;
         if (prototype.k != null) {
-            bytes += 48L * prototype.k.length;
+            bytes += 96L * prototype.k.length;
             for (var constant : prototype.k) {
-                if (constant instanceof LuaString text) bytes += text.m_length;
+                // A short LuaString may keep an entire larger backing array alive.
+                if (constant instanceof LuaString text) bytes += text.m_bytes.length;
             }
         }
         if (prototype.locvars != null) {
-            bytes += 64L * prototype.locvars.length;
+            bytes += 96L * prototype.locvars.length;
             for (var local : prototype.locvars) {
-                if (local != null && local.varname != null) bytes += local.varname.m_length;
+                if (local != null && local.varname != null) bytes += local.varname.m_bytes.length;
             }
         }
         if (prototype.upvalues != null) {
-            bytes += 64L * prototype.upvalues.length;
+            bytes += 96L * prototype.upvalues.length;
             for (var upvalue : prototype.upvalues) {
-                if (upvalue != null && upvalue.name != null) bytes += upvalue.name.m_length;
+                if (upvalue != null && upvalue.name != null) bytes += upvalue.name.m_bytes.length;
             }
         }
         if (prototype.p != null) {
