@@ -29,6 +29,18 @@ import java.util.function.Function;
  * @author excln
  */
 public class LuaSkinLoader extends JSONSkinLoader {
+	/** Reflection metadata only: never retain Lua tables, skin values or callback results. */
+	private static final ClassValue<Map<LuaValue, Field>> FIELDS = new ClassValue<>() {
+		@Override
+		protected Map<LuaValue, Field> computeValue(Class<?> type) {
+			Map<LuaValue, Field> fields = new HashMap<>();
+			for (Field field : ClassReflection.getFields(type)) {
+				// Preserve getFields()'s first match when a public field hides an inherited field.
+				fields.putIfAbsent(LuaValue.valueOf(field.getName()), field);
+			}
+			return Map.copyOf(fields);
+		}
+	};
 
 	public LuaSkinLoader() {
 		super(new SkinLuaAccessor(false));
@@ -147,17 +159,16 @@ public class LuaSkinLoader extends JSONSkinLoader {
 		} else {
 			try {
 				T instance = (T) ClassReflection.newInstance(cls);
-				Field[] fields = ClassReflection.getFields(cls);
 				if (lv.istable()) {
+					Map<LuaValue, Field> fields = FIELDS.get(cls);
 					LuaTable table = (LuaTable)lv;
 					for (LuaValue key : table.keys()) {
-						String keyName = key.tojstring();
-						for (Field field : fields) {
-							if (field.getName().equals(keyName)) {
-								Object value = fromLuaValue(field.getType(), table.get(key));
-								field.set(instance, value);
-								break;
-							}
+						LuaValue name = key.getClass() == org.luaj.vm2.LuaString.class
+								? key : LuaValue.valueOf(key.tojstring());
+						Field field = fields.get(name);
+						if (field != null) {
+							Object value = fromLuaValue(field.getType(), table.get(key));
+							field.set(instance, value);
 						}
 					}
 				} else if (lv.isuserdata()) {

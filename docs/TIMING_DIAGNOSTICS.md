@@ -53,6 +53,26 @@ characters). Other Lua values retain their dynamic `tojstring()` behavior. These
 caches neither increase the JVM heap setting nor alter GC selection or the
 number of retained skin images.
 
+Skin loading also bounds reuse of compiled Lua code (#572). Each load still
+reads the current source and executes a new closure in the current globals;
+module results, mutable tables, callback values and closure upvalues are never
+shared between skins. Content hashes and chunk names identify text compilation
+results, so same-size edits with unchanged timestamps are still observed.
+The LRU admits at most 64 chunks, 8 MiB of corresponding source and 16 MiB of
+estimated compiled-code storage; a chunk larger than 2 MiB bypasses it. These
+are cache admission limits, not a process-memory cap. Binary chunks keep the
+original LuaJ loading path. JSON/Lua field conversion separately reuses only
+class reflection metadata, and always converts the current table values.
+
+CPU-only loading measurements on one 1.25 MB animation-table module reduced
+allocation from 44.34 to 7.06 MiB per repeated load (including table execution).
+A generated 100-destination/64-keyframe conversion fixture dropped from
+16,602,952 to 3,743,752 bytes per conversion, with matching output. These are
+load-path allocation measurements, not steady-play allocation, process RSS,
+or proof that a particular reported client-memory increase is resolved. The
+first affected client version is unknown; operator-run acceptance after a
+separately authorized distribution must check the real memory behavior.
+
 All timing distributions contain `count`, `average_us`, `p50_us`, `p95_us`,
 `p99_us`, `max_us`, and `max_at`. `max_at` is the UTC instant at which the
 period's maximum was observed. Percentiles use fixed upper-bound buckets, so
