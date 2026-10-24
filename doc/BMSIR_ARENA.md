@@ -1341,6 +1341,25 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   never regenerates a seed or reapplies a modifier. NORMAL, MIRROR, S-RANDOM,
   H-RANDOM, unavailable sides, and old replays without a fixed placement
   return zero.
+- F5 Skin Configuration opens using the running skin without reloading it or
+  rerolling Random options. Alternative skins are collected only when opening
+  the skin picker or pressing its previous/next arrows. F5 and F12 share cached
+  header definitions, with separate copies of all customization items for each
+  consumer. Each collection checks files under `skin/` for additions, edits and
+  deletions (including Lua modules and assets), and the LR2 theme path also
+  invalidates the cache. After editing dependencies outside `skin/`, use F5's
+  `Refresh list` action (then reopen F12 if needed), or restart the client.
+  F12 still loads its own Skin Select interface and collects the list on entry;
+  its selected-skin preview loads on the render thread after a complete frame
+  can be displayed. Rapid option edits replace the pending preview request;
+  leaving the screen cancels it. This avoids blocking the first settings frame
+  on preview construction, but preview loading itself remains synchronous.
+  Non-GUI regression tests cover cache reuse/invalidation, customization
+  isolation, LR2 5/10-key aliases, F5 opening without replacement, and deferred
+  preview coalescing/cancellation. Operator acceptance after distribution:
+  compare F5/F12 first and repeated opening times, verify options and file
+  choices, skin switching and edited/added/deleted skin discovery, and leave
+  F12 immediately or change options rapidly with preview ON/OFF.
 - Skin Select can show a live, scaled preview of the selected skin. The bundled
   Lua Skin Select declares `skin.skinpreview = { id = "skin-preview" }` and a
   destination with the same ID. JSON and Lua skins use the same explicit

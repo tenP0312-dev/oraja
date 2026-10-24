@@ -236,6 +236,40 @@ public class SkinHeader {
 		this.destinationResolution = destinationResolution;
 	}
 
+	/** Copy definitions without retaining a player's selections or mutable offsets. */
+	public SkinHeader copyDefinition() {
+		SkinHeader copy = new SkinHeader();
+		copy.type = type;
+		copy.path = path;
+		copy.mode = mode;
+		copy.name = name;
+		copy.author = author;
+		copy.resolution = resolution;
+		copy.sourceResolution = sourceResolution;
+		copy.destinationResolution = destinationResolution;
+		Map<CustomItem, CustomItem> items = new IdentityHashMap<>();
+		copy.options = Arrays.stream(options).map(option -> {
+			CustomOption item = new CustomOption(option.name, option.option.clone(), option.contents.clone(), option.def);
+			items.put(option, item);
+			return item;
+		}).toArray(CustomOption[]::new);
+		copy.files = Arrays.stream(files).map(file -> {
+			CustomFile item = new CustomFile(file.name, file.path, file.def);
+			items.put(file, item);
+			return item;
+		}).toArray(CustomFile[]::new);
+		copy.offsets = Arrays.stream(offsets).map(offset -> {
+			CustomOffset item = new CustomOffset(offset.name, offset.id,
+					offset.x, offset.y, offset.w, offset.h, offset.r, offset.a);
+			items.put(offset, item);
+			return item;
+		}).toArray(CustomOffset[]::new);
+		copy.categories = Arrays.stream(categories).map(category -> new CustomCategory(category.name,
+				Arrays.stream(category.items).map(items::get).filter(Objects::nonNull)
+						.toArray(CustomItem[]::new))).toArray(CustomCategory[]::new);
+		return copy;
+	}
+
 	/**
 	 * ユーザーが選択可能な項目
 	 * 

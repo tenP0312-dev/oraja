@@ -12,9 +12,6 @@ import bms.player.beatoraja.SkinConfig;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 import bms.player.beatoraja.skin.*;
-import bms.player.beatoraja.skin.json.JSONSkinLoader;
-import bms.player.beatoraja.skin.lr2.LR2SkinHeaderLoader;
-import bms.player.beatoraja.skin.lua.LuaSkinLoader;
 import bms.player.beatoraja.select.MusicSelector;
 
 import java.io.IOException;
@@ -24,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.stream.Stream;
+import com.badlogic.gdx.Gdx;
 
 /**
  * スキンコンフィグ
@@ -34,6 +31,7 @@ import java.util.stream.Stream;
 public class SkinConfiguration extends MainState {
 	private static final Logger logger = LoggerFactory.getLogger(SkinConfiguration.class);
 
+	private final DeferredSkinPreview deferredPreview = new DeferredSkinPreview();
 	private SkinConfigurationSkin skin;
 	private SkinType type;
 	private SkinConfig config;
@@ -62,6 +60,7 @@ public class SkinConfiguration extends MainState {
 
 	@Override
 	public void shutdown() {
+		deferredPreview.cancel();
 		setSelectedSkin(null, null);
 	}
 
@@ -70,6 +69,10 @@ public class SkinConfiguration extends MainState {
 		if (main.getInputProcessor().isControlKeyPressed(ControlKeys.ESCAPE)) {
 			main.saveConfig();
 			main.changeState(MainStateType.MUSICSELECT);
+			return;
+		}
+		if (deferredPreview.take(Gdx.graphics.getFrameId())) {
+			loadSelectedSkinPreview();
 		}
 	}
 
@@ -226,8 +229,9 @@ public class SkinConfiguration extends MainState {
 			updateCustomFiles();
 			updateCustomOffsets();
 			customOptionOffsetMax = Math.max(0, customOptions.size() - skin.getCustomPropertyCount());
-			loadSelectedSkinPreview();
+			requestSelectedSkinPreview();
 		} else {
+			deferredPreview.cancel();
 			selectedSkinHeader = null;
 			customOptions = null;
 			setSelectedSkin(null, null);
@@ -486,6 +490,15 @@ public class SkinConfiguration extends MainState {
 		return false;
 	}
 
+	private void requestSelectedSkinPreview() {
+		deferredPreview.cancel();
+		setSelectedSkin(null, null);
+		if (selectedSkinHeader != null && config != null && config.getPath() != null
+				&& shouldLoadPreview(player.isSkinSelectPreviewEnabled(), type, hasPreviewObject())) {
+			deferredPreview.request(Gdx.graphics.getFrameId());
+		}
+	}
+
 	private void loadSelectedSkinPreview() {
 		boolean previewObjectAvailable = hasPreviewObject();
 		boolean previewEnabled = player.isSkinSelectPreviewEnabled();
@@ -580,7 +593,7 @@ public class SkinConfiguration extends MainState {
 
 	private void reloadSelectedSkinPreview() {
 		if (selectedSkinHeader != null) {
-			loadSelectedSkinPreview();
+			requestSelectedSkinPreview();
 		}
 	}
 
@@ -607,66 +620,12 @@ public class SkinConfiguration extends MainState {
 	}
 
 	private void loadAllSkins() {
-		allSkins = new ArrayList<SkinHeader>();
-		List<Path> skinPaths = new ArrayList<>();
-		scanSkins(Paths.get("skin"), skinPaths);
-		for (Path path : skinPaths) {
-			String pathString = path.toString().toLowerCase();
-			if (pathString.endsWith(".json")) {
-				JSONSkinLoader loader = new JSONSkinLoader();
-				SkinHeader header = loader.loadHeader(path);
-				if (header != null) {
-					allSkins.add(header);
-				}
-			} else if (pathString.endsWith(".luaskin")) {
-				LuaSkinLoader loader = new LuaSkinLoader();
-				SkinHeader header = loader.loadHeader(path);
-				if (header != null) {
-					allSkins.add(header);
-				}
-			} else {
-				LR2SkinHeaderLoader loader = new LR2SkinHeaderLoader(main.getConfig());
-				try {
-					SkinHeader header = loader.loadSkin(path, null);
-					allSkins.add(header);
-					// 7/14key skinは5/10keyにも加える
-					if(header.getType() == SkinHeader.TYPE_LR2SKIN &&
-							(header.getSkinType() == SkinType.PLAY_7KEYS || header.getSkinType() == SkinType.PLAY_14KEYS)) {
-						header = loader.loadSkin(path, null);
-
-						if(header.getSkinType() == SkinType.PLAY_7KEYS && !header.getName().toLowerCase().contains("7key")) {
-							header.setName(header.getName() + " (7KEYS) ");
-						} else if(header.getSkinType() == SkinType.PLAY_14KEYS && !header.getName().toLowerCase().contains("14key")) {
-							header.setName(header.getName() + " (14KEYS) ");
-						}
-						header.setSkinType(header.getSkinType() == SkinType.PLAY_7KEYS ? SkinType.PLAY_5KEYS : SkinType.PLAY_10KEYS);
-						allSkins.add(header);
-					}
-
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	private void scanSkins(Path path, List<Path> paths) {
-		if (Files.isDirectory(path)) {
-			try (Stream<Path> sub = Files.list(path)) {
-				sub.forEach((Path t) -> {
-					scanSkins(t, paths);
-				});
-			} catch (IOException e) {
-			}
-		} else if (path.getFileName().toString().toLowerCase().endsWith(".lr2skin")
-				|| path.getFileName().toString().toLowerCase().endsWith(".luaskin")
-				|| path.getFileName().toString().toLowerCase().endsWith(".json")) {
-			paths.add(path);
-		}
+		allSkins = SkinHeaderCatalog.shared().load(Paths.get("skin"), main.getConfig());
 	}
 
 	@Override
 	public void dispose() {
+		deferredPreview.cancel();
 		setSelectedSkin(null, null);
 		super.dispose();
 	}
