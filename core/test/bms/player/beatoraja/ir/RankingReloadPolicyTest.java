@@ -100,7 +100,9 @@ class RankingReloadPolicyTest {
             public void create() {} public void render() {}
         };
         CourseData course = new CourseData();
-        SongData song = new SongData(); song.setMd5("a".repeat(32)); song.setSha256("a".repeat(64));
+        Path chart = java.nio.file.Files.writeString(directory.resolve("fixture.bms"),
+                "#BPM 120\n#WAV01 a.wav\n#00111:" + "01".repeat(10) + "\n");
+        SongData song = new SongData(new bms.model.BMSDecoder().decode(chart), false);
         course.setSong(new SongData[] {song});
         RankingData ranking = ranking(0);
         ranking.load(state, course, LN, true);

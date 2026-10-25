@@ -94,8 +94,10 @@ class AutomaticRankingReceiveProfileTest {
         final PersistentRankingDataStore store = new PersistentRankingDataStore();
         final MainController.IRStatus status;
         final MainState state;
-        Fixture(boolean course) {
-            SongData song = new SongData(); song.setMd5("a".repeat(32)); song.setSha256("a".repeat(64)); song.setMode(7);
+        Fixture(boolean course) throws Exception {
+            Path chart = java.nio.file.Files.writeString(directory.resolve("fixture.bms"),
+                    "#BPM 120\n#WAV01 a.wav\n#00111:" + "01".repeat(200) + "\n");
+            SongData song = new SongData(new bms.model.BMSDecoder().decode(chart), false);
             CourseData grade = new CourseData(); grade.setName("fixture"); grade.setSong(new SongData[]{song});
             target = course ? grade : song;
             IRConnection connection = (IRConnection)Proxy.newProxyInstance(IRConnection.class.getClassLoader(),
@@ -124,7 +126,7 @@ class AutomaticRankingReceiveProfileTest {
             state = new MainState(main, null) { public void create() {} public void render() {} };
         }
         String path() { return directory.resolve(target instanceof CourseData ? "course" : "song").toString(); }
-        String identity() { return RankingData.cacheIdentity(target, CONTEXT); }
+        String identity() { return RankingData.cacheIdentity(target, CONTEXT) + ":0:200"; }
         RankingData select() throws Exception {
             RankingData ranking = new RankingData();
             ranking.loadForSelection(state, target, CONTEXT, false); await(ranking);
@@ -145,7 +147,7 @@ class AutomaticRankingReceiveProfileTest {
     private static IRScoreData[] scores(int count) {
         IRScoreData[] result = new IRScoreData[count];
         for(int i=0;i<count;i++) { ScoreData score = new ScoreData(); score.setPlayer("rival"+i);
-            score.setClear(ClearType.Hard.id); score.setEpg(100-i); result[i] = new IRScoreData(score); }
+            score.setClear(ClearType.Hard.id); score.setNotes(200); score.setEpg(100-i); result[i] = new IRScoreData(score); }
         return result;
     }
 }

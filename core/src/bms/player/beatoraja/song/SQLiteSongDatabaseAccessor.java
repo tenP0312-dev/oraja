@@ -738,8 +738,8 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 					if (record != null && record.getPath().equals(pathname)) {
 						records.set(i, null);
 						// Old parser metadata is re-parsed in place; only this scan's files are touched.
-						if (record.getDate() == lastModifiedTime && record.getParsercompatibility()
-								>= bms.player.beatoraja.BMSIRParserCompatibility.CURRENT_REVISION) {
+						if (record.getDate() == lastModifiedTime && bms.player.beatoraja.BMSIRParserCompatibility
+                                .isCurrentMetadata(record.getParsercompatibility())) {
 							update = false;
 
 							final String oldPreview = record.getPreview() == null ? "" : record.getPreview();

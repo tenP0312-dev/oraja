@@ -411,9 +411,9 @@ public class CourseResult extends AbstractResult {
 			this.course = course;
 			this.lnmode = lnmode;
 			this.score = score;
-			this.courseSnapshot = new IRCourseData(course, lnmode,
+			this.courseSnapshot = IRCourseData.forPlaySnapshot(course, lnmode,
 					bms.player.beatoraja.BMSIRLongNoteMode.isApplied(owner.resource.getBMSModel()),
-					owner.resource.getBmsirCourseStages());
+					owner.resource.getBmsirCourseStages(), owner.resource.getCourseBMSModels());
 			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 		
