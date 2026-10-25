@@ -48,6 +48,7 @@ public class MiscSettingMenu {
     private static final ImInt LANE_COVER_SWITCH_DURATION = new ImInt(0);
     private static final ImBoolean ENABLE_CONSTANT = new ImBoolean(false);
     private static final ImInt CONSTANT_VALUE = new ImInt(0);
+    private static final ImBoolean END_PLAY_AT_LAST_NOTE = new ImBoolean(false);
     private static ImInt SELECTED_PLAYER;
 
     private static String[] players = PlayerConfig.readAllPlayerID("player");
@@ -57,7 +58,7 @@ public class MiscSettingMenu {
     }
 
 
-    /** Per-mode lane and visibility settings; HI-SPEED and key profiles are the same editors the Arena overlay shows. */
+    /** Per-mode lane and visibility settings; key profiles are the same editor the Arena overlay shows. */
     public static void showPlaySettings(ImBoolean open) {
         // TODO: We can setup preferred game mode here in future
         if (CURRENT_PLAY_MODE == null) {
@@ -67,8 +68,6 @@ public class MiscSettingMenu {
         ImGui.setNextWindowPos(windowWidth * 0.455f, windowHeight * 0.04f, ImGuiCond.FirstUseEver);
         if (ImGui.begin(t("プレイ設定", "Play Settings") + "###play-settings",
                 open, ImGuiWindowFlags.AlwaysAutoResize)) {
-            if (ImGui.beginTabBar("##play-settings-tabs")) {
-            if (ImGui.beginTabItem(t("プレイ", "Play"))) {
             // Below settings are depending on different play mode
             if (ImGui.combo(t("プレイモード", "Play Mode"), PLAY_MODE_VALUE, PLAY_MODE_OPTIONS)) {
                 changePlayMode(Mode.getMode(PLAY_MODE_OPTIONS[PLAY_MODE_VALUE.get()]));
@@ -115,21 +114,29 @@ public class MiscSettingMenu {
             }
 
             PlayerConfig player = main.getPlayerConfig();
+            END_PLAY_AT_LAST_NOTE.set(player.isEndPlayAtLastNote());
+            if (ImGui.checkbox(t("最終ノーツ後すぐに終了", "End play at last note"), END_PLAY_AT_LAST_NOTE)) {
+                player.setEndPlayAtLastNote(END_PLAY_AT_LAST_NOTE.get());
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip(t("最後のノーツ（LN終端を含む）の判定が確定したら、余韻を待たずにリザルトへ進みます。",
+                        "Goes to the result as soon as the last note (including LN ends) is judged, without the trailing wait."));
+            }
+
             if (ImGui.collapsingHeader(t("キープロファイル", "Key Profiles") + "###play-settings-key-profiles")) {
                 BMSIRArenaOverlay.renderKeyProfiles(player);
                 alsoInArena(t("Arenaオーバーレイの「プロファイル」タブ", "the Arena overlay's Profiles tab"));
             }
             ImGui.separator();
             profileSwitcher();
-            ImGui.endTabItem();
-            }
-            if (ImGui.beginTabItem(t("ハイスピード", "HI-SPEED"))) {
-                BMSIRArenaOverlay.renderHispeedSettings();
-                alsoInArena(t("Arenaオーバーレイのハイスピードタブ", "the Arena overlay HI-SPEED tab"));
-                ImGui.endTabItem();
-            }
-            ImGui.endTabBar();
-            }
+        }
+        ImGui.end();
+    }
+
+    public static void showHispeedSettings(ImBoolean open) {
+        ImGui.setNextWindowPos(windowWidth * 0.462f, windowHeight * 0.06f, ImGuiCond.FirstUseEver);
+        if (ImGui.begin(t("ハイスピード", "HI-SPEED") + "###hispeed-settings", open, ImGuiWindowFlags.AlwaysAutoResize)) {
+            BMSIRArenaOverlay.renderHispeedSettings();
         }
         ImGui.end();
     }

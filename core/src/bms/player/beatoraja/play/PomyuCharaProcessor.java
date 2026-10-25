@@ -26,6 +26,11 @@ public class PomyuCharaProcessor {
         PMcharaJudge = 0;
     }
 
+    /** Records the latest judgement the way BMSPlayer.update does. */
+    public void setJudge(int judge) {
+        PMcharaJudge = judge + 1;
+    }
+
     public int getPMcharaTime(int index) {
         if(index < 0 || index >= PMcharaTime.length) return 1;
         return PMcharaTime[index];

@@ -236,11 +236,7 @@ public final class BMSIRArenaOverlay {
         ImGui.separator();
         if (ImGui.beginChild("##bmsir-arena-scroll-content", 0, 0, false)
                 && ImGui.beginTabBar("##bmsir-arena-tabs")) {
-            if (ImGui.beginTabItem(t("ハイスピード", "HI-SPEED"))) {
-                renderSpeedBlock(false);
-                renderAlsoIn("プレイ設定のハイスピードタブ", "the HI-SPEED tab in Play Settings");
-                ImGui.endTabItem();
-            }
+            // Arena features first; HI-SPEED and the table editor live in their own F5 windows.
             if (ImGui.beginTabItem(t("対戦", "Battle"))) {
                 renderQueueActions();
                 ImGui.separator();
@@ -251,16 +247,8 @@ public final class BMSIRArenaOverlay {
                 renderRoomControls(config);
                 ImGui.endTabItem();
             }
-            if (ImGui.beginTabItem(t("難易度表編集", "Table Editor"))) {
-                renderMyDifficultyTableEditor();
-                ImGui.endTabItem();
-            }
             if (ImGui.beginTabItem(FontAwesomeIcons.Trophy + t(" レートランキング", " Rating"))) {
                 renderRanking();
-                ImGui.endTabItem();
-            }
-            if (ImGui.beginTabItem(t("マニュアル", "Manual"))) {
-                renderManual();
                 ImGui.endTabItem();
             }
             if (ImGui.beginTabItem(t("プロファイル", "Profiles"))) {
@@ -272,9 +260,22 @@ public final class BMSIRArenaOverlay {
                 renderSettings(config);
                 ImGui.endTabItem();
             }
+            if (ImGui.beginTabItem(t("マニュアル", "Manual"))) {
+                renderManual();
+                ImGui.endTabItem();
+            }
             ImGui.endTabBar();
         }
         ImGui.endChild();
+        ImGui.end();
+    }
+
+    /** The F5 menu's Table Editor window. */
+    public static void showMyDifficultyTableEditor(ImBoolean open) {
+        ImGui.setNextWindowSize(620, 640, ImGuiCond.FirstUseEver);
+        if (ImGui.begin(t("難易度表編集", "Table Editor") + "###my-table-editor", open)) {
+            renderMyDifficultyTableEditor();
+        }
         ImGui.end();
     }
 
@@ -849,7 +850,6 @@ public final class BMSIRArenaOverlay {
         if (!gameplay && !BMSIRArenaClient.isResultState()) {
             bms.player.beatoraja.modmenu.FunctionKeyMenu.renderOpenButton();
         }
-        renderSpeedBlock(true);
         renderPhaseBanner(true);
         if (BMSIRArenaClient.isFillWaiting()) {
             ImGui.text(String.format(
@@ -924,7 +924,6 @@ public final class BMSIRArenaOverlay {
         }
         renderPhaseBanner(false);
         renderModeBanner();
-        renderSpeedBlock(false);
         renderRatingResult(match);
         renderChatPreview();
         renderForceEndVote(match);
@@ -1035,7 +1034,6 @@ public final class BMSIRArenaOverlay {
             return;
         }
         renderModeBanner();
-        renderSpeedBlock(true);
         renderPhaseBanner(true);
         if (filling) {
             ImGui.text(String.format(
@@ -1052,13 +1050,13 @@ public final class BMSIRArenaOverlay {
         ImGui.end();
     }
 
-    private static void renderSpeedBlock(boolean compact) {
+    private static void renderSpeedBlock() {
         PlayerConfig config = BMSIRArenaClient.playerConfig();
         if (config == null) return;
-        String suffix = compact ? "-compact" : "-full";
+        String suffix = "-full";
         int current = BMSIRArenaClient.currentPlayModeForLayout();
         HISPEED_EDITOR_MODE.set(hispeedEditorModeIndex(config.getBmsirHispeedEditorMode()));
-        ImGui.setNextItemWidth(compact ? 150f : 210f);
+        ImGui.setNextItemWidth(210f);
         if (ImGui.combo(t("対象モード", "Key mode") + "##speed-mode" + suffix,
                 HISPEED_EDITOR_MODE, hispeedEditorModeLabels())) {
             config.setBmsirHispeedEditorMode(hispeedEditorModeId(HISPEED_EDITOR_MODE.get()));
@@ -1072,7 +1070,7 @@ public final class BMSIRArenaOverlay {
         boolean editable = live == null || live.canChangeHispeedMode();
         ImGui.beginDisabled(!editable);
         ImInt selected = new ImInt(hispeedModeIndex(mode));
-        ImGui.setNextItemWidth(compact ? 180f : 260f);
+        ImGui.setNextItemWidth(260f);
         if (ImGui.combo(t("方式", "Speed mode") + "##speed-kind" + suffix, selected,
                 new String[]{t("通常", "Normal"), "LR2", t("フローティング", "Floating")})) {
             applyHispeedMode(config, modeId, hispeedModeValue(selected.get()), live);
@@ -1082,21 +1080,16 @@ public final class BMSIRArenaOverlay {
         ImGui.separator();
         if (PlayConfig.HISPEED_MODE_FLOATING.equals(mode)) {
             ImInt green = new ImInt(bms.player.beatoraja.play.BMSIRFloatingHispeed.greenNumber(active.getBmsirFloatingGreenFrames()));
-            if (ImGui.inputInt(t("保存緑数字", "Saved green number") + suffix, green)) {
+            if (ImGui.inputInt(t("緑数字", "Green number") + suffix, green)) {
                 float frames = Math.max(10, Math.min(6000, green.get())) / 10f;
                 saved.setBmsirFloatingGreenFrames(frames);
                 if (live != null) { active.setBmsirFloatingGreenFrames(frames); live.resetHispeed(live.getNowBPM()); }
                 saveSettingsOrWarn();
             }
-            ImFloat multiplier = new ImFloat(active.getBmsirFloatingHispeed());
-            if (ImGui.inputFloat(t("倍率", "Multiplier") + suffix, multiplier)) {
-                float value = bms.player.beatoraja.play.BMSIRFloatingHispeed.clampMultiplier(multiplier.get());
-                saved.setBmsirFloatingHispeed(value);
-                if (live != null) live.setHispeed(value);
-                saveSettingsOrWarn();
-            }
-            ImGui.textWrapped(t("START＋黒鍵／白鍵：倍率 ±0.50。カバー操作で保存緑数字に戻ります。",
-                    "START + black/white keys: ±0.50. Cover adjustment restores the saved green number."));
+            ImGui.textDisabled(String.format(Locale.ROOT, t("倍率 %.2f（緑数字とBPMから自動）", "Multiplier %.2f (from green number and BPM)"),
+                    active.getBmsirFloatingHispeed()));
+            ImGui.textWrapped(t("曲開始・カバー操作で緑数字を保ちます。START＋黒鍵／白鍵は倍率±0.50相当で緑数字を変えます。",
+                    "Song start and cover moves keep the green number. START + black/white keys change it by a ±0.50 multiplier step."));
         } else {
             ImInt fix = new ImInt(active.getFixhispeed());
             if (ImGui.combo("HI-SPEED FIX" + suffix, fix, new String[]{"OFF", "START", "MAX", "MAIN", "MIN"})) {
@@ -1135,8 +1128,6 @@ public final class BMSIRArenaOverlay {
         ImGui.endDisabled();
         if (!editable) ImGui.textDisabled(t("コース制約またはリプレイ復元中は変更できません", "Locked by course rules or replay restoration"));
         else ImGui.textDisabled(t("各方式の設定を保持し、切替はその場で反映します", "Each speed mode retains its settings; switching applies immediately"));
-        ImGui.separator();
-        renderBgaDisplaySetting(config);
     }
 
     public static int hispeedModeIndex(String mode) {
@@ -3534,6 +3525,7 @@ public final class BMSIRArenaOverlay {
 
     /** Shared with the F5 menu's Display window. */
     public static void renderDisplayToggles(PlayerConfig config) {
+        renderBgaDisplaySetting(config);
         ImBoolean cursor = new ImBoolean(config.isBmsirArenaShowCursor());
         if (ImGui.checkbox(t("プレイ中もマウスカーソルを表示", "Show cursor during play"), cursor)) {
             config.setBmsirArenaShowCursor(cursor.get());
@@ -3587,7 +3579,7 @@ public final class BMSIRArenaOverlay {
 
     /** Shared with the F5 menu's Play Settings window. */
     public static void renderHispeedSettings() {
-        renderSpeedBlock(false);
+        renderSpeedBlock();
     }
 
     /** Shared with the F5 menu's Play Settings window. */

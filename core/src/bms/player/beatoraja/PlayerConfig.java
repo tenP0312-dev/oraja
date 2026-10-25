@@ -225,6 +225,11 @@ public final class PlayerConfig {
 	 * Window Hold
 	 */
 	private boolean isWindowHold = false;
+
+	/**
+	 * 最終ノーツの判定確定後、余韻を待たずにプレイを終了する
+	 */
+	private boolean endPlayAtLastNote = false;
 	
 	/**
 	 * Enable folder random select bar
@@ -1800,6 +1805,14 @@ public final class PlayerConfig {
 
 	public void setGuideSE(boolean isGuideSE) {
 		this.isGuideSE = isGuideSE;
+	}
+
+	public boolean isEndPlayAtLastNote() {
+		return endPlayAtLastNote;
+	}
+
+	public void setEndPlayAtLastNote(boolean endPlayAtLastNote) {
+		this.endPlayAtLastNote = endPlayAtLastNote;
 	}
 
 	public boolean isWindowHold() {

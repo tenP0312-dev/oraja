@@ -805,6 +805,11 @@ public final class PlayDataAccessor {
 		return ((forceLn() || BMSIRLongNoteMode.isApplied(song.getBMSModel()))
 				&& existsReplayData(BMSIRLongNoteMode.replayHash(song, hash), song.hasAnyLongNote(), lnmode, index))
 				|| existsReplayData(BMSIRParserCompatibility.storageHash(song, hash), authoredUndefined, lnmode, index)
+                || existsReplayData(forceLn() || BMSIRLongNoteMode.isApplied(song.getBMSModel())
+                        ? BMSIRLongNoteMode.previousParserReplayHash(song, hash)
+                        : BMSIRParserCompatibility.previousStorageHash(song, hash),
+                        forceLn() || BMSIRLongNoteMode.isApplied(song.getBMSModel()) ? song.hasAnyLongNote() : authoredUndefined,
+                        lnmode, index)
                 || existsReplayData(hash, authoredUndefined, lnmode, index);
 	}
 
@@ -822,6 +827,8 @@ public final class PlayDataAccessor {
 			ln |= model.containsUndefinedLongNote();
 		}
 		return existsReplayData(hash, ln, lnmode, index, constraint)
+                || existsReplayData(Arrays.stream(models).map(model -> BMSIRLongNoteMode.previousParserReplayHash(model, model.getSHA256())).toArray(String[]::new),
+                        ln, lnmode, index, constraint)
                 || existsReplayData(Arrays.stream(models).map(model -> BMSIRLongNoteMode.legacyReplayHash(model, model.getSHA256())).toArray(String[]::new),
                         ln, lnmode, index, constraint)
 				|| existsReplayData(Arrays.stream(models).map(BMSModel::getSHA256).toArray(String[]::new),
@@ -908,6 +915,8 @@ public final class PlayDataAccessor {
 			return readReplayData(hashes, ln, lnmode, index, constraint);
 		}
         String[] legacy = Arrays.stream(models).map(model -> BMSIRLongNoteMode.legacyReplayHash(model, model.getSHA256())).toArray(String[]::new);
+        String[] previous = Arrays.stream(models).map(model -> BMSIRLongNoteMode.previousParserReplayHash(model, model.getSHA256())).toArray(String[]::new);
+        if (existsReplayData(previous, ln, lnmode, index, constraint)) return readReplayData(previous, ln, lnmode, index, constraint);
         if (existsReplayData(legacy, ln, lnmode, index, constraint)) return readReplayData(legacy, ln, lnmode, index, constraint);
 		return readReplayData(Arrays.stream(models).map(BMSModel::getSHA256).toArray(String[]::new),
 				Arrays.stream(models).anyMatch(BMSIRLongNoteMode::authoredUndefined),
@@ -1008,6 +1017,9 @@ public final class PlayDataAccessor {
 	private String replayReadPath(BMSModel model, int lnmode, int index) {
 		String current = getReplayDataFilePath(model, lnmode, index);
 		if (Files.exists(Paths.get(current + ".brd"))) return current;
+        String previousParser = getReplayDataFilePath(BMSIRLongNoteMode.previousParserReplayHash(model, baseReplayHash(model)),
+                model.containsUndefinedLongNote(), lnmode, index);
+        if (Files.exists(Paths.get(previousParser + ".brd"))) return previousParser;
         String parserLegacy = getReplayDataFilePath(BMSIRLongNoteMode.legacyReplayHash(model, baseReplayHash(model)),
                 model.containsUndefinedLongNote(), lnmode, index);
         if (Files.exists(Paths.get(parserLegacy + ".brd"))) return parserLegacy;

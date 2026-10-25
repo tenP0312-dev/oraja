@@ -384,6 +384,7 @@
                                              </valueFactory>
                                          </NumericSpinner>
                                          <CheckBox fx:id="chartpreview"  GridPane.columnIndex="2" GridPane.rowIndex="5" mnemonicParsing="false" text="%CHART_PREVIEW" />
+                                         <CheckBox fx:id="endplayatlastnote" GridPane.columnIndex="3" GridPane.rowIndex="5" mnemonicParsing="false" text="%END_PLAY_AT_LAST_NOTE" />
                                      </GridPane>
                                  </VBox>
                            </content>

@@ -49,20 +49,8 @@ public final class BMSIRManiacSettings {
     private transient int addNotesPlacementVersion = ADD_NOTES_PLACEMENT_VERSION;
     private int addLongNotes;
     private int addMines;
-    private int acceleration;
-    private int softLanding;
-    private int earthquake;
-    private int tornado;
-    private int superLoop;
     private int gambol;
-    private int character;
-    private int heartbeat;
     private int loudness;
-    private int nabeatsu;
-    private int sinCurve;
-    private int wave;
-    private int spiral;
-    private int sideJump;
     private int spToDpDifficulty;
     private transient int spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
     private boolean doubleBattle;
@@ -90,20 +78,8 @@ public final class BMSIRManiacSettings {
         addNotesPlacementVersion = source.addNotesPlacementVersion;
         addLongNotes = source.addLongNotes;
         addMines = source.addMines;
-        acceleration = source.acceleration;
-        softLanding = source.softLanding;
-        earthquake = source.earthquake;
-        tornado = source.tornado;
-        superLoop = source.superLoop;
         gambol = source.gambol;
-        character = source.character;
-        heartbeat = source.heartbeat;
         loudness = source.loudness;
-        nabeatsu = source.nabeatsu;
-        sinCurve = source.sinCurve;
-        wave = source.wave;
-        spiral = source.spiral;
-        sideJump = source.sideJump;
         spToDpDifficulty = source.spToDpDifficulty;
         spToDpPlacementVersion = source.spToDpPlacementVersion;
         doubleBattle = source.doubleBattle;
@@ -122,20 +98,8 @@ public final class BMSIRManiacSettings {
         addNotes = percent(addNotes);
         addLongNotes = percent(addLongNotes);
         addMines = percent(addMines);
-        acceleration = clamp(acceleration, 0, 3);
-        softLanding = clamp(softLanding, 0, 2);
-        earthquake = percent(earthquake);
-        tornado = percent(tornado);
-        superLoop = percent(superLoop);
         gambol = clamp(gambol, 0, 2);
-        character = percent(character);
-        heartbeat = percent(heartbeat);
         loudness = percent(loudness);
-        nabeatsu = percent(nabeatsu);
-        sinCurve = percent(sinCurve);
-        wave = percent(wave);
-        spiral = percent(spiral);
-        sideJump = percent(sideJump);
         spToDpDifficulty = clamp(spToDpDifficulty, 0, 3);
         if (spToDpDifficulty == 0) {
             spToDpPlacementVersion = SP_TO_DP_PLACEMENT_VERSION;
@@ -187,20 +151,8 @@ public final class BMSIRManiacSettings {
         }
         settings.setAddLongNotes(integer(values, "long"));
         settings.setAddMines(integer(values, "mines"));
-        settings.setAcceleration(integer(values, "accel"));
-        settings.setSoftLanding(integer(values, "soft"));
-        settings.setEarthquake(integer(values, "earthquake"));
-        settings.setTornado(integer(values, "tornado"));
-        settings.setSuperLoop(integer(values, "superloop"));
         settings.setGambol(integer(values, "gambol"));
-        settings.setCharacter(integer(values, "char"));
-        settings.setHeartbeat(integer(values, "heartbeat"));
         settings.setLoudness(integer(values, "loudness"));
-        settings.setNabeatsu(integer(values, "nabeatsu"));
-        settings.setSinCurve(integer(values, "sin"));
-        settings.setWave(integer(values, "wave"));
-        settings.setSpiral(integer(values, "spiral"));
-        settings.setSideJump(integer(values, "sidejump"));
         settings.setSpToDpDifficulty(integer(values, "sp2dp"));
         if (settings.spToDpDifficulty > 0) {
             int placementVersion = integer(values, "sp2dp_version");
@@ -241,11 +193,7 @@ public final class BMSIRManiacSettings {
 
     public boolean hasStandardEffect() {
         return hiddenSudden1P > 0 || hiddenSudden2P > 0
-                || addMines > 0 || acceleration > 0 || softLanding > 0
-                || earthquake > 0 || tornado > 0 || superLoop > 0
-                || gambol > 0 || character > 0 || heartbeat > 0
-                || loudness > 0 || nabeatsu > 0 || sinCurve > 0
-                || wave > 0 || spiral > 0 || sideJump > 0;
+                || addMines > 0 || gambol > 0 || loudness > 0;
     }
 
     public int chartTransformCount() {
@@ -333,20 +281,21 @@ public final class BMSIRManiacSettings {
                 "notes=" + addNotes,
                 "long=" + addLongNotes,
                 "mines=" + addMines,
-                "accel=" + acceleration,
-                "soft=" + softLanding,
-                "earthquake=" + earthquake,
-                "tornado=" + tornado,
-                "superloop=" + superLoop,
+                // Removed visual-only options stay pinned so existing score keys and IR rows keep matching.
+                "accel=0",
+                "soft=0",
+                "earthquake=0",
+                "tornado=0",
+                "superloop=0",
                 "gambol=" + gambol,
-                "char=" + character,
-                "heartbeat=" + heartbeat,
+                "char=0",
+                "heartbeat=0",
                 "loudness=" + loudness,
-                "nabeatsu=" + nabeatsu,
-                "sin=" + sinCurve,
-                "wave=" + wave,
-                "spiral=" + spiral,
-                "sidejump=" + sideJump,
+                "nabeatsu=0",
+                "sin=0",
+                "wave=0",
+                "spiral=0",
+                "sidejump=0",
                 "db=" + doubleBattle,
                 "link=" + randomLink
         );
@@ -411,19 +360,7 @@ public final class BMSIRManiacSettings {
         if (addLongNotes > 0) values.add("LN " + addLongNotes + "%");
         if (addMines > 0) values.add("MINE " + addMines + "%");
         if (gambol > 0) values.add("GAMBOL Lv" + gambol);
-        if (softLanding > 0) values.add("SOFT Lv" + softLanding);
-        appendPercent(values, "TORNADO", tornado);
-        appendPercent(values, "EARTHQUAKE", earthquake);
-        appendPercent(values, "SUPERLOOP", superLoop);
-        appendPercent(values, "CHAR", character);
-        appendPercent(values, "HEARTBEAT", heartbeat);
         appendPercent(values, "LOUDNESS", loudness);
-        appendPercent(values, "NABEATSU", nabeatsu);
-        appendPercent(values, "SIN", sinCurve);
-        appendPercent(values, "WAVE", wave);
-        appendPercent(values, "SPIRAL", spiral);
-        appendPercent(values, "SIDEJUMP", sideJump);
-        if (acceleration > 0) values.add("ACCEL " + acceleration);
         if (hiddenSudden1P > 0 || hiddenSudden2P > 0) values.add("HID/SUD");
         if (values.size() > 3) {
             return "MANIAC x" + values.size();
@@ -448,19 +385,7 @@ public final class BMSIRManiacSettings {
         if (addLongNotes > 0) values.add("ADD LONGNOTES " + addLongNotes + "%");
         if (addMines > 0) values.add("MINE " + addMines + "%");
         if (gambol > 0) values.add("GAMBOL Lv" + gambol);
-        if (softLanding > 0) values.add("SOFTLANDING Lv" + softLanding);
-        appendPercent(values, "TORNADO", tornado);
-        appendPercent(values, "EARTHQUAKE", earthquake);
-        appendPercent(values, "SUPERLOOP", superLoop);
-        appendPercent(values, "CHAR", character);
-        appendPercent(values, "HEARTBEAT", heartbeat);
         appendPercent(values, "LOUDNESS", loudness);
-        appendPercent(values, "NABEATSU", nabeatsu);
-        appendPercent(values, "SIN CURVE", sinCurve);
-        appendPercent(values, "WAVE", wave);
-        appendPercent(values, "SPIRAL", spiral);
-        appendPercent(values, "SIDEJUMP", sideJump);
-        if (acceleration > 0) values.add("ACCELERATION " + acceleration);
         if (hiddenSudden1P > 0) values.add("HIDDEN/SUDDEN 1P=" + hiddenSudden1P);
         if (hiddenSudden2P > 0) values.add("HIDDEN/SUDDEN 2P=" + hiddenSudden2P);
         return String.join(" / ", values);
@@ -550,34 +475,10 @@ public final class BMSIRManiacSettings {
     public void setAddLongNotes(int value) { addLongNotes = value; validate(); }
     public int getAddMines() { return addMines; }
     public void setAddMines(int value) { addMines = value; validate(); }
-    public int getAcceleration() { return acceleration; }
-    public void setAcceleration(int value) { acceleration = value; validate(); }
-    public int getSoftLanding() { return softLanding; }
-    public void setSoftLanding(int value) { softLanding = value; validate(); }
-    public int getEarthquake() { return earthquake; }
-    public void setEarthquake(int value) { earthquake = value; validate(); }
-    public int getTornado() { return tornado; }
-    public void setTornado(int value) { tornado = value; validate(); }
-    public int getSuperLoop() { return superLoop; }
-    public void setSuperLoop(int value) { superLoop = value; validate(); }
     public int getGambol() { return gambol; }
     public void setGambol(int value) { gambol = value; validate(); }
-    public int getCharacter() { return character; }
-    public void setCharacter(int value) { character = value; validate(); }
-    public int getHeartbeat() { return heartbeat; }
-    public void setHeartbeat(int value) { heartbeat = value; validate(); }
     public int getLoudness() { return loudness; }
     public void setLoudness(int value) { loudness = value; validate(); }
-    public int getNabeatsu() { return nabeatsu; }
-    public void setNabeatsu(int value) { nabeatsu = value; validate(); }
-    public int getSinCurve() { return sinCurve; }
-    public void setSinCurve(int value) { sinCurve = value; validate(); }
-    public int getWave() { return wave; }
-    public void setWave(int value) { wave = value; validate(); }
-    public int getSpiral() { return spiral; }
-    public void setSpiral(int value) { spiral = value; validate(); }
-    public int getSideJump() { return sideJump; }
-    public void setSideJump(int value) { sideJump = value; validate(); }
     public int getSpToDpDifficulty() { return spToDpDifficulty; }
     public void setSpToDpDifficulty(int value) {
         spToDpDifficulty = clamp(value, 0, 3);

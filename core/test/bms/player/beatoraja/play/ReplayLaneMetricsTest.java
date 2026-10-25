@@ -42,7 +42,7 @@ class ReplayLaneMetricsTest {
         assertEquals(583, renderer.floatingGreenNumber(150, true));
         renderer.changeHispeed(true);
         assertEquals(2.5f, renderer.getHispeed()); assertEquals(150, renderer.getNowBPM());
-        assertEquals(30.12345f, renderer.getPlayConfig().getBmsirFloatingGreenFrames());
+        assertEquals(30.12345f * 2f / 2.5f, renderer.getPlayConfig().getBmsirFloatingGreenFrames(), 0.0001);
         assertEquals(777, renderer.getCurrentDuration());
         renderer.moveFloatingScratch(150);
         assertEquals(3.5f, renderer.getHispeed(), 0.00001);

@@ -42,9 +42,9 @@ public class EventFactory {
 		String mode = pc.resolveBmsirHispeedMode(legacyLr2);
 		pc.setBmsirHispeedMode(mode);
 		if (PlayConfig.HISPEED_MODE_FLOATING.equals(mode)) {
-			float previous = pc.getBmsirFloatingHispeed();
-			bms.player.beatoraja.play.BMSIRFloatingHispeed.changeMultiplier(pc, increase ? .5f : -.5f);
-			return previous != pc.getBmsirFloatingHispeed();
+			float previous = pc.getBmsirFloatingGreenFrames();
+			bms.player.beatoraja.play.BMSIRFloatingHispeed.changeGreen(pc, increase ? .5f : -.5f);
+			return previous != pc.getBmsirFloatingGreenFrames();
 		}
 		boolean lr2 = PlayConfig.HISPEED_MODE_LR2.equals(mode);
 		float previous = lr2 ? pc.getEffectiveLr2Hispeed() : pc.getHispeed();

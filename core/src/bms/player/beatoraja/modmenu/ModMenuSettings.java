@@ -27,6 +27,11 @@ public final class ModMenuSettings {
                 itemEnabled.putIfAbsent(item.id, legacyMisc);
             }
         }
+        // HI-SPEED was a Play Settings tab; keep a player's existing choice for it.
+        Boolean play = itemEnabled.get(ModMenuItem.PLAY_SETTINGS.id);
+        if (play != null) {
+            itemEnabled.putIfAbsent(ModMenuItem.HISPEED_SETTINGS.id, play);
+        }
         for (ModMenuItem item : ModMenuItem.values()) {
             itemEnabled.putIfAbsent(item.id, true);
         }

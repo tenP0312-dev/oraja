@@ -38,7 +38,7 @@ public class BMSIRManiacSettingsTest {
     public void canonicalOptionsRoundTripForIrSync() {
         BMSIRManiacSettings source = new BMSIRManiacSettings();
         source.setExtraMode(2);
-        source.setTornado(30);
+        source.setHiddenSudden1P(1);
 
         BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(
                 source.canonicalOptions()
@@ -119,9 +119,7 @@ public class BMSIRManiacSettingsTest {
     public void percentagesAreRoundedAndClampedToMenuSteps() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setAddMines(26);
-        settings.setWave(999);
         assertEquals(30, settings.getAddMines());
-        assertEquals(100, settings.getWave());
         assertEquals(BMSIRManiacSettings.RankingClass.MANIAC_STANDARD, settings.rankingClass());
     }
 
@@ -165,7 +163,7 @@ public class BMSIRManiacSettingsTest {
     @Test
     public void spToDpHasCanonicalAndStorageIdentityWithoutChangingLegacyIdentity() {
         BMSIRManiacSettings legacy = new BMSIRManiacSettings();
-        legacy.setTornado(30);
+        legacy.setHiddenSudden1P(1);
         assertFalse(legacy.canonicalOptions().contains("sp2dp"));
 
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
@@ -208,5 +206,38 @@ public class BMSIRManiacSettingsTest {
         settings.selectDoubleBattle(true, false);
         assertEquals(0, settings.getSpToDpDifficulty());
         assertTrue(settings.isDoubleBattle());
+    }
+
+    @Test
+    public void removedVisualOptionsKeepTheLegacyCanonicalFormat() {
+        BMSIRManiacSettings settings = new BMSIRManiacSettings();
+        settings.setHiddenSudden1P(1);
+
+        // Existing local score keys hash this exact string, so removed options stay pinned at zero.
+        assertEquals("hs1=1,hs2=0,extra=0,notes=0,long=0,mines=0,accel=0,soft=0,"
+                        + "earthquake=0,tornado=0,superloop=0,gambol=0,char=0,heartbeat=0,"
+                        + "loudness=0,nabeatsu=0,sin=0,wave=0,spiral=0,sidejump=0,"
+                        + "db=false,link=off,seed=fixed,algorithm=1",
+                settings.canonicalOptions());
+    }
+
+    @Test
+    public void legacyRemovedVisualOptionValuesAreIgnored() {
+        String legacy = "hs1=1,hs2=0,extra=0,notes=0,long=0,mines=0,accel=2,soft=1,"
+                + "earthquake=30,tornado=30,superloop=30,gambol=0,char=30,heartbeat=30,"
+                + "loudness=0,nabeatsu=30,sin=30,wave=30,spiral=30,sidejump=30,"
+                + "db=false,link=off,seed=fixed,algorithm=1";
+        BMSIRManiacSettings restored = BMSIRManiacSettings.fromCanonicalOptions(legacy);
+        assertNotNull(restored);
+        assertEquals(1, restored.getHiddenSudden1P());
+        assertTrue(restored.canonicalOptions().contains("earthquake=0,tornado=0"));
+        assertNull(BMSIRManiacSettings.fromCanonicalOptions(legacy.replace("hs1=1", "hs1=0")));
+
+        com.badlogic.gdx.utils.Json json = new com.badlogic.gdx.utils.Json();
+        json.setIgnoreUnknownFields(true);
+        BMSIRManiacSettings stored = json.fromJson(BMSIRManiacSettings.class,
+                "{\"tornado\":30,\"softLanding\":2,\"acceleration\":1,\"hiddenSudden2P\":2}");
+        assertEquals(2, stored.validate().getHiddenSudden2P());
+        assertEquals(BMSIRManiacSettings.RankingClass.MANIAC_STANDARD, stored.rankingClass());
     }
 }

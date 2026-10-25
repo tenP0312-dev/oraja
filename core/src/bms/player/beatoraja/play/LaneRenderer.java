@@ -183,7 +183,7 @@ public class LaneRenderer {
 		};
 
 		if (isFloatingHispeedEnabled()) {
-			if (BMSIRFloatingHispeed.hasCover(playconfig)) BMSIRFloatingHispeed.restoreGreen(playconfig, model.getBpm());
+			BMSIRFloatingHispeed.restoreGreen(playconfig, model.getBpm());
 		} else this.setLanecover(playconfig.getLanecover());
 		basehispeed = playconfig.getHispeed();
 		this.hispeedmargin = playconfig.getHispeedMargin();
@@ -289,7 +289,7 @@ public class LaneRenderer {
 	public void setLanecover(float lanecover) {
 		setLanecoverValue(lanecover);
 		if (isFloatingHispeedEnabled()) {
-			if (BMSIRFloatingHispeed.hasCover(playconfig)) BMSIRFloatingHispeed.restoreGreen(playconfig, nowbpm, currentscroll);
+			BMSIRFloatingHispeed.restoreGreen(playconfig, nowbpm, currentscroll);
 		} else if (!bmsirLr2HispeedFixEnabled) {
 			resetHispeed(basebpm);
 		}
@@ -303,7 +303,7 @@ public class LaneRenderer {
 	) {
 		setLanecoverValue(lanecover);
 		if (isFloatingHispeedEnabled()) {
-			if (BMSIRFloatingHispeed.hasCover(playconfig)) BMSIRFloatingHispeed.restoreGreen(playconfig, targetBpm, currentscroll);
+			BMSIRFloatingHispeed.restoreGreen(playconfig, targetBpm, currentscroll);
 		} else if (bmsirLr2HispeedFixEnabled) {
 			// LR2 mode keeps the applied speed independent from cover.
 		} else if (recalculateHispeed && Double.isFinite(targetBpm) && targetBpm > 0.0) {
@@ -382,7 +382,7 @@ public class LaneRenderer {
 
 	public void changeHispeed(boolean b) {
 		if (isFloatingHispeedEnabled()) {
-			BMSIRFloatingHispeed.changeMultiplier(playconfig, BMSIRFloatingHispeed.KEY_STEP * (b ? 1 : -1));
+			BMSIRFloatingHispeed.changeGreen(playconfig, BMSIRFloatingHispeed.KEY_STEP * (b ? 1 : -1));
 			updateStartHerePreviewMetrics();
 			return;
 		}
@@ -409,7 +409,7 @@ public class LaneRenderer {
 	public void addHispeed(float delta) {
 		if (bmsirLr2HispeedFixEnabled) { setHispeed(playconfig.getEffectiveLr2Hispeed() + delta); return; }
 		if (isFloatingHispeedEnabled()) {
-			BMSIRFloatingHispeed.changeMultiplier(playconfig, delta);
+			BMSIRFloatingHispeed.changeGreen(playconfig, delta);
 			updateStartHerePreviewMetrics();
 			return;
 		}
@@ -433,7 +433,7 @@ public class LaneRenderer {
 			return;
 		}
 		if (isFloatingHispeedEnabled()) {
-			playconfig.setBmsirFloatingHispeed(BMSIRFloatingHispeed.clampMultiplier(hispeed));
+			BMSIRFloatingHispeed.setMultiplierKeepingRatio(playconfig, hispeed);
 			updateStartHerePreviewMetrics();
 			return;
 		}
@@ -525,7 +525,7 @@ public class LaneRenderer {
 		};
 		if (isFloatingHispeedEnabled()) {
 			BMSIRFloatingHispeed.normalizeCovers(playconfig);
-			if (BMSIRFloatingHispeed.hasCover(playconfig)) BMSIRFloatingHispeed.restoreGreen(playconfig, nowbpm, currentscroll);
+			BMSIRFloatingHispeed.restoreGreen(playconfig, nowbpm, currentscroll);
 			long time = main != null && main.timer != null && main.timer.isTimerOn(TIMER_PLAY) ? main.timer.getNowTime(TIMER_PLAY) : 0;
 			floatingTransition = new BMSIRFloatingHispeed.Transition(playconfig.getBmsirFloatingHispeed(), time);
 		} else if (!bmsirLr2HispeedFixEnabled) resetHispeed(basebpm);
@@ -894,8 +894,6 @@ public class LaneRenderer {
 							lane,
 							lanes.length,
 							model.getMode().player,
-							i,
-							now,
 							dstx,
 							dsty,
 							dstw,
@@ -954,8 +952,6 @@ public class LaneRenderer {
 										lane,
 										lanes.length,
 										model.getMode().player,
-										i,
-										now,
 										dstx,
 										(float) (dsty + dy),
 										dstw,

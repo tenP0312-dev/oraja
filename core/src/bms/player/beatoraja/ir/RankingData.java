@@ -62,7 +62,15 @@ public class RankingData {
 	private final AtomicBoolean accessInFlight = new AtomicBoolean();
 	private volatile IRLongNoteContract contract = IRLongNoteContract.UNKNOWN;
 
-	public void setContract(IRLongNoteContract contract) { this.contract = contract; }
+	public synchronized void setContract(IRLongNoteContract contract) {
+        this.contract = contract;
+        if (contract.notes() <= 0 || contract.lntype() < 0 || contract.lntype() > 2) {
+            scores = null; scorerankings = null;
+            irtotal = irrank = prevrank = localrank = 0;
+            Arrays.fill(lamps, 0);
+            state = FAIL; lastAccessFailed = true;
+        }
+    }
 
 	public static boolean matchesContract(IRScoreData[] rows, int lntype, int notes) {
 		IRLongNoteContract expected = new IRLongNoteContract(lntype, notes);
@@ -117,6 +125,7 @@ public class RankingData {
 						? new IRLongNoteContract(chart.bmsirRankingLnType, chart.bmsirRankingNotes)
 						: new IRLongNoteContract(courseRequest.bmsirRankingLnType, courseRequest.bmsirRankingNotes));
 				discardIncompatibleScores(context);
+                if (contract.notes() <= 0 || contract.lntype() < 0 || contract.lntype() > 2) return;
 				String identity = cacheIdentity(song, context);
 				if (!identity.isEmpty() && contract.notes() >= 0)
 					identity += ":" + contract.lntype() + ":" + contract.notes();

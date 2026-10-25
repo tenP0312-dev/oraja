@@ -27,6 +27,8 @@ class HispeedModeSwitchTest {
         PlayConfig config = new PlayConfig(); config.setBmsirHispeedMode(mode);
         config.setFixhispeed(PlayConfig.FIX_HISPEED_OFF); config.setHispeed(2f);
         config.setBmsirLr2Hispeed(3f); config.setEnablelanecover(false);
+        // Floating speed is derived from the saved green number; seed it to match 2.00x here.
+        BMSIRFloatingHispeed.rememberGreen(config, 180, 2);
         BMSModel model = new BMSDecoder().decode("#PLAYER 1\n#TITLE T\n#BPM 120\n#WAV01 a.wav\n#00111:01\n".getBytes(StandardCharsets.UTF_8), false, null);
         set(lane, LaneRenderer.class, "main", player); set(lane, LaneRenderer.class, "model", model);
         set(lane, LaneRenderer.class, "config", new PlayerConfig()); set(lane, LaneRenderer.class, "playconfig", config);

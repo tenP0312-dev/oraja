@@ -1,14 +1,18 @@
 package bms.player.beatoraja.config;
 
+import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.TimerManager;
 
 /** Pure timeline calculations shared by the stateful Skin Select previews. */
 final class SkinPreviewLifecycle {
-	private static final long MIN_LOAD_MS = 1200L;
-	private static final long MIN_READY_MS = 1000L;
-	private static final long MIN_FINISH_MS = 1200L;
+	/** BMSPlayer waits at least one second in PRELOAD before READY. */
+	private static final long MIN_LOAD_MS = 1000L;
 	private static final long DEFAULT_SCENE_MS = 6000L;
 	private static final long MAX_SCENE_MS = 12000L;
+	/** Keeps the faded last frame briefly before a scene preview repeats. */
+	private static final long SCENE_HOLD_MS = 500L;
+	/** Simulated confirm press that reveals a result skin's score update. */
+	private static final long SCORE_UPDATE_PRESS_MS = 1500L;
 
 	private SkinPreviewLifecycle() {}
 
@@ -42,12 +46,14 @@ final class SkinPreviewLifecycle {
 			long playDuration,
 			long finishMargin,
 			long fadeoutDuration) {
+		// Phase lengths follow BMSPlayer.render so skin animations keep their
+		// real timing; only the one-second PRELOAD floor is the body's own.
 		long load = Math.max(MIN_LOAD_MS, configuredLoad);
-		long ready = Math.max(MIN_READY_MS, configuredReady);
+		long ready = Math.max(0L, configuredReady);
 		long play = Math.max(1L, playDuration);
 		long finishBeforeFade = Math.max(0L, finishMargin);
-		long fadeout = Math.max(500L, fadeoutDuration);
-		long finish = Math.max(MIN_FINISH_MS, finishBeforeFade + fadeout);
+		long fadeout = Math.max(0L, fadeoutDuration);
+		long finish = Math.max(1L, finishBeforeFade + fadeout);
 		long cycle = load + ready + play + finish;
 		long position = Math.floorMod(elapsed, cycle);
 		long iteration = Math.floorDiv(elapsed, cycle);
@@ -77,14 +83,27 @@ final class SkinPreviewLifecycle {
 
 	static SceneFrame sceneFrame(
 			long elapsed, long configuredInput, long configuredScene, long configuredFadeout) {
+		return sceneFrame(elapsed, configuredInput, configuredScene, configuredFadeout, false);
+	}
+
+	/**
+	 * Decide and result scenes fade out at the skin's scene time and finish
+	 * after its fadeout, as in MusicDecide/MusicResult. Scenes that wait for a
+	 * key (no or very long scene time) use a bounded stand-in length.
+	 *
+	 * @param immediateScoreUpdate true when the real state turns the score
+	 *            update timer on from the first frame (no rank time, course result)
+	 */
+	static SceneFrame sceneFrame(long elapsed, long configuredInput, long configuredScene,
+			long configuredFadeout, boolean immediateScoreUpdate) {
 		long scene = configuredScene > 0L && configuredScene <= MAX_SCENE_MS
-				? Math.max(3000L, configuredScene) : DEFAULT_SCENE_MS;
-		long fadeout = Math.max(500L, Math.min(4000L, configuredFadeout));
-		long cycle = scene + fadeout;
+				? configuredScene : DEFAULT_SCENE_MS;
+		long fadeout = Math.max(0L, configuredFadeout);
+		long cycle = scene + fadeout + SCENE_HOLD_MS;
 		long position = Math.floorMod(elapsed, cycle);
 		long iteration = Math.floorDiv(elapsed, cycle);
-		long inputAt = Math.max(0L, Math.min(scene - 1000L, configuredInput));
-		long updateAt = Math.max(1500L, inputAt);
+		long inputAt = Math.max(0L, configuredInput);
+		long updateAt = immediateScoreUpdate ? 0L : Math.max(SCORE_UPDATE_PRESS_MS, inputAt);
 		return new SceneFrame(
 				position,
 				cycle,
@@ -94,6 +113,22 @@ final class SkinPreviewLifecycle {
 				position >= scene ? position - scene : -1L);
 	}
 
+	/**
+	 * Measures a preview timeline from its first rendered frame. Preview states
+	 * are constructed before their skin is loaded, so the state clock already
+	 * contains the load time. The TimerManager itself stays monotonic.
+	 */
+	static final class Clock {
+		private long origin = Long.MIN_VALUE;
+
+		long elapsed(long now) {
+			if (origin == Long.MIN_VALUE) {
+				origin = now;
+			}
+			return now - origin;
+		}
+	}
+
 	static void setTimer(TimerManager timer, int id, long elapsedSinceStart) {
 		if (elapsedSinceStart >= 0L) {
 			timer.setMicroTimer(id,
@@ -101,5 +136,14 @@ final class SkinPreviewLifecycle {
 		} else {
 			timer.setTimerOff(id);
 		}
+	}
+
+	/**
+	 * Starts a freshly prepared preview at its real first frame. Preview states
+	 * are constructed before their skin is loaded, so keeping that construction
+	 * clock would make a heavy skin appear several seconds into its timeline.
+	 */
+	static void restartPreparedPreviewClock(TimerManager timer, MainState state) {
+		timer.setMainState(state);
 	}
 }

@@ -69,6 +69,11 @@ public class BMSPlayer extends MainState {
 	private int courseGaugeInitialValue;
 
 	private int playtime;
+	/** Set when the play finished at the last judged note instead of waiting out the after-note margin. */
+	private boolean endedAtLastNote;
+	private int expectedJudgedNotes = -1;
+	/** Play time when every note was first seen judged, or {@link Long#MIN_VALUE} while notes remain. */
+	private long allNotesJudgedAt = Long.MIN_VALUE;
 
 	/**
 	 * キー入力用スレッド
@@ -104,6 +109,10 @@ public class BMSPlayer extends MainState {
     }
 
 	static final int TIME_MARGIN = 5000;
+	/** Frames after the last judgment so gauge, gauge auto shift and failure checks settle before finishing. */
+	static final int END_AT_LAST_NOTE_SETTLE = 100;
+	/** Wait past the last chart object (mines included) so a late mine still damages the gauge. */
+	static final int END_AT_LAST_NOTE_OBJECT_MARGIN = 500;
 	private static final long LOUDNESS_ANALYSIS_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(15);
 
 	private int state = STATE_PRELOAD;
@@ -1211,7 +1220,20 @@ public class BMSPlayer extends MainState {
 				skin.pomyu.updateTimer(this);
 
 				// System.out.println("playing time : " + time);
-				if (playtime < ptime) {
+				boolean endAtLastNote = false;
+				if (config.isEndPlayAtLastNote()
+						&& allNotesJudged(true, autoplay.mode, judge.getPastNotes(), expectedJudgedNotes())) {
+					if (allNotesJudgedAt == Long.MIN_VALUE) {
+						allNotesJudgedAt = ptime;
+					}
+					endAtLastNote = endAtLastNoteSettled(ptime, allNotesJudgedAt, model.getLastNoteTime());
+				}
+				if (playtime < ptime || endAtLastNote) {
+					if (endAtLastNote && playtime >= ptime) {
+						endedAtLastNote = true;
+						timer.switchTimer(TIMER_ENDOFNOTE_1P, true);
+						logger.info("最終ノーツ処理済みのため余韻を待たずに終了");
+					}
 					state = STATE_FINISHED;
 					timer.setTimerOn(TIMER_MUSIC_END);
 					for(int i = TIMER_PM_CHARA_1P_NEUTRAL; i <= TIMER_PM_CHARA_2P_BAD; i++) {
@@ -1334,7 +1356,7 @@ public class BMSPlayer extends MainState {
                 control.setEnableCursor(false);
                 keyinput.stopJudge();
 				keysound.stopBGPlay();
-				if (timer.getNowTime(TIMER_MUSIC_END) > skin.getFinishMargin()) {
+				if (endedAtLastNote || timer.getNowTime(TIMER_MUSIC_END) > skin.getFinishMargin()) {
 					timer.switchTimer(TIMER_FADEOUT, true);
 				}
 				if (timer.getNowTime(TIMER_FADEOUT) > skin.getFadeout()) {
@@ -1409,6 +1431,37 @@ public class BMSPlayer extends MainState {
             laneTimeline.record(lanerender.captureReplayLaneState(timer.getNowMicroTime(TIMER_PLAY)));
         }
 		prevtime = micronow;
+	}
+
+	/**
+	 * Whether every note (including LN ends) has been judged, so the option may end the play.
+	 * Only PLAY and REPLAY honor the option; AUTOPLAY and PRACTICE keep their normal end timing.
+	 */
+	static boolean allNotesJudged(boolean enabled, BMSPlayerMode.Mode mode, int pastNotes, int expectedNotes) {
+		return enabled
+				&& (mode == BMSPlayerMode.Mode.PLAY || mode == BMSPlayerMode.Mode.REPLAY)
+				&& expectedNotes > 0
+				&& pastNotes >= expectedNotes;
+	}
+
+	/**
+	 * Whether the play may finish after all notes were judged at {@code allJudgedAt}: the judge thread
+	 * updates the gauge after the note count, so wait a short settle time, and never before the last
+	 * chart object (mines included) is past.
+	 */
+	static boolean endAtLastNoteSettled(long ptime, long allJudgedAt, long lastNoteTime) {
+		return allJudgedAt != Long.MIN_VALUE
+				&& ptime - allJudgedAt >= END_AT_LAST_NOTE_SETTLE
+				&& ptime >= lastNoteTime + END_AT_LAST_NOTE_OBJECT_MARGIN;
+	}
+
+	/** The judged-note count that means the chart is done; the larger count is used so the end is never early. */
+	private int expectedJudgedNotes() {
+		if (expectedJudgedNotes < 0) {
+			int songNotes = resource.getSongdata() != null ? resource.getSongdata().getNotes() : 0;
+			expectedJudgedNotes = Math.max(songNotes, NantokaManiaRules.totalNotes(model));
+		}
+		return expectedJudgedNotes;
 	}
 
 	private void sendPlayEndMetrics(boolean quickRetry) {

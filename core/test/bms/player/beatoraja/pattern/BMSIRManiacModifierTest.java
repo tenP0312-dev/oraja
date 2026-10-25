@@ -377,22 +377,6 @@ class BMSIRManiacModifierTest {
         assertTrue(model.getTotalNotes() > original);
     }
 
-    @Test
-    void softLandingChangesScrollDeterministically() {
-        BMSIRManiacSettings settings = new BMSIRManiacSettings();
-        settings.setSoftLanding(2);
-        BMSModel first = model();
-        BMSModel second = model();
-        new BMSIRManiacModifier(settings).modify(first);
-        new BMSIRManiacModifier(settings).modify(second);
-        assertTrue(java.util.Arrays.stream(first.getAllTimeLines())
-                .anyMatch(line -> line.getScroll() != 1.0));
-        for (int index = 0; index < first.getAllTimeLines().length; index++) {
-            assertEquals(first.getAllTimeLines()[index].getScroll(),
-                    second.getAllTimeLines()[index].getScroll());
-        }
-    }
-
     private static BMSModel model() {
         BMSModel model = new BMSModel();
         model.setMode(Mode.BEAT_7K);

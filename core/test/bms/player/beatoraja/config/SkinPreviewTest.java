@@ -5,9 +5,11 @@ import bms.model.LongNote;
 import bms.model.Note;
 import bms.model.TimeLine;
 import bms.player.beatoraja.PlayerConfig;
+import bms.player.beatoraja.Resolution;
 import bms.player.beatoraja.TimerManager;
 import bms.player.beatoraja.skin.CustomTimer;
 import bms.player.beatoraja.skin.Skin;
+import bms.player.beatoraja.skin.SkinHeader;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinType;
 import com.badlogic.gdx.utils.Json;
@@ -79,11 +81,11 @@ class SkinPreviewTest {
 
 	@Test
 	void playTimelineCoversLoadingReadyPlayAndFinishBeforeLooping() {
-		var preload = SkinPreviewLifecycle.playFrame(0, 0, 0, 10_000, 500, 500);
-		var ready = SkinPreviewLifecycle.playFrame(1_200, 0, 0, 10_000, 500, 500);
-		var play = SkinPreviewLifecycle.playFrame(2_200, 0, 0, 10_000, 500, 500);
-		var finish = SkinPreviewLifecycle.playFrame(12_200, 0, 0, 10_000, 500, 500);
-		var looped = SkinPreviewLifecycle.playFrame(13_400, 0, 0, 10_000, 500, 500);
+		var preload = SkinPreviewLifecycle.playFrame(0, 0, 1_000, 10_000, 500, 500);
+		var ready = SkinPreviewLifecycle.playFrame(1_000, 0, 1_000, 10_000, 500, 500);
+		var play = SkinPreviewLifecycle.playFrame(2_000, 0, 1_000, 10_000, 500, 500);
+		var finish = SkinPreviewLifecycle.playFrame(12_000, 0, 1_000, 10_000, 500, 500);
+		var looped = SkinPreviewLifecycle.playFrame(13_000, 0, 1_000, 10_000, 500, 500);
 
 		assertEquals(SkinPreviewLifecycle.PlayPhase.PRELOAD, preload.phase());
 		assertEquals(SkinPreviewLifecycle.PlayPhase.READY, ready.phase());
@@ -103,6 +105,28 @@ class SkinPreviewTest {
 		assertEquals(-1, intro.inputTime());
 		assertEquals(0, update.updateTime());
 		assertEquals(200, fadeout.fadeoutTime());
+	}
+
+	@Test
+	void phaseLengthsFollowTheSkinInsteadOfPreviewMinimums() {
+		var ready = SkinPreviewLifecycle.playFrame(1_000, 0, 0, 10_000, 0, 200);
+		var fading = SkinPreviewLifecycle.playFrame(11_100, 0, 0, 10_000, 0, 200);
+		var shortScene = SkinPreviewLifecycle.sceneFrame(1_100, 0, 1_000, 300);
+
+		assertEquals(SkinPreviewLifecycle.PlayPhase.PLAY, ready.phase());
+		assertEquals(100L, fading.fadeoutTime());
+		assertEquals(11_200L, fading.cycle());
+		assertEquals(100L, shortScene.fadeoutTime());
+		assertEquals(1_800L, shortScene.cycle());
+	}
+
+	@Test
+	void resultScoreUpdateIsImmediateWhenTheRealStateTurnsItOnAtOnce() {
+		var delayed = SkinPreviewLifecycle.sceneFrame(100, 0, 5000, 500, false);
+		var immediate = SkinPreviewLifecycle.sceneFrame(100, 0, 5000, 500, true);
+
+		assertEquals(-1L, delayed.updateTime());
+		assertEquals(100L, immediate.updateTime());
 	}
 
 	@Test
@@ -143,6 +167,122 @@ class SkinPreviewTest {
 	}
 
 	@Test
+	void preparedPreviewRestartsAtPreloadInsteadOfCountingSkinLoadTime() {
+		TimerManager timer = new TimerManager();
+		timer.setMainState(null);
+		timer.setMicroTimer(TIMER_JUDGE_1P, 123L);
+
+		SkinPreviewLifecycle.restartPreparedPreviewClock(timer, null);
+		timer.update();
+		var firstFrame = SkinPreviewLifecycle.playFrame(
+				timer.getNowTime(), 0, 0, 10_000, 500, 500);
+
+		assertEquals(SkinPreviewLifecycle.PlayPhase.PRELOAD, firstFrame.phase());
+		assertEquals(0L, firstFrame.iteration());
+		assertFalse(timer.isTimerOn(TIMER_JUDGE_1P));
+	}
+
+	@Test
+	void previewClockStartsAtTheFirstRenderedFrame() {
+		var clock = new SkinPreviewLifecycle.Clock();
+
+		assertEquals(0L, clock.elapsed(4_321L));
+		assertEquals(250L, clock.elapsed(4_571L));
+	}
+
+	@Test
+	void previewStateDoesNotCountTimeSpentBeforeItsFirstFrame() throws InterruptedException {
+		SkinPreviewDecide decide = new SkinPreviewDecide(null, null);
+		SkinHeader header = new SkinHeader();
+		header.setSourceResolution(Resolution.HD);
+		header.setDestinationResolution(Resolution.HD);
+		Skin skin = new Skin(header);
+		skin.setInput(500);
+		skin.setScene(3000);
+		skin.setFadeout(500);
+		// Stands in for loading and preparing a heavy skin after the state exists.
+		Thread.sleep(50L);
+
+		long first = decide.preparePreviewFrame(skin);
+		long second = decide.preparePreviewFrame(skin);
+
+		assertEquals(0L, first);
+		assertTrue(second >= first);
+		assertTrue(decide.timer.getNowTime() >= 50L);
+	}
+
+	@Test
+	void notesThatReachedTheJudgeLineAreJudgedAndRewindEachLoop() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+
+		int judged = SkinPreviewPlayer.markJudgedNotes(model, 0, -1L);
+		assertEquals(0, judged);
+		judged = SkinPreviewPlayer.markJudgedNotes(model, judged, firstNoteMillis);
+		assertTrue(judged > 0);
+		judged = SkinPreviewPlayer.markJudgedNotes(model, judged, model.getLastTime());
+
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(1, note.getState());
+				}
+			}
+		}
+
+		SkinPreviewPlayer.clearNoteStates(model);
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(0, note.getState());
+				}
+			}
+		}
+	}
+
+	@Test
+	void notesAheadOfTheLaneClockStayUnjudged() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
+
+		SkinPreviewPlayer.markJudgedNotes(model, 0, firstNoteMillis - 1);
+
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					assertEquals(0, note.getState());
+				}
+			}
+		}
+	}
+
+	@Test
+	void rhythmAndQuarterNoteTimingFollowTheMeasureLinesLikeRealPlay() {
+		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
+		long firstSectionLine = -1L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getSectionLine()) {
+				firstSectionLine = timeline.getTime();
+				break;
+			}
+		}
+		assertTrue(firstSectionLine > 0L);
+		long quarter = Math.round(60000d / SkinPreviewModel.BPM);
+
+		assertEquals(-1L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine - 1));
+		assertEquals(0L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine));
+		assertEquals(100L, SkinPreviewPlayer.quarterNoteElapsed(model, firstSectionLine + quarter + 100));
+
+		assertEquals(-1L, SkinPreviewPlayer.rhythmTimerElapsed(model, -1L));
+		assertEquals(0L, SkinPreviewPlayer.rhythmTimerElapsed(model, firstSectionLine));
+		assertEquals(Math.round(800 * SkinPreviewModel.BPM / 6000d),
+				SkinPreviewPlayer.rhythmTimerElapsed(model, firstSectionLine + 800));
+	}
+
+	@Test
 	void playDataStartsAtTheFirstRealNoteTimeAndReachesTheFullChart() {
 		var model = SkinPreviewModel.create(bms.model.Mode.BEAT_7K);
 		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
@@ -171,31 +311,48 @@ class SkinPreviewTest {
 		assertTrue(playerOneNotes > 0);
 		assertTrue(playerTwoNotes > 0);
 		assertEquals(model.getTotalNotes(), playerOneNotes + playerTwoNotes);
-		assertTrue(SkinPreviewPlayer.latestJudgementTimeForPlayer(
-				model, 0, lastNoteMillis) >= firstNoteMillis);
-		assertTrue(SkinPreviewPlayer.latestJudgementTimeForPlayer(
-				model, 1, lastNoteMillis) >= firstNoteMillis);
 	}
 
 	@Test
-	void gaugeEventsRestartAtEachJudgementForBothPlayersAndReachMaximum() {
+	void judgementEventsCoverEveryJudgedNoteInChartOrder() {
 		BMSModel model = SkinPreviewModel.create(bms.model.Mode.BEAT_14K);
-		long firstNoteMillis = SkinPreviewModel.LEAD_IN_MICROS / 1000L;
-		long nextNoteMillis = firstNoteMillis + SkinPreviewModel.STEP_MICROS / 1000L;
+		long[] times = SkinPreviewPlayer.judgementTimes(model);
 
-		for (int player = 0; player < model.getMode().player; player++) {
-			assertEquals(-1L, SkinPreviewPlayer.gaugeEffectTime(
-					model, player, firstNoteMillis - 1L));
-			assertEquals(0L, SkinPreviewPlayer.gaugeEffectTime(
-					model, player, firstNoteMillis));
-			assertEquals(199L, SkinPreviewPlayer.gaugeEffectTime(
-					model, player, nextNoteMillis - 1L));
-			assertEquals(0L, SkinPreviewPlayer.gaugeEffectTime(
-					model, player, nextNoteMillis));
+		assertEquals(model.getTotalNotes(), times.length);
+		assertEquals(SkinPreviewModel.LEAD_IN_MICROS / 1000L, times[0]);
+		for (int i = 1; i < times.length; i++) {
+			assertTrue(times[i - 1] <= times[i]);
 		}
-		assertEquals(22f, SkinPreviewPlayer.gaugeValue(0, model.getTotalNotes()));
-		assertEquals(100f, SkinPreviewPlayer.gaugeValue(
-				model.getTotalNotes(), model.getTotalNotes()));
+	}
+
+	@Test
+	void previewJudgementsMatchTheScoreSplitAndRankTimers() {
+		assertEquals(1, SkinPreviewPlayer.judgeOf(1));
+		assertEquals(0, SkinPreviewPlayer.judgeOf(2));
+		assertEquals(0, SkinPreviewPlayer.judgeOf(4));
+		int greats = 0;
+		for (int notes = 1; notes <= 400; notes++) {
+			greats += SkinPreviewPlayer.judgeOf(notes);
+		}
+		assertEquals(400 - 400 * 3 / 4, greats);
+		assertEquals(400 * 3 / 4 * 2 + 100, SkinPreviewPlayer.exScore(400));
+
+		boolean[] early = SkinPreviewPlayer.scoreTimersReached(100, 400, 400, 600);
+		boolean[] late = SkinPreviewPlayer.scoreTimersReached(700, 400, 400, 600);
+		assertFalse(early[0]);
+		assertFalse(early[3]);
+		assertTrue(late[0]);
+		assertTrue(late[1]);
+		assertFalse(late[2]);
+		assertTrue(late[3]);
+		assertTrue(late[4]);
+	}
+
+	@Test
+	void timersStayOffUntilTheirEventAndThenCountFromIt() {
+		assertEquals(-1L, SkinPreviewPlayer.elapsedSince(500L, Long.MIN_VALUE));
+		assertEquals(-1L, SkinPreviewPlayer.elapsedSince(500L, 600L));
+		assertEquals(200L, SkinPreviewPlayer.elapsedSince(800L, 600L));
 	}
 
 	@Test

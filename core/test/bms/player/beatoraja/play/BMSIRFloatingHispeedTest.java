@@ -42,6 +42,20 @@ class BMSIRFloatingHispeedTest {
         assertTrue(pc.getBmsirFloatingHispeed() < 2f);
     }
 
+    @Test void speedKeysMoveGreenSoTheNextSongKeepsTheNewSpeed() {
+        PlayConfig pc = config();
+        BMSIRFloatingHispeed.rememberGreen(pc, 150);
+        BMSIRFloatingHispeed.changeGreen(pc, 0.5f);
+        assertEquals(2.5f, pc.getBmsirFloatingHispeed());
+        assertEquals(pc.getBmsirFloatingGreenFrames(), BMSIRFloatingHispeed.visibleFrames(pc, 150, 1, true), 0.00001);
+        pc.setBmsirFloatingHispeed(9f);
+        BMSIRFloatingHispeed.restoreGreen(pc, 150);
+        assertEquals(2.5f, pc.getBmsirFloatingHispeed(), 0.00001);
+        float green = pc.getBmsirFloatingGreenFrames();
+        BMSIRFloatingHispeed.changeGreen(pc, Float.NaN);
+        assertEquals(green, pc.getBmsirFloatingGreenFrames());
+    }
+
     @Test void nakedScratchChangesMultiplierAndRemembersGreen() {
         PlayConfig pc = config();
         BMSIRFloatingHispeed.moveScratch(pc, 150, 150);

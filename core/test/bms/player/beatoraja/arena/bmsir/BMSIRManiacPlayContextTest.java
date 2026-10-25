@@ -111,7 +111,7 @@ class BMSIRManiacPlayContextTest {
     void otherManiacSettingsRemainActiveWhenDoubleBattleIsSuspended() {
         BMSIRManiacSettings settings = new BMSIRManiacSettings();
         settings.setDoubleBattle(true);
-        settings.setTornado(30);
+        settings.setHiddenSudden1P(1);
 
         BMSIRManiacSettings applied = BMSIRManiacPlayContext.effectiveSettings(
                 settings,
@@ -120,7 +120,7 @@ class BMSIRManiacPlayContextTest {
 
         assertNotNull(applied);
         assertFalse(applied.isDoubleBattle());
-        assertEquals(30, applied.getTornado());
+        assertEquals(1, applied.getHiddenSudden1P());
         assertTrue(BMSIRManiacPlayContext.prepare(settings, model(Mode.BEAT_14K), false)
                 .isDoubleBattleSuspended());
     }
@@ -155,7 +155,7 @@ class BMSIRManiacPlayContextTest {
         assertTrue(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_7K));
         assertFalse(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_14K));
 
-        settings.setTornado(20);
+        settings.setHiddenSudden1P(1);
         assertFalse(BMSIRManiacPlayContext.allowsDuringArena(settings, Mode.BEAT_7K));
     }
 

@@ -2,6 +2,7 @@ package bms.player.beatoraja.config;
 
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.SpriteBatchHelper;
+import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.skin.Skin;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
 import bms.player.beatoraja.skin.SkinObject;
@@ -112,6 +113,8 @@ public final class SkinPreview extends SkinObject {
 			long stateTime;
 			if (previewState instanceof SkinPreviewState statefulPreview) {
 				stateTime = statefulPreview.preparePreviewFrame(previewSkin);
+			} else if (previewState instanceof MusicSelector selector) {
+				stateTime = selector.prepareSkinPreviewFrame();
 			} else {
 				previewState.timer.update();
 				stateTime = previewState.timer.getNowTime();

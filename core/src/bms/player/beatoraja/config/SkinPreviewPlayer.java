@@ -2,6 +2,7 @@ package bms.player.beatoraja.config;
 
 import bms.model.BMSModel;
 import bms.model.LongNote;
+import bms.model.MineNote;
 import bms.model.Note;
 import bms.model.TimeLine;
 import bms.player.beatoraja.MainController;
@@ -29,18 +30,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private static final int[] COMBO_TIMERS = {
 			TIMER_COMBO_1P, TIMER_COMBO_2P, TIMER_COMBO_3P
 	};
-	private static final int[] END_OF_NOTE_TIMERS = {
-			TIMER_ENDOFNOTE_1P, TIMER_ENDOFNOTE_2P
+	/** Score timers BMSPlayer.update switches on: A, AA, AAA, BEST, TARGET. */
+	private static final int[] SCORE_TIMERS = {
+			TIMER_SCORE_A, TIMER_SCORE_AA, TIMER_SCORE_AAA,
+			TIMER_SCORE_BEST, TIMER_SCORE_TARGET
 	};
-	private static final int[] FULL_COMBO_TIMERS = {
-			TIMER_FULLCOMBO_1P, TIMER_FULLCOMBO_2P
-	};
-	private static final int[] GAUGE_INCREASE_TIMERS = {
-			TIMER_GAUGE_INCLEASE_1P, TIMER_GAUGE_INCLEASE_2P
-	};
-	private static final int[] GAUGE_MAX_TIMERS = {
-			TIMER_GAUGE_MAX_1P, TIMER_GAUGE_MAX_2P
-	};
+	private static final int[] SCORE_RANKS = {18, 21, 24};
 
 	private final BMSModel previewModel;
 	private ScoreData previewScore;
@@ -52,11 +47,21 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 	private int previewPastNotes;
 	private final int[] previewPastNotesByPlayer;
 	private long previewIteration = Long.MIN_VALUE;
+	private int previewJudgedTimelines;
+	/** Sorted chart times of every judged note, replayed like real judgements. */
+	private final long[] previewJudgementTimes;
+	private int previewJudgedEvents;
+	private long previewGaugeMaxSince = Long.MIN_VALUE;
+	private long previewFullComboSince = Long.MIN_VALUE;
+	private final long[] previewScoreTimerSince = new long[SCORE_TIMERS.length];
+	private final SkinPreviewLifecycle.Clock previewClock = new SkinPreviewLifecycle.Clock();
 
 	SkinPreviewPlayer(MainController main, PlayerResource resource) {
 		super(main, resource, true);
 		previewModel = resource.getBMSModel();
 		previewPastNotesByPlayer = new int[Math.max(1, previewModel.getMode().player)];
+		previewJudgementTimes = judgementTimes(previewModel);
+		Arrays.fill(previewScoreTimerSince, Long.MIN_VALUE);
 		previewScore = new ScoreData(previewModel.getMode());
 		previewScore.setNotes(previewModel.getTotalNotes());
 		resource.setScoreData(previewScore);
@@ -70,6 +75,14 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		previewJudge.init(previewModel, resource);
 		previewScore = previewJudge.getScoreData();
 		resource.setScoreData(previewScore);
+		createPreviewGauge();
+		getScoreDataProperty().setTargetScore(
+				previewModel.getTotalNotes(), null,
+				previewModel.getTotalNotes() * 3 / 2, null,
+				previewModel.getTotalNotes());
+	}
+
+	private void createPreviewGauge() {
 		previewGauge = GrooveGauge.create(
 				previewModel, resource.getPlayerConfig().getGauge(), resource);
 		if (previewGauge == null) {
@@ -77,10 +90,6 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 					previewModel, GrooveGauge.NORMAL, resource);
 		}
 		resource.setGrooveGauge(previewGauge);
-		getScoreDataProperty().setTargetScore(
-				previewModel.getTotalNotes(), null,
-				previewModel.getTotalNotes() * 3 / 2, null,
-				previewModel.getTotalNotes());
 	}
 
 	@Override
@@ -88,7 +97,7 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		timer.update();
 		PlaySkin playSkin = (PlaySkin) skin;
 		SkinPreviewLifecycle.PlayFrame frame = SkinPreviewLifecycle.playFrame(
-				timer.getNowTime(),
+				previewClock.elapsed(timer.getNowTime()),
 				(long) playSkin.getLoadstart() + playSkin.getLoadend(),
 				playSkin.getPlaystart(),
 				getPlaytime(),
@@ -110,32 +119,47 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 						? frame.position() - playSkin.getInput() : -1L);
 		SkinPreviewLifecycle.setTimer(timer, TIMER_READY, frame.readyTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_PLAY, frame.playTime());
-		SkinPreviewLifecycle.setTimer(timer, TIMER_RHYTHM, frame.playTime());
+		SkinPreviewLifecycle.setTimer(timer, TIMER_RHYTHM,
+				rhythmTimerElapsed(previewModel, frame.playTime()));
 		SkinPreviewLifecycle.setTimer(timer, TIMER_MUSIC_END, frame.musicEndTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_FADEOUT, frame.fadeoutTime());
 		SkinPreviewLifecycle.setTimer(timer, TIMER_FAILED, -1L);
-		SkinPreviewLifecycle.setTimer(timer, TIMER_PM_CHARA_1P_NEUTRAL, frame.position());
-		SkinPreviewLifecycle.setTimer(timer, TIMER_PM_CHARA_2P_NEUTRAL, frame.position());
-
-		long played = Math.max(0L, Math.min(getPlaytime(), frame.playTime()));
-		updateLiveData(played);
-		for (int player = 0; player < previewPastNotesByPlayer.length; player++) {
-			long lastNote = latestJudgementTimeForPlayer(
-					previewModel, player, Long.MAX_VALUE);
-			SkinPreviewLifecycle.setTimer(timer, END_OF_NOTE_TIMERS[player],
-					frame.playTime() >= lastNote && lastNote >= 0L
-							? frame.playTime() - lastNote : -1L);
-			SkinPreviewLifecycle.setTimer(timer, FULL_COMBO_TIMERS[player],
-					frame.phase() == SkinPreviewLifecycle.PlayPhase.FINISHED
-							? frame.phaseTime() : -1L);
+		// Judgements happen when a calibrated player hits the note on the judge
+		// line, which LaneRenderer draws at play time + notes display timing.
+		long chartTime = frame.playTime() >= 0L
+				? frame.playTime() + resource.getPlayerConfig().getJudgetiming() : -1L;
+		boolean playing = frame.phase() == SkinPreviewLifecycle.PlayPhase.PLAY;
+		if (playing || frame.phase() == SkinPreviewLifecycle.PlayPhase.FINISHED) {
+			if (previewGaugeMaxSince == Long.MIN_VALUE && previewGauge.getGauge().isMax()) {
+				previewGaugeMaxSince = chartTime;
+			}
+			advanceJudgements(playSkin, chartTime);
 		}
+		updateLiveData(chartTime);
+		// LaneRenderer keeps drawing unjudged notes below the judge line, so
+		// mark them the way judgement does once they reach it.
+		previewJudgedTimelines = markJudgedNotes(previewModel, previewJudgedTimelines, chartTime);
 
-		if (frame.phase() == SkinPreviewLifecycle.PlayPhase.PLAY && previewPastNotes > 0) {
-			updateJudgementEffects(frame.playTime());
+		SkinPreviewLifecycle.setTimer(timer, TIMER_GAUGE_MAX_1P,
+				elapsedSince(chartTime, previewGaugeMaxSince));
+		SkinPreviewLifecycle.setTimer(timer, TIMER_FULLCOMBO_1P,
+				elapsedSince(chartTime, previewFullComboSince));
+		for (int i = 0; i < SCORE_TIMERS.length; i++) {
+			SkinPreviewLifecycle.setTimer(timer, SCORE_TIMERS[i],
+					elapsedSince(chartTime, previewScoreTimerSince[i]));
+		}
+		// BMSPlayer turns this on once play passes playtime - TIME_MARGIN,
+		// which is the last note time in ordinary play.
+		long lastNote = previewModel.getLastNoteTime();
+		SkinPreviewLifecycle.setTimer(timer, TIMER_ENDOFNOTE_1P,
+				frame.playTime() >= lastNote ? frame.playTime() - lastNote : -1L);
+
+		updatePomyuChara(playSkin, frame.phase());
+		if (playing && previewPastNotes > 0) {
+			updateJudgementEffects(chartTime);
 		} else {
 			clearPlayEffects();
 		}
-		updateGaugeEffects(frame.phase(), frame.playTime());
 		return frame.position();
 	}
 
@@ -143,6 +167,14 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		timer.resetSkinPreviewCycle();
 		skin.resetSkinPreviewCycle();
 		previewLaneRenderer.resetTimelinePosition();
+		clearNoteStates(previewModel);
+		previewJudgedTimelines = 0;
+		previewJudgedEvents = 0;
+		previewGaugeMaxSince = Long.MIN_VALUE;
+		previewFullComboSince = Long.MIN_VALUE;
+		Arrays.fill(previewScoreTimerSince, Long.MIN_VALUE);
+		createPreviewGauge();
+		((PlaySkin) skin).pomyu.init();
 		Arrays.fill(previewPastNotesByPlayer, 0);
 		clearPlayEffects();
 	}
@@ -164,34 +196,174 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		previewScore.setPassnotes(previewPastNotes);
 		previewScore.setMinbp(0);
 		getScoreDataProperty().update(previewScore, previewPastNotes);
+	}
 
-		if (previewGauge != null) {
-			previewGauge.setValue(gaugeValue(previewPastNotes, previewModel.getTotalNotes()));
+	/**
+	 * Applies the judgements reached since the previous frame in order, the way
+	 * JudgeManager feeds BMSPlayer.update: gauge, score timers, full combo and
+	 * the PMS character all react per note.
+	 */
+	private void advanceJudgements(PlaySkin playSkin, long chartTime) {
+		int total = previewJudgementTimes.length;
+		while (previewJudgedEvents < total
+				&& previewJudgementTimes[previewJudgedEvents] <= chartTime) {
+			long time = previewJudgementTimes[previewJudgedEvents];
+			int notes = ++previewJudgedEvents;
+			int judge = judgeOf(notes);
+			previewGauge.update(judge);
+			if (previewGaugeMaxSince == Long.MIN_VALUE && previewGauge.getGauge().isMax()) {
+				previewGaugeMaxSince = time;
+			}
+			boolean[] reached = scoreTimersReached(exScore(notes), total,
+					getScoreDataProperty().getBestScore(),
+					getScoreDataProperty().getRivalScore());
+			for (int i = 0; i < reached.length; i++) {
+				if (reached[i] && previewScoreTimerSince[i] == Long.MIN_VALUE) {
+					previewScoreTimerSince[i] = time;
+				}
+			}
+			if (notes == total) {
+				previewFullComboSince = time;
+			}
+			playSkin.pomyu.setJudge(judge);
 		}
 	}
 
-	private void updateGaugeEffects(SkinPreviewLifecycle.PlayPhase phase, long playTime) {
-		boolean playing = phase == SkinPreviewLifecycle.PlayPhase.PLAY;
-		boolean maximum = previewGauge != null && previewGauge.getGauge().isMax()
-				&& (playing || phase == SkinPreviewLifecycle.PlayPhase.FINISHED);
-		for (int player = 0; player < previewPastNotesByPlayer.length; player++) {
-			long elapsed = gaugeEffectTime(previewModel, player, playTime);
-			SkinPreviewLifecycle.setTimer(timer, GAUGE_INCREASE_TIMERS[player],
-					playing ? elapsed : -1L);
-			SkinPreviewLifecycle.setTimer(timer, GAUGE_MAX_TIMERS[player],
-					maximum ? elapsed : -1L);
+	private void updatePomyuChara(PlaySkin playSkin, SkinPreviewLifecycle.PlayPhase phase) {
+		switch (phase) {
+			case PRELOAD, READY -> {
+				if (!timer.isTimerOn(TIMER_PM_CHARA_1P_NEUTRAL)
+						|| !timer.isTimerOn(TIMER_PM_CHARA_2P_NEUTRAL)) {
+					timer.setTimerOn(TIMER_PM_CHARA_1P_NEUTRAL);
+					timer.setTimerOn(TIMER_PM_CHARA_2P_NEUTRAL);
+				}
+			}
+			case PLAY -> playSkin.pomyu.updateTimer(this);
+			case FINISHED -> {
+				for (int id = TIMER_PM_CHARA_1P_NEUTRAL; id <= TIMER_PM_CHARA_2P_BAD; id++) {
+					timer.setTimerOff(id);
+				}
+				timer.setTimerOff(TIMER_PM_CHARA_DANCE);
+			}
 		}
 	}
 
-	static long gaugeEffectTime(BMSModel model, int player, long playTime) {
-		long latest = latestJudgementTimeForPlayer(model, player, playTime);
-		return latest >= 0L ? playTime - latest : -1L;
+	static long elapsedSince(long now, long since) {
+		return since != Long.MIN_VALUE && now >= since ? now - since : -1L;
 	}
 
-	static float gaugeValue(int pastNotes, int totalNotes) {
-		float progress = totalNotes > 0
-				? Math.min(1f, Math.max(0, pastNotes) / (float) totalNotes) : 0f;
-		return Math.min(100f, 22f + progress * 78f);
+	/** Preview judgements are three PGREATs per GREAT, in a fixed order. */
+	static int judgeOf(int notes) {
+		return notes * 3 / 4 > (notes - 1) * 3 / 4 ? 0 : 1;
+	}
+
+	static int exScore(int notes) {
+		int pgreat = notes * 3 / 4;
+		return pgreat * 2 + (notes - pgreat);
+	}
+
+	/** Mirrors ScoreDataProperty ranks and BMSPlayer's BEST/TARGET checks. */
+	static boolean[] scoreTimersReached(int exScore, int totalNotes, int best, int rival) {
+		float rate = totalNotes == 0 ? 1f : (float) exScore / (totalNotes * 2);
+		boolean[] reached = new boolean[SCORE_TIMERS.length];
+		for (int i = 0; i < SCORE_RANKS.length; i++) {
+			reached[i] = totalNotes != 0 && rate >= 1f * SCORE_RANKS[i] / 27;
+		}
+		reached[3] = exScore >= best;
+		reached[4] = exScore >= rival;
+		return reached;
+	}
+
+	static long[] judgementTimes(BMSModel model) {
+		int count = 0;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				if (isJudgementNote(model, timeline.getNote(lane))) {
+					count++;
+				}
+			}
+		}
+		long[] times = new long[count];
+		int index = 0;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				if (isJudgementNote(model, timeline.getNote(lane))) {
+					times[index++] = timeline.getTime();
+				}
+			}
+		}
+		return times;
+	}
+
+	/**
+	 * Marks every note up to the lane clock as PGREAT, continuing from the
+	 * returned timeline index of the previous frame.
+	 */
+	static int markJudgedNotes(BMSModel model, int fromTimeline, long laneTime) {
+		TimeLine[] timelines = model.getAllTimeLines();
+		int index = Math.max(0, fromTimeline);
+		if (laneTime < 0L) {
+			return index;
+		}
+		for (; index < timelines.length && timelines[index].getTime() <= laneTime; index++) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timelines[index].getNote(lane);
+				if (note != null && !(note instanceof MineNote)) {
+					note.setState(1);
+				}
+			}
+		}
+		return index;
+	}
+
+	static void clearNoteStates(BMSModel model) {
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			for (int lane = 0; lane < model.getMode().key; lane++) {
+				Note note = timeline.getNote(lane);
+				if (note != null) {
+					note.setState(0);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Mirrors RhythmTimerProcessor: the timer restarts on each measure line and
+	 * then advances at BPM / 6000 of real time.
+	 */
+	static long rhythmTimerElapsed(BMSModel model, long playTime) {
+		if (playTime < 0L) {
+			return -1L;
+		}
+		long lastSectionLine = 0L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getTime() > playTime) {
+				break;
+			}
+			if (timeline.getSectionLine()) {
+				lastSectionLine = timeline.getTime();
+			}
+		}
+		return Math.round((playTime - lastSectionLine) * model.getBpm() / 6000d);
+	}
+
+	/**
+	 * Time since the latest quarter note, counted from the first measure line
+	 * like RhythmTimerProcessor, or -1 before that line.
+	 */
+	static long quarterNoteElapsed(BMSModel model, long playTime) {
+		long firstSectionLine = -1L;
+		for (TimeLine timeline : model.getAllTimeLines()) {
+			if (timeline.getSectionLine()) {
+				firstSectionLine = timeline.getTime();
+				break;
+			}
+		}
+		if (firstSectionLine < 0L || playTime < firstSectionLine || model.getBpm() <= 0d) {
+			return -1L;
+		}
+		long quarter = Math.max(1L, Math.round(60000d / model.getBpm()));
+		return Math.floorMod(playTime - firstSectionLine, quarter);
 	}
 
 	static int countPastNotes(BMSModel model, long playTime) {
@@ -247,8 +419,9 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 			SkinPreviewLifecycle.setTimer(timer, JUDGE_TIMERS[player], elapsed);
 			SkinPreviewLifecycle.setTimer(timer, COMBO_TIMERS[player], elapsed);
 			if (latestLanes[player] >= 0) {
+				// JudgeManager keeps one combo shared by both sides.
 				previewJudge.setSkinPreviewJudgement(
-						latestLanes[player], 0, previewPastNotesByPlayer[player], 0L);
+						latestLanes[player], judgeOf(previewPastNotes), previewPastNotes, 0L);
 			}
 		}
 	}
@@ -339,21 +512,6 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		return latest;
 	}
 
-	static long latestJudgementTimeForPlayer(
-			BMSModel model, int player, long playTime) {
-		int players = Math.max(1, model.getMode().player);
-		if (player < 0 || player >= players) {
-			return -1L;
-		}
-		int sideWidth = model.getMode().key / players;
-		int firstLane = player * sideWidth;
-		long latest = -1L;
-		for (int lane = firstLane; lane < firstLane + sideWidth; lane++) {
-			latest = Math.max(latest, latestJudgementTime(model, lane, playTime));
-		}
-		return latest;
-	}
-
 	private static boolean isJudgementNote(BMSModel model, Note note) {
 		if (!(note instanceof LongNote longNote)) {
 			return note != null;
@@ -380,7 +538,12 @@ final class SkinPreviewPlayer extends BMSPlayer implements SkinPreviewState {
 		return previewPastNotes;
 	}
 	@Override public int getPlaytime() { return Math.max(1, previewModel.getLastTime() + 1000); }
-	@Override public long getNowQuarterNoteTime() { return timer.getNowTime(TIMER_PLAY) % 400L; }
+	@Override public long getNowQuarterNoteTime() {
+		// BMSPlayer returns the absolute time of the latest quarter note.
+		long elapsed = timer.isTimerOn(TIMER_PLAY)
+				? quarterNoteElapsed(previewModel, timer.getNowTime(TIMER_PLAY)) : -1L;
+		return elapsed >= 0L ? timer.getNowTime() - elapsed : 0L;
+	}
 
 	@Override
 	public void dispose() {

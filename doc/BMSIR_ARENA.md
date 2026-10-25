@@ -168,6 +168,13 @@ mode's values, the chart position, and replay events. NO SPEED constraints
 and replay lane restoration lock the speed controls. BGA display can be
 toggled independently while its playback clock continues.
 
+The dedicated HI-SPEED tab selects Normal, LR2, or Floating independently
+for each key mode. Startup settings and the F5 Mod Menu's own HI-SPEED
+window (no longer a Play Settings tab) share the selection; the Arena overlays no longer show a HI-SPEED editor. Live switching preserves each speed
+mode's values, the chart position, and replay events. NO SPEED constraints
+and replay lane restoration lock the speed controls. BGA display can be
+toggled independently while its playback clock continues.
+
 Legacy global LR2 and per-mode floating settings migrate without changing
 the selected behavior. The new explicit per-mode selection is authoritative.
 The sidecar retains the independent speed values, fixed-BPM selection,
@@ -346,6 +353,14 @@ player's table cannot be targeted and a concurrent Web/client edit reloads the
 authoritative selected table instead of being overwritten. Child-table levels
 managed by a cross-game master are shown read-only and continue to come from
 the master.
+
+The table editor is no longer an Arena overlay tab: open it from the F5 Mod
+Menu's `難易度表編集` / `Table Editor` window (filterable like other Mod Menu
+items). The music-select Arena overlay tabs are ordered Battle, Lobby / Rooms,
+Rating, Profiles, Settings, Manual. HI-SPEED is edited only in the F5 HI-SPEED
+window, and `BGAを表示` lives with the display toggles in Settings
+and the F5 Display window.
+
 Version `0.4.14.37` lets an existing table hold metadata and up to 64
 selected-chart add/update/remove changes as an in-memory draft. The overlay
 shows the pending count and
@@ -1493,20 +1508,28 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   itself is excluded to avoid recursive previews. Music Select skins render
   against a deterministic in-memory catalog containing two virtual folders and
   enough scored songs to fill a normal bar list without reading the user's song
-  DB. DECIDE skins receive the same virtual selected chart through a
+  DB; the song-bar change and start-input timers start on the first preview
+  frame, as they do when Music Select opens. DECIDE skins receive the same virtual selected chart through a
   `MusicDecide`-compatible state. Play skins render against a mode-matched,
   silent synthetic session presented to the skin as ordinary play. Its normal
   notes, chords, and charge notes advance
   through PRELOAD, READY, PLAY, music-end, and fadeout before the preview loops;
-  score, combo, gauge, judge, and end timers advance with it. A deterministic
+  phase lengths follow the skin's own load, play-start, finish-margin, and
+  fadeout values, with only the body's one-second PRELOAD floor. Every sample
+  note is judged in order when it reaches the judge line (play time plus the
+  notes display timing), so judged notes leave the lane and the real groove
+  gauge, score, combo, SCORE A/AA/AAA/BEST/TARGET, full-combo, gauge-max, and
+  PMS character timers react as in ordinary play. As in the body, gauge-max,
+  end-of-note, and full-combo use the 1P timers only and the gauge-increase
+  timers are never set. The quarter-note expansion and rhythm timers follow
+  the sample chart's measure lines. A deterministic
   silent BGA keeps BGA-gated frames and song-BGA declarations available when
-  BGA is enabled, and gauge-increase/gauge-max timers follow the sample notes
-  for both play sides. This allows skins such as WMII to build the same score
+  BGA is enabled. This allows skins such as WMII to build the same score
   graph and surrounding play parts they use in normal play. The chart's time
   and measure positions stay aligned so its first notes enter from above the
   visible lane. Double-play previews place sample notes on both sides and
-  advance the independent 1P/2P judgement, combo, key-beam, end-of-note, and
-  full-combo timers used by 14-key skins. Each loop resets the lane scan and
+  advance the 1P/2P judgement and key-beam timers used by 14-key skins, with
+  one combo shared by both sides as in JudgeManager. Each loop resets the lane scan and
   input state, tap key beams release after a bounded hold, and charge-note
   pairs drive the held-LN body and HOLD timers. Falling-note position uses the
   synthetic PLAY timer's elapsed time rather than the cycle-relative skin
@@ -1514,7 +1537,13 @@ ordinary system-sound volume multiplied by the Arena notification volume.
   producing a negative chart time. All data-backed previews also
   rewind untimed one-shot destinations, cached custom timers/events, and movie
   sources at the loop boundary, so DECIDE, PLAY, RESULT, and COURSE RESULT
-  intro/fade animations replay after the first iteration. RESULT and COURSE
+  intro/fade animations replay after the first iteration. Each preview's
+  timeline starts at its first rendered frame, so skin loading time does not
+  skip intro animations. DECIDE, RESULT, and COURSE RESULT fade out at the
+  skin's scene time over its fadeout length and hold briefly before looping;
+  key-waiting scenes use a six-second stand-in. The score-update timer starts
+  immediately for COURSE RESULT and for RESULT skins without a rank time, and
+  otherwise after a simulated confirm press. RESULT and COURSE
   RESULT skins receive result-compatible
   states with a representative
   current/best/rival score, gauge history, timing distribution, replay status,

@@ -27,16 +27,6 @@ class BMSIRManiacVisualEffectsTest {
     }
 
     @Test
-    void accelerationUsesLr2CurveEndpoints() {
-        BMSIRManiacSettings settings = new BMSIRManiacSettings();
-        settings.setAcceleration(1);
-        BMSIRManiacVisualEffects.Transform output =
-                new BMSIRManiacVisualEffects.Transform();
-        apply(output, settings, 0, 8, 1, 50f);
-        assertEquals((float) Math.sin(Math.PI / 4.0) * 100f, output.y, 0.001f);
-    }
-
-    @Test
     void gambolOverridesOnlyTheScoringWindows() {
         long[][] table = {
                 {-20_000, 20_000}, {-60_000, 60_000}, {-150_000, 150_000},
@@ -75,8 +65,6 @@ class BMSIRManiacVisualEffectsTest {
                 lane,
                 lanes,
                 players,
-                0,
-                0L,
                 0f,
                 y,
                 10f,

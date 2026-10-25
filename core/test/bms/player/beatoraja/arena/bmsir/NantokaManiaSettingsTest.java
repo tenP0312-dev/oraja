@@ -54,10 +54,10 @@ class NantokaManiaSettingsTest {
         assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(settings, Mode.POPN_9K));
         assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(null, Mode.BEAT_7K));
 
-        settings.setTornado(20);
+        settings.setHiddenSudden1P(1);
         assertFalse(settings.isNantokaManiaOnly());
         assertFalse(BMSIRManiacPlayContext.allowsDuringCourse(settings, Mode.BEAT_7K));
-        settings.setTornado(0);
+        settings.setHiddenSudden1P(0);
 
         settings.setDoubleBattle(true);
         assertFalse(settings.isNantokaManiaOnly());

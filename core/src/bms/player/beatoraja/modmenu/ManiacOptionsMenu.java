@@ -28,20 +28,8 @@ public final class ManiacOptionsMenu {
             "ADD MINES",
             "HIDDEN / SUDDEN 1P",
             "HIDDEN / SUDDEN 2P",
-            "ACCELERATION",
-            "SOFTLANDING",
-            "EARTHQUAKE",
-            "TORNADO",
-            "SUPERLOOP",
             "GAMBOL",
-            "CHAR",
-            "HEARTBEAT",
             "LOUDNESS",
-            "NABEATSU",
-            "SIN CURVE",
-            "WAVE",
-            "SPIRAL",
-            "SIDEJUMP",
             "NANTOKA MANIA MODE",
             "7K TO 9K",
             "DAN GAUGE",
@@ -50,7 +38,6 @@ public final class ManiacOptionsMenu {
     private static final String[] LEVEL_1_3 = {"OFF", "LEVEL 1", "LEVEL 2", "LEVEL 3"};
     private static final String[] LEVEL_1_2 = {"OFF", "LEVEL 1", "LEVEL 2"};
     private static final String[] HIDDEN_SUDDEN = {"OFF", "HIDDEN", "SUDDEN", "HIDDEN+SUDDEN"};
-    private static final String[] ACCELERATION = {"OFF", "ACCELERATION", "DECELERATION", "RANDOM"};
     private static final String[] RANDOM_LINK = {"OFF", "SYNC", "SYMMETRY"};
     private static final String CONTROL_HELP =
             "1KEY: DOWN    2KEY: UP    6KEY: SELECT    7KEY: BACK TO MUSIC SELECT";
@@ -152,24 +139,12 @@ public final class ManiacOptionsMenu {
             case 8 -> draft.setAddMines(nextPercent(draft.getAddMines()));
             case 9 -> draft.setHiddenSudden1P((draft.getHiddenSudden1P() + 1) % HIDDEN_SUDDEN.length);
             case 10 -> draft.setHiddenSudden2P((draft.getHiddenSudden2P() + 1) % HIDDEN_SUDDEN.length);
-            case 11 -> draft.setAcceleration((draft.getAcceleration() + 1) % ACCELERATION.length);
-            case 12 -> draft.setSoftLanding((draft.getSoftLanding() + 1) % LEVEL_1_2.length);
-            case 13 -> draft.setEarthquake(nextPercent(draft.getEarthquake()));
-            case 14 -> draft.setTornado(nextPercent(draft.getTornado()));
-            case 15 -> draft.setSuperLoop(nextPercent(draft.getSuperLoop()));
-            case 16 -> draft.setGambol((draft.getGambol() + 1) % LEVEL_1_2.length);
-            case 17 -> draft.setCharacter(nextPercent(draft.getCharacter()));
-            case 18 -> draft.setHeartbeat(nextPercent(draft.getHeartbeat()));
-            case 19 -> draft.setLoudness(nextPercent(draft.getLoudness()));
-            case 20 -> draft.setNabeatsu(nextPercent(draft.getNabeatsu()));
-            case 21 -> draft.setSinCurve(nextPercent(draft.getSinCurve()));
-            case 22 -> draft.setWave(nextPercent(draft.getWave()));
-            case 23 -> draft.setSpiral(nextPercent(draft.getSpiral()));
-            case 24 -> draft.setSideJump(nextPercent(draft.getSideJump()));
-            case 25 -> draft.setNantokaMania(!draft.isNantokaMania());
-            case 26 -> draft.setSevenToNinePreview(!draft.isSevenToNinePreview());
-            case 27 -> draft.setCourseGauge(!draft.isCourseGauge());
-            case 28 -> {
+            case 11 -> draft.setGambol((draft.getGambol() + 1) % LEVEL_1_2.length);
+            case 12 -> draft.setLoudness(nextPercent(draft.getLoudness()));
+            case 13 -> draft.setNantokaMania(!draft.isNantokaMania());
+            case 14 -> draft.setSevenToNinePreview(!draft.isSevenToNinePreview());
+            case 15 -> draft.setCourseGauge(!draft.isCourseGauge());
+            case 16 -> {
                 if (draft.isCourseGauge()) {
                     int value = draft.getCourseGaugeInitialValue();
                     draft.setCourseGaugeInitialValue(value <= 2 ? 100 : value - 2);
@@ -218,13 +193,13 @@ public final class ManiacOptionsMenu {
             float valueColumn = Math.max(300.0f, listWidth - 260.0f);
             for (int index = 0; index < LABELS.length; index++) {
                 boolean selected = index == selectedIndex;
-                boolean disabled = index == 28 && !draft.isCourseGauge();
+                boolean disabled = index == 16 && !draft.isCourseGauge();
                 if (disabled) {
                     ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(140, 140, 140));
                 } else if (selected) {
                     ImGui.pushStyleColor(ImGuiCol.Text, ImColor.rgb(118, 219, 153));
                 }
-                ImGui.textUnformatted((selected ? "> " : "  ") + (index == 25
+                ImGui.textUnformatted((selected ? "> " : "  ") + (index == 13
                         ? t("ナントカマニアモード", LABELS[index]) : LABELS[index]));
                 ImGui.sameLine(valueColumn);
                 ImGui.textUnformatted("[" + value(index) + "]");
@@ -328,33 +303,21 @@ public final class ManiacOptionsMenu {
             case 8 -> percentValue(draft.getAddMines());
             case 9 -> HIDDEN_SUDDEN[draft.getHiddenSudden1P()];
             case 10 -> HIDDEN_SUDDEN[draft.getHiddenSudden2P()];
-            case 11 -> ACCELERATION[draft.getAcceleration()];
-            case 12 -> LEVEL_1_2[draft.getSoftLanding()];
-            case 13 -> percentValue(draft.getEarthquake());
-            case 14 -> percentValue(draft.getTornado());
-            case 15 -> percentValue(draft.getSuperLoop());
-            case 16 -> LEVEL_1_2[draft.getGambol()];
-            case 17 -> percentValue(draft.getCharacter());
-            case 18 -> percentValue(draft.getHeartbeat());
-            case 19 -> percentValue(draft.getLoudness());
-            case 20 -> percentValue(draft.getNabeatsu());
-            case 21 -> percentValue(draft.getSinCurve());
-            case 22 -> percentValue(draft.getWave());
-            case 23 -> percentValue(draft.getSpiral());
-            case 24 -> percentValue(draft.getSideJump());
-            case 25 -> draft.isNantokaMania() ? "ON" : "OFF";
-            case 26 -> draft.isSevenToNinePreview() ? "ON / NO SAVE" : "OFF";
-            case 27 -> draft.isCourseGauge() ? "ON" : "OFF";
-            case 28 -> draft.isCourseGauge() ? draft.getCourseGaugeInitialValue() + "%" : "OFF";
+            case 11 -> LEVEL_1_2[draft.getGambol()];
+            case 12 -> percentValue(draft.getLoudness());
+            case 13 -> draft.isNantokaMania() ? "ON" : "OFF";
+            case 14 -> draft.isSevenToNinePreview() ? "ON / NO SAVE" : "OFF";
+            case 15 -> draft.isCourseGauge() ? "ON" : "OFF";
+            case 16 -> draft.isCourseGauge() ? draft.getCourseGaugeInitialValue() + "%" : "OFF";
             default -> "OFF";
         };
     }
 
     private static String description(int index) {
         return switch (index) {
-            case 27 -> t("単曲を段位ゲージで演奏します。記録・IRは段位の各曲と同じ扱いです。コース・Arenaでは適用しません。", "Uses a Dan gauge for single songs, with the same per-song records and IR handling as courses. Suspended in courses and Arena.");
-            case 28 -> t("段位ゲージの開始値を100%から2%刻みで設定します。2%の次は100%に戻ります。段位OFF時は無効です。", "Sets the Dan gauge start value from 100% down to 2% in 2% steps, then wraps to 100%. Disabled while Dan gauge is OFF.");
-            case 26 -> t("7KEYと皿を9KEYへ変換する試遊版。無理押しを避け、余剰ノーツはBGMへ移します。記録・リプレイ・ランキングは保存しません。他のマニアック効果と配置変更は一時停止。単曲の通常・オートプレイ専用です。", "Trial 7KEY + scratch to 9KEY conversion. Avoids impossible chords and moves excess notes to BGM. No records, replays, or rankings. Other MANIAC effects and placement options are suspended. Solo play/autoplay only.");
+            case 15 -> t("単曲を段位ゲージで演奏します。記録・IRは段位の各曲と同じ扱いです。コース・Arenaでは適用しません。", "Uses a Dan gauge for single songs, with the same per-song records and IR handling as courses. Suspended in courses and Arena.");
+            case 16 -> t("段位ゲージの開始値を100%から2%刻みで設定します。2%の次は100%に戻ります。段位OFF時は無効です。", "Sets the Dan gauge start value from 100% down to 2% in 2% steps, then wraps to 100%. Disabled while Dan gauge is OFF.");
+            case 14 -> t("7KEYと皿を9KEYへ変換する試遊版。無理押しを避け、余剰ノーツはBGMへ移します。記録・リプレイ・ランキングは保存しません。他のマニアック効果と配置変更は一時停止。単曲の通常・オートプレイ専用です。", "Trial 7KEY + scratch to 9KEY conversion. Avoids impossible chords and moves excess notes to BGM. No records, replays, or rankings. Other MANIAC effects and placement options are suspended. Solo play/autoplay only.");
             case 0 -> t("SP 5KEY/7KEYを左右へ決定的に分配します。LEVELが高いほど左右移動と偏りを許容します。", "Deterministically distributes SP 5KEY/7KEY across both sides. Higher levels allow faster side changes and more bias.");
             case 1 -> t("SP譜面を1P・2Pの両側へ複製します。", "Duplicates an SP chart across both sides.");
             case 2 -> t("DOUBLE BATTLEの両側の皿を自動演奏します。", "Autoplays both scratch lanes in Double Battle.");
@@ -366,21 +329,9 @@ public final class ManiacOptionsMenu {
             case 8 -> t("地雷ノーツを指定割合で追加します。", "Adds mines at the selected percentage.");
             case 9 -> t("1P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 1.");
             case 10 -> t("2P側のHIDDEN / SUDDEN表示を変更します。", "Changes the HIDDEN / SUDDEN effect for side 2.");
-            case 11 -> t("ノーツの移動速度を加速・減速・ランダム化します。", "Accelerates, decelerates, or randomizes note speed.");
-            case 12 -> t("スクロール変化を滑らかにします。", "Softens scroll-speed changes.");
-            case 13 -> t("レーン全体を揺らします。", "Shakes the lane display.");
-            case 14 -> t("ノーツ表示を旋回させます。", "Rotates the note display.");
-            case 15 -> t("ノーツ表示を繰り返しループさせます。", "Loops the note display repeatedly.");
-            case 16 -> t("判定窓をLR2 GAMBOL仕様で厳しくします。", "Tightens the judgment window using LR2 GAMBOL rules.");
-            case 17 -> t("ノーツを文字表示に変化させます。", "Replaces notes with character-style rendering.");
-            case 18 -> t("ノーツを鼓動するように表示します。", "Pulses notes like a heartbeat.");
-            case 19 -> t("キー音の音量に応じて表示を変化させます。", "Changes rendering according to keysound loudness.");
-            case 20 -> t("小節番号に応じて表示を変化させます。", "Changes rendering according to the measure number.");
-            case 21 -> t("ノーツを正弦波状に揺らします。", "Moves notes along a sine curve.");
-            case 22 -> t("ノーツを上下に波打たせます。", "Moves notes in a vertical wave.");
-            case 23 -> t("ノーツを螺旋状に移動させます。", "Moves notes in a spiral.");
-            case 24 -> t("ノーツを左右に跳ねさせます。", "Makes notes jump sideways.");
-            case 25 -> t("5/7/10/14KEYの判定とゲージを専用仕様に固定します。記録は別保存・ローカル専用です。GAMBOLは適用されません。", "Uses fixed judgment and gauge rules for 5/7/10/14KEY. Records are separate and local only. GAMBOL is suspended.");
+            case 11 -> t("判定窓をLR2 GAMBOL仕様で厳しくします。", "Tightens the judgment window using LR2 GAMBOL rules.");
+            case 12 -> t("ノーツのあるタイミングを指定割合で選び、同じ側の空きレーンを同じキー音のノーツで埋めます。記録はローカル専用です。", "At the selected percentage of note timings, fills the empty lanes on that side with notes using the same keysound. Records are local only.");
+            case 13 -> t("5/7/10/14KEYの判定とゲージを専用仕様に固定します。記録は別保存・ローカル専用です。GAMBOLは適用されません。", "Uses fixed judgment and gauge rules for 5/7/10/14KEY. Records are separate and local only. GAMBOL is suspended.");
             default -> "";
         };
     }

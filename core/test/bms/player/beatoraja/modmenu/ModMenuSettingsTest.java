@@ -65,7 +65,8 @@ class ModMenuSettingsTest {
             player.validate();
             var settings = player.getModMenuSettings();
             for (ModMenuItem item : new ModMenuItem[] {
-                    ModMenuItem.PLAY_SETTINGS, ModMenuItem.SOUND_SETTINGS, ModMenuItem.DISPLAY_SETTINGS}) {
+                    ModMenuItem.PLAY_SETTINGS, ModMenuItem.HISPEED_SETTINGS,
+                    ModMenuItem.SOUND_SETTINGS, ModMenuItem.DISPLAY_SETTINGS}) {
                 assertEquals(miscEnabled, settings.isEnabled(item), item.id);
             }
             assertTrue(settings.isEnabled(ModMenuItem.SONG_MANAGER));

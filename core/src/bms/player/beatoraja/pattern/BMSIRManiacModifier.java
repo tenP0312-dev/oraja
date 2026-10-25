@@ -63,9 +63,6 @@ public final class BMSIRManiacModifier extends PatternModifier {
         if (settings.getLoudness() > 0) {
             applyLoudness(model, settings.getLoudness(), random);
         }
-        if (settings.getSoftLanding() > 0) {
-            applySoftLanding(model, settings.getSoftLanding(), random);
-        }
         if (settings.getSpToDpDifficulty() > 0) {
             BMSIRSpToDpModifier.apply(model, settings.getSpToDpDifficulty());
         }
@@ -597,29 +594,6 @@ public final class BMSIRManiacModifier extends PatternModifier {
     }
 
     private record NotePosition(TimeLine timeline, Note note) {
-    }
-
-    private static void applySoftLanding(BMSModel model, int level, LR2Random random) {
-        double factor = 1.0;
-        for (TimeLine timeline : model.getAllTimeLines()) {
-            boolean hasPlayableNote = false;
-            for (int lane = 0; lane < model.getMode().key; lane++) {
-                if (timeline.getNote(lane) != null) {
-                    hasPlayableNote = true;
-                    break;
-                }
-            }
-            if ((level == 1 && timeline.getSectionLine())
-                    || (level == 2 && hasPlayableNote)) {
-                factor = softLandingFactor(random);
-            }
-            timeline.setScroll(timeline.getScroll() * factor);
-        }
-    }
-
-    private static double softLandingFactor(LR2Random random) {
-        double value = (random.inclusive(100) + 100.0) / 100.0;
-        return random.inclusive(1) == 0 ? value : 1.0 / value;
     }
 
     private static TreeMap<Long, TimeLine> timelinesByTime(BMSModel model) {

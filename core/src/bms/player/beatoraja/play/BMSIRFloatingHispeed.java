@@ -80,6 +80,23 @@ public final class BMSIRFloatingHispeed {
         pc.setBmsirFloatingHispeed(clampMultiplier(multiplier));
     }
 
+    /** Speed keys and direct speed edits move the saved green number by the matching multiplier ratio. */
+    public static void changeGreen(PlayConfig pc, float multiplierDelta) {
+        if (!Float.isFinite(multiplierDelta)) return;
+        setMultiplierKeepingRatio(pc, pc.getBmsirFloatingHispeed() + multiplierDelta);
+    }
+
+    public static void setMultiplierKeepingRatio(PlayConfig pc, float multiplier) {
+        if (!Float.isFinite(multiplier)) return;
+        float previous = clampMultiplier(pc.getBmsirFloatingHispeed());
+        float next = clampMultiplier(multiplier);
+        pc.setBmsirFloatingHispeed(next);
+        float green = pc.getBmsirFloatingGreenFrames();
+        if (Float.isFinite(green) && green > 0) {
+            pc.setBmsirFloatingGreenFrames(Math.max(1f, Math.min(600f, green * previous / next)));
+        }
+    }
+
     public static void changeMultiplier(PlayConfig pc, float delta) {
         if (!Float.isFinite(delta)) return;
         pc.setBmsirFloatingHispeed(clampMultiplier(pc.getBmsirFloatingHispeed() + delta));
