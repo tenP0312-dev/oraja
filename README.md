@@ -23,6 +23,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.123 preserves every 0.4.14.122 feature and fixes orphan LNOBJ
+decoding and chart/score identity consistency (#571). Parser revision 3 retains
+unmatched LNOBJ as normal notes, isolates changed local records and preserves
+historical replay decoding. Paired plugin 0.0.82 rejects mismatched uploads.
+Launcher 0.2.30 and optional updates remain. See
+[the test scope](docs/TEST_RELEASE_0.4.14.123.md).
+
 Version 0.4.14.122 preserves 0.4.14.121 and adds the merged F5/F12 skin
 settings loading improvements (#580) and NANTOKA v2 BSS reversal fix (#579).
 A reversal no longer consumes a following scratch at the same input time.

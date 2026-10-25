@@ -85,6 +85,8 @@ public class IRChartData {
 	/** Optional BMS-IR exact ranking contract; -1 denotes unresolved metadata. */
 	public final int bmsirRankingLnType;
 	public final int bmsirRankingNotes;
+    /** Expected local score identity, distinct from the public chart SHA-256. */
+    public final String bmsirScoreSha256;
 	/**
 	 * LN TYPE未定義ロングノーツが存在するかどうか
 	 */
@@ -133,12 +135,12 @@ public class IRChartData {
 	/** Queue-safe metadata snapshot; no chart I/O on the result/render thread. */
 	public static IRChartData forPlaySnapshot(SongData song, int lnmode, boolean forceLn) {
 		return new IRChartData(song, forceLn ? 0 : lnmode, forceLn,
-				song.getBMSModel() == null ? IRLongNoteContract.UNKNOWN
+				!IRLongNoteContract.matchesIdentity(song, song.getBMSModel()) ? IRLongNoteContract.UNKNOWN
 						: IRLongNoteContract.fromModel(song.getBMSModel(), lnmode, forceLn));
 	}
 
 	private IRChartData(SongData song, int lntype, boolean forceLn) {
-		this(song, lntype, forceLn, song.getBMSModel() == null ? IRLongNoteContract.UNKNOWN
+		this(song, lntype, forceLn, !IRLongNoteContract.matchesIdentity(song, song.getBMSModel()) ? IRLongNoteContract.UNKNOWN
 				: IRLongNoteContract.fromModel(song.getBMSModel(), lntype, false));
 	}
 
@@ -155,6 +157,11 @@ public class IRChartData {
 		this.level = song.getLevel();
 		
 		final BMSModel model = song.getBMSModel();
+        String localBase = model == null ? song.getSha256() : model.getValues().getOrDefault(
+                bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext.MODEL_STORAGE_HASH, model.getSHA256());
+        this.bmsirScoreSha256 = model == null
+                ? bms.player.beatoraja.BMSIRParserCompatibility.storageHash(song, localBase)
+                : bms.player.beatoraja.BMSIRParserCompatibility.storageHash(model, localBase);
 		this.total = (int) (model != null ? model.getTotal() : 0);
 		this.mode = model != null ? model.getMode() : storedMode(song.getMode());
 		this.judge = song.getJudge();

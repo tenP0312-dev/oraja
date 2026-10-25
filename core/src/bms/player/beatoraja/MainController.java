@@ -288,6 +288,7 @@ public class MainController {
 		}));
 		tasks.add(StartupTask.required("プレイデータベース", () -> {
 			playdata = new PlayDataAccessor(config, player);
+			playdata.setSongDatabase(getSongDatabase());
 			return StartupTask.Result.ok();
 		}));
 
@@ -687,6 +688,7 @@ public class MainController {
 		ImGuiNotify.setInfoEnabled(pc.isBmsirInfoNotificationsEnabled());
 
 		playdata = new PlayDataAccessor(config, player);
+		playdata.setSongDatabase(getSongDatabase());
 		ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
 		initializeIRConfig();
 		// Dispose MusicSelector to unallocate loaded skin

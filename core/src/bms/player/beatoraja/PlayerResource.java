@@ -303,16 +303,16 @@ public final class PlayerResource {
 	public BMSModel loadBMSModelForReplay(ReplayData replay) {
 		return loadBMSModel(chartResource != null ? chartResource
 				: SongResources.fromPath(Path.of(model.getPath())),
-				replay.mode, replay.rand, replay.bmsirForcedLongNotes, replay.bmsirParserRevision < 2);
+				replay.mode, replay.rand, replay.bmsirForcedLongNotes, replay.bmsirParserRevision);
 	}
 
 	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
 			boolean forceLongNotes) {
-        return loadBMSModel(resource, lnmode, selectedRandom, forceLongNotes, false);
+        return loadBMSModel(resource, lnmode, selectedRandom, forceLongNotes, BMSIRParserCompatibility.CURRENT_REVISION);
     }
 
     private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
-                                boolean forceLongNotes, boolean legacyParser) {
+                                boolean forceLongNotes, int parserRevision) {
 		String lowerName = resource.name().toLowerCase(java.util.Locale.ROOT);
 		ChartDecoder decoder;
 		BMSModel loaded;
@@ -320,7 +320,7 @@ public final class PlayerResource {
 			if (lowerName.endsWith(".bms") || lowerName.endsWith(".bme")
 					|| lowerName.endsWith(".bml") || lowerName.endsWith(".pms")) {
 				decoder = new BMSDecoder(lnmode);
-                ((BMSDecoder)decoder).setLegacyCompatibility(legacyParser);
+                ((BMSDecoder)decoder).setCompatibilityRevision(parserRevision);
 				try (java.io.InputStream input = resource.openStream()) {
 					loaded = ((BMSDecoder) decoder).decode(input.readAllBytes(),
 							lowerName.endsWith(".pms"), selectedRandom);
@@ -344,8 +344,10 @@ public final class PlayerResource {
 			return null;
 		}
 		if (loaded != null) {
+			// Retain decoder-selected RANDOM branches when attaching the resource path.
+			// A normal load supplies no selection, but its result is still branch-specific.
 			loaded.setChartInformation(new ChartInformation(
-					Path.of(resource.displayPath()), lnmode, selectedRandom));
+					Path.of(resource.displayPath()), lnmode, loaded.getRandom()));
 		}
 		return prepareModel(loaded, decoder, forceLongNotes);
 	}
@@ -368,6 +370,7 @@ public final class PlayerResource {
 		if (model == null) {
 			return null;
 		}
+		if (!DETACHED_LOAD.get()) BMSIRParserCatalog.capture(model);
 		if (forceLongNotes) BMSIRLongNoteMode.apply(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);

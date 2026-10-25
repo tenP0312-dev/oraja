@@ -34,6 +34,8 @@ public record IRLongNoteContract(int lntype, int notes) {
     /** Called on the existing ranking worker, never mutates catalog/play models. */
     public static IRLongNoteContract forRanking(SongData song, int selected, boolean forceLn) {
         BMSModel model = song.getBMSModel();
+        if (model == null && song.hasRandomSequence()) return UNKNOWN;
+        if (model != null && !matchesIdentity(song, model)) return UNKNOWN;
         if (model != null && (forceLn || !BMSIRLongNoteMode.isApplied(model))) {
             return fromModel(model, selected, forceLn);
         }
@@ -54,12 +56,18 @@ public record IRLongNoteContract(int lntype, int notes) {
                 model = decoder == null ? null : decoder.decode(new ChartInformation(path, selected, null));
             }
             // Do not associate a changed file with the catalog's former chart identity.
-            if (model == null || (song.getSha256() != null && !song.getSha256().isBlank()
-                    && !song.getSha256().equalsIgnoreCase(model.getSHA256()))) return UNKNOWN;
+            if (model == null || !matchesIdentity(song, model)) return UNKNOWN;
+            if (song.getBMSModel() == null && model.getRandom() != null && model.getRandom().length > 0) return UNKNOWN;
             return fromModel(model, selected, forceLn);
         } catch (Exception error) {
             return UNKNOWN;
         }
+    }
+
+    static boolean matchesIdentity(SongData song, BMSModel model) {
+        return model != null
+                && (song.getSha256() == null || song.getSha256().isBlank() || song.getSha256().equalsIgnoreCase(model.getSHA256()))
+                && (song.getMd5() == null || song.getMd5().isBlank() || song.getMd5().equalsIgnoreCase(model.getMD5()));
     }
 
     public boolean matches(IRScoreData score) {
