@@ -344,8 +344,10 @@ public final class PlayerResource {
 			return null;
 		}
 		if (loaded != null) {
+			// Retain decoder-selected RANDOM branches when attaching the resource path.
+			// A normal load supplies no selection, but its result is still branch-specific.
 			loaded.setChartInformation(new ChartInformation(
-					Path.of(resource.displayPath()), lnmode, selectedRandom));
+					Path.of(resource.displayPath()), lnmode, loaded.getRandom()));
 		}
 		return prepareModel(loaded, decoder, forceLongNotes);
 	}
@@ -368,6 +370,7 @@ public final class PlayerResource {
 		if (model == null) {
 			return null;
 		}
+		if (!DETACHED_LOAD.get()) BMSIRParserCatalog.capture(model);
 		if (forceLongNotes) BMSIRLongNoteMode.apply(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);

@@ -58,6 +58,7 @@ public final class PlayDataAccessor {
 	 * スコアデータベースアクセサ
 	 */
 	private ScoreDatabaseAccessor scoredb;
+    private bms.player.beatoraja.song.SongDatabaseAccessor songDatabase;
 	private ScoreDatabaseAccessor maniacScoredb;
 	private ScoreDatabaseAccessor forcedScoredb;
 	private ScoreDatabaseAccessor forcedManiacScoredb;
@@ -176,6 +177,16 @@ public final class PlayDataAccessor {
 		pd.setPlaytime(pd.getPlaytime() + time);
 		scoredb.setPlayerData(pd);
 	}
+
+    public void setSongDatabase(bms.player.beatoraja.song.SongDatabaseAccessor database) {
+        songDatabase = database;
+    }
+
+    private void refreshParserCatalog(BMSModel model) {
+        if (songDatabase == null) return;
+        SongData metadata = BMSIRParserCatalog.metadata(model);
+        if (metadata != null) songDatabase.refreshParserMetadata(metadata);
+    }
 
 	/**
 	 * スコアデータを読み込む
@@ -422,6 +433,11 @@ public final class PlayDataAccessor {
 		score.setDate(Calendar.getInstance(TimeZone.getDefault()).getTimeInMillis() / 1000L);
 		score.setScorehash(getScoreHash(score));
 		targetDatabase.setScoreData(score);
+        if (updateScore && songDatabase != null && targetDatabase != maniacScoredb
+                && targetDatabase != forcedManiacScoredb) {
+            // Already on the score-save path: no new render-thread chart/file reads.
+            refreshParserCatalog(model);
+        }
 		if (targetDatabase == maniacScoredb && maniacMetadata != null) {
 			maniacMetadata.record(model, newscore, newscore.getExscore() > previousEx, "local");
 		}
@@ -658,6 +674,7 @@ public final class PlayDataAccessor {
 		score.setDate(Calendar.getInstance(TimeZone.getDefault()).getTimeInMillis() / 1000L);
 		score.setScorehash(getScoreHash(score));
 		targetDatabase.setScoreData(score);
+		if (updateScore) for (BMSModel stage : models) refreshParserCatalog(stage);
 		ScoreLogDatabaseAccessor courseLog = changedLnMode ? forcedScorelogdb : scorelogdb;
 		newscore.setMode(score.getMode());
 		if (log.getSha256() != null && courseLog != null) {

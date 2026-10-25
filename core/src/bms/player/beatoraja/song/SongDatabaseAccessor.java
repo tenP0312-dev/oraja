@@ -71,6 +71,11 @@ public interface SongDatabaseAccessor {
 
 	public void setSongDatas(SongData[] songs);
 
+    /** Refresh an existing old-parser row without replacing user/catalog metadata. */
+    public default boolean refreshParserMetadata(SongData decoded) {
+        return false;
+    }
+
 	public SongData[] getSongDatasByText(String text);
 
 	/**

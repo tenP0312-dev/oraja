@@ -365,10 +365,21 @@ public final class MusicSelector extends MainState {
 			manager.invalidatePlayerScoreDisplay();
 		}
 		if (playedsong != null) {
+            if (bms.player.beatoraja.BMSIRParserCatalog.refreshVisibleSongs(playedsong, manager.getVisibleSongDatas())) {
+                scorecache.clear();
+            }
 			scorecache.update(playedsong, config.getLnmode());
 			playedsong = null;
 		}
 		if (playedcourse != null) {
+			BMSModel[] playedModels = resource.getCourseBMSModels();
+			if (playedModels != null) for (BMSModel model : playedModels) {
+				boolean refreshed = bms.player.beatoraja.BMSIRParserCatalog.refreshVisibleModel(model, playedcourse.getSong());
+				refreshed |= bms.player.beatoraja.BMSIRParserCatalog.refreshVisibleModel(model, manager.getVisibleSongDatas());
+				if (refreshed) {
+					scorecache.clear();
+				}
+			}
 			for (SongData sd : playedcourse.getSong()) {
 				scorecache.update(sd, config.getLnmode());
 			}
