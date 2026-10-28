@@ -200,10 +200,40 @@ public class CourseResult extends AbstractResult {
 			irprocess.start();
 		}
 
+		submitNantokaCourse(newscore);
+
 		boolean qualifiedClear = newscore != null && newscore.getClear() != Failed.id
 				&& (!bmsirQualification.hasRules() || bmsirQualification.passed());
 		play(qualifiedClear ? (getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR)
 				: (getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL), resource.getConfig().getAudioConfig().isLoopCourseResultSound());
+	}
+
+	/** NANTOKA MANIA Dan: pass/fail is recorded only on the external ranking server, never in local course records. */
+	private void submitNantokaCourse(ScoreData newscore) {
+		final bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext maniac = resource.getManiacPlayContext();
+		final BMSModel[] models = resource.getCourseBMSModels();
+		if (newscore == null || maniac == null || models == null || resource.getCourseData() == null
+				|| resource.getPlayMode().mode != BMSPlayerMode.Mode.PLAY
+				|| !bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.accepts(main, maniac.settings())
+				|| !shouldPersistScore(models, resource.getConfig().getWorkDirectory())
+				|| Arrays.stream(models).anyMatch(bms.player.beatoraja.BMSIRLongNoteMode::isApplied)) {
+			return;
+		}
+		final int lnmode = Arrays.stream(models).anyMatch(BMSModel::containsUndefinedLongNote)
+				? resource.getPlayerConfig().getLnmode() : 0;
+		final RankingData target = ranking;
+		Thread worker = new Thread(() -> {
+			try {
+				var scores = bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.submitCourse(main,
+						resource.getCourseData(), models, resource.getConstraint(), maniac.settings(), lnmode, newscore);
+				target.updateScore(scores, newscore);
+				rankingOffset = target.getRank() > 10 ? target.getRank() - 5 : 0;
+			} catch (Exception e) {
+				logger.warn("NANTOKA IR course submission failed: {}", e.getMessage());
+			}
+		}, "bmsir-nantoka-course");
+		worker.setDaemon(true);
+		worker.start();
 	}
 
 	public void shutdown() {

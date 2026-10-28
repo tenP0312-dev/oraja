@@ -588,6 +588,7 @@ public final class BMSIRArenaClient {
                 controller.getPlayerConfig().isBmsirArenaDetailedLogEnabled()
         );
         BMSIRManiacApiClient.syncOwnScoresAsync(controller);
+        BMSIRNantokaIr.importLocalScoresAsync(controller);
         BMSIRMyTableClient.initialize(controller);
         BMSIRArenaLog.event(
                 "initialize",
