@@ -68,14 +68,19 @@ resource idと重複した場合、またはsceneのloadに失敗した場合は
 ## Textureとmesh
 
 textureは`id`, `path`, `filter` (`nearest`/`linear`), `wrapX`, `wrapY`
-(`clamp`/`repeat`), `premultipliedAlpha`を持ちます。同じtextureはscene内で共有され、
-最後の参照をdisposeしたときに1回だけ解放されます。
+(`clamp`/`repeat`), `premultipliedAlpha`を持ちます。同じ実ファイル、サイズ・更新時刻、
+filter、wrap、GL contextが一致するtextureは、別々のscene間でも共有されます。
+最後のsceneの参照をdisposeしたときに1回だけ解放されます。条件が異なる場合や画像が
+更新された場合は別のtextureを作り、既存の参照は従来の画像を保持します。
 
 JSONの解析・コンパイル結果だけは、再読み込み時にもCPU側のLRUキャッシュで再利用
 します（最大32件、元JSON合計16 MiB。コンパイル後のヒープ容量の上限ではありません）。
 JSONのサイズ・更新時刻が変われば再コンパイルし、textureの存在・サイズ・更新時刻は
 取得のたびに確認します。画像のdecode/GPU uploadや演出のフレーム間引きは変更せず、
 最後の参照が閉じたGPU resourceは従来どおり解放します。
+
+キーが１個だけの track は探索 cursor を確保しません。非表示が続く間の繰り返し reset は
+cursor を再走査せず、再表示や巻き戻しでは従来どおり現在時刻のキーを評価します。
 
 meshは`positions`（xyz）、`uv`、triangle `indices`を持ちます。外部配列の行列は
 row-majorですが、mesh positionはscene pixel単位です。meshを省略したtexture leafは

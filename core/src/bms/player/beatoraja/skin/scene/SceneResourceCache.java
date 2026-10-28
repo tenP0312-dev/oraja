@@ -26,6 +26,7 @@ public final class SceneResourceCache {
 	private static final long TEXTURE_MEMORY_WARNING_BYTES = 256L * 1024 * 1024;
 	private static final Map<Key, Entry> ENTRIES = new HashMap<>();
 	private static final SceneCompilationCache COMPILED = new SceneCompilationCache(32, 16L * 1024 * 1024);
+	private static final SceneTexturePool<TextureKey, Texture> TEXTURES = new SceneTexturePool<>(Texture::dispose);
 
 	private SceneResourceCache() {
 	}
@@ -39,39 +40,48 @@ public final class SceneResourceCache {
 		Key key = new Key(canonical, resourceVersion(canonical, scene));
 		Entry entry = ENTRIES.get(key);
 		if (entry == null) {
-			entry = new Entry(load(canonical, scene));
+			entry = new Entry(load(canonical, scene, key.version));
 			ENTRIES.put(key, entry);
 		}
 		entry.references++;
 		return new Handle(key, entry.bundle);
 	}
 
-	private static Bundle load(Path source, CompiledScene scene) throws SceneValidationException {
-		Texture[] textures = new Texture[scene.textures.length];
+	private static Bundle load(Path source, CompiledScene scene, ResourceVersion version) throws SceneValidationException {
+		List<SceneTexturePool<TextureKey, Texture>.Lease> textures = new ArrayList<>();
 		try {
 			IntBuffer sizeBuffer = BufferUtils.newIntBuffer(1);
 			Gdx.gl.glGetIntegerv(GL20.GL_MAX_TEXTURE_SIZE, sizeBuffer);
 			int maximumTextureSize = sizeBuffer.get(0);
 			long estimatedTextureBytes = 0;
 			Path sceneRoot = source.getParent().toRealPath();
-			for (int i = 0; i < textures.length; i++) {
+			for (int i = 0; i < scene.textures.length; i++) {
 				CompiledScene.TextureResource resource = scene.textures[i];
 				Path texturePath = Path.of(resource.path).toRealPath();
 				if (!texturePath.startsWith(sceneRoot) || !Files.isRegularFile(texturePath)) {
 					throw new SceneValidationException("Scene texture does not exist: " + texturePath);
 				}
-				textures[i] = new Texture(Gdx.files.absolute(texturePath.toString()));
-				if (textures[i].getWidth() > maximumTextureSize
-						|| textures[i].getHeight() > maximumTextureSize) {
-					throw new SceneValidationException("Scene texture exceeds the GPU size limit: "
-							+ texturePath);
-				}
-				estimatedTextureBytes += (long) textures[i].getWidth()
-						* textures[i].getHeight() * 4;
-				TextureFilter filter = resource.linear ? TextureFilter.Linear : TextureFilter.Nearest;
-				textures[i].setFilter(filter, filter);
-				textures[i].setWrap(resource.repeatX ? TextureWrap.Repeat : TextureWrap.ClampToEdge,
-						resource.repeatY ? TextureWrap.Repeat : TextureWrap.ClampToEdge);
+				verifyTextureStamp(texturePath, version.textures.get(i));
+				TextureKey key = new TextureKey(version.textures.get(i), resource.linear,
+						resource.repeatX, resource.repeatY, Gdx.gl);
+				var lease = TEXTURES.acquire(key, () -> {
+					Texture texture = new Texture(Gdx.files.absolute(texturePath.toString()));
+					try {
+						if (texture.getWidth() > maximumTextureSize || texture.getHeight() > maximumTextureSize)
+							throw new IllegalArgumentException("Scene texture exceeds the GPU size limit: " + texturePath);
+						TextureFilter filter = resource.linear ? TextureFilter.Linear : TextureFilter.Nearest;
+						texture.setFilter(filter, filter);
+						texture.setWrap(resource.repeatX ? TextureWrap.Repeat : TextureWrap.ClampToEdge,
+								resource.repeatY ? TextureWrap.Repeat : TextureWrap.ClampToEdge);
+						return texture;
+					} catch (Throwable error) {
+						texture.dispose();
+						throw error;
+					}
+				});
+				textures.add(lease);
+				Texture texture = lease.value();
+				estimatedTextureBytes += (long) texture.getWidth() * texture.getHeight() * 4;
 			}
 			if (estimatedTextureBytes > TEXTURE_MEMORY_WARNING_BYTES) {
 				logger.warn("Skin scene {} uses approximately {} MiB of decoded textures",
@@ -79,9 +89,7 @@ public final class SceneResourceCache {
 			}
 			return new Bundle(scene, textures);
 		} catch (Throwable error) {
-			for (Texture texture : textures) {
-				if (texture != null) texture.dispose();
-			}
+			for (var texture : textures) texture.close();
 			if (error instanceof SceneValidationException validation) {
 				throw validation;
 			}
@@ -112,6 +120,12 @@ public final class SceneResourceCache {
 	private static ResourceStamp stamp(Path path) throws IOException {
 		BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
 		return new ResourceStamp(path, attributes.size(), attributes.lastModifiedTime());
+	}
+
+	static void verifyTextureStamp(Path path, ResourceStamp expected) throws IOException, SceneValidationException {
+		if (!stamp(path).equals(expected)) {
+			throw new SceneValidationException("Scene texture changed while loading: " + path);
+		}
 	}
 
 	private static Path canonical(Path source) throws SceneValidationException {
@@ -146,7 +160,7 @@ public final class SceneResourceCache {
 		}
 
 		public Texture texture(int index) {
-			return bundle.textures[index];
+			return bundle.textures.get(index).value();
 		}
 
 		@Override
@@ -167,6 +181,9 @@ public final class SceneResourceCache {
 	static record ResourceStamp(Path path, long size, FileTime modified) {
 	}
 
+	static record TextureKey(ResourceStamp stamp, boolean linear, boolean repeatX, boolean repeatY, GL20 context) {
+	}
+
 	private static final class Entry {
 		private final Bundle bundle;
 		private int references;
@@ -178,17 +195,15 @@ public final class SceneResourceCache {
 
 	private static final class Bundle {
 		private final CompiledScene scene;
-		private final Texture[] textures;
+		private final List<SceneTexturePool<TextureKey, Texture>.Lease> textures;
 
-		private Bundle(CompiledScene scene, Texture[] textures) {
+		private Bundle(CompiledScene scene, List<SceneTexturePool<TextureKey, Texture>.Lease> textures) {
 			this.scene = scene;
 			this.textures = textures;
 		}
 
 		private void dispose() {
-			for (Texture texture : textures) {
-				texture.dispose();
-			}
+			for (var texture : textures) texture.close();
 		}
 	}
 }
