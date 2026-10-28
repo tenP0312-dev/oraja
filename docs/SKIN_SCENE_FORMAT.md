@@ -79,6 +79,9 @@ JSONのサイズ・更新時刻が変われば再コンパイルし、textureの
 取得のたびに確認します。画像のdecode/GPU uploadや演出のフレーム間引きは変更せず、
 最後の参照が閉じたGPU resourceは従来どおり解放します。
 
+キーが１個だけの track は探索 cursor を確保しません。非表示が続く間の繰り返し reset は
+cursor を再走査せず、再表示や巻き戻しでは従来どおり現在時刻のキーを評価します。
+
 meshは`positions`（xyz）、`uv`、triangle `indices`を持ちます。外部配列の行列は
 row-majorですが、mesh positionはscene pixel単位です。meshを省略したtexture leafは
 `0..1`の共有quadを使い、top-left/bottom-leftのどちらでも画像が正立する既定UVを

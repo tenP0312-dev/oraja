@@ -3,11 +3,33 @@ package bms.player.beatoraja.skin.scene;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SceneEvaluatorTest {
 	private static final float TOLERANCE = 0.0001f;
+
+	@Test
+	void constantTracksAvoidCursorsAndResetKeepsSeekingCorrect() throws Exception {
+		SceneDocument document = SceneCompilerTest.fixture();
+		SceneEvaluator constant = evaluator(document);
+		var field = SceneEvaluator.class.getDeclaredField("keyCursors");
+		field.setAccessible(true);
+		assertEquals(0, ((Map<?, ?>) field.get(constant)).size());
+		constant.evaluate(1000, 0, 0, 100, 100, 0, 1, 1, 1, 1);
+		constant.reset(); constant.reset();
+		assertEquals(1, constant.evaluate(0, 0, 0, 100, 100, 0, 1, 1, 1, 1));
+
+		document.clips[0].instances[0].transformTrack = animatedAffineTrack();
+		SceneEvaluator animated = evaluator(document);
+		assertEquals(1, ((Map<?, ?>) field.get(animated)).size());
+		animated.evaluate(1500, 0, 0, 100, 100, 0, 1, 1, 1, 1);
+		assertEquals(15, animated.getCommands()[0].world[12], TOLERANCE);
+		animated.reset(); animated.reset();
+		animated.evaluate(500, 0, 0, 100, 100, 0, 1, 1, 1, 1);
+		assertEquals(5, animated.getCommands()[0].world[12], TOLERANCE);
+	}
 
 	@Test
 	void composesParentTransformAndAffineColorInDepthOrder() throws Exception {
