@@ -61,6 +61,7 @@ public final class SceneResourceCache {
 				if (!texturePath.startsWith(sceneRoot) || !Files.isRegularFile(texturePath)) {
 					throw new SceneValidationException("Scene texture does not exist: " + texturePath);
 				}
+				verifyTextureStamp(texturePath, version.textures.get(i));
 				TextureKey key = new TextureKey(version.textures.get(i), resource.linear,
 						resource.repeatX, resource.repeatY, Gdx.gl);
 				var lease = TEXTURES.acquire(key, () -> {
@@ -119,6 +120,12 @@ public final class SceneResourceCache {
 	private static ResourceStamp stamp(Path path) throws IOException {
 		BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
 		return new ResourceStamp(path, attributes.size(), attributes.lastModifiedTime());
+	}
+
+	static void verifyTextureStamp(Path path, ResourceStamp expected) throws IOException, SceneValidationException {
+		if (!stamp(path).equals(expected)) {
+			throw new SceneValidationException("Scene texture changed while loading: " + path);
+		}
 	}
 
 	private static Path canonical(Path source) throws SceneValidationException {

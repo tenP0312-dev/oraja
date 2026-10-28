@@ -152,10 +152,13 @@ class SceneResourceCacheTest {
 
 		SceneResourceCache.ResourceVersion first =
 				SceneResourceCache.resourceVersion(scenePath.toRealPath(), scene);
+		SceneResourceCache.verifyTextureStamp(texture.toRealPath(), first.textures().get(0));
 		FileTime sceneModified = Files.getLastModifiedTime(scenePath);
 		Files.write(texture, new byte[] {4, 3, 2, 1});
 		Files.setLastModifiedTime(texture,
 				FileTime.fromMillis(Files.getLastModifiedTime(texture).toMillis() + 2000));
+		assertThrows(SceneValidationException.class,
+				() -> SceneResourceCache.verifyTextureStamp(texture.toRealPath(), first.textures().get(0)));
 		SceneResourceCache.ResourceVersion second =
 				SceneResourceCache.resourceVersion(scenePath.toRealPath(), cache.get(scenePath));
 
