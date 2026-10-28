@@ -137,15 +137,19 @@ public class MusicResult extends AbstractResult {
 		final IRStatus[] ir = main.getIRStatus();
 		final BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
 		final FloatArray activeGauge = resource.getGauge()[resource.getGrooveGauge().getType()];
+		// NANTOKA MANIA goes to the external ranking server on every saved play of an unmodified chart;
+		// the server keeps each player's best.
 		final boolean sendManiac = maniacContext != null
-				&& BMSIRManiacApiClient.canSubmit(maniacContext.settings())
 				&& resource.isUpdateScore()
-				&& BMSIRManiacApiClient.shouldSubmit(
-						main,
-						newscore,
-						oldscore,
-						activeGauge.get(activeGauge.size - 1) > 0.0
-				);
+				&& (bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.accepts(main, maniacContext.settings())
+						? !bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())
+						: BMSIRManiacApiClient.canSubmit(maniacContext.settings())
+								&& BMSIRManiacApiClient.shouldSubmit(
+										main,
+										newscore,
+										oldscore,
+										activeGauge.get(activeGauge.size - 1) > 0.0
+								));
 		if ((ir.length > 0 || sendManiac)
 				&& resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
 				&& !resource.isFreqOn()) {
