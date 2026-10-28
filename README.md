@@ -23,6 +23,12 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.124 preserves every 0.4.14.123 feature, refreshes legacy
+catalog and personal-best references after parser PB saves (#587), and can send
+NANTOKA MANIA plays to an optional player-configured external ranking server
+(#590). Plugin 0.0.82, launcher 0.2.30 and optional updates remain. See
+[the test scope](docs/TEST_RELEASE_0.4.14.124.md).
+
 Version 0.4.14.123 preserves every 0.4.14.122 feature and fixes orphan LNOBJ
 decoding and chart/score identity consistency (#571). Parser revision 3 retains
 unmatched LNOBJ as normal notes, isolates changed local records and preserves
