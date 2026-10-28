@@ -68,8 +68,10 @@ resource idと重複した場合、またはsceneのloadに失敗した場合は
 ## Textureとmesh
 
 textureは`id`, `path`, `filter` (`nearest`/`linear`), `wrapX`, `wrapY`
-(`clamp`/`repeat`), `premultipliedAlpha`を持ちます。同じtextureはscene内で共有され、
-最後の参照をdisposeしたときに1回だけ解放されます。
+(`clamp`/`repeat`), `premultipliedAlpha`を持ちます。同じ実ファイル、サイズ・更新時刻、
+filter、wrap、GL contextが一致するtextureは、別々のscene間でも共有されます。
+最後のsceneの参照をdisposeしたときに1回だけ解放されます。条件が異なる場合や画像が
+更新された場合は別のtextureを作り、既存の参照は従来の画像を保持します。
 
 JSONの解析・コンパイル結果だけは、再読み込み時にもCPU側のLRUキャッシュで再利用
 します（最大32件、元JSON合計16 MiB。コンパイル後のヒープ容量の上限ではありません）。
