@@ -21,6 +21,12 @@ repository.
 
 ## Workflow
 
+- Post every task outcome to its GitHub Issue or PR (the one the request
+  names, else the closest related Issue): success, failure, a stop, or a wait
+  for approval or a decision. Say what stopped it and whose approval is
+  needed, so the operator never has to relay results by hand. Pass this rule
+  to child sessions. Approvals themselves still come from the operator
+  directly in the session; never post secrets or private values.
 - Read `README.md`, `doc/BMSIR_ARENA.md`,
   `docs/CODEX_PROGRESS_DISCORD.md`, and the code around the affected
   behavior before editing.
