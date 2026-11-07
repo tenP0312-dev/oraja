@@ -70,8 +70,11 @@ public final class PersistentRankingDataStore {
         json.setIgnoreUnknownFields(true);
         json.setOutputType(JsonWriter.OutputType.json);
         json.setUsePrototypes(false);
-        // Never instantiate a class named inside the cached JSON.
+        // Never instantiate a class named inside the cached JSON. The former
+        // writer tagged list elements with their class; name the element type
+        // here instead so those files still read as Entry objects.
         json.setTypeName(null);
+        json.setElementType(CacheFile.class, "entries", Entry.class);
         // IRGaugeHistory is a record, so the default no-arg JSON reader cannot restore it.
         json.setSerializer(IRGaugeHistory.class, new Json.Serializer<IRGaugeHistory>() {
             public void write(Json writer, IRGaugeHistory history, Class knownType) {
@@ -95,9 +98,14 @@ public final class PersistentRankingDataStore {
 
     private static java.util.List<Float> readGauge(JsonValue history, String name) {
         java.util.ArrayList<Float> values = new java.util.ArrayList<>();
-        JsonValue channel = history.get(name);
-        if (channel != null) for (JsonValue value : channel)
-            values.add(value.isObject() ? value.getFloat("value") : value.asFloat());
+        JsonValue channel = history == null ? null : history.get(name);
+        // The former default writer stored a list as {"class": ..., "items": [...]}.
+        if (channel != null && channel.isObject() && channel.get("items") != null) channel = channel.get("items");
+        if (channel == null || !(channel.isArray() || channel.isObject())) return values;
+        for (JsonValue value : channel) {
+            if (value.isObject() && value.has("value")) values.add(value.getFloat("value"));
+            else if (value.isNumber()) values.add(value.asFloat());
+        }
         return values;
     }
 
