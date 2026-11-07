@@ -7,7 +7,10 @@ import org.slf4j.LoggerFactory;
 
 import org.luaj.vm2.*;
 import org.luaj.vm2.lib.*;
-import org.luaj.vm2.lib.jse.JsePlatform;
+import org.luaj.vm2.compiler.LuaC;
+import org.luaj.vm2.lib.jse.JseBaseLib;
+import org.luaj.vm2.lib.jse.JseMathLib;
+import org.luaj.vm2.lib.jse.JseStringLib;
 
 import bms.player.beatoraja.MainState;
 import bms.player.beatoraja.skin.SkinHeader;
@@ -26,6 +29,8 @@ public class SkinLuaAccessor {
 	private static final Logger logger = LoggerFactory.getLogger(SkinLuaAccessor.class);
 	
 	private final Globals globals;
+	private final SkinLuaRestrictedLibs.RestrictedIoLib restrictedIo;
+	private Path skinDirectory;
 
 	// 各機能のエクスポート先を globals にするかどうか
 	private final boolean isGlobal;
@@ -36,7 +41,10 @@ public class SkinLuaAccessor {
 	private static final String EVENT_UTIL = "event_util";
 
 	public SkinLuaAccessor(boolean isGlobal) {
-		globals = JsePlatform.standardGlobals();
+		restrictedIo = new SkinLuaRestrictedLibs.RestrictedIoLib();
+		globals = createRestrictedGlobals(restrictedIo);
+		restrictStandardGlobals(globals);
+		LegacySkinLuaApi.install(globals, this::getSkinDirectory);
 		SkinLuaPrototypeCache.install(globals);
 		SkinLuaValueCache.installTypeFunction(globals);
 		this.isGlobal = isGlobal;
@@ -47,6 +55,50 @@ public class SkinLuaAccessor {
 			globals.package_.setIsLoaded(TIMER_UTIL, new LuaTable());
 			globals.package_.setIsLoaded(EVENT_UTIL, new LuaTable());
 		}
+	}
+
+	/**
+	 * Standard Lua libraries without OS command execution, unrestricted file
+	 * access or Java reflection. A Lua skin could otherwise run any program
+	 * (os.execute, io.popen, luajava) when it is loaded.
+	 */
+	static Globals createRestrictedGlobals(IoLib ioLib) {
+		Globals globals = new Globals();
+		globals.load(new JseBaseLib());
+		globals.load(new PackageLib());
+		globals.load(new Bit32Lib());
+		globals.load(new TableLib());
+		globals.load(new JseStringLib());
+		globals.load(new CoroutineLib());
+		globals.load(new JseMathLib());
+		globals.load(ioLib);
+		globals.load(new SkinLuaRestrictedLibs.SafeOsLib());
+		LoadState.install(globals);
+		LuaC.install(globals);
+		return globals;
+	}
+
+	static void restrictStandardGlobals(Globals globals) {
+		globals.set("luajava", LuaValue.NIL);
+		globals.set("debug", LuaValue.NIL);
+
+		LuaTable pkg = globals.get("package").checktable();
+		pkg.set("loadlib", LuaValue.NIL);
+		pkg.set("cpath", "");
+		removeNativePackageSearchers(pkg.get("searchers"));
+		removeNativePackageSearchers(pkg.get("loaders"));
+	}
+
+	private static void removeNativePackageSearchers(LuaValue searchers) {
+		// Keep the preload and Lua-file searchers; drop the C and Java class loaders.
+		if (searchers.istable()) {
+			searchers.set(3, LuaValue.NIL);
+			searchers.set(4, LuaValue.NIL);
+		}
+	}
+
+	private Path getSkinDirectory() {
+		return skinDirectory;
 	}
 
 	public BooleanProperty loadBooleanProperty(String script) {
@@ -284,7 +336,10 @@ public class SkinLuaAccessor {
 
 	public void setDirectory(Path path) {
 		LuaTable pkg = globals.get("package").checktable();
-		pkg.set("path", pkg.get("path").tojstring() + ";" + path.toString() + "/?.lua");
+		Path normalizedPath = (path != null ? path : Path.of("")).toAbsolutePath().normalize();
+		skinDirectory = normalizedPath;
+		restrictedIo.setRoot(normalizedPath);
+		pkg.set("path", pkg.get("path").tojstring() + ";" + normalizedPath + "/?.lua");
 	}
 
 	/**
