@@ -96,6 +96,10 @@ public class JSONSkinLoader extends SkinLoader {
 		serializer = new JsonSkinSerializer(lua, path -> getPath(path, filemap));
 		SkinHeader header = null;
 		try {
+			if(lua != null) {
+				// Lua io in JSON skins is limited to the skin directory.
+				lua.setDirectory(p.getParent());
+			}
 			Json json = new Json();
 			json.setIgnoreUnknownFields(true);
 			serializer.setSerializers(json, null, p);
@@ -236,6 +240,9 @@ public class JSONSkinLoader extends SkinLoader {
 		header.setSkinConfigProperty(property);
 
 		try {
+			if(lua != null) {
+				lua.setDirectory(p.getParent());
+			}
 			Json json = new Json();
 			json.setIgnoreUnknownFields(true);
 
