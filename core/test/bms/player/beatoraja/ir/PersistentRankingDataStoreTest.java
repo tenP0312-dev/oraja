@@ -1,7 +1,9 @@
 package bms.player.beatoraja.ir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,22 +38,105 @@ class PersistentRankingDataStoreTest {
 
     @Test
     void previousDefaultWriterEmptyGaugeRecordDoesNotForceRefetch() throws Exception {
-        PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRStatus status = status("BMS-IR", "190031");
         IRRankingContext context = new IRRankingContext(0, false);
         SongData chart = chartTarget("f".repeat(64));
-        store.save(directory.toString(), "player", status, context, chart,
+        // Build the former JSON file with one entry, the way older clients wrote it.
+        PersistentRankingDataStore writer = new PersistentRankingDataStore();
+        writer.save(directory.resolve("source").toString(), "player", status, context, chart,
                 new IRScoreData[]{score("fixture", 100, ClearType.Hard)});
-        Path path = directory.resolve("player/ir-ranking-cache.json");
-        com.badlogic.gdx.utils.Json oldJson = new com.badlogic.gdx.utils.Json();
-        oldJson.setUsePrototypes(false);
-        PersistentRankingDataStore.CacheFile oldFile = oldJson.fromJson(PersistentRankingDataStore.CacheFile.class, Files.readString(path));
-        oldFile.entries.get(0).scores[0].gaugeHistory = IRGaugeHistory.fromGaugeLog(null);
-        Files.writeString(path, oldJson.toJson(oldFile));
+        PersistentRankingDataStore.Entry entry = onlyEntry(writer, directory.resolve("source"), status, context, chart);
+        writer.close();
+        entry.scores[0].gaugeHistory = IRGaugeHistory.fromGaugeLog(null);
+        writeLegacy(directory.resolve("player"), entry);
+
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRScoreData restored = store.load(directory.toString(), "player", status, context, chart)[0];
         assertEquals(200, restored.getExscore());
         // The old generic writer omitted record components; missing history stays empty.
         assertEquals(new IRGaugeHistory(java.util.List.of(), java.util.List.of(), java.util.List.of(), java.util.List.of()), restored.gaugeHistory);
+        store.close();
+    }
+
+    @Test
+    void legacyJsonIsMigratedOnceAndKeptAsMigratedFile() throws Exception {
+        IRStatus status = status("https://ir.example", "account");
+        IRRankingContext context = new IRRankingContext(0, false);
+        SongData first = chartTarget("1".repeat(64));
+        SongData second = chartTarget("2".repeat(64));
+        PersistentRankingDataStore writer = new PersistentRankingDataStore();
+        Path source = directory.resolve("source");
+        writer.save(source.toString(), "player", status, context, first, new IRScoreData[]{score("a", 11, ClearType.Hard)});
+        writer.save(source.toString(), "player", status, context, second, new IRScoreData[]{score("b", 22, ClearType.Easy)});
+        PersistentRankingDataStore.Entry firstEntry = onlyEntry(writer, source, status, context, first);
+        PersistentRankingDataStore.Entry secondEntry = onlyEntry(writer, source, status, context, second);
+        writer.close();
+        Path profile = directory.resolve("player");
+        writeLegacy(profile, firstEntry, secondEntry);
+
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        assertEquals(11, store.load(directory.toString(), "player", status, context, first)[0].epg);
+        assertEquals(22, store.load(directory.toString(), "player", status, context, second)[0].epg);
+        assertFalse(Files.exists(profile.resolve("ir-ranking-cache.json")));
+        assertTrue(Files.exists(profile.resolve("ir-ranking-cache.json.migrated")));
+        assertTrue(Files.exists(profile.resolve("ir-ranking-cache.sqlite")));
+        store.close();
+
+        // A JSON file that appears again later is not imported a second time.
+        writeLegacy(profile, firstEntry);
+        PersistentRankingDataStore reopened = new PersistentRankingDataStore();
+        reopened.save(directory.toString(), "player", status, context, first, new IRScoreData[]{score("a", 33, ClearType.Hard)});
+        reopened.close();
+        PersistentRankingDataStore again = new PersistentRankingDataStore();
+        assertEquals(33, again.load(directory.toString(), "player", status, context, first)[0].epg);
+        assertTrue(Files.exists(profile.resolve("ir-ranking-cache.json")));
+        again.close();
+    }
+
+    @Test
+    void scopedSaveReplacesTheChartRowAndLastGoodSeesIt() {
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        IRStatus status = status("https://ir.example", "account");
+        IRRankingContext context = new IRRankingContext(0, false);
+        String identity = "song:" + "9".repeat(64);
+        store.save(directory.toString(), "player", status, context, identity, new IRScoreData[]{score("a", 1, ClearType.Hard)});
+        store.saveScoped(directory.toString(), "player", status, context, identity, "rivals-v2",
+                new IRScoreData[]{score("a", 2, ClearType.Hard)});
+        assertNull(store.load(directory.toString(), "player", status, context, identity));
+        assertNull(store.loadScoped(directory.toString(), "player", status, context, identity, "rivals-v1"));
+        assertEquals(2, store.loadScoped(directory.toString(), "player", status, context, identity, "rivals-v2")[0].epg);
+        assertEquals(2, store.loadLastGood(directory.toString(), "player", status, context, identity)[0].epg);
+        store.close();
+    }
+
+    @Test
+    void oldestRowsAreEvictedBeyondTheLimit() {
+        PersistentRankingDataStore store = new PersistentRankingDataStore(3);
+        IRStatus status = status("https://ir.example", "account");
+        IRRankingContext context = new IRRankingContext(0, false);
+        for (int index = 0; index < 5; index++) {
+            store.save(directory.toString(), "player", status, context, "song:" + index,
+                    new IRScoreData[]{score("a", index, ClearType.Hard)});
+        }
+        assertNull(store.load(directory.toString(), "player", status, context, "song:0"));
+        assertNull(store.load(directory.toString(), "player", status, context, "song:1"));
+        for (int index = 2; index < 5; index++) {
+            assertEquals(index, store.load(directory.toString(), "player", status, context, "song:" + index)[0].epg);
+        }
+        store.close();
+    }
+
+    @Test
+    void damagedDatabaseIsSetAsideAndCachingContinues() throws Exception {
+        Path profile = Files.createDirectories(directory.resolve("player"));
+        Files.writeString(profile.resolve("ir-ranking-cache.sqlite"), "not a database");
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        IRStatus status = status("https://ir.example", "account");
+        IRRankingContext context = new IRRankingContext(0, false);
+        store.save(directory.toString(), "player", status, context, "song:x", new IRScoreData[]{score("a", 7, ClearType.Hard)});
+        assertEquals(7, store.load(directory.toString(), "player", status, context, "song:x")[0].epg);
+        assertTrue(Files.exists(profile.resolve("ir-ranking-cache.sqlite.corrupt")));
+        store.close();
     }
 
     @Test
@@ -76,17 +161,24 @@ class PersistentRankingDataStoreTest {
 
     @Test
     void damagedCacheFallsBackToBackupOrEmptyWithoutThrowing() throws Exception {
-        PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRStatus status = status("https://ir.example", "account");
         IRRankingContext context = new IRRankingContext(0, false);
-        String chart = "b".repeat(64);
-        store.save(directory.toString(), "player", status, context, chartTarget(chart),
+        SongData chart = chartTarget("b".repeat(64));
+        PersistentRankingDataStore writer = new PersistentRankingDataStore();
+        Path source = directory.resolve("source");
+        writer.save(source.toString(), "player", status, context, chart,
                 new IRScoreData[]{score("rival", 250, ClearType.FullCombo)});
-        Path cache = directory.resolve("player").resolve("ir-ranking-cache.json");
-        Files.writeString(cache, "{broken");
+        PersistentRankingDataStore.Entry entry = onlyEntry(writer, source, status, context, chart);
+        writer.close();
+        Path profile = directory.resolve("player");
+        writeLegacy(profile, entry);
+        Files.move(profile.resolve("ir-ranking-cache.json"), profile.resolve("ir-ranking-cache.json.bak"));
+        Files.writeString(profile.resolve("ir-ranking-cache.json"), "{broken");
 
-        IRScoreData[] restored = store.load(directory.toString(), "player", status, context, chartTarget(chart));
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        IRScoreData[] restored = store.load(directory.toString(), "player", status, context, chart);
         assertEquals(250, restored[0].epg);
+        store.close();
     }
 
     @Test
@@ -128,6 +220,38 @@ class PersistentRankingDataStoreTest {
         assertEquals(1, ranking.getClearCount(ClearType.FullCombo.id));
         assertEquals(2, ranking.getScoreRanking(1));
         assertEquals(2, ranking.getScoreRanking(2));
+    }
+
+    /** Reads back the stored entry for one chart through the public API. */
+    private static PersistentRankingDataStore.Entry onlyEntry(PersistentRankingDataStore store, Path root,
+            IRStatus status, IRRankingContext context, SongData chart) throws Exception {
+        IRScoreData[] scores = store.load(root.toString(), "player", status, context, chart);
+        PersistentRankingDataStore.Entry entry = new PersistentRankingDataStore.Entry();
+        entry.key = legacyKey(status, context, chart);
+        entry.baseKey = entry.key;
+        entry.savedAt = System.currentTimeMillis();
+        entry.scores = java.util.Arrays.stream(scores).map(PersistentRankingDataStore.ScoreEntry::new)
+                .toArray(PersistentRankingDataStore.ScoreEntry[]::new);
+        return entry;
+    }
+
+    private static String legacyKey(IRStatus status, IRRankingContext context, SongData chart) throws Exception {
+        String identity = String.join("\n", status.config.getIrname(), status.player.id,
+                Integer.toString(context.lnmode()), Boolean.toString(context.forceLn()),
+                "song:" + chart.getSha256().toLowerCase());
+        byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return bms.model.BMSDecoder.convertHexString(digest);
+    }
+
+    /** Writes the former single-file JSON cache with the old default writer. */
+    private static void writeLegacy(Path profile, PersistentRankingDataStore.Entry... entries) throws Exception {
+        Files.createDirectories(profile);
+        PersistentRankingDataStore.CacheFile file = new PersistentRankingDataStore.CacheFile();
+        file.entries.addAll(java.util.List.of(entries));
+        com.badlogic.gdx.utils.Json oldJson = new com.badlogic.gdx.utils.Json();
+        oldJson.setUsePrototypes(false);
+        Files.writeString(profile.resolve("ir-ranking-cache.json"), oldJson.toJson(file));
     }
 
     private static SongData chartTarget(String hash) {

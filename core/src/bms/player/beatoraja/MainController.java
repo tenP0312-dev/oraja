@@ -1441,6 +1441,8 @@ public class MainController {
 			loudnessAnalyzer.shutdown();
 		}
 
+		// After every screen has been disposed, so no later save reopens it.
+		persistentRankingDataStore.close();
 		logger.info("全リソース破棄完了");
 		TimingDiagnostics.shutdown();
 	}
