@@ -84,8 +84,14 @@ public final class PersistentRankingDataStore {
                 writer.writeObjectEnd();
             }
             public IRGaugeHistory read(Json reader, JsonValue value, Class type) {
-                return new IRGaugeHistory(readGauge(value, "easy"), readGauge(value, "groove"),
-                        readGauge(value, "hard"), readGauge(value, "exhard"));
+                // Gauge history is optional display data; never drop a ranking over it.
+                try {
+                    return new IRGaugeHistory(readGauge(value, "easy"), readGauge(value, "groove"),
+                            readGauge(value, "hard"), readGauge(value, "exhard"));
+                } catch (RuntimeException error) {
+                    return new IRGaugeHistory(new java.util.ArrayList<>(), new java.util.ArrayList<>(),
+                            new java.util.ArrayList<>(), new java.util.ArrayList<>());
+                }
             }
         });
     }
@@ -398,13 +404,9 @@ public final class PersistentRankingDataStore {
             }
             return RobustFile.load(legacy, bytes -> {
                 try {
-                    CacheFile parsed = json.fromJson(CacheFile.class, new String(bytes, StandardCharsets.UTF_8));
-                    if (parsed == null || parsed.version != FORMAT_VERSION || parsed.entries == null) {
-                        throw new java.text.ParseException("unsupported or invalid ranking cache", 0);
-                    }
-                    return parsed;
+                    return parseLegacy(new String(bytes, StandardCharsets.UTF_8));
                 } catch (RuntimeException error) {
-                    java.text.ParseException failure = new java.text.ParseException("invalid ranking cache: " + error.getMessage(), 0);
+                    java.text.ParseException failure = new java.text.ParseException("invalid ranking cache: " + error, 0);
                     failure.initCause(error);
                     throw failure;
                 }
@@ -413,6 +415,38 @@ public final class PersistentRankingDataStore {
             logger.warn("Former IR ranking cache could not be read; starting with an empty cache: {}", error.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Reads the former file entry by entry, so one entry the current reader
+     * cannot restore does not discard every other ranking.
+     */
+    private CacheFile parseLegacy(String text) throws java.text.ParseException {
+        JsonValue root = new com.badlogic.gdx.utils.JsonReader().parse(text);
+        if (root == null || !root.isObject() || root.getInt("version", -1) != FORMAT_VERSION) {
+            throw new java.text.ParseException("unsupported or invalid ranking cache", 0);
+        }
+        JsonValue entries = root.get("entries");
+        if (entries != null && entries.isObject() && entries.get("items") != null) entries = entries.get("items");
+        if (entries == null || !entries.isArray()) {
+            throw new java.text.ParseException("ranking cache has no entries", 0);
+        }
+        CacheFile file = new CacheFile();
+        int skipped = 0;
+        String firstError = null;
+        for (JsonValue value : entries) {
+            try {
+                Entry entry = json.readValue(Entry.class, null, value);
+                if (entry != null) file.entries.add(entry);
+            } catch (RuntimeException error) {
+                skipped++;
+                if (firstError == null) firstError = error.toString();
+            }
+        }
+        if (skipped > 0) {
+            logger.warn("Skipped {} unreadable entries in the former IR ranking cache: {}", skipped, firstError);
+        }
+        return file;
     }
 
     private static void retireLegacy(Path legacy) {

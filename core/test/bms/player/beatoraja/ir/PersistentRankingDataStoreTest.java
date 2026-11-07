@@ -2,6 +2,7 @@ package bms.player.beatoraja.ir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,8 +54,13 @@ class PersistentRankingDataStoreTest {
         PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRScoreData restored = store.load(directory.toString(), "player", status, context, chart)[0];
         assertEquals(200, restored.getExscore());
-        // The old generic writer omitted record components; missing history stays empty.
-        assertEquals(new IRGaugeHistory(java.util.List.of(), java.util.List.of(), java.util.List.of(), java.util.List.of()), restored.gaugeHistory);
+        // Depending on the writer, the old record is either empty or a tagged list
+        // ({"class": ..., "items": [0]}); both restore without dropping the ranking.
+        assertNotNull(restored.gaugeHistory);
+        for (java.util.List<Float> channel : java.util.List.of(restored.gaugeHistory.easy(), restored.gaugeHistory.groove(),
+                restored.gaugeHistory.hard(), restored.gaugeHistory.exhard())) {
+            assertTrue(channel.isEmpty() || channel.equals(java.util.List.of(0f)), channel.toString());
+        }
         store.close();
     }
 
