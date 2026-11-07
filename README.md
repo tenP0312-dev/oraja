@@ -23,10 +23,10 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
-Version 0.4.14.125 preserves every 0.4.14.124 feature and adds merged oraja
+Version 0.4.14.126 preserves every 0.4.14.124 feature and adds merged oraja
 #596 (#595): Lua skins run in a restricted sandbox that blocks OS commands and
 file operations. Plugin 0.0.82, launcher 0.2.30 and optional updates remain.
-See [the test scope](docs/TEST_RELEASE_0.4.14.125.md).
+See [the test scope](docs/TEST_RELEASE_0.4.14.126.md).
 
 Version 0.4.14.124 preserves every 0.4.14.123 feature, refreshes legacy
 catalog and personal-best references after parser PB saves (#587), and can send
