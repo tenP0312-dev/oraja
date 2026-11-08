@@ -175,6 +175,7 @@ public class MainController {
 		this.auto = auto;
 		this.config = config;
 		this.songUpdated = songUpdated;
+		bms.player.beatoraja.skin.lua.SkinLuaAccessor.setTrustedSkinDirectories(config.getLuaTrustedSkinDirectories());
 		MainLoader.configureSongArchiveScanning(
 				config.isScanSongArchives() || config.isEnableBmsirBodyDownload());
 
