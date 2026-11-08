@@ -262,6 +262,12 @@ public class Config implements Validatable {
 	 * Discord webhook urls
 	 */
 	private String[] webhookUrl = new String[0];
+	/**
+	 * Skin directories the player trusts to run Lua with full Java access
+	 * (luajava, os and io). Lua skins are sandboxed otherwise (#595). Only the
+	 * player can add entries; a skin cannot trust itself.
+	 */
+	private String[] luaTrustedSkinDirectories = new String[0];
 
 	/**
 	 * OBS WebSocket Control
@@ -552,6 +558,14 @@ public class Config implements Validatable {
 
 	public String[] getBmsroot() {
 		return bmsroot;
+	}
+
+	public String[] getLuaTrustedSkinDirectories() {
+		return luaTrustedSkinDirectories;
+	}
+
+	public void setLuaTrustedSkinDirectories(String[] luaTrustedSkinDirectories) {
+		this.luaTrustedSkinDirectories = luaTrustedSkinDirectories != null ? luaTrustedSkinDirectories : new String[0];
 	}
 
 	public void setBmsroot(String[] bmsroot) {
@@ -1092,6 +1106,9 @@ public class Config implements Validatable {
 			audio = new AudioConfig();
 		}
 		audio.validate();
+		if (luaTrustedSkinDirectories == null) {
+			luaTrustedSkinDirectories = new String[0];
+		}
 		maxFramePerSecond = MathUtils.clamp(maxFramePerSecond, 0, 50000);
 		prepareFramePerSecond = MathUtils.clamp(prepareFramePerSecond, 0, 100000);
         maxSearchBarCount = MathUtils.clamp(maxSearchBarCount, 1, 100);
