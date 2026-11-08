@@ -112,6 +112,28 @@ class SkinLuaSandboxTest {
         assertEquals(42, lua.exec("return require('helper').value").toint());
     }
 
+    @Test void onlyPlayerTrustedSkinDirectoriesGetFullJavaAccess() throws Exception {
+        Path trustedRoot = Files.createDirectories(temp.resolve("skin").resolve("trusted"));
+        Path trustedSkin = Files.createDirectories(trustedRoot.resolve("select"));
+        Path untrustedSkin = Files.createDirectories(temp.resolve("skin").resolve("other"));
+        try {
+            SkinLuaAccessor.setTrustedSkinDirectories(new String[] { trustedRoot.toString() });
+            SkinLuaAccessor trusted = accessor(trustedSkin);
+            assertEquals("ok", trusted.exec("return luajava.newInstance('java.lang.StringBuilder','ok'):toString()").tojstring());
+            assertEquals(3, trusted.exec("return luajava.bindClass('java.lang.Math'):abs(-3)").toint());
+            assertTrue(trusted.exec("return os.getenv").isfunction());
+            assertTrue(trusted.exec("return io.popen").isfunction());
+
+            SkinLuaAccessor untrusted = accessor(untrustedSkin);
+            assertThrows(LuaError.class, () -> untrusted.exec("return luajava.bindClass('java.lang.Math')"));
+            assertTrue(untrusted.exec("return os.getenv").isnil());
+        } finally {
+            SkinLuaAccessor.setTrustedSkinDirectories(new String[0]);
+        }
+        // Without an entry, the same directory is sandboxed again.
+        assertTrue(accessor(trustedSkin).exec("return os.getenv").isnil());
+    }
+
     @Test void ioWithoutASkinDirectoryIsRefused() {
         SkinLuaAccessor lua = new SkinLuaAccessor(true);
         assertTrue(lua.exec("return io.open('anything.txt')").isnil());

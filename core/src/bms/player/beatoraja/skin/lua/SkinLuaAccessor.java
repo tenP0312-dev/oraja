@@ -340,6 +340,51 @@ public class SkinLuaAccessor {
 		skinDirectory = normalizedPath;
 		restrictedIo.setRoot(normalizedPath);
 		pkg.set("path", pkg.get("path").tojstring() + ";" + normalizedPath + "/?.lua");
+		if (!fullAccess && isTrustedSkinDirectory(normalizedPath)) {
+			grantFullAccess(normalizedPath);
+		}
+	}
+
+	private static volatile java.util.List<Path> trustedSkinDirectories = java.util.List.of();
+	private boolean fullAccess;
+
+	/** Directories from Config#getLuaTrustedSkinDirectories; set by the player only. */
+	public static void setTrustedSkinDirectories(String[] directories) {
+		java.util.List<Path> trusted = new java.util.ArrayList<>();
+		if (directories != null) {
+			for (String directory : directories) {
+				if (directory == null || directory.isBlank()) continue;
+				try {
+					trusted.add(Path.of(directory.trim()).toAbsolutePath().normalize());
+				} catch (RuntimeException e) {
+					logger.warn("Ignoring invalid trusted Lua skin directory: {}", directory);
+				}
+			}
+		}
+		trustedSkinDirectories = java.util.List.copyOf(trusted);
+	}
+
+	static boolean isTrustedSkinDirectory(Path skinDirectory) {
+		for (Path trusted : trustedSkinDirectories) {
+			if (skinDirectory.startsWith(trusted)) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Restores the libraries the sandbox removes (os, io, luajava, debug) for a
+	 * skin under a directory the player explicitly trusts. Older skins that
+	 * drive the client through Java (for example ports that read the target
+	 * list or the player config) need this to work.
+	 */
+	private void grantFullAccess(Path directory) {
+		fullAccess = true;
+		logger.warn("Lua skin in a trusted directory runs with full Java access: {}", directory);
+		globals.load(new org.luaj.vm2.lib.jse.JseIoLib());
+		globals.load(new org.luaj.vm2.lib.jse.JseOsLib());
+		globals.load(new org.luaj.vm2.lib.jse.LuajavaLib());
+		globals.load(new DebugLib());
+		globals.package_.setIsLoaded("luajava", globals.get("luajava").checktable());
 	}
 
 	/**
