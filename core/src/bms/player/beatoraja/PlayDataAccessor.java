@@ -225,13 +225,34 @@ public final class PlayDataAccessor {
 	}
 
 	public ScoreData readManiacScoreData(SongData song, String storageHash, int lnmode) {
-		ScoreDatabaseAccessor database = scoreDatabase(song, true);
-		int mode = songScoreMode(song, lnmode);
-		ScoreData score = database.getScoreData(storageHash, mode);
-		if (score == null && mode != 0 && !separatesScore(song)) {
-			score = database.getScoreData(storageHash, 0);
+		ScoreData score = readManiacScoreDataByKey(song, maniacStorageKey(song, storageHash), lnmode);
+		if (score == null && storageHash != null && !storageHash.equals(maniacStorageKey(song, storageHash))) {
+			// Scores synced from the server are stored under the untransformed id.
+			score = readManiacScoreDataByKey(song, storageHash, lnmode);
 		}
 		return BMSIRLongNoteMode.compatibleScore(score, separatesScore(song));
+	}
+
+	private ScoreData readManiacScoreDataByKey(SongData song, String key, int lnmode) {
+		if (key == null) return null;
+		ScoreDatabaseAccessor database = scoreDatabase(song, true);
+		int mode = songScoreMode(song, lnmode);
+		ScoreData score = database.getScoreData(key, mode);
+		if (score == null && mode != 0 && !separatesScore(song)) {
+			score = database.getScoreData(key, 0);
+		}
+		return score;
+	}
+
+	/**
+	 * Local MANIAC plays are saved under the parser-compatibility storage hash
+	 * of the MANIAC id (see scoreHash(BMSModel)), exactly like ordinary plays.
+	 * Reading with the bare MANIAC id missed them on parser-affected charts, so
+	 * their clear lamps did not show outside the rival ranking.
+	 */
+	private static String maniacStorageKey(SongData song, String storageHash) {
+		if (storageHash == null || storageHash.isBlank()) return storageHash;
+		return BMSIRParserCompatibility.storageHash(song, storageHash);
 	}
 
 	public void readManiacScoreDatas(
@@ -243,8 +264,21 @@ public final class PlayDataAccessor {
 		for (boolean separate : new boolean[]{false, true}) {
 			SongData[] group = Arrays.stream(songs).filter(s -> separatesScore(s) == separate).toArray(SongData[]::new);
 			if (group.length == 0) continue;
-			(separate ? forcedManiacScoredb : maniacScoredb).getScoreDatasByHash(
-					collector, group, lnmode, storageHashProvider, true, separate);
+			ScoreDatabaseAccessor database = separate ? forcedManiacScoredb : maniacScoredb;
+			java.util.Map<SongData, ScoreData> found = new java.util.IdentityHashMap<>();
+			database.getScoreDatasByHash(found::put, group, lnmode,
+					song -> maniacStorageKey(song, storageHashProvider.apply(song)), true, separate);
+			// Synced scores of parser-affected charts sit under the untransformed id.
+			SongData[] missing = Arrays.stream(group).filter(song -> found.get(song) == null
+					&& BMSIRParserCompatibility.affected(song)
+					&& storageHashProvider.apply(song) != null).toArray(SongData[]::new);
+			if (missing.length > 0) {
+				database.getScoreDatasByHash((song, score) -> { if (score != null) found.put(song, score); },
+						missing, lnmode, storageHashProvider, true, separate);
+			}
+			for (SongData song : group) {
+				collector.collect(song, found.get(song));
+			}
 		}
 	}
 
