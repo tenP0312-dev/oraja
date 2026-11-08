@@ -61,6 +61,23 @@ class ParserStorageCompatibilityTest {
         data.deleteScoreData(current, 0); assertNull(data.readScoreData(current, 0));
         assertEquals(6, data.readScoreData(old, 0).getExscore());
     }
+    @Test void maniacPlaysOnParserAffectedChartsAreReadBackWithTheirSavedKey() throws Exception {
+        Path path = chart(); BMSModel current = decode(path, false);
+        PlayDataAccessor data = new PlayDataAccessor(config());
+        SongData song = new SongData(current, false);
+        assertTrue(BMSIRParserCompatibility.affected(song), "fixture must be a parser-affected chart");
+        String maniacId = "maniac-" + current.getSHA256();
+        current.getValues().put(bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext.MODEL_STORAGE_HASH, maniacId);
+        data.writeScoreData(score(current, 1), current, 0, true);
+        // Saved under the parser storage hash of the MANIAC id, not the bare id.
+        ScoreData single = data.readManiacScoreData(song, maniacId, 0);
+        assertNotNull(single, "clear lamp of a MANIAC play must be readable on the select screen");
+        assertEquals(1, single.getClear());
+        Map<SongData, ScoreData> batch = new IdentityHashMap<>();
+        data.readManiacScoreDatas(batch::put, new SongData[]{song}, 0, ignored -> maniacId);
+        assertNotNull(batch.get(song));
+        assertEquals(single.getExscore(), batch.get(song).getExscore());
+    }
     @Test void courseStorageAndOldReplayFallbackKeepBothInterpretations() throws Exception {
         Path path = chart(); BMSModel old = decode(path, true), current = decode(path, false);
         Config config = config(); PlayDataAccessor data = new PlayDataAccessor(config);
