@@ -183,6 +183,7 @@ public class ImGuiRenderer {
             if (show(ModMenuItem.MY_TABLE_EDITOR)) ImGui.checkbox(t("難易度表編集", "Show Table Editor Window"), SHOW_MY_TABLE_EDITOR);
             if (show(ModMenuItem.MANIAC_OPTIONS) && ImGui.button("MANIAC OPTIONS")) showManiacOptions();
             if (show(ModMenuItem.NONSTOP_MIX)) ImGui.checkbox(t("NONSTOP MIX（曲をつないで連続プレイ）", "NONSTOP MIX (continuous sets)"), SHOW_NONSTOP_MIX);
+            if (show(ModMenuItem.DIFFICULTY_FILTER)) DifficultyFilterMenu.render();
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
                     !BMSIRArenaOverlay.isHidden()

@@ -1159,6 +1159,7 @@ public class MainController {
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
 		MiscSettingMenu.setMain(this);
 		HandCameraMenu.setMain(this);
+		bms.player.beatoraja.modmenu.DifficultyFilterMenu.setMain(this);
 		FunctionKeyMenu.setMain(this);
 		bms.player.beatoraja.modmenu.NonstopMixMenu.setMain(this);
 		if (initializeArena) {

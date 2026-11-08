@@ -1128,11 +1128,23 @@ public class BarManager {
 	}
 
 	public void setDifficultyFilter(int difficulty) {
-		select.resource.getPlayerConfig().setDifficultyFilter(
-				Math.max(0, Math.min(5, difficulty))
-		);
+		int filter = Math.max(0, Math.min(5, difficulty));
+		select.resource.getPlayerConfig().setDifficultyFilter(filter);
 		updateBar();
 		select.play(OPTION_CHANGE);
+		// An accidental filter key press otherwise looks like songs vanished.
+		bms.player.beatoraja.modmenu.ImGuiNotify.info(difficultyFilterNotice(filter));
+	}
+
+	static String difficultyFilterNotice(int filter) {
+		String label = bms.player.beatoraja.modmenu.DifficultyFilterMenu.label(filter);
+		return filter == 0
+				? bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+						"難易度フィルター：" + label + "（全曲を表示）",
+						"Difficulty filter: " + label + " (all songs shown)")
+				: bms.player.beatoraja.arena.bmsir.BMSIRArenaI18n.text(
+						"難易度フィルター：" + label + " のみ表示中（F5 メニューか同じキーで戻せます）",
+						"Difficulty filter: showing " + label + " only (reset from the F5 menu or the same key)");
 	}
 
 	static Bar[] filterDifficultyBars(Bar[] bars, int difficulty) {
