@@ -100,6 +100,30 @@ class PersistentRankingDataStoreTest {
     }
 
     @Test
+    void bothReleasedAndEarlyLegacyVersionsAreMigrated() throws Exception {
+        IRStatus status = status("https://ir.example", "account");
+        IRRankingContext context = new IRRankingContext(0, false);
+        SongData chart = chartTarget("3".repeat(64));
+        PersistentRankingDataStore writer = new PersistentRankingDataStore();
+        Path source = directory.resolve("source");
+        writer.save(source.toString(), "player", status, context, chart, new IRScoreData[]{score("a", 44, ClearType.Hard)});
+        PersistentRankingDataStore.Entry entry = onlyEntry(writer, source, status, context, chart);
+        writer.close();
+        for (int version : new int[] { 1, 2 }) {
+            Path root = directory.resolve("v" + version);
+            writeLegacy(root.resolve("player"), version, entry);
+            PersistentRankingDataStore store = new PersistentRankingDataStore();
+            assertEquals(44, store.load(root.toString(), "player", status, context, chart)[0].epg, "version " + version);
+            store.close();
+        }
+        Path unknown = directory.resolve("v9");
+        writeLegacy(unknown.resolve("player"), 9, entry);
+        PersistentRankingDataStore store = new PersistentRankingDataStore();
+        assertNull(store.load(unknown.toString(), "player", status, context, chart));
+        store.close();
+    }
+
+    @Test
     void scopedSaveReplacesTheChartRowAndLastGoodSeesIt() {
         PersistentRankingDataStore store = new PersistentRankingDataStore();
         IRStatus status = status("https://ir.example", "account");
@@ -252,8 +276,13 @@ class PersistentRankingDataStoreTest {
 
     /** Writes the former single-file JSON cache with the old default writer. */
     private static void writeLegacy(Path profile, PersistentRankingDataStore.Entry... entries) throws Exception {
+        writeLegacy(profile, 2, entries);
+    }
+
+    private static void writeLegacy(Path profile, int version, PersistentRankingDataStore.Entry... entries) throws Exception {
         Files.createDirectories(profile);
         PersistentRankingDataStore.CacheFile file = new PersistentRankingDataStore.CacheFile();
+        file.version = version;
         file.entries.addAll(java.util.List.of(entries));
         com.badlogic.gdx.utils.Json oldJson = new com.badlogic.gdx.utils.Json();
         oldJson.setUsePrototypes(false);

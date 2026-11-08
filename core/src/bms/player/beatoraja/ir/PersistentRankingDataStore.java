@@ -44,7 +44,10 @@ import bms.player.beatoraja.system.RobustFile;
  */
 public final class PersistentRankingDataStore {
     private static final Logger logger = LoggerFactory.getLogger(PersistentRankingDataStore.class);
-    private static final int FORMAT_VERSION = 1;
+    // Released clients (0.4.14.124 and earlier) wrote version 2; early
+    // development builds wrote 1. Both share the same entry layout.
+    private static final int FORMAT_VERSION = 2;
+    private static final java.util.Set<Integer> LEGACY_VERSIONS = java.util.Set.of(1, 2);
     private static final String LEGACY_FILE_NAME = "ir-ranking-cache.json";
     private static final String DATABASE_FILE_NAME = "ir-ranking-cache.sqlite";
     private static final String LEGACY_MIGRATED_KEY = "legacy_json_migrated";
@@ -423,7 +426,7 @@ public final class PersistentRankingDataStore {
      */
     private CacheFile parseLegacy(String text) throws java.text.ParseException {
         JsonValue root = new com.badlogic.gdx.utils.JsonReader().parse(text);
-        if (root == null || !root.isObject() || root.getInt("version", -1) != FORMAT_VERSION) {
+        if (root == null || !root.isObject() || !LEGACY_VERSIONS.contains(root.getInt("version", -1))) {
             throw new java.text.ParseException("unsupported or invalid ranking cache", 0);
         }
         JsonValue entries = root.get("entries");
