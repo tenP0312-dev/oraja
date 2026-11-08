@@ -1151,6 +1151,7 @@ public class MainController {
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
 		MiscSettingMenu.setMain(this);
+		bms.player.beatoraja.modmenu.DifficultyFilterMenu.setMain(this);
 		FunctionKeyMenu.setMain(this);
 		if (initializeArena) {
 			BMSIRArenaClient.initialize(this);
