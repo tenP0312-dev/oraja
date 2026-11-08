@@ -17,7 +17,8 @@ public enum ModMenuItem {
     MY_TABLE_EDITOR("my_table_editor", "難易度表編集", "Table Editor"),
     BMSIR_ARENA_OVERLAY("bmsir_arena_overlay", "BMS-IR Arenaオーバーレイ", "BMS-IR Arena Overlay"),
     ARENA_DEBUG("arena_debug", "Arena orajaデバッグ情報", "Arena oraja Debug Information"),
-    MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS");
+    MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS"),
+    DIFFICULTY_FILTER("difficulty_filter", "難易度フィルター", "Difficulty Filter");
 
     public final String id;
     public final String displayName;
