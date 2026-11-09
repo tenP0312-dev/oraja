@@ -36,6 +36,13 @@
         <CheckBox fx:id="skinSelectPreviewEnabled" mnemonicParsing="false" text="%SKIN_SELECT_PREVIEW_ENABLED"/>
         <Label maxWidth="520.0" style="-fx-text-fill: #555555;" text="%SKIN_SELECT_PREVIEW_DESCRIPTION" wrapText="true"/>
     </HBox>
+    <HBox fx:id="skinLuaTrustRow" alignment="CENTER_LEFT" spacing="12.0" managed="false" visible="false">
+        <VBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0"/>
+        </VBox.margin>
+        <CheckBox fx:id="skinLuaTrusted" mnemonicParsing="false" onAction="#changeSkinLuaTrusted" text="%SKIN_LUA_TRUSTED"/>
+        <Label maxWidth="520.0" style="-fx-text-fill: #8a4b00;" text="%SKIN_LUA_TRUSTED_DESCRIPTION" wrapText="true"/>
+    </HBox>
     <ScrollPane fx:id="skinconfig" prefHeight="400.0" prefWidth="723.0" VBox.vgrow="ALWAYS">
         <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="200.0"/>
     </ScrollPane>
