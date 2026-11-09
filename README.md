@@ -23,11 +23,10 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
-Version 0.4.14.128 preserves every 0.4.14.127 feature and adds merged oraja
-#604 (#603): trusted Lua skin folders can be registered, and #606 (#605): the
-difficulty filter can be shown, toggled and reset from the F5 overlay.
-Plugin 0.0.82, launcher 0.2.30 and optional updates remain.
-See [the test scope](docs/TEST_RELEASE_0.4.14.128.md).
+Version 0.4.14.129 preserves every 0.4.14.128 feature and adds merged oraja
+#607 (#603): the launcher Skin tab can trust a Lua skin with a checkbox and
+confirmation. Plugin 0.0.82, launcher 0.2.30 and optional updates remain.
+See [the test scope](docs/TEST_RELEASE_0.4.14.129.md).
 
 Version 0.4.14.124 preserves every 0.4.14.123 feature, refreshes legacy
 catalog and personal-best references after parser PB saves (#587), and can send

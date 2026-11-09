@@ -68,7 +68,7 @@ tasks {
 
         destinationDirectory.set(projectDir.resolveSibling("dist"))
         archiveBaseName.set("BMS-IR-Arena-oraja")
-        archiveVersion.set("0.4.14.128")
+        archiveVersion.set("0.4.14.129")
         archiveClassifier.set(platformClassifier)
         mergeServiceFiles()
 
