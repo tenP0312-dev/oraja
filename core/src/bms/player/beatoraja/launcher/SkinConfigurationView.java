@@ -39,6 +39,13 @@ public class SkinConfigurationView implements Initializable {
 	private Button skinUpdateButton;
 	@FXML
 	private CheckBox skinSelectPreviewEnabled;
+	@FXML
+	private javafx.scene.layout.HBox skinLuaTrustRow;
+	@FXML
+	private CheckBox skinLuaTrusted;
+
+	private Config config;
+	private ResourceBundle resources;
 
 	private PlayerConfig player;
 	private SkinType mode = null;
@@ -55,6 +62,7 @@ public class SkinConfigurationView implements Initializable {
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
+		this.resources = resources;
 		skintypeSelector.setCellFactory((param) -> new SkinTypeCell());
 		skintypeSelector.setButtonCell(new SkinTypeCell());
 		skintypeSelector.getItems().addAll(SkinType.values());
@@ -177,6 +185,7 @@ public class SkinConfigurationView implements Initializable {
 	}
     
     public void update(Config config) {
+		this.config = config;
 		List<Path> skinpaths = new ArrayList<Path>();
 		scan(Paths.get(config.getSkinpath()), skinpaths);
 		for (Path path : skinpaths) {
@@ -270,8 +279,84 @@ public class SkinConfigurationView implements Initializable {
 			}
 		}
 		skinconfig.setContent(create(header, property));
-    	
+		updateSkinLuaTrust(header);
     }
+
+	/** Lua and JSON skins can run Lua; LR2 skins cannot. */
+	static boolean runsLua(SkinHeader header) {
+		if (header == null || header.getPath() == null) return false;
+		String name = header.getPath().getFileName().toString().toLowerCase();
+		return name.endsWith(".luaskin") || name.endsWith(".json");
+	}
+
+	static Path trustDirectory(SkinHeader header) {
+		Path parent = header.getPath().toAbsolutePath().normalize().getParent();
+		return parent != null ? parent : header.getPath().toAbsolutePath().normalize();
+	}
+
+	static boolean isTrusted(String[] trusted, Path directory) {
+		if (trusted == null) return false;
+		for (String entry : trusted) {
+			if (entry == null || entry.isBlank()) continue;
+			try {
+				if (directory.startsWith(Path.of(entry.trim()).toAbsolutePath().normalize())) return true;
+			} catch (RuntimeException ignored) {
+			}
+		}
+		return false;
+	}
+
+	/** Stores the directory relative to the game folder when it is inside it. */
+	static String storedPath(Path directory) {
+		Path base = Path.of("").toAbsolutePath().normalize();
+		return directory.startsWith(base) ? base.relativize(directory).toString().replace('\\', '/') : directory.toString();
+	}
+
+	static String[] withTrust(String[] trusted, Path directory, boolean trust) {
+		List<String> result = new ArrayList<>();
+		if (trusted != null) {
+			for (String entry : trusted) {
+				if (entry == null || entry.isBlank()) continue;
+				boolean same;
+				try {
+					same = Path.of(entry.trim()).toAbsolutePath().normalize().equals(directory);
+				} catch (RuntimeException e) {
+					same = false;
+				}
+				if (!same) result.add(entry);
+			}
+		}
+		if (trust) result.add(storedPath(directory));
+		return result.toArray(new String[0]);
+	}
+
+	private void updateSkinLuaTrust(SkinHeader header) {
+		boolean visible = config != null && runsLua(header);
+		skinLuaTrustRow.setVisible(visible);
+		skinLuaTrustRow.setManaged(visible);
+		if (visible) {
+			skinLuaTrusted.setSelected(isTrusted(config.getLuaTrustedSkinDirectories(), trustDirectory(header)));
+		}
+	}
+
+	@FXML
+	public void changeSkinLuaTrusted() {
+		SkinHeader header = skinheaderSelector.getValue();
+		if (config == null || !runsLua(header)) return;
+		Path directory = trustDirectory(header);
+		boolean trust = skinLuaTrusted.isSelected();
+		if (trust) {
+			javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+			confirm.setTitle(resources.getString("SKIN_LUA_TRUSTED_CONFIRM_TITLE"));
+			confirm.setHeaderText(resources.getString("SKIN_LUA_TRUSTED_CONFIRM_HEADER"));
+			confirm.setContentText(resources.getString("SKIN_LUA_TRUSTED_CONFIRM_DESCRIPTION") + "\n\n" + directory);
+			if (confirm.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL) != javafx.scene.control.ButtonType.OK) {
+				skinLuaTrusted.setSelected(false);
+				return;
+			}
+		}
+		config.setLuaTrustedSkinDirectories(withTrust(config.getLuaTrustedSkinDirectories(), directory, trust));
+	}
     
     public void commitSkinHeader() {
 		// history保存
