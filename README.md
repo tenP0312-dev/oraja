@@ -23,6 +23,13 @@ OpenALでは未対応と表示し、設定値を保持します。変更は本�
 
 ## Current Version
 
+Version 0.4.14.121 preserves 0.4.14.120 and adds only #573's bounded Lua
+compilation reuse and reflection metadata reuse to reduce temporary allocation
+while loading skins. Mutable Lua state and callback results remain independent.
+Plugin 0.0.81 and launcher 0.2.30 are retained; this is an optional test.
+See [the test scope](docs/TEST_RELEASE_0.4.14.121.md). Real process-memory and
+stutter acceptance remains operator-run in #574.
+
 Version 0.4.14.120 preserves 0.4.14.119 and brings in main-only changes
 (#569): HI-SPEED gets its own tab and F5 window with Normal/LR2/Floating per
 key mode and live switching, and Floating HI-SPEED is green-number driven
