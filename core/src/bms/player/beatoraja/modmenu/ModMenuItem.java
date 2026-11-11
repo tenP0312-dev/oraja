@@ -14,10 +14,12 @@ public enum ModMenuItem {
     HISPEED_SETTINGS("hispeed_settings", "ハイスピード", "HI-SPEED"),
     SOUND_SETTINGS("sound_settings", "音", "Sound"),
     DISPLAY_SETTINGS("display_settings", "表示", "Display"),
+    HAND_CAMERA("hand_camera", "手元カメラ", "Hand Camera"),
     MY_TABLE_EDITOR("my_table_editor", "難易度表編集", "Table Editor"),
     BMSIR_ARENA_OVERLAY("bmsir_arena_overlay", "BMS-IR Arenaオーバーレイ", "BMS-IR Arena Overlay"),
     ARENA_DEBUG("arena_debug", "Arena orajaデバッグ情報", "Arena oraja Debug Information"),
     MANIAC_OPTIONS("maniac_options", "MANIAC OPTIONS", "MANIAC OPTIONS"),
+    NONSTOP_MIX("nonstop_mix", "NONSTOP MIX", "NONSTOP MIX"),
     DIFFICULTY_FILTER("difficulty_filter", "難易度フィルター", "Difficulty Filter");
 
     public final String id;

@@ -1,4 +1,75 @@
-# Unreleased
+# Arena oraja 0.4.14.92
+
+- NANTOKA MANIA v2の判定処理を更新しました。DP皿、入力候補と見逃し、HCN途中離し・再保持、BSS停止、8/10フレーム周期を修正しました。
+- Updated NANTOKA MANIA v2 judgment handling: DP scratches, candidate/miss limits, HCN release/reentry, BSS stop, and 8/10-frame cycles.
+- 新旧成績を分離し、旧リプレイはv1で再生します。任意test、plugin 0.0.77／launcher 0.2.29を継続します。
+
+# Arena oraja 0.4.14.91
+
+- NANTOKA MANIAの段位判定・専用ゲージ、コントローラー対応My Table編集、Sceneコンパイル再利用、ADDNOTES v2、強制LN切替後のランキング再取得を追加。
+- Added NANTOKA course rules, controller My Table editing, Scene compilation reuse, ADDNOTES v2, and LN-context ranking revalidation.
+- NANTOKA段位は通常成績に保存・IR送信しません。任意test、plugin 0.0.77／launcher 0.2.29を継続します。
+
+# Arena oraja 0.4.14.90
+
+- 段位コース合否のリザルト表示、Mod Menuの項目別設定保存、任意の4/7バンド出力EQを追加しました。
+- Added course qualification results, persistent Mod Menu item settings, and optional four/seven-band output EQ.
+- 任意の内部test配布です。plugin 0.0.77、launcher 0.2.29を継続します。
+
+# Arena oraja 0.4.14.86
+
+- CN/HCN指定譜面の強制LN時に、取得ランキングへ元のCN/HCN情報が残る問題を修正しました。ON/OFFのランキングキャッシュも切り替えます。
+- 送信処理は変更していません。plugin 0.0.75、launcher 0.2.29を継続します。
+- Fixed Force LN ranking requests and ON/OFF caches for authored CN/HCN charts. Score submission is unchanged.
+
+# Arena oraja 0.4.14.85
+
+- 強制LNをONにしても、LNなし・元からLNの譜面は従来のスコアとランプを使用します。CN/HCNをLNへ変換する譜面だけ専用成績に切り替わり、OFFに戻すと元の成績を表示します。
+- 未定義LNは従来のモード別成績を使用します。既存記録の移動・削除・MAX値による推測移行は行いません。plugin 0.0.75、launcher 0.2.29、7K TO 9K試遊版を継続します。
+- Force LN now shares ordinary bests for charts without long notes and charts already using LN. Only authored CN/HCN charts use separate forced-LN records; turning it OFF restores ordinary scores. Existing records are preserved without migration.
+
+# Arena oraja 0.4.14.84
+
+- MANIAC OPTIONSに7K TO 9K試遊版を追加。ON / NO SAVEで7鍵譜面を9鍵へ変換し、配置できないノーツはBGM化します。
+- スコア・ランプ・プレイ回数・履歴・リプレイを保存せず、ランキングへ送信しません。ソロ通常プレイとオートプレイ用です。
+- Added the disposable 7K TO 9K preview. Enable ON / NO SAVE in MANIAC OPTIONS for solo play or autoplay. Unplaced notes become BGM; no records, replays, or ranking submissions are saved.
+
+# Arena oraja 0.4.14.83
+
+- 起動前のBMS-IR固有設定に「強制LN」のON/OFFを追加（初期OFF）。ONでは譜面指定のCN/HCNもLNにします。OFFでは従来の譜面指定・LNモードに戻ります。
+- ON/OFFの自己ベストを分離し、リプレイは記録時の設定で再生します。対応pluginは0.0.75です。
+- Restore the default-off Force LN switch. ON plays authored CN/HCN as LN; OFF restores chart definitions and the saved LN mode. Local bests are separate; replays retain their recorded setting. Paired plugin: 0.0.75.
+
+# Arena oraja 0.4.14.81
+
+- Added NANTOKA MANIA MODE to MANIAC OPTIONS for 5/7/10/14KEY solo play.
+- Fixed its key/scratch judgment windows, integer gauge arithmetic, and
+  LN/CN/HCN/BSS handling independently of the ordinary rule profile.
+- Isolated mode-on local scores and replays, and excluded the mode from Arena,
+  courses, practice, ordinary IR, and MANIAC IR.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.80` behavior.
+
+# Arena oraja 0.4.14.80
+
+- Added optional vertical color gradients to dynamic TrueType/OpenType skin
+  text in JSON and Lua skins.
+- Required both upper and lower `RRGGBBAA` colors to enable the effect, while
+  retaining destination tint and alpha animation.
+- Preserved existing single-color text, Launcher `0.2.29`, plugin `0.0.72`,
+  protocol v8, and all `0.4.14.79` behavior.
+
+# Arena oraja 0.4.14.79
+
+- Fixed Skin Scene projective vertex shaders on macOS so the GLSL 150 core-
+  profile conversion rewrites every legacy `attribute` and `varying`
+  qualifier, including one at the start of the source.
+- Added a regression test for the converted vertex and fragment shader
+  contracts.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, Windows rendering,
+  and all `0.4.14.78` behavior.
+
+# Arena oraja 0.4.14.78
 
 - Fixed Skin Scene resources with `timer: 0` so they start with the state just
   like resources that omit `timer`.
@@ -8,25 +79,80 @@
   default quad upright for both top-left and bottom-left canvases.
 - Clarified that Skin Scene v1 provides seven blend modes and nested hard
   rectangle masks; it does not provide alpha/color masks.
+
+# Arena oraja 0.4.14.77
+
+- Added an optional neutral Skin Scene v1 resource for JSON and Lua skins.
+- Added compile-time schema and safety validation, deterministic clocks and
+  timeline interpolation, nested 2D/3D transforms, focal-camera projection,
+  perspective-correct textured meshes, color transforms, and seven named blend
+  modes.
+- Added nested hard rectangle masks, bounded texture references, disposal and
+  rendering metrics, malformed/non-finite input handling, and a self-authored
+  projective-grid sample.
+- Kept skins without a scene on the existing SpriteBatch path.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.76` behavior.
+
+# Arena oraja 0.4.14.76
+
+- Added a validated 0.01--20.00 field to the full and compact Arena overlays
+  for directly editing the selected mode's LR2 HI-SPEED. A matching live lane
+  updates immediately.
+- Added a labeled 1--1000 START+6/7 lane-cover step field to both overlays. It
+  edits the existing shared player setting and remains separate from the
+  per-mode HI-SPEED change step.
+- Renamed the existing Japanese Long Note Modify settings to expose the
+  forced-LN conversion clearly without changing OFF, REMOVE, or ADD behavior.
 - Filtered root difficulty-table bars by the active concrete key mode. Mixed
   tables remain visible for their contained modes, ALL shows every table, and
   any unresolved chart or course mode keeps the table safely reachable.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.75` behavior.
+
+# Arena oraja 0.4.14.75
+
 - Added a default-on per-player Skin Select live-preview switch. Turning it off
   skips preview construction, reload, and rendering without disabling skin
   selection or custom options.
 - Added AUTO/current-chart and explicit play-mode selection to the LR2
   fixed-HI-SPEED overlay editor, plus a labeled numeric per-mode HI-SPEED
   change-step field with a validated 0.00--10.00 range.
-- Added a labeled 1--1000 START+6/7 lane-cover step field to the full and
-  compact Arena overlays. It edits the existing global player setting and
-  remains separate from the per-mode HI-SPEED change step.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.74` behavior.
+
+# Arena oraja 0.4.14.74
+
 - Updated the 7z reader to Apache Commons Compress 1.26.2 and added a
   concurrent-reader regression test, preventing false checksum failures when
   movie BGA materialization overlaps the solid-7z key-sound pass.
+- When BMS-IR is Primary IR, kept only the dedicated `BMS-IR Leaderboard`
+  instead of showing a second generic entry for the same service. Other
+  Primary IR services retain their separate leaderboard.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+  `0.4.14.73` behavior.
+
+# Arena oraja 0.4.14.73
+
 - Replaced the archive-only song-update completion Alert with one consolidated
   result dialog. The inherited full-library detected, processed, and
   added/updated chart counts remain primary; scanned, loaded, and unreadable
   archive counts appear as a secondary breakdown with the last failure reason.
+- Applied the file's effective `#BASE` consistently to base-dependent extended
+  header IDs even when `#BASE 62` appears after their definitions. Ordinary
+  base-36 and early-base-62 charts retain their existing interpretation and
+  chart-file hashes.
+- Loaded referenced key sounds from a solid 7z archive through one bounded
+  sequential archive pass before parallel audio decoding. This prevents
+  concurrent reads of one solid block from causing checksum failures and
+  missing audio.
+- Removed the per-chart temporary audio copies after loading while leaving the
+  original compressed archive unchanged.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and the complete
+  `0.4.14.72` behavior.
+
+# Arena oraja 0.4.14.72
+
 - Restored the Endless Dream feature paths that had diverged in Arena: the
   last-played overlay no longer hides legacy skin sort output, Practice Random
   Trainer applies its selected seed, BGA image IDs no longer share a texture,
@@ -39,17 +165,158 @@
 - Added executable ED 0.4.0 and distribution-fix inventories. CI and the final
   release builder now reject a source tree that loses a feature entry, state
   path, execution path, or protected regression test.
+- Restored authored `#LNMODE`, LN/CN/HCN selection, missed-POOR visibility,
+  keyboard/controller-axis/mouse/MIDI difficulty filtering, play controls and
+  floating HI-SPEED, and 5K/10K result-input compatibility.
+- Restored PNG/JPG screenshots, song/course `/deletescore`, database BACKBMP,
+  IR player names, skin 378/379 including the LITONE play date, automatic
+  `oraja_helper` payloads, and uncleared Random Select presets.
+- Kept rian DX/X MODE and all rianIR submission/replay-send paths excluded by
+  product-owner decision. Launcher `0.2.29`, plugin `0.0.72`, protocol v8,
+  native audio, and the `0.4.14.59` through `.71` release fixes remain present.
+
+# Arena oraja 0.4.14.71
+
 - Hid the Arena play cursor without capturing or confining the OS pointer.
   Mouse movement, the Mod Menu, and leaving play restore cursor visibility;
   ordinary non-Arena cursor capture is unchanged.
-- Fixed Skin Select PLAY previews so falling notes restart and continue on
-  every loop instead of disappearing after the first iteration.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior,
+  native audio, and bundled default skins.
+
+# Arena oraja 0.4.14.70
+
+- Restored top-row `8` as the fixed Music Select compatibility shortcut for
+  `Show All Charts`. Physical NUMPAD 8 remains a separate configurable
+  shortcut and keeps its saved assignment.
+- Preserved Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior,
+  native audio, and bundled default skins.
+
+# Arena oraja 0.4.14.69
+
+- Kept the transactional all-table refresh already present in the release
+  line: all configured tables are downloaded and validated before replacement,
+  and any failure preserves the previous caches.
+- Stopped the Music Select BGM and explicit or generated preview synchronously
+  before ordinary or Arena gameplay begins.
+- Restored the default Music Select BGM after an explicit or discovered OpenAL
+  one-shot preview reaches its decoded duration.
+- Added default-OFF timing diagnostics for static-image BGA cache planning,
+  collisions, runtime misses, and texture upload time without changing cache
+  or rendering behavior.
+- Kept bundled default skin assets and definitions unchanged. Launcher
+  `0.2.29`, plugin `0.0.72`, protocol, score behavior, and the Windows
+  native-audio repair baseline are unchanged.
+
+# Arena oraja 0.4.14.68
+
+- Kept the Skin Widget Manager open independently of the F5 parent menu.
+- Removed its visibility-wide gameplay input lock; actual ImGui focus, active
+  controls, and text input continue to use the shared capture path.
+- Included width-only and height-only edits in clipboard export.
+- Clarified that the manager temporarily edits only the current scene skin and
+  does not edit the separate BMS-IR Arena overlay or write skin source files.
+- Preserved launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior, and
+  the Windows native-audio repair baseline.
+
+# Arena oraja 0.4.14.66
+
+- Republished the Windows body as a complete native-audio repair baseline.
+- Included the required PortAudio/JPortAudio DLLs and their pinned sources,
+  licenses, build manifest, and SPDX SBOM in the same body release manifest.
+- Launcher `0.2.28` now restores those files when they are missing from an
+  existing installation while applying the current body update.
+- Preserved the `0.4.14.65` client behavior. Launcher `0.2.28` and plugin
+  `0.0.72` are otherwise unchanged.
+
+# Arena oraja 0.4.14.65
+
+- Removed the non-working pseudo-FHS switch and restored ordinary
+  START+SELECT/LIFT controls.
+- Removed the BMS-IR-specific equivalent-green editor/readout. Ordinary skin
+  green number reporting continues to use actual BPM, cover, and LIFT.
+- Replaced the fixed 7KEYS label with a selectable BMS-IR settings mode.
+- Added independent 50–400 reference-BPM values per play mode, defaulting to
+  150, alongside the existing base scroll values.
+- Added LR2-style fixed-HI-SPEED ON/OFF, base-scroll, and reference-BPM
+  controls to both full and compact Music Select Arena overlays.
+- Preserved NO SPEED authority and replay snapshots. Launcher `0.2.28` and
+  plugin `0.0.72` are unchanged.
+
+# Arena oraja 0.4.14.64
+
+- Added a default-OFF LR2-style fixed-HI-SPEED override with independent base
+  scroll values for 5-key, 7-key, 10-key, 14-key, 9-key, 24-key, and 24-key
+  double play, using a fixed 150 BPM reference.
+- Made the displayed and editable equivalent green number account for both
+  SUD+ and LIFT, using the same calculation in Start Here and active play.
+- Added an independent pseudo-FHS option: a clean short START+SELECT release
+  latches the current green number, while the normal exit hold uses the larger
+  of 500 ms and the configured exit delay.
+- Preserved NO SPEED constraints and snapshotted the settings into replay data.
+  Existing configurations keep both switches off and base scroll at 100.
+
+# Arena oraja 0.4.14.63
+
+- Moved the physical-folder visibility parent switch and BMS Path checklist
+  from BMS-IR Features to Resource directly below BMS Path.
+- Classic and Sidebar now expose the controls through the same Resource
+  controller.
+- Preserved saved per-player values, the default-OFF behavior, BMS Path
+  ordering, and every Music Select filtering and exclusion rule from
+  `0.4.14.62`.
+
+# Arena oraja 0.4.14.62
+
+- Added a default-OFF, per-player switch to limit physical folders shown at
+  the Music Select root.
+- When enabled, the launcher shows one checkbox per configured BMS Path and
+  keeps only checked physical roots. Leaving all boxes unchecked creates a
+  difficulty-table-only root.
+- Difficulty tables, courses, favorites, commands, searches, Primary IR
+  roots, and Arena candidate folders are never filtered by this setting.
+- Retains the protocol-v8 LN/CN/HCN behavior, readable archive names, and all
+  recovery features shipped in 0.4.14.61.
+
+# Arena oraja 0.4.14.61
+
+- Restored the ordinary `LONG NOTE` / `CHARGE NOTE` / `HELL CHARGE NOTE`
+  selection and preserved the selected mode through decoding, local records,
+  ranking requests, and score submission.
+- Advanced Arena communication to protocol v8. Casual/private rooms lock the
+  selected LN/CN/HCN mode and verify every participant's decoded note count at
+  the ready barrier; rated Arena remains LN-only.
 - Saved newly accepted BMS-IR body archives as portable readable
   `[artist]title-<8-character-md5>.zip/.rar/.7z` files while preserving the
   detected archive format and no-overwrite validation.
 - Kept legacy `bmsir-<full-md5>` packages reusable and rediscovered managed
   multi-chart packages after restart even when the filename came from another
   requested chart in the same package.
+- Retains the settings search, gameplay-start mitigation, download recovery,
+  difficulty-table comments, and safe all-table update shipped in 0.4.14.60.
+
+# Arena oraja 0.4.14.60
+
+- Restored startup-settings search by localized title, setting label, and
+  description, including category navigation and a clear no-results state.
+- Restored the gameplay-start render-stall mitigation and extended timing
+  diagnostics without changing ordinary gameplay scheduling policy.
+- Restored BMS-IR body-download recovery across restarts, queued targeted song
+  updates, and post-scan requested-chart verification.
+- Restored difficulty-table comment import, cache retention, and Music Select
+  skin string property `tablecomment` / `1004`.
+- Retains the safe all-table cache replacement from 0.4.14.59 and remains on
+  Arena wire protocol v7.
+
+# Arena oraja 0.4.14.59
+
+- Restored one visible Resource-settings action for updating every configured
+  difficulty table in both classic and sidebar layouts.
+- Fetches and validates the complete configured table set before replacing
+  live caches.
+- Removes orphan `.bmt` files left by URL edits or removals only after every
+  table succeeds, while preserving unrelated files.
+- Keeps or restores the previous complete cache set when any fetch,
+  validation, or cache operation fails.
 
 # Arena oraja 0.4.14.58
 

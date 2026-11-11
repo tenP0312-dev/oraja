@@ -70,12 +70,16 @@ public final class BMSIRManiacApiClient {
     }
 
     public static boolean hasOnlineRanking(MainController main, SongData song) {
-        BMSIRManiacSettings settings = effectiveSettings(main, song);
-        return settings != null && onlineRanking(settings);
+        return identity(main, song) != null;
     }
 
     public static boolean canSubmit(BMSIRManiacSettings settings) {
         return settings != null && onlineRanking(settings);
+    }
+
+    /** NANTOKA MANIA plays go to the player's external ranking server when one is configured. */
+    public static boolean canSubmit(MainController main, BMSIRManiacSettings settings) {
+        return canSubmit(settings) || BMSIRNantokaIr.accepts(main, settings);
     }
 
     public static boolean shouldSubmit(
@@ -135,9 +139,8 @@ public final class BMSIRManiacApiClient {
         }
         Thread worker = new Thread(() -> {
             try {
-                Auth auth = auth(main);
-                ObjectNode response = post(main, RANKING_PATH, identityPayload(identity, auth));
-                ranking.updateScore(scores(response, auth.playerId()), localScore(main, song, identity));
+                Ranking response = ranking(main, identity);
+                ranking.updateScore(scores(response.body(), response.ownPlayerId()), localScore(main, song, identity));
             } catch (Exception error) {
                 ranking.failAccess();
                 logger.warn("MANIAC ranking request failed: {}", error.getMessage());
@@ -157,8 +160,9 @@ public final class BMSIRManiacApiClient {
         Identity identity = identity(main, song);
         if (identity == null) return new LeaderboardEntry[0];
         try {
-            Auth auth = auth(main);
-            ObjectNode response = post(main, RANKING_PATH, identityPayload(identity, auth));
+            Ranking ranking = ranking(main, identity);
+            ObjectNode response = ranking.body();
+            Auth auth = new Auth(ranking.ownPlayerId(), "");
             List<LeaderboardEntry> entries = new ArrayList<>();
             JsonNode items = response.path("items");
             boolean hasOwnOnlineScore = false;
@@ -207,6 +211,19 @@ public final class BMSIRManiacApiClient {
         Identity identity = identity(main, song);
         if (identity == null || targetPlayerId <= 0) return null;
         try {
+            if (identity.nantoka()) {
+                ObjectNode payload = BMSIRNantokaIr.chartPayload(identity.baseSha256(),
+                        identity.settings().getNantokaJudgeVersion(), identity.lnmode());
+                payload.put("target_player_id", targetPlayerId);
+                ObjectNode response = BMSIRNantokaIr.post(main, "ghost", payload);
+                return new GhostScore(
+                        response.path("name").asText(""),
+                        response.path("ghost").asText(""),
+                        "",
+                        response.path("random_seed").asLong(-1L),
+                        identity.settings()
+                );
+            }
             Auth auth = auth(main);
             ObjectNode payload = identityPayload(identity, auth);
             payload.put("target_player_id", targetPlayerId);
@@ -283,15 +300,20 @@ public final class BMSIRManiacApiClient {
             RankingData ranking
     ) {
         if (main == null || context == null || score == null
-                || !onlineRanking(context.settings())) {
+                || !canSubmit(main, context.settings())) {
             return false;
         }
         try {
+            if (BMSIRNantokaIr.accepts(main, context.settings())) {
+                return submitNantokaScore(main, context, score, ranking);
+            }
             Auth auth = auth(main);
             Identity identity = new Identity(
                     context.baseHash(),
                     context.settings(),
-                    context.virtualHash()
+                    context.virtualHash(),
+                    false,
+                    0
             );
             ObjectNode payload = identityPayload(identity, auth);
             payload.put("placement_hash", context.placementHash());
@@ -325,6 +347,44 @@ public final class BMSIRManiacApiClient {
         }
     }
 
+    private static boolean submitNantokaScore(
+            MainController main,
+            BMSIRManiacPlayContext context,
+            ScoreData score,
+            RankingData ranking
+    ) throws IOException {
+        Identity identity = new Identity(context.baseHash(), context.settings(), null, true, score.getMode());
+        ObjectNode payload = BMSIRNantokaIr.chartPayload(identity.baseSha256(),
+                identity.settings().getNantokaJudgeVersion(), identity.lnmode());
+        BMSIRNantokaIr.putScore(payload, score);
+        SongData song = main.getPlayerResource() == null ? null : main.getPlayerResource().getSongdata();
+        if (song != null && identity.baseSha256().equalsIgnoreCase(song.getSha256())) BMSIRNantokaIr.putTitle(payload, song);
+        payload.put("replay_hash", BMSIRNantokaIr.replayHash(
+                identity.settings().storageChartId(identity.baseSha256()), score));
+        IRScoreData[] values = BMSIRNantokaIr.scores(
+                BMSIRNantokaIr.post(main, "score", payload),
+                BMSIRNantokaIr.playerId(main),
+                ""
+        );
+        RankingData cached = CACHE.computeIfAbsent(identity.cacheKey(), ignored -> new RankingData());
+        cached.updateScore(values, score);
+        if (ranking != null && ranking != cached) ranking.updateScore(values, score);
+        return true;
+    }
+
+    private record Ranking(ObjectNode body, int ownPlayerId) {
+    }
+
+    private static Ranking ranking(MainController main, Identity identity) throws IOException {
+        if (identity.nantoka()) {
+            ObjectNode payload = BMSIRNantokaIr.chartPayload(identity.baseSha256(),
+                    identity.settings().getNantokaJudgeVersion(), identity.lnmode());
+            return new Ranking(BMSIRNantokaIr.post(main, "ranking", payload), BMSIRNantokaIr.playerId(main));
+        }
+        Auth auth = auth(main);
+        return new Ranking(post(main, RANKING_PATH, identityPayload(identity, auth)), auth.playerId());
+    }
+
     private static ScoreData localScore(MainController main, SongData song, Identity identity) {
         return main.getPlayDataAccessor().readManiacScoreData(
                 song,
@@ -335,8 +395,12 @@ public final class BMSIRManiacApiClient {
 
     private static Identity identity(MainController main, SongData song) {
         BMSIRManiacSettings settings = effectiveSettings(main, song);
+        if (BMSIRNantokaIr.accepts(main, settings)) {
+            int lnmode = song.hasUndefinedLongNote() ? main.getPlayerConfig().getLnmode() : 0;
+            return new Identity(song.getSha256(), settings, null, true, lnmode);
+        }
         if (settings == null || !onlineRanking(settings)) return null;
-        return new Identity(song.getSha256(), settings, settings.virtualChartId(song.getSha256()));
+        return new Identity(song.getSha256(), settings, settings.virtualChartId(song.getSha256()), false, 0);
     }
 
     private static boolean onlineRanking(BMSIRManiacSettings settings) {
@@ -475,7 +539,7 @@ public final class BMSIRManiacApiClient {
 		return score(item, response.path("virtual_chart_id").asText(""), ownPlayerId);
 	}
 
-    private static ScoreData score(JsonNode item, String chartId, int ownPlayerId) {
+    static ScoreData score(JsonNode item, String chartId, int ownPlayerId) {
         ScoreData score = new ScoreData();
         score.setSha256(chartId == null ? "" : chartId);
         score.setPlayer(item.path("player_id").asInt() == ownPlayerId
@@ -549,9 +613,15 @@ public final class BMSIRManiacApiClient {
     private record Identity(
             String baseSha256,
             BMSIRManiacSettings settings,
-            String virtualChartId
+            String virtualChartId,
+            boolean nantoka,
+            int lnmode
     ) {
         private String cacheKey() {
+            if (nantoka) {
+                return "bmsir-nantoka:" + baseSha256.toLowerCase(Locale.ROOT)
+                        + ":j" + settings.getNantokaJudgeVersion() + ":ln" + lnmode;
+            }
             String ranking = virtualChartId == null
                     ? "bmsir-maniac:v" + BMSIRManiacSettings.ALGORITHM_VERSION
                     + ':' + baseSha256 + ":standard"

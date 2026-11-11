@@ -41,7 +41,6 @@ public final class SceneEvaluator {
 	private final float[][] maskCamera;
 	private final float[] rootTransform = new float[16];
 	private final IdentityHashMap<Object, KeyCursor> keyCursors = new IdentityHashMap<>();
-	private boolean cursorsDirty;
 
 	private long evaluatedTicks;
 	private int evaluatedLeaves;
@@ -75,11 +74,11 @@ public final class SceneEvaluator {
 		maskCamera = vectorStack(Math.max(1, scene.maxMaskDepth), 4);
 		for (CompiledScene.Clip clip : scene.clips) {
 			for (Instance instance : clip.instances) {
-				registerCursor(instance.transform, instance.transform == null ? null : instance.transform.times);
-				registerCursor(instance.color, instance.color == null ? null : instance.color.times);
-				registerCursor(instance.camera, instance.camera == null ? null : instance.camera.times);
-				registerCursor(instance.clipRect, instance.clipRect == null ? null : instance.clipRect.times);
-				registerCursor(instance.frameTrack, instance.frameTrack == null ? null : instance.frameTrack.times);
+				registerCursor(instance.transform);
+				registerCursor(instance.color);
+				registerCursor(instance.camera);
+				registerCursor(instance.clipRect);
+				registerCursor(instance.frameTrack);
 			}
 		}
 		reset();
@@ -93,7 +92,6 @@ public final class SceneEvaluator {
 	public int evaluate(long tick, float x, float y, float width, float height,
 			float rootAngleDegrees, float rootR, float rootG, float rootB, float rootA) {
 		long start = System.nanoTime();
-		cursorsDirty = true;
 		commandCount = 0;
 		setIdentity(worldStack[0]);
 		setRootTransform(rootTransform, x, y, width, height, rootAngleDegrees);
@@ -266,7 +264,6 @@ public final class SceneEvaluator {
 	}
 
 	private int findKey(Object track, long[] times, long tick) {
-		if (times.length == 1) return 0;
 		KeyCursor cursor = keyCursors.get(track);
 		if (cursor != null && tick >= cursor.tick) {
 			while (cursor.index + 1 < times.length && times[cursor.index + 1] <= tick) {
@@ -293,8 +290,8 @@ public final class SceneEvaluator {
 		return result;
 	}
 
-	private void registerCursor(Object track, long[] times) {
-		if (track != null && times.length > 1) {
+	private void registerCursor(Object track) {
+		if (track != null) {
 			keyCursors.put(track, new KeyCursor());
 		}
 	}
@@ -465,12 +462,9 @@ public final class SceneEvaluator {
 		commandCount = 0;
 		evaluatedTicks = 0;
 		evaluatedLeaves = 0;
-		if (cursorsDirty) {
-			for (KeyCursor cursor : keyCursors.values()) {
-				cursor.index = 0;
-				cursor.tick = Long.MIN_VALUE;
-			}
-			cursorsDirty = false;
+		for (KeyCursor cursor : keyCursors.values()) {
+			cursor.index = 0;
+			cursor.tick = Long.MIN_VALUE;
 		}
 	}
 }

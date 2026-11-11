@@ -105,6 +105,15 @@ public final class BMSIRLongNoteMode {
         return changesAuthoredMode(song) ? forcedReplayHash(storage) : storage;
     }
 
+    public static String previousParserReplayHash(BMSModel model, String baseHash) {
+        return legacyReplayHash(model, BMSIRParserCompatibility.previousStorageHash(model, baseHash));
+    }
+
+    public static String previousParserReplayHash(SongData song, String baseHash) {
+        String storage = BMSIRParserCompatibility.previousStorageHash(song, baseHash);
+        return changesAuthoredMode(song) ? forcedReplayHash(storage) : storage;
+    }
+
     private static String forcedReplayHash(String baseHash) {
         try {
             byte[] identity = ("bmsir-forced-ln-replay-v1:" + baseHash)

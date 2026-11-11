@@ -43,6 +43,7 @@ public class MusicResult extends AbstractResult {
 
 	static boolean shouldPersistScore(BMSModel model, String workDirectory) {
 		return !bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(model)
+				&& !bms.player.beatoraja.nonstop.MixRuntime.isMix(model)
 				&& !BMSIRTestPlayFolder.contains(model, workDirectory);
 	}
 
@@ -86,7 +87,11 @@ public class MusicResult extends AbstractResult {
 		}
 
 		updateScoreDatabase();
-		if (!bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(resource.getBMSModel())) {
+		final boolean nonstopMix = bms.player.beatoraja.nonstop.MixRuntime.isMix(resource.getBMSModel());
+		if (nonstopMix) {
+			bms.player.beatoraja.nonstop.MixPlayRecorder.record(main, resource);
+		}
+		if (!nonstopMix && !bms.player.beatoraja.pattern.BMSIRSevenToNineModifier.isApplied(resource.getBMSModel())) {
 			BMSIROrajaHelperBridge.publishResult(
 				resource.getSongdata(),
 				resource.getReplayData(),
@@ -95,7 +100,7 @@ public class MusicResult extends AbstractResult {
 			);
 		}
 		// リプレイの自動保存
-		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !resource.isFreqOn()) {
+		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY && !resource.isFreqOn() && !nonstopMix) {
 			for (int i = 0; i < REPLAY_SIZE; i++) {
 				if (ReplayAutoSaveConstraint.get(resource.getPlayerConfig().getAutoSaveReplay()[i]).isQualified(oldscore,
 						resource.getScoreData())) {
@@ -132,15 +137,19 @@ public class MusicResult extends AbstractResult {
 		final IRStatus[] ir = main.getIRStatus();
 		final BMSIRManiacPlayContext maniacContext = resource.getManiacPlayContext();
 		final FloatArray activeGauge = resource.getGauge()[resource.getGrooveGauge().getType()];
+		// NANTOKA MANIA goes to the external ranking server on every saved play of an unmodified chart;
+		// the server keeps each player's best.
 		final boolean sendManiac = maniacContext != null
-				&& BMSIRManiacApiClient.canSubmit(maniacContext.settings())
 				&& resource.isUpdateScore()
-				&& BMSIRManiacApiClient.shouldSubmit(
-						main,
-						newscore,
-						oldscore,
-						activeGauge.get(activeGauge.size - 1) > 0.0
-				);
+				&& (bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.accepts(main, maniacContext.settings())
+						? !bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())
+						: BMSIRManiacApiClient.canSubmit(maniacContext.settings())
+								&& BMSIRManiacApiClient.shouldSubmit(
+										main,
+										newscore,
+										oldscore,
+										activeGauge.get(activeGauge.size - 1) > 0.0
+								));
 		if ((ir.length > 0 || sendManiac)
 				&& resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY
 				&& !resource.isFreqOn()) {
@@ -207,10 +216,12 @@ public class MusicResult extends AbstractResult {
 
 				Runnable fetchRanking = () -> {
 					try {
-						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null,
-								IRChartData.forRanking(resource.getSongdata(), resource.getBMSModel().getLntype(),
-										bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())));
-						if(response.isSucceeded()) {
+						IRChartData request = IRChartData.forRanking(resource.getSongdata(), resource.getBMSModel().getLntype(),
+								bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()));
+						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getPlayData(null, request);
+						if(response.isSucceeded() && RankingData.matchesContract(response.getData(),
+								request.bmsirRankingLnType, request.bmsirRankingNotes)) {
+							ranking.setContract(new IRLongNoteContract(request.bmsirRankingLnType, request.bmsirRankingNotes));
 							if (!bms.player.beatoraja.BMSIRLongNoteMode.separatesScore(resource.getBMSModel())) {
 								main.getRivalDataAccessor().updateAllRivalsScores(
 										response.getData(),
@@ -230,7 +241,8 @@ public class MusicResult extends AbstractResult {
 											bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
 										RankingData.cacheIdentity(resource.getSongdata(),
 											new IRRankingContext(resource.getBMSModel().getLntype(),
-												bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()))),
+												bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())))
+											+ ":" + request.bmsirRankingLnType + ":" + request.bmsirRankingNotes,
 										response.getData());
 							}
 							rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
@@ -537,7 +549,7 @@ public class MusicResult extends AbstractResult {
 						newscore.getEpr() + newscore.getLpr() + newscore.getEms() + newscore.getLms(),
 						newscore.getCombo(),
 						newscore.getOption(),
-						resource.getBMSModel().getLntype()));
+						newscore.getBmsirEffectiveLnType()));
 			}
 		}
 		// コースモードの場合はコーススコアに加算・累積する
@@ -547,10 +559,13 @@ public class MusicResult extends AbstractResult {
 				cscore = new ScoreData();
 				cscore.setMinbp(0);
 				int notes = 0;
+				int courseLnType = 0;
 				for (BMSModel mo : resource.getCourseBMSModels()) {
-					notes += mo.getTotalNotes();
+					notes += NantokaManiaRules.totalNotes(mo);
+					courseLnType = Math.max(courseLnType, IRLongNoteContract.fromModel(mo, mo.getLntype(), false).lntype());
 				}
 				cscore.setNotes(notes);
+				cscore.setBmsirEffectiveLnType(courseLnType);
 				cscore.setDeviceType(newscore.getDeviceType());
 				cscore.setOption(newscore.getOption());
 				cscore.setJudgeAlgorithm(newscore.getJudgeAlgorithm());
@@ -559,6 +574,7 @@ public class MusicResult extends AbstractResult {
 			}
 			cscore.setPassnotes(cscore.getPassnotes() + newscore.getPassnotes());
 			if (newscore.isBmsirFloatingHispeedUsed()) cscore.setBmsirFloatingHispeedUsed(true);
+			cscore.setBmsirEffectiveLnType(Math.max(cscore.getBmsirEffectiveLnType(), newscore.getBmsirEffectiveLnType()));
 			cscore.setEpg(cscore.getEpg() + newscore.getEpg());
 			cscore.setLpg(cscore.getLpg() + newscore.getLpg());
 			cscore.setEgr(cscore.getEgr() + newscore.getEgr());

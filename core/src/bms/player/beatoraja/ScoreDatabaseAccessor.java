@@ -86,6 +86,7 @@ public class ScoreDatabaseAccessor extends SQLiteDatabaseAccessor {
 						new Column("date", "INTEGER"),
 						new Column("state", "INTEGER"),
 						new Column("bmsirLongNotePolicy", "INTEGER", 1, 0, "0"),
+						new Column("bmsirEffectiveLnType", "INTEGER", 1, 0, "-1"),
 						new Column("scorehash", "TEXT")
 						));
 		Class.forName("org.sqlite.JDBC");

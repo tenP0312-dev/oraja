@@ -166,6 +166,8 @@ public class JudgeManager {
         mjudgefast = new long[judgeregion];
         score = new ScoreData(orgmode);
         score.setNotes(NantokaManiaRules.totalNotes(model));
+        score.setBmsirEffectiveLnType(bms.player.beatoraja.ir.IRLongNoteContract
+                .fromModel(model, model.getLntype(), false).lntype());
         score.setSha256(model.getSHA256());
         ghost = new int[NantokaManiaRules.totalNotes(model)];
         for (int i=0; i<ghost.length; i++) {

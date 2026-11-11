@@ -289,6 +289,7 @@ public class MainController {
 		}));
 		tasks.add(StartupTask.required("プレイデータベース", () -> {
 			playdata = new PlayDataAccessor(config, player);
+			playdata.setSongDatabase(getSongDatabase());
 			return StartupTask.Result.ok();
 		}));
 
@@ -562,6 +563,11 @@ public class MainController {
 		return offset[index];
 	}
 
+	/** Loudness analyzer shared with NONSTOP MIX volume matching; null before startup finishes. */
+	public bms.player.beatoraja.audio.BMSLoudnessAnalyzer getLoudnessAnalyzer() {
+		return loudnessAnalyzer;
+	}
+
 	public SongDatabaseAccessor getSongDatabase() {
 		return MainLoader.getScoreDatabaseAccessor();
 	}
@@ -683,6 +689,7 @@ public class MainController {
 		ImGuiNotify.setInfoEnabled(pc.isBmsirInfoNotificationsEnabled());
 
 		playdata = new PlayDataAccessor(config, player);
+		playdata.setSongDatabase(getSongDatabase());
 		ircache = new RankingDataCache(() -> getPlayerConfig().isBmsirForceLn());
 		initializeIRConfig();
 		// Dispose MusicSelector to unallocate loaded skin
@@ -1151,8 +1158,10 @@ public class MainController {
 		SongManagerMenu.injectMusicSelector(selector);
 		ArenaMenu.init(resource.getPlayerConfig().getName(), selector);
 		MiscSettingMenu.setMain(this);
+		HandCameraMenu.setMain(this);
 		bms.player.beatoraja.modmenu.DifficultyFilterMenu.setMain(this);
 		FunctionKeyMenu.setMain(this);
+		bms.player.beatoraja.modmenu.NonstopMixMenu.setMain(this);
 		if (initializeArena) {
 			BMSIRArenaClient.initialize(this);
 		}
@@ -1957,12 +1966,16 @@ public class MainController {
 		public boolean isSent = false;
 		public boolean rankingRefreshRequested = false;
 		private final MainController owner;
+		private final IRChartData chartSnapshot;
+		private final bms.player.beatoraja.ir.IRScoreData scoreSnapshot;
 		public IRSendStatus(IRConnection ir, SongData song, ScoreData score) {
 			this.owner = null;
 			this.ir = ir;
 			this.status = null;
 			this.song = song;
 			this.score = score;
+			this.chartSnapshot = new IRChartData(song);
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 		public IRSendStatus(MainController owner, IRStatus status, SongData song, ScoreData score) {
 			this.owner = owner;
@@ -1970,12 +1983,14 @@ public class MainController {
 			this.status = status;
 			this.song = song;
 			this.score = score;
+			this.chartSnapshot = new IRChartData(song);
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 
 		public boolean send() {
 			logger.info("IRへスコア送信中 : {}", song.getTitle());
 			lastTry = System.currentTimeMillis();
-			IRResponse<Object> send1 = ir.sendPlayData(new IRChartData(song), new bms.player.beatoraja.ir.IRScoreData(score));
+			IRResponse<Object> send1 = ir.sendPlayData(chartSnapshot, scoreSnapshot);
 			retry++;
 			if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", song.getTitle());

@@ -89,6 +89,14 @@ class PlayConfigurationSidebarLayoutTest {
 	}
 
 	@Test
+	void safeTableUpdateGuidanceIsAvailableInEnglishAndJapanese() {
+		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
+		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
+		assertTrue(english.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("current caches are kept"));
+		assertTrue(japanese.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("現在のキャッシュを残します"));
+	}
+
+	@Test
 	void sidebarNoResultGuidanceIsAvailableInEnglishAndJapanese() {
 		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
 		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
@@ -96,14 +104,6 @@ class PlayConfigurationSidebarLayoutTest {
 		assertTrue(english.getString("CONFIGURATION_SEARCH_NO_MATCHES_DESCRIPTION").contains("clear"));
 		assertTrue(japanese.getString("CONFIGURATION_SEARCH_NO_MATCHES").contains("一致"));
 		assertTrue(japanese.getString("CONFIGURATION_SEARCH_NO_MATCHES_DESCRIPTION").contains("検索を消去"));
-	}
-
-	@Test
-	void safeTableUpdateGuidanceIsAvailableInEnglishAndJapanese() {
-		ResourceBundle english = ResourceBundle.getBundle("resources.UIResources", Locale.ROOT);
-		ResourceBundle japanese = ResourceBundle.getBundle("resources.UIResources", Locale.JAPAN);
-		assertTrue(english.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("current caches are kept"));
-		assertTrue(japanese.getString("TABLES_LOAD_ALL_DESCRIPTION").contains("現在のキャッシュを残します"));
 	}
 
 	@Test

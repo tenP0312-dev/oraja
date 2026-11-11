@@ -181,8 +181,35 @@ public final class PlayerResource {
 		failMeasure = Double.NaN;
 	}
 
+	/**
+	 * Installs a compiled NONSTOP MIX set (Issue #535). The merged chart is
+	 * played like an ordinary chart; its sounds and images resolve through the
+	 * set's virtual resource into each song's own folder.
+	 */
+	public boolean setNonstopMix(bms.player.beatoraja.nonstop.MixRuntime.Session session, BMSPlayerMode mode) {
+		BMSModel merged = session.mix().model();
+		if (merged == null || merged.getAllTimeLines().length == 0) {
+			return false;
+		}
+		this.mode = mode;
+		replay = new ReplayData();
+		chartResource = session.mix().resource();
+		model = merged;
+		marginTime = 0;
+		songdata = new SongData(merged, false);
+		orgmode = merged.getMode();
+		bms.player.beatoraja.nonstop.MixRuntime.activate(session);
+		bmsresource.setBMSFile(merged, chartResource, config, mode);
+		setTablename("NONSTOP MIX");
+		setTablelevel("");
+		// loudness is matched per song while compiling; the merged chart is not analysed again
+		analysisTask = null;
+		return true;
+	}
+
 	public boolean setBMSFile(final Path f, BMSPlayerMode mode) {
 		// TODO play mode, リプレイデータでの読み込み分岐をここで行う
+		bms.player.beatoraja.nonstop.MixRuntime.deactivate();
 		this.mode = mode;
 		replay = new ReplayData();
 		chartResource = SongResources.fromPath(f);
@@ -230,6 +257,22 @@ public final class PlayerResource {
 		return loadBMSModel(SongResources.fromPath(f), lnmode, null);
 	}
 
+	private static final ThreadLocal<Boolean> DETACHED_LOAD = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+	/**
+	 * Loads and prepares a chart exactly like play does, without touching the
+	 * state of the chart that is currently selected or played. Safe to call from
+	 * a background thread (NONSTOP MIX, Issue #535).
+	 */
+	public BMSModel loadDetachedBMSModel(Path f, int lnmode, int[] selectedRandom) {
+		DETACHED_LOAD.set(Boolean.TRUE);
+		try {
+			return loadBMSModel(SongResources.fromPath(f), lnmode, selectedRandom);
+		} finally {
+			DETACHED_LOAD.remove();
+		}
+	}
+
 	public BMSModel loadBMSModel(int[] selectedRandom) {
 		if(model != null) {
 			ChartInformation info = model.getChartInformation();
@@ -260,16 +303,16 @@ public final class PlayerResource {
 	public BMSModel loadBMSModelForReplay(ReplayData replay) {
 		return loadBMSModel(chartResource != null ? chartResource
 				: SongResources.fromPath(Path.of(model.getPath())),
-				replay.mode, replay.rand, replay.bmsirForcedLongNotes, replay.bmsirParserRevision < 2);
+				replay.mode, replay.rand, replay.bmsirForcedLongNotes, replay.bmsirParserRevision);
 	}
 
 	private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
 			boolean forceLongNotes) {
-        return loadBMSModel(resource, lnmode, selectedRandom, forceLongNotes, false);
+        return loadBMSModel(resource, lnmode, selectedRandom, forceLongNotes, BMSIRParserCompatibility.CURRENT_REVISION);
     }
 
     private BMSModel loadBMSModel(SongResource resource, int lnmode, int[] selectedRandom,
-                                boolean forceLongNotes, boolean legacyParser) {
+                                boolean forceLongNotes, int parserRevision) {
 		String lowerName = resource.name().toLowerCase(java.util.Locale.ROOT);
 		ChartDecoder decoder;
 		BMSModel loaded;
@@ -277,7 +320,7 @@ public final class PlayerResource {
 			if (lowerName.endsWith(".bms") || lowerName.endsWith(".bme")
 					|| lowerName.endsWith(".bml") || lowerName.endsWith(".pms")) {
 				decoder = new BMSDecoder(lnmode);
-                ((BMSDecoder)decoder).setLegacyCompatibility(legacyParser);
+                ((BMSDecoder)decoder).setCompatibilityRevision(parserRevision);
 				try (java.io.InputStream input = resource.openStream()) {
 					loaded = ((BMSDecoder) decoder).decode(input.readAllBytes(),
 							lowerName.endsWith(".pms"), selectedRandom);
@@ -301,8 +344,10 @@ public final class PlayerResource {
 			return null;
 		}
 		if (loaded != null) {
+			// Retain decoder-selected RANDOM branches when attaching the resource path.
+			// A normal load supplies no selection, but its result is still branch-specific.
 			loaded.setChartInformation(new ChartInformation(
-					Path.of(resource.displayPath()), lnmode, selectedRandom));
+					Path.of(resource.displayPath()), lnmode, loaded.getRandom()));
 		}
 		return prepareModel(loaded, decoder, forceLongNotes);
 	}
@@ -325,12 +370,16 @@ public final class PlayerResource {
 		if (model == null) {
 			return null;
 		}
+		if (!DETACHED_LOAD.get()) BMSIRParserCatalog.capture(model);
 		if (forceLongNotes) BMSIRLongNoteMode.apply(model);
 		if (decoder instanceof OSUDecoder) {
 			model.setFromOSU(true);
 		}
 
-		marginTime = BMSModelUtils.setStartNoteTime(model, 1000);
+		long margin = BMSModelUtils.setStartNoteTime(model, 1000);
+		if (!DETACHED_LOAD.get()) {
+			marginTime = margin;
+		}
 		BMSPlayerRule.validate(model);
 
 		// 地雷ノートに爆発音が定義されていない場合、デフォルト爆発音をセットする
@@ -507,7 +556,13 @@ public final class PlayerResource {
 	}
 
 	public void reloadBMSFile() {
-		if (model != null) {
+		if (bms.player.beatoraja.nonstop.MixRuntime.isMix(model)) {
+			// a retry needs fresh notes; the set is rebuilt from the already loaded songs
+			BMSModel rebuilt = bms.player.beatoraja.nonstop.MixRuntime.recompile();
+			if (rebuilt != null) {
+				model = rebuilt;
+			}
+		} else if (model != null) {
 			model = loadBMSModel(Paths.get(model.getPath()), pconfig.getLnmode());
 		}
 		final String name = tablename;

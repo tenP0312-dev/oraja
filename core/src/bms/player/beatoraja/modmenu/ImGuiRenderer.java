@@ -62,8 +62,10 @@ public class ImGuiRenderer {
     private static ImBoolean SHOW_HISPEED_SETTINGS = new ImBoolean(false);
     private static ImBoolean SHOW_SOUND_SETTINGS = new ImBoolean(false);
     private static ImBoolean SHOW_DISPLAY_SETTINGS = new ImBoolean(false);
+    private static ImBoolean SHOW_HAND_CAMERA = new ImBoolean(false);
     private static ImBoolean SHOW_MY_TABLE_EDITOR = new ImBoolean(false);
     private static ImBoolean SHOW_MANIAC_OPTIONS = new ImBoolean(false);
+    private static ImBoolean SHOW_NONSTOP_MIX = new ImBoolean(false);
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_FONT_SCALE = 1.300f;
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_X_RATIO = 0.346f;
     private static final float MY_TABLE_BATCH_INDICATOR_DEFAULT_Y_RATIO = 0.094f;
@@ -177,8 +179,10 @@ public class ImGuiRenderer {
             if (show(ModMenuItem.PLAY_SETTINGS)) ImGui.checkbox(t("プレイ設定", "Show Play Settings Window"), SHOW_PLAY_SETTINGS);
             if (show(ModMenuItem.SOUND_SETTINGS)) ImGui.checkbox(t("音", "Show Sound Window"), SHOW_SOUND_SETTINGS);
             if (show(ModMenuItem.DISPLAY_SETTINGS)) ImGui.checkbox(t("表示", "Show Display Window"), SHOW_DISPLAY_SETTINGS);
+            if (show(ModMenuItem.HAND_CAMERA)) ImGui.checkbox(t("手元カメラ", "Show Hand Camera Window"), SHOW_HAND_CAMERA);
             if (show(ModMenuItem.MY_TABLE_EDITOR)) ImGui.checkbox(t("難易度表編集", "Show Table Editor Window"), SHOW_MY_TABLE_EDITOR);
             if (show(ModMenuItem.MANIAC_OPTIONS) && ImGui.button("MANIAC OPTIONS")) showManiacOptions();
+            if (show(ModMenuItem.NONSTOP_MIX)) ImGui.checkbox(t("NONSTOP MIX（曲をつないで連続プレイ）", "NONSTOP MIX (continuous sets)"), SHOW_NONSTOP_MIX);
             if (show(ModMenuItem.DIFFICULTY_FILTER)) DifficultyFilterMenu.render();
             ImGui.separator();
             ImBoolean showBmsirArenaOverlay = new ImBoolean(
@@ -231,6 +235,9 @@ public class ImGuiRenderer {
             if (SHOW_DISPLAY_SETTINGS.get()) {
                 MiscSettingMenu.showDisplaySettings(SHOW_DISPLAY_SETTINGS);
             }
+            if (SHOW_HAND_CAMERA.get()) {
+                HandCameraMenu.show(SHOW_HAND_CAMERA);
+            }
             if (SHOW_MY_TABLE_EDITOR.get()) {
                 BMSIRArenaOverlay.showMyDifficultyTableEditor(SHOW_MY_TABLE_EDITOR);
             }
@@ -250,12 +257,17 @@ public class ImGuiRenderer {
             ImGui.end();
 		}
 
-		if (SHOW_SKIN_WIDGET_MANAGER.get()) {
-			SkinWidgetManager.show(SHOW_SKIN_WIDGET_MANAGER);
-		}
+        if (SHOW_SKIN_WIDGET_MANAGER.get()) {
+            SkinWidgetManager.show(SHOW_SKIN_WIDGET_MANAGER);
+        }
         if (SHOW_MANIAC_OPTIONS.get()) {
             ManiacOptionsMenu.show(SHOW_MANIAC_OPTIONS);
         }
+        bms.player.beatoraja.nonstop.MixMainThread.drain();
+        if (SHOW_NONSTOP_MIX.get()) {
+            NonstopMixMenu.show(SHOW_NONSTOP_MIX);
+        }
+        NonstopMixMenu.renderResultWindow();
         AudioChartMenu.render();
         renderMyDifficultyTableBatchIndicator();
         BMSIRArenaOverlay.render();
@@ -546,12 +558,14 @@ public class ImGuiRenderer {
             case HISPEED_SETTINGS -> SHOW_HISPEED_SETTINGS.set(false);
             case SOUND_SETTINGS -> SHOW_SOUND_SETTINGS.set(false);
             case DISPLAY_SETTINGS -> SHOW_DISPLAY_SETTINGS.set(false);
+            case HAND_CAMERA -> SHOW_HAND_CAMERA.set(false);
             case MY_TABLE_EDITOR -> SHOW_MY_TABLE_EDITOR.set(false);
             case BMSIR_ARENA_OVERLAY -> BMSIRArenaOverlay.setVisible(false);
             case MANIAC_OPTIONS -> {
                 SHOW_MANIAC_OPTIONS.set(false);
                 ManiacOptionsMenu.discard();
             }
+            case NONSTOP_MIX -> SHOW_NONSTOP_MIX.set(false);
             case ARENA_DEBUG -> { }
         }
     }

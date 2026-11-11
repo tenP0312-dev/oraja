@@ -21,6 +21,9 @@ public class IRScoreData {
 	 * LN TYPE(0: LN, 1: CN, 2: HCN)
 	 */
 	public final int lntype;
+	/** Original local DB lookup mode, distinct from the wire LN type. */
+	public final int bmsirScoreMode;
+	public final int bmsirEffectiveLnType;
 	/** Local score interpretation revision, optional for compatible IR plugins. */
 	public final int bmsirLongNotePolicy;
 	/** True when floating hi-speed was active during this live play; optional for compatible IR plugins. */
@@ -118,7 +121,10 @@ public class IRScoreData {
 	
 	public IRScoreData(ScoreData score) {
 		this.sha256 = score.getSha256();
-		this.lntype = score.getMode();
+		this.bmsirScoreMode = score.getMode();
+		this.bmsirEffectiveLnType = score.getBmsirEffectiveLnType();
+		this.lntype = score.getBmsirEffectiveLnType() >= 0
+				? score.getBmsirEffectiveLnType() : score.getMode();
 		this.bmsirLongNotePolicy = score.getBmsirLongNotePolicy();
 		this.bmsirFloatingHispeedUsed = score.isBmsirFloatingHispeedUsed();
 		this.player = score.getPlayer();
@@ -161,6 +167,8 @@ public class IRScoreData {
 			JudgeAlgorithm judgeAlgorithm, BMSPlayerRule rule, String skin) {
 		this.sha256 = sha256;
 		this.lntype = lntype;
+		this.bmsirScoreMode = lntype;
+		this.bmsirEffectiveLnType = lntype;
 		this.bmsirLongNotePolicy = bmsirLongNotePolicy;
 		this.bmsirFloatingHispeedUsed = false;
 		this.player = player;
@@ -201,6 +209,7 @@ public class IRScoreData {
 		ScoreData score = new ScoreData();
 		score.setSha256(this.sha256);
 		score.setMode(this.lntype);
+		score.setBmsirEffectiveLnType(this.lntype);
 		score.setBmsirLongNotePolicy(this.bmsirLongNotePolicy);
 		score.setBmsirFloatingHispeedUsed(this.bmsirFloatingHispeedUsed);
 		score.setPlayer(this.player);

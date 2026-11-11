@@ -399,6 +399,7 @@ public class BarManager {
 			if (generatedAudio != null) {
 				l.add(generatedAudio);
 			}
+			l.add(new NonstopMixFolderBar(select));
 			appendFolders.keySet().forEach((key) -> {
 			    l.add(appendFolders.get(key));
 			});

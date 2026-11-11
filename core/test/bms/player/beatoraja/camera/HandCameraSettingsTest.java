@@ -36,6 +36,24 @@ class HandCameraSettingsTest {
         assertEquals(expected, HandCameraSettings.from(json.fromJson(Config.class, json.toJson(config))));
         assertFalse(HandCameraSettings.from(json.fromJson(Config.class, "{}")).usable());
     }
+    @Test void rememberedCameraIdentitySurvivesSaveAndOldConfigurationHasNone() {
+        Json json = new Json();
+        Config config = new Config();
+        config.setHandCameraEnabled(true);
+        config.setHandCameraDevice("1");
+        config.setHandCameraDeviceName(" FaceTime HD Camera ");
+        config.setHandCameraDeviceId("@device_pnp_\\\\?\\usb#vid_0001");
+        config.validate();
+        var reloaded = HandCameraSettings.from(json.fromJson(Config.class, json.toJson(config)));
+        assertEquals("1", reloaded.device());
+        assertEquals("FaceTime HD Camera", reloaded.deviceName());
+        assertEquals("@device_pnp_\\\\?\\usb#vid_0001", reloaded.deviceId());
+        assertTrue(reloaded.remembersIdentity());
+        var legacy = HandCameraSettings.from(json.fromJson(Config.class, "{handCameraEnabled:true,handCameraDevice:0}"));
+        assertTrue(legacy.usable());
+        assertFalse(legacy.remembersIdentity());
+        assertEquals("", legacy.deviceName());
+    }
     @Test void normalizedTopLeftCropRejectsInvalidAreasAndKeepsPixelsBounded() {
         assertArrayEquals(new int[] {160, 120, 320, 240}, new CameraCrop(.25f, .25f, .5f, .5f).pixels(640, 480));
         assertArrayEquals(new int[] {639, 479, 1, 1}, new CameraCrop(.999f, .999f, .001f, .001f).pixels(640, 480));

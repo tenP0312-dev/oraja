@@ -24,6 +24,7 @@ class ModMenuStateTest {
                 Map.entry(ModMenuItem.HISPEED_SETTINGS, "SHOW_HISPEED_SETTINGS"),
                 Map.entry(ModMenuItem.SOUND_SETTINGS, "SHOW_SOUND_SETTINGS"),
                 Map.entry(ModMenuItem.DISPLAY_SETTINGS, "SHOW_DISPLAY_SETTINGS"),
+                Map.entry(ModMenuItem.HAND_CAMERA, "SHOW_HAND_CAMERA"),
                 Map.entry(ModMenuItem.MY_TABLE_EDITOR, "SHOW_MY_TABLE_EDITOR"),
                 Map.entry(ModMenuItem.MANIAC_OPTIONS, "SHOW_MANIAC_OPTIONS"));
         for (var entry : windows.entrySet()) {

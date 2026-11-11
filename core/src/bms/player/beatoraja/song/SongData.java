@@ -150,8 +150,7 @@ public class SongData implements Validatable, IpfsInformation {
 			return;
 		}
 		this.model = model;
-        parsercompatibility = "1".equals(model.getValues().get(BMSDecoder.COMPATIBILITY_REVISION)) ? 1
-                : bms.player.beatoraja.BMSIRParserCompatibility.affected(model) ? 3 : 2;
+        parsercompatibility = bms.player.beatoraja.BMSIRParserCompatibility.catalogMetadata(model);
 		BMSPlayerRule.validate(model);
 		setTitle(model.getTitle());
 		setSubtitle(model.getSubTitle());

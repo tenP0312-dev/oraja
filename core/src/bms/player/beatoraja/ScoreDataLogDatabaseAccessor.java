@@ -24,6 +24,7 @@ public class ScoreDataLogDatabaseAccessor extends SQLiteDatabaseAccessor {
 	private static final Column[] SCORE_DATA_LOG_COLUMNS = {
 			new Column("sha256", "TEXT", 1, 0),
 			new Column("mode", "INTEGER"),
+			new Column("bmsirEffectiveLnType", "INTEGER", 1, 0, "-1"),
 			new Column("clear", "INTEGER"),
 			new Column("epg", "INTEGER"),
 			new Column("lpg", "INTEGER"),

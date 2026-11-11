@@ -23,8 +23,24 @@ public final class FFmpegCameraProcess {
         thread.setDaemon(true);
         return thread;
     });
-    public record Device(String value, String label) {
-        @Override public String toString() { return label; }
+    /**
+     * {@code value} is the FFmpeg input for this run, {@code label} the device name and {@code id} the OS
+     * unique ID when FFmpeg reports one (DirectShow alternative name). Empty label/id mean unknown.
+     */
+    public record Device(String value, String label, String id) {
+        public Device {
+            value = value == null ? "" : value;
+            label = label == null ? "" : label;
+            id = id == null ? "" : id;
+        }
+        public Device(String value, String label) { this(value, label, ""); }
+        public String displayName() { return label.isEmpty() ? value : label; }
+        @Override public String toString() { return displayName(); }
+    }
+
+    /** The remembered camera is not connected now. Never fall back to another device. */
+    static final class DeviceNotFoundException extends Exception {
+        DeviceNotFoundException() { super(null, null, false, false); }
     }
 
     private FFmpegCameraProcess() { }
@@ -71,6 +87,11 @@ public final class FFmpegCameraProcess {
     }
 
     static CameraCapture.Source open(HandCameraSettings settings) throws Exception {
+        if (settings.remembersIdentity()) {
+            // Indexes and enumeration order change between launches; look the camera up by its identity.
+            settings = settings.withDevice(HandCameraDeviceResolver.resolve(settings, devices())
+                    .orElseThrow(DeviceNotFoundException::new).value());
+        }
         String executable = Loader.load(org.bytedeco.ffmpeg.ffmpeg.class);
         Process process = start(new ProcessBuilder(command(executable, platform(), settings))
                 .redirectError(ProcessBuilder.Redirect.DISCARD));
@@ -128,12 +149,24 @@ public final class FFmpegCameraProcess {
     static List<Device> parseDevices(String platform, String output) {
         List<Device> devices = new ArrayList<>();
         boolean video = false;
-        Pattern windows = Pattern.compile("\\\"([^\\\"]+)\\\" \\(video\\)");
+        // FFmpeg 5+ prints `"Name" (video)` and, on the next line, `Alternative name "@device_..."`.
+        Pattern windows = Pattern.compile("\\\"([^\\\"]+)\\\" \\(([a-z, ]+)\\)");
+        Pattern alternative = Pattern.compile("Alternative name \\\"([^\\\"]+)\\\"");
         Pattern mac = Pattern.compile("\\] \\[(\\d+)\\] (.+)$");
         for (String line : output.split("\\R")) {
             if (platform.equals("windows")) {
+                Matcher id = alternative.matcher(line);
+                if (id.find()) {
+                    if (video) {
+                        Device last = devices.remove(devices.size() - 1);
+                        devices.add(new Device(last.value(), last.label(), id.group(1)));
+                    }
+                    video = false;
+                    continue;
+                }
                 Matcher match = windows.matcher(line);
-                if (match.find()) devices.add(new Device(match.group(1), match.group(1)));
+                video = match.find() && List.of(match.group(2).split(", *")).contains("video");
+                if (video) devices.add(new Device(match.group(1), match.group(1)));
             } else {
                 if (line.contains("AVFoundation video devices:")) video = true;
                 if (line.contains("AVFoundation audio devices:")) video = false;
@@ -142,6 +175,13 @@ public final class FFmpegCameraProcess {
                     devices.add(new Device(match.group(1), match.group(2)));
                 }
             }
+        }
+        if (platform.equals("windows")) {
+            // DirectShow opens the first device with a matching name; address duplicates by their unique ID.
+            List<Device> named = List.copyOf(devices);
+            devices.replaceAll(device -> !device.id().isEmpty() && named.stream()
+                    .filter(other -> other.label().equals(device.label())).count() > 1
+                    ? new Device(device.id(), device.label(), device.id()) : device);
         }
         return List.copyOf(devices);
     }

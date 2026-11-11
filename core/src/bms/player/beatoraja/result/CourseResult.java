@@ -112,7 +112,8 @@ public class CourseResult extends AbstractResult {
 					break;
 				}
 			}
-			final int lnmode = uln ? config.getLnmode() : 0;
+			final int lnmode = newscore.getBmsirEffectiveLnType() >= 0
+					? newscore.getBmsirEffectiveLnType() : uln ? config.getLnmode() : 0;
 			
         	for(IRStatus irc : ir) {
     			boolean send = resource.isUpdateCourseScore() && !resource.isForceNoIRSend() && resource.getCourseData().isRelease();
@@ -163,10 +164,12 @@ public class CourseResult extends AbstractResult {
 						&& irSendStatus.stream().anyMatch(score -> score.status == ir[0])) {
 					timer.switchTimer(succeed ? TIMER_IR_CONNECT_SUCCESS : TIMER_IR_CONNECT_FAIL, true);
 					try {
-						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getCoursePlayData(null,
-								new IRCourseData(resource.getCourseData(), lnmode,
-										bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())));
-						if (response.isSucceeded()) {
+						IRCourseData request = IRCourseData.forRanking(resource.getCourseData(), lnmode,
+								bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()));
+						IRResponse<bms.player.beatoraja.ir.IRScoreData[]> response = ir[0].connection.getCoursePlayData(null, request);
+						if (response.isSucceeded() && RankingData.matchesContract(response.getData(),
+								request.bmsirRankingLnType, request.bmsirRankingNotes)) {
+							ranking.setContract(new IRLongNoteContract(request.bmsirRankingLnType, request.bmsirRankingNotes));
 							ranking.updateScore(response.getData(), newscore.getExscore() > oldscore.getExscore() ? newscore : oldscore);
 							main.getRankingDataCache().updateCourseAfterSuccessfulSubmit(
 									resource.getCourseData(),
@@ -178,7 +181,8 @@ public class CourseResult extends AbstractResult {
 										main.getPlayerPath(), main.getPlayerConfig().getId(), sent.status,
 										new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())),
 										RankingData.cacheIdentity(resource.getCourseData(),
-												new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel()))),
+												new IRRankingContext(lnmode, bms.player.beatoraja.BMSIRLongNoteMode.isApplied(resource.getBMSModel())))
+											+ ":" + request.bmsirRankingLnType + ":" + request.bmsirRankingNotes,
 									response.getData());
 							}
 							rankingOffset = ranking.getRank() > 10 ? ranking.getRank() - 5 : 0;
@@ -196,10 +200,40 @@ public class CourseResult extends AbstractResult {
 			irprocess.start();
 		}
 
+		submitNantokaCourse(newscore);
+
 		boolean qualifiedClear = newscore != null && newscore.getClear() != Failed.id
 				&& (!bmsirQualification.hasRules() || bmsirQualification.passed());
 		play(qualifiedClear ? (getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR)
 				: (getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL), resource.getConfig().getAudioConfig().isLoopCourseResultSound());
+	}
+
+	/** NANTOKA MANIA Dan: pass/fail is recorded only on the external ranking server, never in local course records. */
+	private void submitNantokaCourse(ScoreData newscore) {
+		final bms.player.beatoraja.arena.bmsir.BMSIRManiacPlayContext maniac = resource.getManiacPlayContext();
+		final BMSModel[] models = resource.getCourseBMSModels();
+		if (newscore == null || maniac == null || models == null || resource.getCourseData() == null
+				|| resource.getPlayMode().mode != BMSPlayerMode.Mode.PLAY
+				|| !bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.accepts(main, maniac.settings())
+				|| !shouldPersistScore(models, resource.getConfig().getWorkDirectory())
+				|| Arrays.stream(models).anyMatch(bms.player.beatoraja.BMSIRLongNoteMode::isApplied)) {
+			return;
+		}
+		final int lnmode = Arrays.stream(models).anyMatch(BMSModel::containsUndefinedLongNote)
+				? resource.getPlayerConfig().getLnmode() : 0;
+		final RankingData target = ranking;
+		Thread worker = new Thread(() -> {
+			try {
+				var scores = bms.player.beatoraja.arena.bmsir.BMSIRNantokaIr.submitCourse(main,
+						resource.getCourseData(), models, resource.getConstraint(), maniac.settings(), lnmode, newscore);
+				target.updateScore(scores, newscore);
+				rankingOffset = target.getRank() > 10 ? target.getRank() - 5 : 0;
+			} catch (Exception e) {
+				logger.warn("NANTOKA IR course submission failed: {}", e.getMessage());
+			}
+		}, "bmsir-nantoka-course");
+		worker.setDaemon(true);
+		worker.start();
 	}
 
 	public void shutdown() {
@@ -385,6 +419,8 @@ public class CourseResult extends AbstractResult {
 		public int retry = 0;
 		public boolean rankingRefreshRequested = false;
 		private final CourseResult owner;
+		private final IRCourseData courseSnapshot;
+		private final bms.player.beatoraja.ir.IRScoreData scoreSnapshot;
 		
 		public IRSendStatus(IRConnection ir, CourseData course, int lnmode, ScoreData score) {
 			this.owner = null;
@@ -393,6 +429,8 @@ public class CourseResult extends AbstractResult {
 			this.course = course;
 			this.lnmode = lnmode;
 			this.score = score;
+			this.courseSnapshot = new IRCourseData(course, lnmode);
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 
 
@@ -403,15 +441,16 @@ public class CourseResult extends AbstractResult {
 			this.course = course;
 			this.lnmode = lnmode;
 			this.score = score;
+			this.courseSnapshot = IRCourseData.forPlaySnapshot(course, lnmode,
+					bms.player.beatoraja.BMSIRLongNoteMode.isApplied(owner.resource.getBMSModel()),
+					owner.resource.getBmsirCourseStages(), owner.resource.getCourseBMSModels());
+			this.scoreSnapshot = new bms.player.beatoraja.ir.IRScoreData(score);
 		}
 		
         public boolean send() {
 			logger.info("IRへスコア送信中 : {}", course.getName());
-            IRCourseData.StageResult[] stages = owner != null
-                    ? owner.resource.getBmsirCourseStages() : null;
             IRResponse<Object> send1 = ir.sendCoursePlayData(
-                    new IRCourseData(course, lnmode, false, stages),
-                    new bms.player.beatoraja.ir.IRScoreData(score));
+                    courseSnapshot, scoreSnapshot);
             if(send1.isSucceeded()) {
 				logger.info("IRスコア送信完了 : {}", course.getName());
                 retry = -255;

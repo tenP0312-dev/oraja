@@ -167,6 +167,22 @@ class SkinPreviewTest {
 	}
 
 	@Test
+	void preparedPreviewRestartsAtPreloadInsteadOfCountingSkinLoadTime() {
+		TimerManager timer = new TimerManager();
+		timer.setMainState(null);
+		timer.setMicroTimer(TIMER_JUDGE_1P, 123L);
+
+		SkinPreviewLifecycle.restartPreparedPreviewClock(timer, null);
+		timer.update();
+		var firstFrame = SkinPreviewLifecycle.playFrame(
+				timer.getNowTime(), 0, 0, 10_000, 500, 500);
+
+		assertEquals(SkinPreviewLifecycle.PlayPhase.PRELOAD, firstFrame.phase());
+		assertEquals(0L, firstFrame.iteration());
+		assertFalse(timer.isTimerOn(TIMER_JUDGE_1P));
+	}
+
+	@Test
 	void previewClockStartsAtTheFirstRenderedFrame() {
 		var clock = new SkinPreviewLifecycle.Clock();
 

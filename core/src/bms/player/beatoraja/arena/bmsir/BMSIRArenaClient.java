@@ -493,6 +493,10 @@ public final class BMSIRArenaClient {
         return CLIENT_VERSION;
     }
 
+    static int protocolVersion() {
+        return PROTOCOL_VERSION;
+    }
+
     static final class ArenaNominationLevelBar extends DirectoryBar {
         private final String title;
         private final SongData[] songs;
@@ -584,6 +588,7 @@ public final class BMSIRArenaClient {
                 controller.getPlayerConfig().isBmsirArenaDetailedLogEnabled()
         );
         BMSIRManiacApiClient.syncOwnScoresAsync(controller);
+        BMSIRNantokaIr.importLocalScoresAsync(controller);
         BMSIRMyTableClient.initialize(controller);
         BMSIRArenaLog.event(
                 "initialize",

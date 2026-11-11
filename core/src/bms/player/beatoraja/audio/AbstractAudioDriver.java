@@ -532,6 +532,8 @@ public abstract class AbstractAudioDriver<T> implements AudioDriver {
 	}
 
 	public void play(Note n, float volume, int pitch) {
+		// NONSTOP MIX: each song follows its own fades (Issue #535); 1.0 for ordinary charts
+		volume *= bms.player.beatoraja.nonstop.MixRuntime.noteGain(n);
 		play0(n, this.volume * volume, pitch);
 		for (Note ln : n.getLayeredNotes()) {
 			play0(ln, this.volume * volume, pitch);

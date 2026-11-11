@@ -3,6 +3,7 @@ package bms.player.beatoraja.select.bar;
 import java.util.Arrays;
 import bms.player.beatoraja.MainController;
 import bms.player.beatoraja.ir.IRChartData;
+import bms.player.beatoraja.ir.RankingData;
 import bms.player.beatoraja.ir.IRResponse;
 import bms.player.beatoraja.ir.IRScoreData;
 import bms.player.beatoraja.ir.LeaderboardEntry;
@@ -80,11 +81,10 @@ public class LeaderBoardBar extends DirectoryBar {
 		MainController.IRStatus primary = statuses[0];
 		final boolean forceLn = selector.main.getPlayerConfig().isBmsirForceLn();
 		final int lnmode = selector.main.getPlayerConfig().getLnmode();
-		IRResponse<IRScoreData[]> response = primary.connection.getPlayData(
-				null,
-				IRChartData.forRanking(songData, lnmode, forceLn)
-		);
-		if (!response.isSucceeded()) {
+		IRChartData request = IRChartData.forRanking(songData, lnmode, forceLn);
+		IRResponse<IRScoreData[]> response = primary.connection.getPlayData(null, request);
+		if (!response.isSucceeded() || !RankingData.matchesContract(response.getData(),
+				request.bmsirRankingLnType, request.bmsirRankingNotes)) {
 			ImGuiNotify.error(String.format(
 					"Failed to load Primary IR leaderboard: %s",
 					response.getMessage()

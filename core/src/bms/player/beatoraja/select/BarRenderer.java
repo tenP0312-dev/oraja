@@ -168,7 +168,10 @@ public final class BarRenderer {
 					ba.value = fn.getDisplayBarType();
 					ba.text = fn.getDisplayTextType();
                 } else {
-					ba.value = generatedChartBarStyle(sd);
+					ba.value = nonstopMixBarStyle(sd);
+					if (ba.value == -1) {
+						ba.value = generatedChartBarStyle(sd);
+					}
 				}
 			} else {
 				ba.value = -1;
@@ -546,6 +549,23 @@ public final class BarRenderer {
 //		cda.write("default", course);
 	}
 
+
+	/**
+	 * Bar style for the NONSTOP MIX folder (#539): folders use the folder bar,
+	 * sets the course bar (the missing-song bar when a song is absent).
+	 */
+	static int nonstopMixBarStyle(Bar bar) {
+		if (bar instanceof NonstopMixFolderBar || bar instanceof NonstopMixIrFolderBar) {
+			return 1;
+		}
+		if (bar instanceof NonstopMixSetBar set) {
+			return set.existsAllSongs() ? 3 : 4;
+		}
+		if (bar instanceof NonstopMixIrSetBar) {
+			return 3;
+		}
+		return -1;
+	}
 
 	/**
 	 * Bar style for the generated-chart folder (#436): folders use the folder

@@ -41,14 +41,16 @@ class BMSLegacyCompatibilityTest {
                 bms.player.beatoraja.BMSIRParserCompatibility.storageHash(second, second.getSHA256()));
         assertNotEquals(first.getSHA256(), bms.player.beatoraja.BMSIRParserCompatibility.storageHash(first, first.getSHA256()));
     }
-    @Test void onlyCompletedLnOrphanEndpointAddsANormalNote() {
+    @Test void unmatchedEndpointsAreNormalAndHistoricalInterpretationsRemainAvailable() {
         String body = "#WAV01 a.wav\n#WAVZZ end.wav\n#LNOBJ ZZ\n#00111:01\n#00211:ZZ\n#00311:ZZ\n";
         BMSModel current = decode(body, false, null), old = decode(body, true, null);
         assertEquals(2, current.getTotalNotes()); assertEquals(1, old.getTotalNotes());
         assertTrue(current.getAllTimeLines()[current.getAllTimeLines().length - 1].getNote(0) instanceof NormalNote);
         assertEquals(current.getSHA256(), old.getSHA256());
         assertEquals(1, decode(body.replace("#00311:ZZ\n", ""), false, null).getTotalNotes());
-        assertEquals(0, decode("#LNOBJ ZZ\n#00111:ZZ\n", false, null).getTotalNotes());
+        assertEquals(1, decode("#LNOBJ ZZ\n#00111:ZZ\n", false, null).getTotalNotes());
+        BMSDecoder v2 = new BMSDecoder(); v2.setCompatibilityRevision(2);
+        assertEquals(0, v2.decode("#BPM 120\n#LNOBJ ZZ\n#00111:ZZ\n".getBytes(Charset.forName("MS932")), false, null).getTotalNotes());
     }
     @Test void bmp00IsInitialOnlyAndUsesTheDenseHeaderMapping() {
         BMSModel model = decode("#BMP05 later.png\n#BMP00 default.png\n#WAV01 a.wav\n#00111:01\n#00206:05\n#00311:01\n", false, null);

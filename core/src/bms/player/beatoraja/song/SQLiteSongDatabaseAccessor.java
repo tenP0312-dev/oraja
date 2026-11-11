@@ -295,6 +295,18 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 
 	}
 
+	@Override
+	public SongData[] getSongDatasByMode(int mode, int limit) {
+		try {
+			List<SongData> m = qr.query("SELECT * FROM song WHERE mode = ? GROUP BY sha256 LIMIT ?",
+					songhandler, mode, Math.max(1, limit));
+			return Validatable.removeInvalidElements(m).toArray(new SongData[0]);
+		} catch (Exception e) {
+			logger.error("song.db読み込み時の例外:{}", e.getMessage());
+		}
+		return SongData.EMPTY;
+	}
+
 	public SongData[] getSongDatasByText(String text) {
 		try {
 			List<SongData> m = qr.query(
@@ -346,6 +358,24 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 			logger.error("song.db更新時の例外:{}", e.getMessage());
 		}
 	}
+
+    @Override
+    public boolean refreshParserMetadata(SongData decoded) {
+        if (decoded == null || !bms.player.beatoraja.BMSIRParserCompatibility
+                .isCurrentMetadata(decoded.getParsercompatibility())
+                || decoded.getSha256() == null || decoded.getMd5() == null
+                || !decoded.getSha256().matches("[a-fA-F0-9]{64}")
+                || !decoded.getMd5().matches("[a-fA-F0-9]{32}")) return false;
+        try {
+            return qr.update("UPDATE song SET notes=?, feature=?, parsercompatibility=?, charthash=? "
+                    + "WHERE sha256=? AND md5=? AND COALESCE(parsercompatibility,0) BETWEEN 0 AND 3",
+                    decoded.getNotes(), decoded.getFeature(), decoded.getParsercompatibility(),
+                    decoded.getCharthash(), decoded.getSha256(), decoded.getMd5()) > 0;
+        } catch (SQLException error) {
+            logger.warn("Parser catalog metadata refresh failed: {}", error.getMessage());
+            return false;
+        }
+    }
 
 	/**
 	 * データベースを更新する
@@ -726,8 +756,8 @@ public class SQLiteSongDatabaseAccessor extends SQLiteDatabaseAccessor implement
 					if (record != null && record.getPath().equals(pathname)) {
 						records.set(i, null);
 						// Old parser metadata is re-parsed in place; only this scan's files are touched.
-						if (record.getDate() == lastModifiedTime && record.getParsercompatibility()
-								>= bms.player.beatoraja.BMSIRParserCompatibility.CURRENT_REVISION) {
+						if (record.getDate() == lastModifiedTime && bms.player.beatoraja.BMSIRParserCompatibility
+                                .isCurrentMetadata(record.getParsercompatibility())) {
 							update = false;
 
 							final String oldPreview = record.getPreview() == null ? "" : record.getPreview();

@@ -21,14 +21,111 @@ PortAudio／ASIO対応で、初期OFF、方式ごとのゲイン保存、プリ�
 OpenALでは未対応と表示し、設定値を保持します。変更は本体の再起動後に適用します。
 詳細と実機確認項目は [出力EQ](docs/OUTPUT_EQUALIZER.md) を参照してください。
 
-The development source fixes HCN body rendering after an early release in
-NANTOKA MANIA MODE: the body switches to the damaged image while the end remains
-pending for reentry and end judgment. Ordinary judgment-mode rendering is
-unchanged. Engine-driven tests cover release/reentry, simultaneous 1P/2P HCNs,
-missed starts, normal end release, and autoplay; physical visual acceptance is
-still an operator check.
-
 ## Current Version
+
+Version 0.4.14.129 preserves every 0.4.14.128 feature and adds merged oraja
+#607 (#603): the launcher Skin tab can trust a Lua skin with a checkbox and
+confirmation. Plugin 0.0.82, launcher 0.2.30 and optional updates remain.
+See [the test scope](docs/TEST_RELEASE_0.4.14.129.md).
+
+Version 0.4.14.124 preserves every 0.4.14.123 feature, refreshes legacy
+catalog and personal-best references after parser PB saves (#587), and can send
+NANTOKA MANIA plays to an optional player-configured external ranking server
+(#590). Plugin 0.0.82, launcher 0.2.30 and optional updates remain. See
+[the test scope](docs/TEST_RELEASE_0.4.14.124.md).
+
+Version 0.4.14.123 preserves every 0.4.14.122 feature and fixes orphan LNOBJ
+decoding and chart/score identity consistency (#571). Parser revision 3 retains
+unmatched LNOBJ as normal notes, isolates changed local records and preserves
+historical replay decoding. Paired plugin 0.0.82 rejects mismatched uploads.
+Launcher 0.2.30 and optional updates remain. See
+[the test scope](docs/TEST_RELEASE_0.4.14.123.md).
+
+Version 0.4.14.122 preserves 0.4.14.121 and adds the merged F5/F12 skin
+settings loading improvements (#580) and NANTOKA v2 BSS reversal fix (#579).
+A reversal no longer consumes a following scratch at the same input time.
+Plugin 0.0.81 and launcher 0.2.30 remain unchanged; updates remain optional.
+See [the test scope](docs/TEST_RELEASE_0.4.14.122.md). Physical skin-menu and
+controller acceptance remains operator-run.
+
+Version 0.4.14.121 preserves 0.4.14.120 and adds only #573's bounded Lua
+compilation reuse and reflection metadata reuse to reduce temporary allocation
+while loading skins. Mutable Lua state and callback results remain independent.
+Plugin 0.0.81 and launcher 0.2.30 are retained; this is an optional test.
+See [the test scope](docs/TEST_RELEASE_0.4.14.121.md). Real process-memory and
+stutter acceptance remains operator-run in #574.
+
+Version 0.4.14.120 preserves 0.4.14.119 and brings in main-only changes
+(#569): HI-SPEED gets its own tab and F5 window with Normal/LR2/Floating per
+key mode and live switching, and Floating HI-SPEED is green-number driven
+(#506, #509); the Music Select Arena overlay is reorganized (#509); an option
+ends play right after the last note while the audio continues into the result
+(#511); twelve visual-only MANIAC OPTIONS are removed (#513); and Skin Select
+previews start at their first rendered frame and match the real screens (#328).
+Arena plugin 0.0.81 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.120.md).
+
+Version 0.4.14.119 preserves 0.4.14.118 and updates NONSTOP MIX (#567): a
+Music Select NONSTOP MIX folder plays saved and IR sets with the controller
+only (#539); the generator ranks charts by difficulty tables and density on
+LV1–LV12 / ★1–★25 scales, uses one chart per song, varies its picks, offers
+genre families and widens rare genres (#552, #563, #565); fade/cut joins keep
+note gaps short (#553); a track can be swapped to another chart of its song
+(#554); a set can turn BGA off and warns when heavy (#556); and a whole new
+generation no longer overwrites the saved set (#555). IR sharing still waits
+for the server. Arena plugin 0.0.81 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.119.md).
+
+Version 0.4.14.118 preserves 0.4.14.117 and fixes two regressions: a chart
+download or folder refresh no longer deletes every other song from the song
+database when old parser metadata is present (#544), and the result screen
+refetches the IR ranking once after a queued new best (#546). Arena plugin
+0.0.81 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.118.md).
+
+Version 0.4.14.117 preserves 0.4.14.116 and fixes effective long-note types
+and exact note-count groups in song/course IR rankings. Arena plugin 0.0.81
+keeps the 0.0.80 floating hi-speed marker and adds the paired ranking contract.
+Updates remain optional; launcher 0.2.30 is retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.117.md).
+
+Version 0.4.14.116 preserves 0.4.14.115 and adds NONSTOP MIX (#535): a
+multi-song set editor on Music Select (F5 Mod menu) that joins chart sections
+with mixes, fades or cuts and plays them as one continuous run with local
+records. IR sharing waits for the server API and shows as unsupported. Updates
+remain optional; plugin 0.0.80 and launcher 0.2.30 are retained. See
+[the test scope](docs/TEST_RELEASE_0.4.14.116.md).
+
+Version 0.4.14.115 preserves 0.4.14.114 and refines the hand camera view
+(#531): the crop position moves the skin's crop window across the whole camera
+image even at 100% zoom, display offsets are cut off at the camera frame, and a
+vertical flip joins mirroring. Updates remain optional; plugin 0.0.80 and
+launcher 0.2.30 are retained. See [the test scope](docs/TEST_RELEASE_0.4.14.115.md).
+
+Version 0.4.14.114 preserves 0.4.14.113 and adds hand camera display fixes:
+skins with their own camera part no longer also show it in the BGA frame
+(#525), and the display offset, zoom and crop centre can be adjusted live from
+the F5 menu or the launcher (#526). Updates remain optional; plugin 0.0.80 and
+launcher 0.2.30 are retained. See [the test scope](docs/TEST_RELEASE_0.4.14.114.md).
+
+Version 0.4.14.113 preserves 0.4.14.112 and adds hand camera usability: the
+selected camera is remembered by name and OS ID and reconnects automatically
+at launch and when it is plugged in (#519), skins without a camera part can
+show it in the BGA frame, and every camera setting is editable from the F5
+menu (#521). Updates remain optional; plugin 0.0.80 and launcher 0.2.30 are
+retained. See [the test scope](docs/TEST_RELEASE_0.4.14.113.md).
+
+Version 0.4.14.112 preserves 0.4.14.111 and adds only the floating hi-speed
+score marker (#515): a play that used floating hi-speed at any point is sent to
+BMS-IR with an optional flag so the Web OP column can show `FHS`. Updates
+remain optional; it ships with Arena plugin 0.0.80 and keeps launcher 0.2.30.
+See [the test scope](docs/TEST_RELEASE_0.4.14.112.md).
+
+Version 0.4.14.111 preserves the 0.4.14.110 release lineage and adds the
+dedicated HI-SPEED tab, live speed-mode switching, BGA display toggling,
+settings-window cleanup, gauge/input/replay fixes, compatibility repairs,
+and Lua allocation reductions. Updates remain optional; plugin 0.0.79 and
+launcher 0.2.30 are retained. See [the test scope](docs/TEST_RELEASE_0.4.14.111.md).
 
 上流監査で残ったIR設定保持、音量正規化、ゲージ/トレーナー表示、BGA/旧BMS互換の
 9件を修正しました。解析が変わる可能性のある譜面は旧成績と新成績のローカル保存を分け、
@@ -41,11 +138,128 @@ still an operator check.
 キー数別の複数入力割当を追加しました。複数入力は最後の入力を離すまで押下を保持します。
 旧リプレイと既存設定を維持し、リプレイの表示設定を普段の設定へ書き戻しません。
 操作と互換性、実機確認項目は [スクショ・リプレイ・複数入力](docs/SCREENSHOT_REPLAY_BINDINGS.md)
-を参照してください。ソース変更のみで、配布は別工程です。
+を参照してください。
 
-手元カメラ入力をJSON/Luaスキンの `camera` 部品で表示できます（source実装、初期OFF）。
+手元カメラ入力をJSON/Luaスキンの `camera` 部品で表示できます（初期OFF）。
 位置・サイズ・切り抜き・表示条件をスキンで管理します。
 設定方法と例、実機確認項目は [手元カメラ](docs/HAND_CAMERA.md) を参照してください。
+
+Version 0.4.14.110 preserves every feature in the 0.4.14.109 optional test
+lineage and adds skin-controlled hand camera input. Launcher 0.2.30 includes
+the macOS camera usage description; plugin 0.0.79 is retained. Updates remain
+optional. See [the test scope](docs/TEST_RELEASE_0.4.14.110.md).
+
+Version 0.4.14.106 preserves the 0.4.14.105 internal test lineage and refines
+generated charts: repeated bars keep their own fills, choruses get chords like
+A-melodies, no notes on dying tails, and notes stay within the span where the
+music plays on the beat (a video's talk intro gets none). Plugin 0.0.77 and
+launcher 0.2.29 remain optional. See
+[the test scope](docs/TEST_RELEASE_0.4.14.106.md).
+
+Version 0.4.14.105 preserves the 0.4.14.104 internal test lineage and lets
+generated charts follow a drifting tempo (bands without a click) with exact
+per-bar BPM changes; steady songs keep a constant BPM. Plugin 0.0.77 and
+launcher 0.2.29 remain optional. See
+[the test scope](docs/TEST_RELEASE_0.4.14.105.md).
+
+Version 0.4.14.104 preserves the 0.4.14.103 internal test lineage and keeps
+generated-chart notes out of silent breaks and off false triplets: a triplet
+needs its sound to peak at the triplet (late 16ths stay 16ths, half-tempo 3/8
+sounds are not snapped). Plugin 0.0.77 and launcher 0.2.29 remain optional.
+See [the test scope](docs/TEST_RELEASE_0.4.14.104.md).
+
+Version 0.4.14.103 preserves the 0.4.14.102 internal test lineage and generates
+charts from video files: the audio track is extracted aligned to the first
+video frame and the video plays as the BGA. Plugin 0.0.77 and launcher 0.2.29
+remain optional. See [the test scope](docs/TEST_RELEASE_0.4.14.103.md).
+
+Version 0.4.14.102 preserves the 0.4.14.101 internal test lineage and charts
+straight 16ths and triplets per position (a union grid where 1/4 vs 1/3 and
+2/3 vs 3/4 compete), replacing the song-wide rhythm setting of 0.4.14.101.
+Plugin 0.0.77 and launcher 0.2.29 remain optional. See
+[the test scope](docs/TEST_RELEASE_0.4.14.102.md).
+
+Version 0.4.14.101 preserves the 0.4.14.100 internal test lineage and adds a
+16ths/triplet rhythm choice for generated charts (fixed grid also 12th/24th),
+an interval-based beat bonus for slow songs, and song-wide loudness in the
+ranking so thin passages stay thin. Plugin 0.0.77 and launcher 0.2.29 remain
+optional. See [the test scope](docs/TEST_RELEASE_0.4.14.101.md).
+
+Version 0.4.14.100 preserves the 0.4.14.99 internal test lineage and refines
+generated charts: scratch only on clear hi-hats (about one position in ten),
+a one-press half/double tempo choice when it is a close call, and per-song
+memory of the player's BPM / first-beat correction. Plugin 0.0.77 and launcher
+0.2.29 remain optional. See [the test scope](docs/TEST_RELEASE_0.4.14.100.md).
+
+Version 0.4.14.99 preserves the 0.4.14.98 internal test lineage and makes
+generated charts follow the music: notes where the music hits (note amount
+scales the song's own density), repeated phrases reuse their layout, and
+scratch on hi-hats. Each can be switched off (off = the fixed 4th/8th/16th
+grid). Plugin 0.0.77 and launcher 0.2.29 remain optional. See
+[the test scope](docs/TEST_RELEASE_0.4.14.99.md).
+
+Version 0.4.14.98 preserves the 0.4.14.97 internal test lineage and fixes a
+Music Select crash as soon as the CHARTS FROM AUDIO row was drawn (0.4.14.97
+with an audio folder set). Plugin 0.0.77 and launcher 0.2.29 remain optional.
+See [the test scope](docs/TEST_RELEASE_0.4.14.98.md).
+
+Version 0.4.14.97 preserves the 0.4.14.96 internal test lineage and fixes the
+CHARTS FROM AUDIO folder and its folder/audio-file rows rendering as blank
+bars; the top settings row now names the song. Plugin 0.0.77 and launcher
+0.2.29 remain optional. See [the test scope](docs/TEST_RELEASE_0.4.14.97.md).
+
+Version 0.4.14.96 preserves the 0.4.14.95 internal test lineage and makes
+generated charts usable with the controller alone: an audio folder set in the
+pre-launch Resource settings appears in Music Select as CHARTS FROM AUDIO,
+where analysis, settings and Play are all decide-button rows. Plugin 0.0.77
+and launcher 0.2.29 remain optional. Physical acceptance remains pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.96.md).
+
+Version 0.4.14.95 preserves the 0.4.14.94 internal test lineage and adds
+charts generated from an audio file dropped in Music Select (no score, replay,
+IR, or Arena), named key/play-setting profiles in the Arena overlay, and an
+IGNORED root folder with a keep-visible option. Plugin 0.0.77 and launcher
+0.2.29 remain optional. Physical acceptance remains operator-run and pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.95.md).
+
+Version 0.4.14.94 preserves the 0.4.14.93 internal test lineage and adds live
+output EQ adjustment from the F5 menu and a named function-key/numpad menu
+on Music Select. Plugin 0.0.77 and launcher 0.2.29 remain optional.
+Physical BGA, audio, and menu acceptance remains operator-run and pending.
+See [the test scope](docs/TEST_RELEASE_0.4.14.94.md).
+
+Version 0.4.14.93 is an optional internal test candidate for the BGA
+asynchronous pipeline over 0.4.14.92. Video decode/seek uses bounded workers
+and native RGB leases, while GL polls frames and reuses textures. Video
+settings add OFF/PERFORMANCE/BALANCED/QUALITY, asynchronous playback and
+Performance Monitor statistics. BALANCED and asynchronous playback are the
+defaults; disabling asynchronous playback restores the old movie route.
+See [the BGA pipeline guide](docs/BGA_PIPELINE.md). Physical frame-time/audio
+acceptance and total codec/GPU native-memory evaluation remain pending in
+[Issue #413](https://github.com/tenP0312-dev/oraja/issues/413); this internal
+test does not establish complete requirement acceptance.
+
+Version 0.4.14.92 updates NANTOKA MANIA v2 judgment handling:
+DP scratch windows, separate candidate/miss limits, consumed HCN endpoints,
+recovery-only reentry, BSS logical-stop judgment, and 8/10-frame cycles.
+New records are separated while existing replays retain the v1 engine.
+This optional test preserves 0.4.14.91, plugin 0.0.77, and launcher 0.2.29.
+Operator acceptance is tracked in #411.
+
+Version 0.4.14.91 includes all five pending client changes: controller-operated
+My Difficulty Table editing (#310), bounded Scene compilation reuse (#348),
+NANTOKA MANIA-only course judgment and Dan gauges (#383), versioned ADDNOTES
+jack avoidance (#402), and ranking revalidation after LN context changes (#403).
+Batch editing also blocks accidental course launches. NANTOKA courses do not
+save ordinary results or submit to IR. This optional test preserves all 0.4.14.90
+features, plugin 0.0.77 and launcher 0.2.29. Operator acceptance is tracked in #406.
+
+Version 0.4.14.90 adds course qualification on result screens, persistent
+per-player Mod Menu item settings, and optional Switch-style four-band and
+LR2-style seven-band output equalizers. It preserves the 0.4.14.89 release
+lineage and its persistent ranking cache. Plugin 0.0.77 and launcher 0.2.29
+remain supported. This is an optional internal test; operator-run physical
+acceptance is tracked in issue #404.
 
 The startup settings include a per-player **Mod Menu items** page, also
 reachable inside the Insert menu. Its default-on filter can hide and disable
@@ -54,17 +268,37 @@ menu while retaining individual choices. Disabled trainers stop, disabled
 windows close, and saved MANIAC choices are suspended for subsequent ordinary
 plays until re-enabled. Song Manager's last-played sort is saved and restored
 before the first song-list build. See [the Mod Menu settings guide](docs/MOD_MENU_SETTINGS.md).
-This source change does not publish a new binary.
 
-The development source adds `DAN GAUGE` and `INITIAL GAUGE` to MANIAC
+Version 0.4.14.89 keeps Force LN behavior from 0.4.14.88 and adds a persistent
+cache for successfully loaded IR rankings. Song and course ranking data is
+restored after restart without a cursor-triggered request. A successful score
+submission refreshes the matching ranking; failed sends keep the previous data.
+The cache is scoped by IR account, chart/course, and LN interpretation. This
+optional test retains plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
+tracked in issue #390.
+
+Version 0.4.14.88 turns the Force LN switch ON by default. Every long note,
+including authored CN/HCN, plays as LN unless the player opts out in the
+launcher's BMS-IR settings; configs saved while the default was OFF are
+switched ON once, and a later opt-out is kept. Arena rule handling, separate
+forced/normal local bests, replays and the IR contract are unchanged.
+This optional test retains all 0.4.14.87 features, plugin 0.0.75 and launcher
+0.2.29. Physical acceptance is tracked in issue #386.
+
+Version 0.4.14.87 adds `DAN GAUGE` and `INITIAL GAUGE` to MANIAC
 OPTIONS. Single songs can use the existing course gauges starting at 100% down
 to 2% in 2% steps. Per-song score, lamp, BP, and IR rules match course play;
 replays retain the applied start value. The switch defaults to OFF and does
 not change real courses or Arena. See the MANIAC section of
 [`doc/BMSIR_ARENA.md`](doc/BMSIR_ARENA.md) for record and replay compatibility.
-This source change does not publish a new binary.
+It also fixes LR2 HS step growth after retries, strengthens forced-LN ranking
+cache/request consistency, and releases keyboard capture after Arena controls
+finish editing. REGUL SPEED (302) and display-time CONSTANT (400) have separate
+indicators; the ASSIST key toggles REGUL SPEED. This optional test retains all
+0.4.14.86 features, plugin 0.0.75 and launcher 0.2.29. Physical acceptance is
+tracked in issue #372; source/build tests do not establish visual recovery.
 
-The current client source version is **0.4.14.58**. Its Windows native-audio
+The current client source version is **0.4.14.106**. Its Windows native-audio
 runtime is rebuilt from pinned PortAudio 19.7.0 and the official Steinberg ASIO
 SDK 2.3.4 under the GPLv3 route. The package carries the corresponding source,
 licenses, source/build manifest, and SPDX SBOM; CI rejects an unverified or
@@ -72,6 +306,138 @@ non-reproducible native bundle.
 Reviewed Windows and macOS packages are distributed from the
 [BMS-IR Arena page](https://www.bms-ir.org/new/arena).
 
+Version 0.4.14.86 fixes Force LN ranking requests for authored CN/HCN charts
+and separates their ON/OFF ranking caches. Submission behavior is unchanged.
+The plugin remains 0.0.75 and the launcher remains 0.2.29.
+
+Version 0.4.14.85 shares ordinary scores for charts without long notes and charts
+already using LN when Force LN is enabled. Only authored CN/HCN charts use the
+separate forced-LN records; switching OFF restores their ordinary scores.
+Existing records are preserved without migration. Plugin 0.0.75, launcher
+0.2.29, and the 7K TO 9K preview remain unchanged.
+
+Version 0.4.14.84 adds the disposable 7K TO 9K preview in MANIAC OPTIONS.
+Choose ON / NO SAVE for solo play or autoplay. It saves no records or replays
+and sends no rankings. See [the preview guide](doc/SEVEN_TO_NINE_PREVIEW.md).
+
+Version 0.4.14.83 restores the default-off Force LN startup switch. ON treats
+CN/HCN charts as LN; OFF restores authored types and the saved LN mode.
+Local bests remain separate, and replay playback follows the recorded switch.
+This test package pairs with BMS-IR plugin 0.0.75.
+
+Version 0.4.14.81 adds the local-only NANTOKA MANIA MODE to MANIAC OPTIONS
+for 5/7/10/14KEY solo play. It fixes judgment windows and integer gauge rules,
+handles LN/CN/HCN/BSS and both DP scratches, and isolates scores and replays
+from ordinary records. Arena, courses, practice, ordinary IR, and MANIAC IR do
+not enable or accept this mode. Launcher 0.2.29, plugin 0.0.72, protocol v8,
+and all 0.4.14.80 behavior remain unchanged.
+
+Version 0.4.14.80 adds optional vertical color gradients to dynamic
+TrueType/OpenType skin text in JSON and Lua skins. Both upper and lower
+`RRGGBBAA` colors are required, and the active destination tint and alpha keep
+working. Existing text without both properties remains on the legacy
+single-color path. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all
+0.4.14.79 behavior remain unchanged.
+
+Version 0.4.14.79 fixes Skin Scene projective shaders on macOS by ensuring the
+GLSL 150 core-profile conversion rewrites every legacy `attribute` and
+`varying` qualifier, including one at the start of the source. A regression
+test covers the converted vertex and fragment contracts. Launcher 0.2.29,
+plugin 0.0.72, protocol v8, Windows rendering, and all 0.4.14.78 behavior
+remain unchanged.
+
+Version 0.4.14.78 makes Skin Scene resources with `timer: 0` state-relative,
+keeps compatible command leaves batched across unchanged hard rectangle mask
+state, reloads textures after image-only edits, and keeps generated quads
+upright for both canvas origins. Its documentation now describes the seven
+implemented blend modes and nested hard rectangle masks precisely. Launcher
+0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.77 behavior remain
+unchanged.
+
+Version 0.4.14.77 adds the optional neutral Skin Scene v1 resource to JSON and
+Lua skins. It provides validated scene compilation, deterministic timelines,
+nested transforms, 2D/3D textured meshes with perspective-correct UVs, color
+transforms, seven named blend modes, nested hard rectangle masks, bounded
+resource handling, metrics, and a self-authored sample. Skins without a scene
+keep the existing SpriteBatch path. Launcher 0.2.29, plugin 0.0.72, protocol
+v8, and all 0.4.14.76 behavior remain unchanged.
+
+Version 0.4.14.76 lets the full and compact Arena overlays edit the selected
+mode's actual LR2 HI-SPEED from 0.01 through 20.00 and the shared START+6/7
+lane-cover step from 1 through 1000. The existing forced-LN conversion is now
+named explicitly in Japanese settings, and a concrete Music Select key-mode
+filter hides only difficulty tables that resolve entirely to incompatible
+modes. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.75 behavior
+remain unchanged.
+
+Version 0.4.14.75 adds a default-on per-player switch that can disable Skin
+Select live-preview work without affecting skin selection or custom options.
+The full and compact Arena overlays can also follow the current chart mode or
+pin the LR2 HI-SPEED editor to any supported play mode, then edit that mode's
+normal HI-SPEED change step in a validated 0.00 through 10.00 numeric field.
+Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.74 behavior remain
+unchanged.
+
+Version 0.4.14.74 updates the 7z reader to Apache Commons Compress 1.26.2 so
+overlapping movie-BGA materialization and solid-7z key-sound loading no longer
+cause false checksum failures. When BMS-IR is the configured Primary IR, the
+song context menu also keeps only the dedicated `BMS-IR Leaderboard`; another
+Primary IR still keeps its separately labeled leaderboard. Launcher 0.2.29,
+plugin 0.0.72, protocol v8, and all 0.4.14.73 behavior remain unchanged.
+
+Version 0.4.14.73 combines the complete song-update result dialog, consistent
+late `#BASE 62` ID mapping, and reliable solid-7z key-sound loading. The update
+dialog keeps full-library chart totals primary and adds archive counts and the
+last failure reason as one secondary breakdown. Base-dependent definitions now
+use the file's effective `#BASE` regardless of declaration order. Referenced
+key sounds in one solid 7z block are read sequentially before parallel decode;
+per-chart temporary copies are removed after loading and the original archive
+stays unchanged. Launcher 0.2.29, plugin 0.0.72, protocol v8, and all 0.4.14.72
+behavior remain unchanged.
+
+Version 0.4.14.72 restores the complete retained LR2oraja Endless Dream
+behavior found by the exact 52-commit history audit. This includes sort-skin
+visibility, Practice Random Trainer seeds, isolated BGA image textures,
+controller hotplug, immediate rival refresh, Primary IR ranking, per-controller
+JKOC, numeric volume inputs, authored LN mode, difficulty filtering, 5K/10K
+result input, screenshots, score deletion, BACKBMP, IR player names, LITONE
+play dates, `oraja_helper`, and Random Select presets. rian DX/X MODE and every
+rianIR submission/replay-send path remain deliberately excluded. Launcher
+0.2.29, plugin 0.0.72, protocol v8, and all `.59` through `.71` fixes remain
+present.
+
+Version 0.4.14.71 hides the Arena play cursor without capturing or confining
+the OS pointer. Mouse movement, the Mod Menu, and leaving play restore cursor
+visibility. Ordinary non-Arena cursor capture is unchanged. Launcher 0.2.29,
+plugin 0.0.72, protocol, score behavior, native audio, and bundled default
+skins are unchanged.
+
+Version 0.4.14.70 restores top-row `8` as the fixed Music Select compatibility
+shortcut for Show All Charts. Physical NUMPAD 8 remains separately
+configurable. Launcher 0.2.29, plugin 0.0.72, protocol, score behavior, native
+audio, and bundled default skins are unchanged.
+
+Version 0.4.14.69 keeps the safe all-table refresh and adds the remaining
+selected non-skin changes. Leaving Music Select now stops its BGM and preview
+synchronously before ordinary or Arena gameplay. Explicit and discovered
+OpenAL one-shot previews return to the default selector BGM at their decoded
+duration. Default-OFF diagnostics now measure static-image BGA cache planning,
+collisions, runtime misses, and texture upload time without changing the cache
+or rendering policy. Bundled default skin assets and definitions are unchanged.
+
+Version 0.4.14.68 repairs the Skin Widget Manager. The manager remains open
+independently of the F5 parent menu, its visibility no longer captures gameplay
+input by itself, and width-only or height-only edits are included in clipboard
+export. It edits the current scene skin temporarily and does not edit the
+separate BMS-IR Arena overlay or write skin source files. Launcher 0.2.29 and
+plugin 0.0.72 are unchanged.
+
+Version 0.4.14.61 restores the ordinary LN/CN/HCN launcher
+selection and carries it through decoding, catalog keys, IR ranking, and score
+submission. Casual/private Arena rooms lock the host's selected mode for every
+participant; rated Arena explicitly remains LN. New BMS-IR body archives use
+portable readable names such as `[Artist]Song-0123abcd.zip`; legacy full-MD5
+archives and retained multi-chart packages remain reusable after restart.
 The BMS-IR startup settings provide a default-off **Force LN** switch.
 When enabled, every existing long note is played as LN, including authored
 BMS/bmson CN and HCN. When disabled, chart definitions and the saved ordinary
@@ -85,6 +451,41 @@ restores original scores. Existing records are neither moved nor inferred from
 MAX values, and replays preserve their recorded interpretation.
 See [the compatibility and validation guide](docs/FORCED_LONG_NOTE_MODE.md).
 This source change does not publish a new body or plugin package.
+
+Version 0.4.14.63 moves the 0.4.14.62 opt-in physical-folder filter from
+BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar now
+expose it from the same Resource controller. Saved per-player values, the
+default-OFF behavior, BMS Path ordering, and all Music Select filtering and
+exclusion rules remain unchanged.
+
+Version 0.4.14.66 republishes the Windows body as a complete repair baseline.
+The same signed body release now carries the PortAudio/JPortAudio DLLs plus
+their pinned sources, licenses, build manifest, and SPDX SBOM. Launcher 0.2.28
+therefore restores any missing native-audio files while applying the current
+body update. Client behavior remains the same as 0.4.14.65.
+
+Version 0.4.14.65 refines the default-off LR2-style fixed-HI-SPEED
+override. Each play mode keeps an independent base scroll value, where 100 is
+1.00x, and a reference BPM adjustable from 50 through 400 with a default of
+150. The selected legacy OFF/START/MAX/MAIN/MIN HI-SPEED FIX target supplies
+the chart BPM used by the calculation. The BMS-IR settings page can switch the
+mode being edited, and the full and compact Arena overlays can toggle the
+override and edit the current mode's base and reference values during Music
+Select. The overlays now also provide an AUTO/current-chart or explicit-mode
+editor selector and a numeric per-mode HI-SPEED change-step field from 0.00
+through 10.00. A separate numeric field edits the selected mode's actual
+HI-SPEED value from 0.01 through 20.00 and applies it to the live lane when a
+matching play is active. Both overlays also expose the global START+6/7
+lane-cover step as a labeled integer from 1 through 1000; it remains separate
+from the per-mode HI-SPEED change step. The override is disabled for NO SPEED
+constraints and is snapshotted into replays. It does not add a pseudo-FHS
+chord or an equivalent-green editor.
+The dedicated HI-SPEED tab selects Normal, LR2, or Floating independently
+for each key mode. Startup settings, the Arena overlay, and the F5 Play
+Settings window share the selection. Live switching preserves each speed
+mode's values, the chart position, and replay events. NO SPEED constraints
+and replay lane restoration lock the speed controls. BGA display can be
+toggled independently while its playback clock continues.
 
 The dedicated HI-SPEED tab selects Normal, LR2, or Floating independently
 for each key mode. Startup settings, the Arena overlay, and the F5 Play
@@ -115,14 +516,6 @@ lower `RRGGBBAA` color while retaining destination tint and alpha animation.
 The two opt-in properties and compatibility behavior are documented in
 [the skin text gradient guide](docs/SKIN_TEXT_GRADIENT.md).
 
-The Resource settings now include an opt-in physical-folder filter for Music
-Select next to the configured BMS Paths. Its parent switch is off by default.
-When enabled, one checkbox is shown for each configured BMS Path and only
-checked physical root folders remain at the selector root; leaving every box
-unchecked creates a table-only root without changing difficulty tables,
-courses, favorites, searches, or Arena folders. The choice is stored per
-player.
-
 At the Music Select root, a concrete key-mode selection now hides a difficulty
 table only when every chart and course entry has a resolved mode and none
 matches the selection. Mixed tables remain visible for each mode they contain,
@@ -145,28 +538,10 @@ interpretation and chart-file hashes.
 The current development source also retains per-chart difficulty-table
 comments in Music Select. `[[BR]]`, CRLF, and CR are normalized to LF, and the
 active table entry is exposed to skins as string property `tablecomment`
-(`1004`). The default Music Select skin replaces the notes-distribution/BPM
-graph region below CLEAR/PLAY with a high-contrast wrapped comment panel;
-custom skins control its width, font size, placement, and practical visible
-line count.
+(`1004`). The default Music Select skin uses a wrapped text area; custom skins
+control its width, font size, placement, and practical visible line count.
 Comments are contextual to the selected table and do not alter local song
 metadata.
-
-The bundled default Music Select skin is now a 1920×1080 `POP//BELT` layout:
-the song list remains on the right while selected-song metadata, score state,
-note radar, table comment, and IR/rival information are stacked on the left.
-Its main panel, overlay, and song-row PNGs are rendered from committed SVG
-masters; the square artwork region is a neutral replacement placeholder when
-the selected song has no banner. The skin continues to expose MANIAC EXTRA
-MODE, judge-timing restore, the ninth judge-rank sort state, folder lamp counts,
-and an optional compact IR/rival detail row. Its `Song Detail` customization
-keeps the table comment as the default and can switch that space to IR data. The
-bundled default 7-key Lua skin adds compact/standard/wide lane widths, a
-toggleable song and play-information overlay, EARLY/LATE totals, and the
-resolved fixed RANDOM placement. The new control artwork is an intentionally
-simple seven-cell square placeholder at
-`assets/skin/default/bmsir-controls-placeholder.png` so it can be replaced
-without changing the skin definitions.
 
 When BMS-IR is the configured Primary IR, the song context menu shows only the
 dedicated `BMS-IR Leaderboard` instead of a second generic Primary IR entry for
@@ -182,6 +557,12 @@ underflows with play-session/state IDs, maximum timestamps, direct-buffer
 usage, and a safe stack sample for render stalls over 50 ms. See
 [the timing diagnostics guide](docs/TIMING_DIAGNOSTICS.md).
 
+The current development source keeps the Skin Widget Manager open independently
+of the F5 parent menu and captures gameplay input only while ImGui actually
+requests it. Width-only and height-only edits are included when the manager
+exports its temporary current-scene changes to the clipboard. The manager does
+not edit the separate BMS-IR Arena overlay or write skin source files.
+
 Leaving Music Select now synchronously stops both its default BGM and any
 explicit or generated song preview. A play transition can no longer interrupt
 the preview fade and leave the selector BGM loop audible during gameplay; the
@@ -191,7 +572,7 @@ one-shot preview, so its natural end restores the default selector BGM even
 though LibGDX `Sound` does not expose a playback-completion query. Loop mode
 continues to play the selected-song preview until the selection changes.
 
-The development source also recovers BMS-IR body downloads across a
+Version 0.4.14.61 also recovers BMS-IR body downloads across a
 client restart by revalidating previously accepted archives before any network
 request. New packages use portable readable names such as
 `[Artist]Song-0123abcd.zip`, with the requested chart's eight-character MD5
@@ -205,7 +586,7 @@ entered the song database. A ready notice tells the player to select the chart
 again to start play; the download action itself does not automatically begin
 gameplay.
 
-The current development source also loads referenced key sounds from a solid
+Version 0.4.14.73 also loads referenced key sounds from a solid
 7z archive in one bounded sequential archive pass before decoding them in
 parallel. This avoids checksum failures and missing audio caused by reopening
 one solid-compression block concurrently for hundreds of entries. The
@@ -262,6 +643,205 @@ Every BMS-IR-built body or plugin made downloadable through the launcher is
 covered by that procedure, including internal test and prerelease updates. A
 distribution is not complete until both ordinary-score acceptance and the
 Arena client-version/build gate are activated and verified where applicable.
+
+## Arena oraja 0.4.14.81
+
+Adds NANTOKA MANIA MODE to MANIAC OPTIONS. Supported solo charts use fixed
+judgment windows, integer gauge arithmetic, and dedicated long-note handling.
+Mode-on scores and replays use a separate local MANIAC identity and cannot be
+submitted to online ranking or Arena. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, and all `0.4.14.80` behavior remain present.
+
+## Arena oraja 0.4.14.80
+
+Adds optional vertical color gradients to dynamic TrueType/OpenType skin text
+in JSON and Lua skins. Both upper and lower `RRGGBBAA` colors are required;
+the active destination tint and alpha multiply the gradient. Existing text
+without both properties keeps the legacy single-color rendering path.
+Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all `0.4.14.79` behavior
+remain present.
+
+## Arena oraja 0.4.14.79
+
+Fixes Skin Scene projective shaders on macOS so the GLSL 150 core-profile
+conversion rewrites every legacy `attribute` and `varying` qualifier,
+including one at the start of the source. A regression test covers both
+converted shader stages. Launcher `0.2.29`, plugin `0.0.72`, protocol v8,
+Windows rendering, and all `0.4.14.78` behavior remain present.
+
+## Arena oraja 0.4.14.78
+
+Treats `timer: 0` like an omitted scene timer, retains batching until texture,
+blend, camera, or the nested hard rectangle mask stack changes, reloads
+textures after image-only edits, and keeps generated quads upright for both
+canvas origins. The format exposes seven blend modes and nested hard rectangle
+masks; it does not expose alpha/color masks. Launcher `0.2.29`, plugin
+`0.0.72`, protocol v8, and all `0.4.14.77` behavior remain present.
+
+## Arena oraja 0.4.14.77
+
+Adds the optional neutral Skin Scene v1 resource for JSON and Lua skins. Scene
+documents are compiled and validated before use, then render deterministic
+timelines, nested 2D/3D transforms, perspective-correct textured meshes,
+projective nested hard rectangle masks, color transforms, and seven named
+blend modes. Invalid or non-finite input fails safely, retained resources are
+bounded and disposed, and metrics plus a self-authored sample are included.
+Skins without a scene keep the existing SpriteBatch path. Launcher `0.2.29`,
+plugin `0.0.72`, protocol v8, and all `0.4.14.76` behavior remain present.
+
+## Arena oraja 0.4.14.76
+
+Adds direct 0.01--20.00 LR2 HI-SPEED editing and shared 1--1000 START+6/7
+lane-cover step editing to both Arena overlay layouts. Japanese settings now
+name the existing forced-LN conversion explicitly. At the Music Select root,
+a concrete key-mode selection hides only tables whose resolved chart and
+course modes are all incompatible; mixed and unresolved tables remain
+reachable. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.75` behavior remain present.
+
+## Arena oraja 0.4.14.75
+
+Adds a default-on per-player Skin Select live-preview switch. Turning it off
+skips preview construction, reload, and rendering without disabling skin
+selection or custom options. The full and compact Arena overlays can follow
+the current chart mode or pin the LR2 HI-SPEED editor to any supported play
+mode and edit its normal HI-SPEED change step through a validated 0.00--10.00
+numeric field. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.74` behavior remain present.
+
+## Arena oraja 0.4.14.74
+
+Updates Apache Commons Compress to 1.26.2, preventing false solid-7z checksum
+failures when movie-BGA materialization overlaps the key-sound load. When
+BMS-IR is Primary IR, the song context menu now shows one dedicated
+`BMS-IR Leaderboard` instead of duplicating the same service through the
+generic Primary IR entry. Other Primary IR services retain their separate
+leaderboard. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and all
+`0.4.14.73` behavior remain present.
+
+## Arena oraja 0.4.14.73
+
+Shows full-library chart totals and archive scan details in one song-update
+result dialog. Resolves base-dependent BMS IDs using the effective `#BASE`
+regardless of whether `#BASE 62` appears before or after the definitions.
+Loads all referenced key sounds from a solid 7z archive through one bounded
+sequential pass before parallel decoding, preventing checksum failures and
+missing audio; temporary copies are removed and the source archive is
+unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol v8, and the complete
+`0.4.14.72` behavior remain present.
+
+## Arena oraja 0.4.14.72
+
+Restores the complete retained LR2oraja Endless Dream behavior found by the
+exact 52-commit audit and locks the result in executable feature/history
+gates. rian DX/X MODE and all rianIR submission/replay-send paths remain
+excluded by product-owner decision. Launcher `0.2.29`, plugin `0.0.72`,
+protocol v8, native audio, and every `.59` through `.71` release fix remain
+present.
+
+## Arena oraja 0.4.14.71
+
+Hides the Arena play cursor without capturing or confining the OS pointer.
+Mouse movement, the Mod Menu, and leaving play restore cursor visibility.
+Ordinary non-Arena cursor capture is unchanged. Launcher `0.2.29`, plugin
+`0.0.72`, protocol, score behavior, native audio, and bundled default skins are
+unchanged.
+
+## Arena oraja 0.4.14.70
+
+Restores top-row `8` as the fixed Music Select compatibility shortcut for Show
+All Charts while keeping physical NUMPAD 8 separately configurable. Launcher
+`0.2.29`, plugin `0.0.72`, protocol, score behavior, native audio, and bundled
+default skins are unchanged.
+
+## Arena oraja 0.4.14.69
+
+Keeps the transactional all-table refresh already present in the release line:
+every configured table is downloaded and validated before live caches are
+replaced, and any failure preserves the previous caches. Music Select now
+stops its BGM and explicit or generated preview synchronously before ordinary
+or Arena gameplay begins. OpenAL one-shot previews return to the default BGM
+after their decoded duration. Default-OFF diagnostics add static-image BGA
+cache-plan, collision, miss, and texture-upload measurements without changing
+cache or rendering behavior. Bundled default skin assets and definitions are
+unchanged. Launcher `0.2.29`, plugin `0.0.72`, protocol, score behavior, and
+the Windows native-audio repair baseline remain unchanged.
+
+## Arena oraja 0.4.14.68
+
+Repairs the Skin Widget Manager so the child window remains open independently
+of the F5 parent menu and no longer captures gameplay input merely because it
+is visible. Clipboard export now includes width-only and height-only changes,
+and the window explains its temporary current-scene scope. The separate BMS-IR
+Arena overlay and skin source files are unchanged. Launcher `0.2.29`, plugin
+`0.0.72`, protocol, score behavior, and the Windows native-audio repair
+baseline are unchanged.
+
+## Arena oraja 0.4.14.66
+
+Republishes the Windows body as a complete native-audio repair baseline. The
+body manifest includes the required PortAudio/JPortAudio DLLs together with
+their pinned sources, licenses, build manifest, and SPDX SBOM, so Launcher
+0.2.28 downloads any files missing from an existing installation. Client
+behavior, Launcher `0.2.28`, and plugin `0.0.72` are otherwise unchanged from
+0.4.14.65.
+
+## Arena oraja 0.4.14.65
+
+Removes the non-working pseudo FHS option and the BMS-IR-specific equivalent-
+green editor/readout. The LR2-style fixed-HI-SPEED settings now have a real
+mode selector plus independent 50–400 reference-BPM values, defaulting to 150.
+Both full and compact Music Select Arena overlays can toggle the override and
+adjust the current mode's base scroll and reference BPM. Ordinary skin green
+number reporting remains based on actual BPM, cover, and LIFT; NO SPEED and
+replay safeguards remain in force.
+
+## Arena oraja 0.4.14.64
+
+Adds a default-OFF LR2-style fixed-HI-SPEED override with independent base
+scroll values per play mode and a fixed 150 BPM reference. Its equivalent
+green number is SUD+ and LIFT aware in both Start Here and active play. An
+optional pseudo FHS uses a clean short START+SELECT release while preserving
+the normal exit hold at the larger of 500 ms and the configured delay. The
+setting is replay-safe and ignored by NO SPEED constraints.
+
+## Arena oraja 0.4.14.63
+
+Moves the physical-folder visibility parent switch and BMS Path checklist from
+BMS-IR Features to Resource directly below BMS Path. Classic and Sidebar use
+the same Resource controller; saved player settings and filtering behavior are
+unchanged.
+
+## Arena oraja 0.4.14.62
+
+Adds a default-OFF, per-player physical-folder filter to BMS-IR Features. When
+enabled, one checkbox appears for each configured BMS Path and only checked
+physical roots remain at the Music Select root. Zero checks creates a
+difficulty-table-only root without filtering tables, courses, favorites,
+commands, searches, Primary IR roots, or Arena candidates.
+
+## Arena oraja 0.4.14.61
+
+Restores ordinary LN/CN/HCN selection and mode-separated IR behavior. Arena
+wire protocol v8 locks the selected mode for casual/private rooms and verifies
+the decoded note count at the ready barrier; rated Arena remains LN-only.
+All 0.4.14.60 recovery features and the safe all-table update remain present.
+
+## Arena oraja 0.4.14.60
+
+Restored the four feature groups that the 0.4.14.59 hotfix unintentionally
+omitted: startup-settings search, gameplay-start render-stall mitigation,
+BMS-IR body-download recovery, and difficulty-table comments exposed to Music
+Select skins. The safe all-table update from 0.4.14.59 remains present, and the
+Arena wire protocol remains v7.
+
+## Arena oraja 0.4.14.59
+
+Resource settings again provide one visible action to update every configured
+difficulty table. The client fetches and validates the complete configured set
+before replacing live caches. A successful update removes orphan `.bmt` files
+left by URL edits or removals while preserving unrelated files; any fetch,
+validation, or cache error keeps or restores the previous complete cache set.
 
 ## Arena oraja 0.4.14.58
 
@@ -639,7 +1219,7 @@ python3 tools/build_arena_release.py \
   --windows-worktree /release/oraja-windows \
   --macos-worktree /release/oraja-macos \
   --java-home /release/jdk-17 \
-  --output-dir /release/build-0.4.14.58
+  --output-dir /release/build-0.4.14.81
 ```
 
 `build-state.json` records both commands, durations, logs, source commit, and
@@ -653,10 +1233,11 @@ Follow the [canonical distribution policy](https://github.com/tenP0312-dev/bms-i
 GitHub's automatic `Source code (zip)` on patch-server is patch-server source
 and must never be presented as the body source download.
 
-Migration status: this documentation change does not update the build helper,
-which still records oraja release targets, or relocate existing releases.
-Before the next publication, update and validate the helper/spec targets and
-source-ZIP staging; do not publish its old targets unchanged. The versioned
+The build helper now stages both assets for patch-server and records the exact
+body commit, pinned submodule commits and source ZIP identity in build-state.
+The ZIP contains committed body/build/license files and pinned submodule source;
+untracked files and local edits are excluded. Existing releases remain unchanged.
+The versioned
 filenames under `artifacts/` remain internal build identities, not public asset
 names. Do not recreate the
 worktrees, download the JDK, or initialize submodules during every release;
