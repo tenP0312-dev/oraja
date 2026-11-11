@@ -21,6 +21,12 @@ repository.
 
 ## Workflow
 
+- Post every task outcome to its GitHub Issue or PR (the one the request
+  names, else the closest related Issue): success, failure, a stop, or a wait
+  for approval or a decision. Say what stopped it and whose approval is
+  needed, so the operator never has to relay results by hand. Pass this rule
+  to child sessions. Approvals themselves still come from the operator
+  directly in the session; never post secrets or private values.
 - Read `README.md`, `doc/BMSIR_ARENA.md`,
   `docs/CODEX_PROGRESS_DISCORD.md`, and the code around the affected
   behavior before editing.
@@ -40,9 +46,14 @@ repository.
 
 ## Validation
 
-- Run the smallest relevant Gradle tests after a stable change.
-- For ordinary client changes, run `./gradlew core:test` and the applicable
-  target build when the environment supports it.
+- Run the smallest relevant Gradle tests after a stable change (for example
+  `./gradlew core:test --tests '<affected classes>'`). Plain `core:test`
+  resolves natives for the host OS/arch when `-Dplatform`/`-Darch` are omitted.
+- The PR's macOS CI lane runs the full `core:test` suite. Do not rerun the
+  whole suite locally for the same commit, including a test-release
+  candidate; its passing CI is the full-suite evidence. Run it locally only
+  when CI cannot run or a shared/cross-cutting area changed and you need the
+  result before pushing.
 - The desktop launcher now lives in its own repository,
   `tenP0312-dev/oraja-Rancher`. For launcher changes, clone that repository
   and run `cargo test --locked` in its `src-tauri` directory, plus the
